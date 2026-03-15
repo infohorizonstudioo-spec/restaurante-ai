@@ -3,7 +3,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
-
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -18,33 +17,21 @@ export async function middleware(request: NextRequest) {
       },
     }
   )
-
   const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
-
-  // Rutas publicas
   if (path === '/login' || path === '/') {
     if (user) {
-      const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).single()
-      if (profile?.role === 'superadmin')
-        return NextResponse.redirect(new URL('/admin', request.url))
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      if (profile?.role === 'superadmin') return NextResponse.redirect(new URL('/admin', request.url))
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
     return supabaseResponse
   }
-
-  // Sin sesion -> login
   if (!user) return NextResponse.redirect(new URL('/login', request.url))
-
-  // /admin solo superadmin
   if (path.startsWith('/admin')) {
-    const { data: profile } = await supabase
-      .from('profiles').select('role').eq('id', user.id).single()
-    if (profile?.role !== 'superadmin')
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    if (profile?.role !== 'superadmin') return NextResponse.redirect(new URL('/dashboard', request.url))
   }
-
   return supabaseResponse
 }
 
