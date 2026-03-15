@@ -1,34 +1,54 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-export const DEMO_TENANT_ID_KEY = 'reservo_tenant_id'
-
-export async function getDemoTenant() {
-  const { data } = await supabase
-    .from('tenants')
-    .select('*')
-    .eq('slug', 'la-bahia')
-    .single()
-  return data
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 }
 
-export async function getTenantData(tenantId: string) {
-  const [reservations, tables, orders, calls, alerts] = await Promise.all([
-    supabase.from('reservations').select('*').eq('tenant_id', tenantId).order('date').order('time'),
-    supabase.from('tables').select('*').eq('tenant_id', tenantId).eq('active', true),
-    supabase.from('orders').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
-    supabase.from('calls').select('*').eq('tenant_id', tenantId).order('started_at', { ascending: false }),
-    supabase.from('alerts').select('*').eq('tenant_id', tenantId).eq('read', false).order('created_at', { ascending: false }),
-  ])
-  return {
-    reservations: reservations.data || [],
-    tables: tables.data || [],
-    orders: orders.data || [],
-    calls: calls.data || [],
-    alerts: alerts.data || [],
+export const supabase = createClient()
+
+export async function getDemoTenant() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, tenant_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile) return null
+
+  if (profile.role === 'superadmin') {
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('slug', 'la-bahia')
+      .single()
+    return tenant
   }
+
+  if (profile.tenant_id) {
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('id', profile.tenant_id)
+      .single()
+    return tenant
+  }
+
+  return null
+}
+
+export async function getCurrentProfile() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+  return data
 }
