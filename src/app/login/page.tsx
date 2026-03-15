@@ -20,7 +20,6 @@ export default function LoginPage() {
     const { data: profile } = await supabase.from('profiles').select('role, tenant_id').eq('id', data.user.id).single()
     if (profile?.role === 'superadmin') { router.push('/admin'); return }
     if (!profile?.tenant_id) { router.push('/onboarding'); return }
-    // Check if onboarding complete
     const { data: tenant } = await supabase.from('tenants').select('onboarding_complete').eq('id', profile.tenant_id).single()
     router.push(tenant?.onboarding_complete ? '/panel' : '/onboarding')
     router.refresh()
@@ -35,9 +34,9 @@ export default function LoginPage() {
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 text-2xl font-black shadow-2xl shadow-violet-500/30 mb-4">R</div>
           <h1 className="text-2xl font-bold text-white">Reservo.AI</h1>
-          <p className="text-white/40 text-sm mt-1">Accede a tu panel de control</p>
+          <p className="text-white/40 text-sm mt-1">Tu recepcionista con IA</p>
         </div>
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin}>
           <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 space-y-4 backdrop-blur-sm">
             {error && <div className="bg-red-500/10 border border-red-500/25 text-red-300 text-xs px-3 py-2.5 rounded-xl">⚠ {error}</div>}
             <div>
@@ -57,10 +56,17 @@ export default function LoginPage() {
           </div>
         </form>
         <div className="mt-5 space-y-2 text-center">
-          <p className="text-sm text-white/30">¿No tienes cuenta? <Link href="/registro" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">Regístrate gratis →</Link></p>
-          <p className="text-xs text-white/20"><Link href="/precios" className="hover:text-white/40 transition-colors">Ver planes y precios</Link></p>
+          <p className="text-sm text-white/30">
+            ¿No tienes cuenta?{' '}
+            <Link href="/registro" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">
+              Empieza gratis →
+            </Link>
+          </p>
+          <p className="text-xs text-white/20">
+            <Link href="/precios" className="hover:text-white/40 transition-colors">Ver planes · desde 350€/mes</Link>
+          </p>
         </div>
-        <p className="text-center text-xs text-white/20 mt-3">Reservo.AI © 2026 · Horizon Studio</p>
+        <p className="text-center text-xs text-white/15 mt-4">Reservo.AI © 2026 · Horizon Studio</p>
       </div>
     </div>
   )
