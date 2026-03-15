@@ -37,7 +37,6 @@
     ".next/dev/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "server.js"
+    "node_modules"
   ]
 }

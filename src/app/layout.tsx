@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Restaurante AI — Panel de Pedidos',
-  description: 'Sistema de pedidos por voz con IA',
+  title: 'Reservo.AI — Recepcionista con IA',
+  description: 'Gestión inteligente de reservas, llamadas y pedidos',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

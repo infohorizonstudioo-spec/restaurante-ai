@@ -1,44 +1,34 @@
 import { createClient } from '@supabase/supabase-js'
 
-export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export async function getRestaurantByPhone(phone: string) {
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+export const DEMO_TENANT_ID_KEY = 'reservo_tenant_id'
+
+export async function getDemoTenant() {
   const { data } = await supabase
-    .from('restaurants')
+    .from('tenants')
     .select('*')
-    .eq('phone_number', phone)
-    .eq('active', true)
+    .eq('slug', 'la-bahia')
     .single()
   return data
 }
 
-export async function createOrder(restaurantId: string, callSid: string) {
-  const { data } = await supabase
-    .from('orders')
-    .insert({ restaurant_id: restaurantId, call_sid: callSid, status: 'nuevo' })
-    .select()
-    .single()
-  return data
-}
-
-export async function updateOrder(orderId: string, updates: any) {
-  const { data } = await supabase
-    .from('orders')
-    .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('id', orderId)
-    .select()
-    .single()
-  return data
-}
-
-export async function getOrders(restaurantId: string) {
-  const { data } = await supabase
-    .from('orders')
-    .select('*')
-    .eq('restaurant_id', restaurantId)
-    .order('created_at', { ascending: false })
-  return data || []
+export async function getTenantData(tenantId: string) {
+  const [reservations, tables, orders, calls, alerts] = await Promise.all([
+    supabase.from('reservations').select('*').eq('tenant_id', tenantId).order('date').order('time'),
+    supabase.from('tables').select('*').eq('tenant_id', tenantId).eq('active', true),
+    supabase.from('orders').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+    supabase.from('calls').select('*').eq('tenant_id', tenantId).order('started_at', { ascending: false }),
+    supabase.from('alerts').select('*').eq('tenant_id', tenantId).eq('read', false).order('created_at', { ascending: false }),
+  ])
+  return {
+    reservations: reservations.data || [],
+    tables: tables.data || [],
+    orders: orders.data || [],
+    calls: calls.data || [],
+    alerts: alerts.data || [],
+  }
 }
