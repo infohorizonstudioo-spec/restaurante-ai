@@ -19,16 +19,17 @@
     "react-dom": "19.2.3",
     "twilio": "^5.13.0",
     "ws": "^8.19.0",
-    "@supabase/ssr": "^0.5.0"
+    "@supabase/ssr": "^0.5.0",
+    "@tailwindcss/postcss": "^4",
+    "tailwindcss": "^4",
+    "autoprefixer": "^10"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "tailwindcss": "^4",
     "typescript": "5.9.3"
   }
 }
