@@ -52,11 +52,16 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
-        <p className="text-center text-sm text-white/30 mt-5">
-          ¿No tienes cuenta?{' '}
-          <Link href="/registro" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">Regístrate gratis →</Link>
-        </p>
-        <p className="text-center text-xs text-white/20 mt-2">Reservo.AI © 2026 · Horizon Studio</p>
+        <div className="mt-5 space-y-2 text-center">
+          <p className="text-sm text-white/30">
+            ¿No tienes cuenta?{' '}
+            <Link href="/registro" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">Regístrate gratis →</Link>
+          </p>
+          <p className="text-xs text-white/20">
+            <Link href="/precios" className="hover:text-white/40 transition-colors">Ver planes y precios</Link>
+          </p>
+        </div>
+        <p className="text-center text-xs text-white/20 mt-3">Reservo.AI © 2026 · Horizon Studio</p>
       </div>
     </div>
   )
