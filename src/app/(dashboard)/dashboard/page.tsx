@@ -1,3 +1,9 @@
+'use client'
+export const dynamic = 'force-dynamic'
+import { useEffect, useState } from 'react'
+import { supabase, getDemoTenant } from '@/lib/supabase'
+import type { Reservation, Order, Call, Alert, Tenant } from '@/types'
+import Link from 'next/link'
 
 export default function DashboardPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null)
