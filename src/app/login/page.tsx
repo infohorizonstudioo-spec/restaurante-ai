@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
@@ -34,9 +35,7 @@ export default function LoginPage() {
         </div>
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 space-y-4 backdrop-blur-sm">
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/25 text-red-300 text-xs px-3 py-2.5 rounded-xl">⚠ {error}</div>
-            )}
+            {error && <div className="bg-red-500/10 border border-red-500/25 text-red-300 text-xs px-3 py-2.5 rounded-xl">⚠ {error}</div>}
             <div>
               <label className="text-xs text-white/40 mb-1.5 block">Email</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" autoFocus
@@ -48,12 +47,16 @@ export default function LoginPage() {
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-violet-500/60 transition-all"/>
             </div>
             <button type="submit" disabled={loading}
-              className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-all active:scale-95 mt-2">
+              className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-all active:scale-95">
               {loading ? 'Accediendo...' : 'Entrar'}
             </button>
           </div>
         </form>
-        <p className="text-center text-xs text-white/20 mt-6">Reservo.AI © 2026 · Horizon Studio</p>
+        <p className="text-center text-sm text-white/30 mt-5">
+          ¿No tienes cuenta?{' '}
+          <Link href="/registro" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">Regístrate gratis →</Link>
+        </p>
+        <p className="text-center text-xs text-white/20 mt-2">Reservo.AI © 2026 · Horizon Studio</p>
       </div>
     </div>
   )
