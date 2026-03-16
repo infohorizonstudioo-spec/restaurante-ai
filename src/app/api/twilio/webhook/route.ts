@@ -15,8 +15,9 @@ export async function POST(req: Request) {
     const callSid = formData.get('CallSid') as string || ''
     const speechResult = formData.get('SpeechResult') as string || ''
     const host = req.headers.get('host') || 'restaurante-ai.vercel.app'
+    const webhookUrl = `https://${host}/api/twilio/webhook`
 
-    // Find tenant by phone number
+    // Find tenant
     let tenant: any = null
     try {
       const { data } = await admin.from('tenants').select('*').eq('agent_phone', to).single()
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
     } catch(e) {}
 
     const agentName = tenant?.agent_name || 'Recepcionista'
-    const businessName = tenant?.name || 'el negocio'
+    const businessName = tenant?.name || 'nuestro negocio'
 
     // Log call
     if (tenant) {
@@ -35,7 +36,6 @@ export async function POST(req: Request) {
         to_number: to,
         status: 'in-progress',
         direction: 'inbound',
-        transcript: speechResult ? (speechResult + ' ') : ''
       }, { onConflict: 'call_sid' }).catch(() => {})
 
       if (tenant.plan === 'trial' || tenant.plan === 'free') {
@@ -45,10 +45,10 @@ export async function POST(req: Request) {
       }
     }
 
-    // Generate AI response
-    let aiResponse = `Hola, gracias por llamar a ${businessName}. Soy ${agentName}, tu recepcionista virtual. ¿En qué puedo ayudarte hoy?`
+    // Generate AI response text
+    let responseText = `Hola, gracias por llamar a ${businessName}. Soy ${agentName}, tu recepcionista virtual. ¿En qué puedo ayudarte hoy?`
 
-    if (speechResult) {
+    if (speechResult && speechResult.trim()) {
       try {
         const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
@@ -59,75 +59,48 @@ export async function POST(req: Request) {
           },
           body: JSON.stringify({
             model: 'claude-haiku-4-5-20251001',
-            max_tokens: 150,
-            system: `Eres ${agentName}, la recepcionista virtual de ${businessName}. 
-Responde en español de forma amable, profesional y concisa (máximo 2 frases).
-Puedes ayudar con: reservas, horarios, información del negocio, y consultas generales.
-Tipo de negocio: ${tenant?.type || 'negocio'}`,
+            max_tokens: 120,
+            system: `Eres ${agentName}, recepcionista virtual de ${businessName}. 
+IMPORTANTE: Responde SIEMPRE en español, de forma amable y concisa (1-2 frases máximo).
+Puedes ayudar con: reservas, horarios, información general, y consultas del negocio.
+Si preguntan por una reserva, pide nombre, fecha y número de personas.
+Tipo de negocio: ${tenant?.type || 'restaurante'}`,
             messages: [{ role: 'user', content: speechResult }]
           })
         })
         const aiData = await aiRes.json()
-        aiResponse = aiData.content?.[0]?.text || aiResponse
+        if (aiData.content?.[0]?.text) {
+          responseText = aiData.content[0].text
+        }
       } catch(e) {
         console.error('AI error:', e)
+        responseText = 'Entendido. ¿En qué más puedo ayudarte?'
       }
     }
 
-    // Convert AI response to speech via ElevenLabs
-    const voiceId = process.env.ELEVENLABS_VOICE_ID || 'ERYLdjEaddaiN9sDjaMX'
-    const elKey = process.env.ELEVENLABS_API_KEY || ''
-    
-    let audioUrl = ''
-    try {
-      const elRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, {
-        method: 'POST',
-        headers: { 'xi-api-key': elKey, 'content-type': 'application/json' },
-        body: JSON.stringify({
-          text: aiResponse,
-          model_id: 'eleven_multilingual_v2',
-          voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.2, use_speaker_boost: true }
-        })
-      })
-      
-      if (elRes.ok) {
-        const audioBuffer = await elRes.arrayBuffer()
-        const base64Audio = Buffer.from(audioBuffer).toString('base64')
-        audioUrl = `data:audio/mpeg;base64,${base64Audio}`
-      }
-    } catch(e) {
-      console.error('ElevenLabs error:', e)
-    }
-
-    // Build TwiML response
-    const twiml = audioUrl 
-      ? `<?xml version="1.0" encoding="UTF-8"?>
+    // Build TwiML - usar Say en español directamente (funciona sin latencia)
+    // ElevenLabs via URL separada en futuro
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Play>${audioUrl}</Play>
-  <Gather input="speech" timeout="5" speechTimeout="auto" action="https://${host}/api/twilio/webhook" method="POST" language="es-ES">
-    <Say language="es-ES">Continúa hablando cuando quieras.</Say>
+  <Say language="es-ES" voice="Polly.Conchita-Neural">${responseText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</Say>
+  <Gather input="speech" language="es-ES" timeout="8" speechTimeout="auto" enhanced="true" action="${webhookUrl}" method="POST">
+    <Say language="es-ES" voice="Polly.Conchita-Neural"> </Say>
   </Gather>
-</Response>`
-      : `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Say language="es-ES" voice="Polly.Conchita">${aiResponse}</Say>
-  <Gather input="speech" timeout="5" speechTimeout="auto" action="https://${host}/api/twilio/webhook" method="POST" language="es-ES">
-    <Say language="es-ES" voice="Polly.Conchita">¿En qué más puedo ayudarte?</Say>
-  </Gather>
+  <Say language="es-ES" voice="Polly.Conchita-Neural">Gracias por llamar. Hasta luego.</Say>
 </Response>`
 
     return new NextResponse(twiml, {
       headers: { 
-        'Content-Type': 'text/xml',
-        'Cache-Control': 'no-cache'
+        'Content-Type': 'text/xml; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store'
       }
     })
   } catch(e: any) {
     console.error('Webhook error:', e)
     const fallback = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say language="es-ES" voice="Polly.Conchita">Hola, gracias por llamar. En este momento no podemos atenderte. Por favor, inténtalo de nuevo más tarde.</Say>
+  <Say language="es-ES" voice="Polly.Conchita-Neural">Hola, gracias por llamar. En este momento no podemos atenderte. Por favor inténtalo de nuevo en unos minutos.</Say>
 </Response>`
-    return new NextResponse(fallback, { headers: { 'Content-Type': 'text/xml' } })
+    return new NextResponse(fallback, { headers: { 'Content-Type': 'text/xml; charset=utf-8' } })
   }
 }
