@@ -1,114 +1,244 @@
 'use client'
-export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
-import { supabase, getDemoTenant } from '@/lib/supabase'
-import type { Table } from '@/types'
-
-const STATUS_CFG: Record<string,{label:string;color:string;bg:string}> = {
-  libre:     {label:'Libre',    color:'text-emerald-400', bg:'bg-emerald-500/15 border-emerald-500/25'},
-  reservada: {label:'Reservada',color:'text-blue-400',    bg:'bg-blue-500/15 border-blue-500/25'},
-  ocupada:   {label:'Ocupada',  color:'text-orange-400',  bg:'bg-orange-500/15 border-orange-500/25'},
-  pendiente: {label:'Pendiente',color:'text-amber-400',   bg:'bg-amber-500/15 border-amber-500/25'},
-  bloqueada: {label:'Bloqueada',color:'text-red-400',     bg:'bg-red-500/15 border-red-500/25'},
-}
-const ZONES = ['interior','terraza','barra','privado']
+import { createClient } from '@/lib/supabase'
+import type { Table, Zone, Tenant, Reservation } from '@/types'
 
 export default function MesasPage() {
+  const [tenant, setTenant] = useState<Tenant | null>(null)
+  const [zones, setZones] = useState<Zone[]>([])
   const [tables, setTables] = useState<Table[]>([])
-  const [zone, setZone] = useState('interior')
+  const [reservations, setReservations] = useState<Reservation[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [showAddZone, setShowAddZone] = useState(false)
+  const [showAddTable, setShowAddTable] = useState(false)
+  const [newZone, setNewZone] = useState({ name: '', description: '' })
+  const [newTable, setNewTable] = useState({ name: '', zone_id: '', capacity: 4, combinable: false })
+  const supabase = createClient()
 
-  useEffect(() => {
-    async function load() {
-      const t = await getDemoTenant()
-      if (!t) return
-      const { data } = await supabase.from('tables').select('*').eq('tenant_id', t.id).eq('active', true)
-      setTables(data || [])
-    }
-    load()
-  }, [])
+  useEffect(() => { loadData() }, [selectedDate])
 
-  async function cycleStatus(table: Table) {
-    const cycle: Record<string,string> = { libre:'ocupada', ocupada:'libre', reservada:'ocupada', pendiente:'ocupada', bloqueada:'libre' }
-    const next = cycle[table.status] || 'libre'
-    await supabase.from('tables').update({ status: next }).eq('id', table.id)
-    setTables(prev => prev.map(t => t.id === table.id ? {...t, status: next as any} : t))
+  async function loadData() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
+    if (!profile) return
+    const tenantId = profile.tenant_id
+
+    const [{ data: t }, { data: z }, { data: tb }, { data: r }] = await Promise.all([
+      supabase.from('tenants').select('*').eq('id', tenantId).single(),
+      supabase.from('zones').select('*').eq('tenant_id', tenantId).order('name'),
+      supabase.from('tables').select('*').eq('tenant_id', tenantId).order('name'),
+      supabase.from('reservations').select('*').eq('tenant_id', tenantId)
+        .eq('reservation_date', selectedDate).in('status', ['confirmada', 'pendiente'])
+    ])
+    setTenant(t); setZones(z || []); setTables(tb || []); setReservations(r || [])
+    setLoading(false)
   }
 
-  const zoneTables = tables.filter(t => t.zone === zone)
-  const libre = tables.filter(t => t.status === 'libre').length
-  const ocupada = tables.filter(t => t.status === 'ocupada').length
-  const reservada = tables.filter(t => t.status === 'reservada').length
+  async function addZone() {
+    if (!tenant || !newZone.name) return
+    await supabase.from('zones').insert({ tenant_id: tenant.id, ...newZone, active: true })
+    setNewZone({ name: '', description: '' }); setShowAddZone(false); loadData()
+  }
+
+  async function addTable() {
+    if (!tenant || !newTable.name || !newTable.zone_id) return
+    await supabase.from('tables').insert({ tenant_id: tenant.id, ...newTable, status: 'libre' })
+    setNewTable({ name: '', zone_id: '', capacity: 4, combinable: false }); setShowAddTable(false); loadData()
+  }
+
+  async function updateTableStatus(tableId: string, status: string) {
+    await supabase.from('tables').update({ status }).eq('id', tableId)
+    setTables(prev => prev.map(t => t.id === tableId ? { ...t, status: status as any } : t))
+  }
+
+  async function autoAssignTables() {
+    // Asignación automática: para cada reserva sin mesa, busca la mejor disponible
+    const unassigned = reservations.filter(r => !r.table_id)
+    for (const res of unassigned) {
+      const availableTables = tables.filter(t => {
+        const isOccupied = reservations.some(r2 => r2.table_id === t.id && 
+          r2.reservation_time === res.reservation_time && r2.id !== res.id)
+        return !isOccupied && t.capacity >= res.party_size && t.status !== 'bloqueada'
+      }).sort((a, b) => a.capacity - b.capacity) // Mejor fit primero
+      
+      if (availableTables[0]) {
+        await supabase.from('reservations').update({ table_id: availableTables[0].id, table_name: availableTables[0].name })
+          .eq('id', res.id)
+      }
+    }
+    loadData()
+  }
+
+  const statusColors: Record<string, string> = {
+    libre: 'bg-green-100 border-green-300 text-green-800',
+    reservada: 'bg-blue-100 border-blue-300 text-blue-800',
+    ocupada: 'bg-red-100 border-red-300 text-red-800',
+    bloqueada: 'bg-gray-100 border-gray-300 text-gray-600'
+  }
+  const statusLabels: Record<string, string> = { libre: '✅ Libre', reservada: '📋 Reservada', ocupada: '🔴 Ocupada', bloqueada: '🔒 Bloqueada' }
+
+  if (loading) return <div className="p-8 text-center text-gray-500">Cargando mesas...</div>
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Mesas</h1>
-          <p className="text-white/40 text-sm">{libre} libres · {ocupada} ocupadas · {reservada} reservadas</p>
+          <h1 className="text-2xl font-bold text-gray-900">Gestión de Mesas</h1>
+          <p className="text-gray-500 text-sm mt-0.5">{tables.length} mesas · {zones.length} zonas</p>
         </div>
-        <div className="flex gap-3">
-          {[{k:'libre',v:libre,c:'emerald'},{k:'ocupada',v:ocupada,c:'orange'},{k:'reservada',v:reservada,c:'blue'}].map(s=>(
-            <div key={s.k} className="glass rounded-xl px-4 py-2 text-center">
-              <div className={`text-lg font-bold text-${s.c}-400`}>{s.v}</div>
-              <div className="text-[10px] text-white/30 capitalize">{s.k}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Zone tabs */}
-      <div className="flex gap-1">
-        {ZONES.map(z => (
-          <button key={z} onClick={() => setZone(z)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all
-              ${zone===z ? 'bg-white/12 text-white' : 'text-white/35 hover:text-white/60 hover:bg-white/5'}`}>
-            {z} <span className="text-white/20 ml-1">{tables.filter(t=>t.zone===z).length}</span>
+        <div className="flex items-center gap-3">
+          <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
+            className="border border-gray-300 rounded-xl px-3 py-2 text-sm"/>
+          <button onClick={autoAssignTables} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700 flex items-center gap-2">
+            ✨ Asignación automática
           </button>
-        ))}
+          <button onClick={() => setShowAddZone(true)} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-200">
+            + Zona
+          </button>
+          <button onClick={() => setShowAddTable(true)} className="bg-gray-800 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-900">
+            + Mesa
+          </button>
+        </div>
       </div>
 
-      {/* Mapa de mesas */}
-      <div className="glass rounded-2xl p-6">
-        <div className="relative" style={{height: '420px'}}>
-          {zoneTables.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-white/25 text-sm">Sin mesas en esta zona</div>
-          ) : zoneTables.map(table => {
-            const cfg = STATUS_CFG[table.status] || STATUS_CFG.libre
-            const x = Math.max(20, Math.min(table.position_x || 80, 750))
-            const y = Math.max(20, Math.min(table.position_y || 80, 350))
+      {/* Reservas del día asignadas */}
+      {reservations.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <h2 className="font-semibold text-gray-900 mb-4">Reservas del {new Date(selectedDate + 'T12:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {reservations.map(res => (
+              <div key={res.id} className={`p-4 rounded-xl border ${res.table_id ? 'bg-blue-50 border-blue-200' : 'bg-yellow-50 border-yellow-200'}`}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium text-gray-900">{res.customer_name}</p>
+                    <p className="text-sm text-gray-600">{res.reservation_time?.slice(0,5)} · {res.party_size} pers.</p>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${res.table_id ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {res.table_name || 'Sin mesa'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {reservations.some(r => !r.table_id) && (
+            <p className="text-sm text-yellow-700 mt-3">⚠️ {reservations.filter(r => !r.table_id).length} reserva(s) sin mesa asignada. Usa la asignación automática.</p>
+          )}
+        </div>
+      )}
+
+      {/* Zonas y mesas */}
+      {zones.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+          <p className="text-4xl mb-3">🏪</p>
+          <p className="text-gray-500 font-medium">Configura tu local</p>
+          <p className="text-sm text-gray-400 mt-1">Añade zonas (terraza, interior, barra) y mesas para gestionar la ocupación</p>
+          <button onClick={() => setShowAddZone(true)} className="mt-4 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium">
+            Crear primera zona
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {zones.map(zone => {
+            const zoneTables = tables.filter(t => t.zone_id === zone.id)
+            const libres = zoneTables.filter(t => t.status === 'libre').length
             return (
-              <button key={table.id} onClick={() => cycleStatus(table)}
-                style={{ left: x, top: y, transform: 'translate(-50%,-50%)' }}
-                className={`absolute flex flex-col items-center justify-center rounded-xl border transition-all hover:scale-105 active:scale-95 cursor-pointer
-                  ${table.shape === 'round' ? 'rounded-full' : ''}
-                  ${table.capacity >= 8 ? 'w-24 h-16' : table.capacity >= 6 ? 'w-20 h-14' : 'w-16 h-12'}
-                  ${cfg.bg}`}>
-                <span className={`text-xs font-bold ${cfg.color}`}>{table.number}</span>
-                <span className="text-[9px] text-white/30">{table.capacity} pax</span>
-                <span className={`text-[9px] ${cfg.color} opacity-70`}>{cfg.label}</span>
-              </button>
+              <div key={zone.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{zone.name}</h3>
+                    <p className="text-sm text-gray-500">{zoneTables.length} mesas · {libres} libres</p>
+                  </div>
+                </div>
+                <div className="p-6">
+                  {zoneTables.length === 0 ? (
+                    <p className="text-gray-400 text-sm">No hay mesas en esta zona</p>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                      {zoneTables.map(table => {
+                        const tableRes = reservations.find(r => r.table_id === table.id)
+                        return (
+                          <div key={table.id} className={`rounded-xl border-2 p-3 cursor-pointer transition-all hover:shadow-md ${statusColors[table.status] || statusColors.libre}`}
+                            onClick={() => {
+                              const nextStatus = { libre: 'ocupada', ocupada: 'libre', reservada: 'libre', bloqueada: 'libre' }
+                              updateTableStatus(table.id, nextStatus[table.status as keyof typeof nextStatus] || 'libre')
+                            }}>
+                            <p className="font-bold text-lg text-center">{table.name}</p>
+                            <p className="text-xs text-center opacity-75">{table.capacity} plazas</p>
+                            {tableRes && <p className="text-xs text-center mt-1 truncate">{tableRes.customer_name}</p>}
+                            <p className="text-xs text-center mt-0.5 opacity-60">{statusLabels[table.status]?.split(' ')[0]}</p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             )
           })}
         </div>
-        <p className="text-xs text-white/25 text-center mt-2">Toca una mesa para cambiar su estado</p>
-      </div>
+      )}
 
-      {/* Lista */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {tables.map(table => {
-          const cfg = STATUS_CFG[table.status] || STATUS_CFG.libre
-          return (
-            <div key={table.id} className={`glass rounded-xl p-4 border ${cfg.bg} transition-all`}>
-              <div className="flex items-start justify-between mb-2">
-                <span className="font-bold">{table.number}</span>
-                <span className={`text-[10px] ${cfg.color}`}>{cfg.label}</span>
+      {/* Modal añadir zona */}
+      {showAddZone && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <h3 className="font-bold text-lg mb-4">Nueva zona</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-gray-700">Nombre de la zona</label>
+                <input value={newZone.name} onChange={e => setNewZone({...newZone, name: e.target.value})}
+                  placeholder="Ej: Terraza, Interior, Barra..."
+                  className="w-full mt-1 border border-gray-300 rounded-xl px-3 py-2 text-sm"/>
               </div>
-              <p className="text-xs text-white/30">{table.capacity} personas</p>
-              <p className="text-xs text-white/25 capitalize">{table.zone}</p>
+              <div className="flex gap-2 mt-4">
+                <button onClick={() => setShowAddZone(false)} className="flex-1 border border-gray-300 rounded-xl py-2 text-sm">Cancelar</button>
+                <button onClick={addZone} className="flex-1 bg-indigo-600 text-white rounded-xl py-2 text-sm font-medium">Crear zona</button>
+              </div>
             </div>
-          )
-        })}
-      </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal añadir mesa */}
+      {showAddTable && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <h3 className="font-bold text-lg mb-4">Nueva mesa</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-gray-700">Nombre o número</label>
+                <input value={newTable.name} onChange={e => setNewTable({...newTable, name: e.target.value})}
+                  placeholder="Ej: Mesa 1, T-01..."
+                  className="w-full mt-1 border border-gray-300 rounded-xl px-3 py-2 text-sm"/>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Zona</label>
+                <select value={newTable.zone_id} onChange={e => setNewTable({...newTable, zone_id: e.target.value})}
+                  className="w-full mt-1 border border-gray-300 rounded-xl px-3 py-2 text-sm">
+                  <option value="">Selecciona zona</option>
+                  {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Capacidad (personas)</label>
+                <input type="number" value={newTable.capacity} onChange={e => setNewTable({...newTable, capacity: parseInt(e.target.value)})}
+                  min={1} max={30} className="w-full mt-1 border border-gray-300 rounded-xl px-3 py-2 text-sm"/>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={newTable.combinable} onChange={e => setNewTable({...newTable, combinable: e.target.checked})} className="rounded"/>
+                <span className="text-sm text-gray-700">Se puede combinar con otras mesas</span>
+              </label>
+              <div className="flex gap-2 mt-4">
+                <button onClick={() => setShowAddTable(false)} className="flex-1 border border-gray-300 rounded-xl py-2 text-sm">Cancelar</button>
+                <button onClick={addTable} className="flex-1 bg-indigo-600 text-white rounded-xl py-2 text-sm font-medium">Crear mesa</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
