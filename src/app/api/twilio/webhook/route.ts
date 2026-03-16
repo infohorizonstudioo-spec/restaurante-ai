@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
+function safe(str: string) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-
-function xmlSafe(str: string) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+function twiml(texto: string, webhookUrl: string) {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say language="es-MX">${safe(texto)}</Say>
+  <Gather input="speech" language="es-ES" timeout="8" speechTimeout="auto" action="${webhookUrl}" method="POST">
+  </Gather>
+  <Say language="es-MX">Gracias por llamar. Hasta pronto.</Say>
+</Response>`
 }
 
 export async function POST(req: Request) {
@@ -20,66 +20,50 @@ export async function POST(req: Request) {
 
   try {
     const form = await req.formData()
-    const from = form.get('From') as string || ''
-    const to   = form.get('To')   as string || ''
-    const sid  = form.get('CallSid') as string || ''
     const speech = (form.get('SpeechResult') as string || '').trim()
 
-    // Buscar tenant por teléfono
-    let tenant: any = null
-    try {
-      const { data } = await supabase.from('tenants').select('*').eq('agent_phone', to).maybeSingle()
-      tenant = data
-    } catch(e) {}
-
-    const nombre   = tenant?.agent_name   || 'Recepcionista'
-    const negocio  = tenant?.name         || 'nuestro negocio'
-    const tipo     = tenant?.type         || 'restaurante'
-
-    // Generar respuesta con Claude
-    let texto = `¡Hola! Gracias por llamar a ${negocio}. Soy ${nombre}, su recepcionista virtual. ¿En qué le puedo ayudar?`
-
-    if (speech) {
-      try {
-        const msg = await anthropic.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 100,
-          system: `Eres ${nombre}, recepcionista de ${negocio} (tipo: ${tipo}).
-REGLAS ESTRICTAS:
-- Responde SIEMPRE en español castellano
-- Máximo 2 frases cortas
-- Sé amable y profesional
-- Si piden reserva: pide nombre, fecha, personas`,
-          messages: [{ role: 'user', content: speech }]
-        })
-        texto = msg.content[0].type === 'text' ? msg.content[0].text : texto
-      } catch(e) {
-        console.error('Claude error:', e)
-        texto = 'Entendido. ¿En qué más le puedo ayudar?'
-      }
+    // PRIMERA LLAMADA: respuesta instantánea sin IA
+    if (!speech) {
+      const xml = twiml('Hola, gracias por llamar. Soy tu recepcionista virtual. ¿En qué puedo ayudarte?', webhookUrl)
+      return new NextResponse(xml, { headers: { 'Content-Type': 'text/xml; charset=utf-8' } })
     }
 
-    // TwiML limpio — Polly.Conchita funciona en trial
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Say language="es-ES" voice="Polly.Conchita">${xmlSafe(texto)}</Say>
-  <Gather input="speech" language="es-ES" timeout="10" speechTimeout="auto" action="${webhookUrl}" method="POST">
-  </Gather>
-  <Say language="es-ES" voice="Polly.Conchita">Gracias por llamar a ${xmlSafe(negocio)}. ¡Hasta luego!</Say>
-</Response>`
+    // CON SPEECH: llamar Claude con timeout estricto
+    let respuesta = 'Entendido. ¿En qué más le puedo ayudar?'
+    
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 7000)
+    
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'anthropic-version': '2023-06-01',
+          'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 80,
+          system: 'Eres una recepcionista virtual. Responde SIEMPRE en español, en 1 frase corta y amable. Puedes ayudar con reservas, horarios e información general.',
+          messages: [{ role: 'user', content: speech }]
+        })
+      })
+      clearTimeout(timer)
+      const d = await r.json()
+      if (d.content?.[0]?.text) respuesta = d.content[0].text
+    } catch(e) {
+      clearTimeout(timer)
+      console.error('Claude timeout:', e)
+    }
 
-    return new NextResponse(twiml, {
-      headers: { 'Content-Type': 'text/xml; charset=utf-8' }
-    })
+    const xml = twiml(respuesta, webhookUrl)
+    return new NextResponse(xml, { headers: { 'Content-Type': 'text/xml; charset=utf-8' } })
 
-  } catch(e: any) {
+  } catch(e) {
     console.error('Error:', e)
-    return new NextResponse(
-      `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Say language="es-ES" voice="Polly.Conchita">Hola, gracias por llamar. Un momento por favor, inténtelo de nuevo en breve.</Say>
-</Response>`,
-      { headers: { 'Content-Type': 'text/xml; charset=utf-8' } }
-    )
+    const xml = twiml('Hola, gracias por llamar. Un momento por favor.', webhookUrl)
+    return new NextResponse(xml, { headers: { 'Content-Type': 'text/xml; charset=utf-8' } })
   }
 }
