@@ -1,95 +1,113 @@
 'use client'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase'
+import { BUSINESS_TEMPLATES } from '@/types'
+import type { Tenant } from '@/types'
 
-const NAV = [
-  { href: '/dashboard', icon: '⚡', label: 'Centro de Mando', badge: null },
-  { href: '/pedidos',   icon: '🧾', label: 'Pedidos',         badge: 'pedidos' },
-  { href: '/reservas',  icon: '📅', label: 'Reservas',        badge: 'reservas' },
-  { href: '/llamadas',  icon: '📞', label: 'Llamadas',        badge: 'llamadas' },
-  { href: '/mesas',     icon: '🪑', label: 'Mesas',           badge: null },
-  { href: '/entregas',  icon: '🛵', label: 'Entregas',        badge: 'entregas' },
-  { href: '/clientes',  icon: '👥', label: 'Clientes',        badge: null },
-  { href: '/agenda',    icon: '🗓️', label: 'Agenda',          badge: null },
-  { href: '/alertas',   icon: '🔔', label: 'Alertas',         badge: 'alertas' },
-]
+const ALL_MODULES: Record<string, { icon: string; label: string; href: string }> = {
+  resumen: { icon: '🏠', label: 'Inicio', href: '/panel' },
+  reservas: { icon: '📅', label: 'Reservas', href: '/panel/reservas' },
+  citas: { icon: '📅', label: 'Citas', href: '/panel/reservas' },
+  mesas: { icon: '🪑', label: 'Mesas', href: '/panel/mesas' },
+  pedidos: { icon: '📦', label: 'Pedidos', href: '/panel/pedidos' },
+  agenda: { icon: '🗓️', label: 'Agenda', href: '/panel/agenda' },
+  clientes: { icon: '👥', label: 'Clientes', href: '/panel/clientes' },
+  pacientes: { icon: '🏥', label: 'Pacientes', href: '/panel/clientes' },
+  conversaciones: { icon: '💬', label: 'Llamadas', href: '/panel/llamadas' },
+  seguimientos: { icon: '🔔', label: 'Seguimientos', href: '/panel/llamadas' },
+  oportunidades: { icon: '⭐', label: 'Oportunidades', href: '/panel/clientes' },
+}
 
-export function Sidebar({ counts }: { counts: Record<string, number> }) {
-  const path = usePathname()
-  const [time, setTime] = useState('')
+export default function Sidebar() {
+  const [tenant, setTenant] = useState<Tenant | null>(null)
+  const [collapsed, setCollapsed] = useState(false)
+  const supabase = createClient()
 
   useEffect(() => {
-    const tick = () => setTime(new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
-    tick(); const t = setInterval(tick, 1000); return () => clearInterval(t)
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
+      if (!profile?.tenant_id) return
+      const { data: t } = await supabase.from('tenants').select('*').eq('id', profile.tenant_id).single()
+      setTenant(t)
+    }
+    load()
   }, [])
 
+  const template = tenant ? BUSINESS_TEMPLATES[tenant.type as keyof typeof BUSINESS_TEMPLATES] || BUSINESS_TEMPLATES.otro : BUSINESS_TEMPLATES.otro
+  const modules = template.modules.map(m => ALL_MODULES[m]).filter(Boolean)
+  const path = typeof window !== 'undefined' ? window.location.pathname : ''
+
+  async function signOut() {
+    await supabase.auth.signOut()
+    window.location.href = '/login'
+  }
+
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-56 bg-[#0f0f12] border-r border-white/5 flex flex-col z-50">
+    <aside className={`${collapsed ? 'w-16' : 'w-64'} flex-shrink-0 bg-white border-r border-gray-200 flex flex-col h-screen sticky top-0 transition-all duration-200`}>
       {/* Logo */}
-      <div className="px-4 py-4 border-b border-white/5">
-        <div className="flex items-center gap-2.5 mb-1">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center text-sm font-black shadow-lg shadow-violet-500/20">R</div>
+      <div className="flex items-center justify-between px-4 py-5 border-b border-gray-100">
+        {!collapsed && (
           <div>
-            <div className="font-black text-sm tracking-tight">RESERVO<span className="text-violet-400">.AI</span></div>
-            <div className="text-[10px] text-white/25">La Bahía · En vivo</div>
+            <p className="font-bold text-indigo-600 text-lg">Reservo.AI</p>
+            {tenant && <p className="text-xs text-gray-500 truncate max-w-[150px]">{tenant.name}</p>}
           </div>
-        </div>
-        <div className="flex items-center gap-1.5 mt-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"/>
-          <span className="text-[10px] font-mono text-white/30">{time}</span>
-        </div>
+        )}
+        <button onClick={() => setCollapsed(!collapsed)} className="text-gray-400 hover:text-gray-600 p-1">
+          {collapsed ? '→' : '←'}
+        </button>
       </div>
 
-      {/* KPIs rápidos */}
-      <div className="grid grid-cols-2 gap-1 p-2 border-b border-white/5">
-        {[
-          { label: 'Pedidos', val: counts.pedidos || 0, color: 'text-orange-400' },
-          { label: 'Reservas', val: counts.reservas || 0, color: 'text-blue-400' },
-          { label: 'Llamadas', val: counts.llamadas || 0, color: 'text-violet-400' },
-          { label: 'Alertas', val: counts.alertas || 0, color: 'text-red-400' },
-        ].map(k => (
-          <div key={k.label} className="bg-white/[0.03] rounded-lg px-2 py-1.5 text-center">
-            <div className={`text-lg font-black ${k.color}`}>{k.val}</div>
-            <div className="text-[9px] text-white/30 uppercase tracking-wider">{k.label}</div>
+      {/* Tipo de negocio */}
+      {!collapsed && tenant && (
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+            <span className="text-lg">{template.icon}</span>
+            <span className="text-xs font-medium text-gray-600 truncate">{template.label}</span>
           </div>
-        ))}
-      </div>
+          {tenant.plan === 'trial' && (
+            <div className="mt-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-center">
+              <p className="text-xs text-amber-700">
+                <span className="font-bold">{Math.max(0, (tenant.free_calls_limit || 10) - (tenant.free_calls_used || 0))}</span> llamadas gratis restantes
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Nav */}
-      <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto">
-        {NAV.map(item => {
-          const active = path === item.href || (item.href !== '/dashboard' && path.startsWith(item.href))
-          const count = item.badge ? (counts[item.badge] || 0) : 0
+      {/* Navegación */}
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {modules.map(mod => {
+          const isActive = path === mod.href || (mod.href !== '/panel' && path.startsWith(mod.href))
           return (
-            <Link key={item.href} href={item.href}
-              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group
-                ${active ? 'bg-violet-500/15 text-violet-300 border border-violet-500/20' : 'text-white/40 hover:text-white/80 hover:bg-white/5 border border-transparent'}`}>
-              <span className="text-base">{item.icon}</span>
-              <span className="flex-1">{item.label}</span>
-              {count > 0 && (
-                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center
-                  ${active ? 'bg-violet-400 text-violet-900' : 'bg-white/10 text-white/60'}`}>
-                  {count}
-                </span>
-              )}
-            </Link>
+            <a key={mod.href + mod.label} href={mod.href}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}>
+              <span className="text-lg shrink-0">{mod.icon}</span>
+              {!collapsed && <span>{mod.label}</span>}
+            </a>
           )
         })}
+        
+        {/* Separador */}
+        <div className="border-t border-gray-100 my-2"/>
+        
+        <a href="/configuracion" className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all ${path === '/configuracion' ? 'bg-indigo-50 text-indigo-700' : ''}`}>
+          <span className="text-lg shrink-0">⚙️</span>
+          {!collapsed && <span>Configuración</span>}
+        </a>
+        <a href="/precios" className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all ${path === '/precios' ? 'bg-indigo-50 text-indigo-700' : ''}`}>
+          <span className="text-lg shrink-0">💳</span>
+          {!collapsed && <span>Planes</span>}
+        </a>
       </nav>
 
-      {/* Bottom */}
-      <div className="p-2 border-t border-white/5 space-y-1">
-        <Link href="/ajustes" className="flex items-center gap-2 px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/5 rounded-lg transition-all">
-          <span>⚙️</span> Ajustes
-        </Link>
-        <div className="flex items-center gap-2 px-3 py-1.5">
-          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-[10px] font-bold">A</div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[11px] font-medium text-white/60 truncate">Admin</div>
-            <div className="text-[9px] text-white/25">Encargado</div>
-          </div>
-        </div>
+      {/* Footer */}
+      <div className="border-t border-gray-100 p-3">
+        <button onClick={signOut} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-500 hover:bg-gray-50 hover:text-red-600 transition-all w-full">
+          <span className="text-lg">🚪</span>
+          {!collapsed && <span>Cerrar sesión</span>}
+        </button>
       </div>
     </aside>
   )
