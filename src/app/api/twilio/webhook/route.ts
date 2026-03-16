@@ -1,43 +1,43 @@
 import { NextResponse } from 'next/server'
 
-function safe(str: string) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-}
+const VOZ = 'Polly.Conchita'
+const LANG = 'es-ES'
 
-function twiml(texto: string, webhookUrl: string) {
+function xml(texto: string, url: string) {
+  const t = texto.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say language="es-MX">${safe(texto)}</Say>
-  <Gather input="speech" language="es-ES" timeout="8" speechTimeout="auto" action="${webhookUrl}" method="POST">
+  <Say voice="${VOZ}" language="${LANG}">${t}</Say>
+  <Gather input="speech" language="${LANG}" timeout="10" speechTimeout="auto" action="${url}" method="POST">
+    <Say voice="${VOZ}" language="${LANG}">Le escucho.</Say>
   </Gather>
-  <Say language="es-MX">Gracias por llamar. Hasta pronto.</Say>
+  <Say voice="${VOZ}" language="${LANG}">No le he podido escuchar. Llámenos de nuevo. Hasta luego.</Say>
 </Response>`
 }
 
 export async function POST(req: Request) {
   const host = req.headers.get('host') || 'restaurante-ai.vercel.app'
-  const webhookUrl = `https://${host}/api/twilio/webhook`
+  const url = `https://${host}/api/twilio/webhook`
 
   try {
     const form = await req.formData()
     const speech = (form.get('SpeechResult') as string || '').trim()
 
-    // PRIMERA LLAMADA: respuesta instantánea sin IA
+    // Sin speech = primera llamada, respuesta instantánea
     if (!speech) {
-      const xml = twiml('Hola, gracias por llamar. Soy tu recepcionista virtual. ¿En qué puedo ayudarte?', webhookUrl)
-      return new NextResponse(xml, { headers: { 'Content-Type': 'text/xml; charset=utf-8' } })
+      return new NextResponse(
+        xml('Hola, gracias por llamar. Soy su recepcionista virtual. ¿En qué puedo ayudarle?', url),
+        { headers: { 'Content-Type': 'text/xml; charset=utf-8' } }
+      )
     }
 
-    // CON SPEECH: llamar Claude con timeout estricto
-    let respuesta = 'Entendido. ¿En qué más le puedo ayudar?'
-    
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 7000)
-    
+    // Con speech: Claude Haiku con timeout
+    let respuesta = 'Entendido, ¿en qué más puedo ayudarle?'
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), 6000)
     try {
       const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        signal: controller.signal,
+        method: 'POST', signal: ctrl.signal,
         headers: {
           'anthropic-version': '2023-06-01',
           'x-api-key': process.env.ANTHROPIC_API_KEY || '',
@@ -46,24 +46,25 @@ export async function POST(req: Request) {
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 80,
-          system: 'Eres una recepcionista virtual. Responde SIEMPRE en español, en 1 frase corta y amable. Puedes ayudar con reservas, horarios e información general.',
+          system: 'Eres una recepcionista española. Responde SIEMPRE en español, en máximo 2 frases cortas y amables. Puedes ayudar con reservas, horarios e información general del negocio.',
           messages: [{ role: 'user', content: speech }]
         })
       })
-      clearTimeout(timer)
+      clearTimeout(t)
       const d = await r.json()
       if (d.content?.[0]?.text) respuesta = d.content[0].text
     } catch(e) {
-      clearTimeout(timer)
-      console.error('Claude timeout:', e)
+      clearTimeout(t)
     }
 
-    const xml = twiml(respuesta, webhookUrl)
-    return new NextResponse(xml, { headers: { 'Content-Type': 'text/xml; charset=utf-8' } })
-
+    return new NextResponse(
+      xml(respuesta, url),
+      { headers: { 'Content-Type': 'text/xml; charset=utf-8' } }
+    )
   } catch(e) {
-    console.error('Error:', e)
-    const xml = twiml('Hola, gracias por llamar. Un momento por favor.', webhookUrl)
-    return new NextResponse(xml, { headers: { 'Content-Type': 'text/xml; charset=utf-8' } })
+    return new NextResponse(
+      xml('Hola, un momento por favor, inténtelo de nuevo en breve.', url),
+      { headers: { 'Content-Type': 'text/xml; charset=utf-8' } }
+    )
   }
 }
