@@ -1,226 +1,119 @@
 'use client'
-export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
-import { supabase, getDemoTenant } from '@/lib/supabase'
-import type { Reservation } from '@/types'
-
-const STATUS_CFG: Record<string,{label:string;cls:string}> = {
-  pendiente:  {label:'Pendiente',  cls:'bg-amber-500/15 text-amber-400 border-amber-500/25'},
-  confirmada: {label:'Confirmada', cls:'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'},
-  sentada:    {label:'Sentada',    cls:'bg-blue-500/15 text-blue-400 border-blue-500/25'},
-  completada: {label:'Completada', cls:'bg-white/8 text-white/30 border-white/10'},
-  cancelada:  {label:'Cancelada',  cls:'bg-red-500/15 text-red-400 border-red-500/25'},
-  no_show:    {label:'No show',    cls:'bg-red-500/15 text-red-400 border-red-500/25'},
-}
-const STATUS_OPTS = ['todos','pendiente','confirmada','sentada','completada','cancelada']
-const ZONAS = ['interior','terraza','barra','privado']
-const FORM_FIELDS = [
-  {l:'Nombre *',k:'customer_name',t:'text',s:2},
-  {l:'Teléfono',k:'customer_phone',t:'tel',s:1},
-  {l:'Personas',k:'people',t:'number',s:1},
-  {l:'Fecha',k:'date',t:'date',s:1},
-  {l:'Hora',k:'time',t:'time',s:1},
-  {l:'Notas',k:'notes',t:'text',s:2},
-  {l:'Alergias',k:'allergies',t:'text',s:2},
-] as const
-
-const defaultForm = () => ({
-  customer_name:'', customer_phone:'',
-  date: new Date().toISOString().split('T')[0],
-  time:'13:00', people:'2', zone:'interior', notes:'', allergies:''
-})
+import { supabase } from '@/lib/supabase'
+import { BUSINESS_TEMPLATES } from '@/types'
+import type { Reservation, Tenant, Table, Zone } from '@/types'
 
 export default function ReservasPage() {
+  const [tenant, setTenant] = useState<Tenant | null>(null)
   const [reservations, setReservations] = useState<Reservation[]>([])
-  const [filter, setFilter] = useState('todos')
-  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0])
-  const [tenantId, setTenantId] = useState('')
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState(defaultForm())
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [tables, setTables] = useState<Table[]>([])
+  const [zones, setZones] = useState<Zone[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [showAdd, setShowAdd] = useState(false)
+  const [form, setForm] = useState({ customer_name: '', customer_phone: '', reservation_date: new Date().toISOString().split('T')[0], reservation_time: '13:00', party_size: 2, table_id: '', notes: '', status: 'confirmada' })
 
-  useEffect(() => {
-    async function load() {
-      const t = await getDemoTenant()
-      if (!t) return
-      setTenantId(t.id)
-      const { data } = await supabase.from('reservations').select('*').eq('tenant_id', t.id).order('date').order('time')
-      setReservations(data || [])
-    }
-    load()
+  useEffect(() => { loadData() }, [selectedDate])
 
-    // Realtime
-    const sub = supabase.channel('reservas-page')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reservations' }, payload => {
-        setReservations(prev => [...prev, payload.new as Reservation].sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)))
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'reservations' }, payload => {
-        setReservations(prev => prev.map(r => r.id === payload.new.id ? payload.new as Reservation : r))
-      })
-      .subscribe()
-    return () => { supabase.removeChannel(sub) }
-  }, [])
-
-  async function updateStatus(id: string, status: string) {
-    const { error } = await supabase.from('reservations').update({ status, updated_at: new Date().toISOString() }).eq('id', id)
-    if (!error) setReservations(prev => prev.map(r => r.id === id ? {...r, status: status as any} : r))
+  async function loadData() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
+    if (!profile) return
+    const tid = (profile as any).tenant_id
+    const [{ data: t }, { data: r }, { data: tb }, { data: z }] = await Promise.all([
+      supabase.from('tenants').select('*').eq('id', tid).single(),
+      supabase.from('reservations').select('*').eq('tenant_id', tid).eq('reservation_date', selectedDate).order('reservation_time'),
+      supabase.from('tables').select('*').eq('tenant_id', tid),
+      supabase.from('zones').select('*').eq('tenant_id', tid)
+    ])
+    setTenant(t); setReservations(r || []); setTables(tb || []); setZones(z || [])
+    setLoading(false)
   }
 
   async function createReservation() {
-    if (!tenantId) { setError('Error: negocio no cargado'); return }
-    if (!form.customer_name.trim()) { setError('El nombre es obligatorio'); return }
-    if (!form.date || !form.time) { setError('Fecha y hora son obligatorias'); return }
-    setSaving(true)
-    setError('')
-    const { data, error: err } = await supabase.from('reservations').insert({
-      tenant_id: tenantId,
-      customer_name: form.customer_name.trim(),
-      customer_phone: form.customer_phone.trim() || null,
-      date: form.date,
-      time: form.time,
-      people: parseInt(form.people) || 2,
-      zone: form.zone,
-      notes: form.notes.trim() || null,
-      allergies: form.allergies.trim() || null,
-      status: 'pendiente',
-      source: 'manual'
-    }).select().single()
-    setSaving(false)
-    if (err) { setError('Error al guardar: ' + err.message); return }
-    if (data) {
-      setReservations(prev => [...prev, data as Reservation].sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)))
-      setShowForm(false)
-      setForm(defaultForm())
-    }
+    if (!tenant || !form.customer_name || !form.reservation_date || !form.reservation_time) return
+    const tableData = form.table_id ? tables.find(t => t.id === form.table_id) : null
+    await supabase.from('reservations').insert({ tenant_id: tenant.id, ...form, party_size: parseInt(form.party_size as any), table_name: tableData?.name, source: 'manual' })
+    setShowAdd(false); loadData()
   }
 
-  const filtered = reservations.filter(r =>
-    (filter === 'todos' || r.status === filter) &&
-    (!dateFilter || r.date === dateFilter)
-  )
-  const today = new Date().toISOString().split('T')[0]
-  const todayCount = reservations.filter(r => r.date === today).length
-  const tom = new Date(); tom.setDate(tom.getDate()+1)
-  const tomorrowCount = reservations.filter(r => r.date === tom.toISOString().split('T')[0]).length
+  async function updateStatus(id: string, status: string) {
+    await supabase.from('reservations').update({ status }).eq('id', id)
+    setReservations(prev => prev.map(r => r.id === id ? { ...r, status: status as any } : r))
+  }
+
+  const template = tenant ? BUSINESS_TEMPLATES[tenant.type] || BUSINESS_TEMPLATES.otro : BUSINESS_TEMPLATES.otro
+  const unit = template.reservationUnit === 'mesa' ? 'reserva' : 'cita'
+  const sc: Record<string,string> = { confirmada:'bg-green-100 text-green-700', pendiente:'bg-yellow-100 text-yellow-700', cancelada:'bg-red-100 text-red-700', completada:'bg-gray-100 text-gray-700' }
+
+  if (loading) return <div className="p-8 text-center text-gray-500">Cargando...</div>
 
   return (
-    <div className="p-6 space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Reservas</h1>
-          <p className="text-white/40 text-sm">{todayCount} hoy · {tomorrowCount} mañana · {reservations.length} total</p>
-        </div>
-        <button onClick={() => { setShowForm(true); setError(''); setForm(defaultForm()) }}
-          className="bg-violet-600 hover:bg-violet-500 text-white font-medium px-4 py-2.5 rounded-xl text-sm transition-all active:scale-95">
-          + Nueva reserva
-        </button>
-      </div>
-
-      {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-3">
-        <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)}
-          className="glass rounded-xl px-3 py-2 text-sm text-white/70 bg-transparent focus:outline-none focus:border-violet-500/50"/>
-        <button onClick={() => setDateFilter('')} className="text-xs text-white/30 hover:text-white/60">Ver todas</button>
-        <div className="flex gap-1 flex-wrap">
-          {STATUS_OPTS.map(s => (
-            <button key={s} onClick={() => setFilter(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-                ${filter===s ? 'bg-white/12 text-white' : 'text-white/35 hover:text-white/60 hover:bg-white/5'}`}>
-              {s === 'todos' ? 'Todos' : STATUS_CFG[s]?.label}
-              <span className="ml-1.5 text-white/25">{s==='todos'?reservations.length:reservations.filter(r=>r.status===s).length}</span>
-            </button>
-          ))}
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div><h1 className="text-2xl font-bold">{template.reservationUnit === 'mesa' ? 'Reservas' : 'Citas'}</h1><p className="text-sm text-gray-500">{reservations.length} para {new Date(selectedDate + 'T12:00').toLocaleDateString('es-ES')}</p></div>
+        <div className="flex items-center gap-3">
+          <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="border border-gray-300 rounded-xl px-3 py-2 text-sm"/>
+          <button onClick={() => setShowAdd(true)} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700">+ Nueva {unit}</button>
         </div>
       </div>
-
-      {/* Tabla */}
-      <div className="glass rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/[0.06]">
-                {['Fecha','Hora','Cliente','Pers.','Zona','Notas','Estado','Acciones'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs text-white/30 font-medium whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.04]">
-              {filtered.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-16 text-white/25 text-sm">Sin reservas</td></tr>
-              ) : filtered.map(r => (
-                <tr key={r.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="px-4 py-3.5 text-xs text-white/40 font-mono whitespace-nowrap">{r.date}</td>
-                  <td className="px-4 py-3.5 font-mono text-sm text-white/60 whitespace-nowrap">{r.time.slice(0,5)}</td>
-                  <td className="px-4 py-3.5">
-                    <p className="text-sm font-medium whitespace-nowrap">{r.customer_name}</p>
-                    {r.customer_phone && <p className="text-xs text-white/30">{r.customer_phone}</p>}
-                  </td>
-                  <td className="px-4 py-3.5 text-sm text-center">{r.people}</td>
-                  <td className="px-4 py-3.5 text-sm text-white/50 capitalize whitespace-nowrap">{r.zone}</td>
-                  <td className="px-4 py-3.5 max-w-[160px]">
-                    {r.notes && <p className="text-xs text-white/50 truncate">{r.notes}</p>}
-                    {r.allergies && <p className="text-xs text-amber-400 mt-0.5">⚠ {r.allergies}</p>}
-                  </td>
-                  <td className="px-4 py-3.5 whitespace-nowrap">
-                    <span className={`text-xs px-2.5 py-1 rounded-full border ${STATUS_CFG[r.status]?.cls||'bg-white/10 text-white/40 border-white/10'}`}>
-                      {STATUS_CFG[r.status]?.label||r.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex gap-1">
-                      {r.status==='pendiente' && <button onClick={()=>updateStatus(r.id,'confirmada')} className="text-xs px-2.5 py-1 bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 rounded-lg hover:bg-emerald-500/25 transition-all whitespace-nowrap">Confirmar</button>}
-                      {r.status==='confirmada' && <button onClick={()=>updateStatus(r.id,'sentada')} className="text-xs px-2.5 py-1 bg-blue-500/15 text-blue-400 border border-blue-500/25 rounded-lg hover:bg-blue-500/25 transition-all">Sentar</button>}
-                      {r.status==='sentada' && <button onClick={()=>updateStatus(r.id,'completada')} className="text-xs px-2.5 py-1 bg-white/10 text-white/50 border border-white/15 rounded-lg hover:bg-white/15 transition-all">Completar</button>}
-                      {!['completada','cancelada','no_show'].includes(r.status) && <button onClick={()=>updateStatus(r.id,'cancelada')} className="text-xs px-2 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-all">✕</button>}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {reservations.length === 0 ? (
+        <div className="bg-white rounded-2xl border p-12 text-center">
+          <p className="text-4xl mb-3">{template.reservationUnit === 'mesa' ? '🪑' : '📅'}</p>
+          <p className="text-gray-500">No hay {unit}s para este día</p>
+          <button onClick={() => setShowAdd(true)} className="mt-4 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium">Crear {unit}</button>
         </div>
-      </div>
-
-      {/* Modal nueva reserva */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={e => { if (e.target === e.currentTarget) setShowForm(false) }}>
-          <div className="glass rounded-2xl p-6 w-full max-w-lg space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-bold text-lg">Nueva Reserva</h2>
-              <button onClick={() => setShowForm(false)} className="text-white/30 hover:text-white/60 text-xl leading-none">✕</button>
-            </div>
-            {error && <div className="bg-red-500/15 border border-red-500/30 text-red-300 text-xs px-3 py-2 rounded-xl">{error}</div>}
-            <div className="grid grid-cols-2 gap-3">
-              {FORM_FIELDS.map(f => (
-                <div key={f.k} className={f.s === 2 ? 'col-span-2' : ''}>
-                  <label className="text-xs text-white/40 mb-1.5 block">{f.l}</label>
-                  <input type={f.t}
-                    value={(form as any)[f.k]}
-                    onChange={e => setForm(p => ({...p, [f.k]: e.target.value}))}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all"/>
+      ) : (
+        <div className="bg-white rounded-2xl border overflow-hidden">
+          {reservations.map(res => (
+            <div key={res.id} className="flex items-center justify-between px-6 py-4 border-b last:border-0 hover:bg-gray-50">
+              <div className="flex items-center gap-4">
+                <p className="w-14 text-xl font-mono font-bold">{res.reservation_time?.slice(0,5)}</p>
+                <div>
+                  <p className="font-medium">{res.customer_name}</p>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-sm text-gray-500">👥 {res.party_size} pers.</span>
+                    {res.customer_phone && <span className="text-sm text-gray-500">📱 {res.customer_phone}</span>}
+                    {res.table_name && <span className="text-sm text-gray-500">🪑 {res.table_name}</span>}
+                    {res.source === 'voice_agent' && <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">🤖 IA</span>}
+                  </div>
                 </div>
-              ))}
-              <div className="col-span-2">
-                <label className="text-xs text-white/40 mb-1.5 block">Zona</label>
-                <select value={form.zone} onChange={e => setForm(p => ({...p, zone: e.target.value}))}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-violet-500/60 transition-all">
-                  {ZONAS.map(z => <option key={z} value={z} className="bg-[#111]">{z.charAt(0).toUpperCase()+z.slice(1)}</option>)}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${sc[res.status]||sc.confirmada}`}>{res.status}</span>
+                <select value={res.status} onChange={e => updateStatus(res.id, e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1">
+                  <option value="confirmada">Confirmada</option><option value="pendiente">Pendiente</option><option value="completada">Completada</option><option value="cancelada">Cancelada</option>
                 </select>
               </div>
             </div>
-            <div className="flex gap-3 pt-1">
-              <button onClick={() => setShowForm(false)}
-                className="flex-1 py-2.5 rounded-xl bg-white/5 text-white/60 text-sm hover:bg-white/10 transition-all">
-                Cancelar
-              </button>
-              <button onClick={createReservation} disabled={saving}
-                className="flex-1 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-semibold text-sm transition-all active:scale-95">
-                {saving ? 'Guardando...' : 'Crear reserva'}
-              </button>
+          ))}
+        </div>
+      )}
+      {showAdd && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-lg space-y-3">
+            <h3 className="font-bold text-lg">Nueva {unit}</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-sm font-medium text-gray-700">Nombre *</label><input value={form.customer_name} onChange={e => setForm({...form, customer_name: e.target.value})} className="w-full mt-1 border border-gray-300 rounded-xl px-3 py-2 text-sm"/></div>
+              <div><label className="text-sm font-medium text-gray-700">Teléfono</label><input value={form.customer_phone} onChange={e => setForm({...form, customer_phone: e.target.value})} className="w-full mt-1 border border-gray-300 rounded-xl px-3 py-2 text-sm"/></div>
             </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div><label className="text-sm font-medium text-gray-700">Fecha *</label><input type="date" value={form.reservation_date} onChange={e => setForm({...form, reservation_date: e.target.value})} className="w-full mt-1 border border-gray-300 rounded-xl px-3 py-2 text-sm"/></div>
+              <div><label className="text-sm font-medium text-gray-700">Hora *</label><input type="time" value={form.reservation_time} onChange={e => setForm({...form, reservation_time: e.target.value})} className="w-full mt-1 border border-gray-300 rounded-xl px-3 py-2 text-sm"/></div>
+              <div><label className="text-sm font-medium text-gray-700">Personas</label><input type="number" value={form.party_size} onChange={e => setForm({...form, party_size: parseInt(e.target.value)})} min={1} className="w-full mt-1 border border-gray-300 rounded-xl px-3 py-2 text-sm"/></div>
+            </div>
+            {template.hasTableManagement && tables.length > 0 && (
+              <div><label className="text-sm font-medium text-gray-700">Mesa</label>
+                <select value={form.table_id} onChange={e => setForm({...form, table_id: e.target.value})} className="w-full mt-1 border border-gray-300 rounded-xl px-3 py-2 text-sm">
+                  <option value="">Sin asignar</option>
+                  {zones.map(z => <optgroup key={z.id} label={z.name}>{tables.filter(t => t.zone_id === z.id).map(t => <option key={t.id} value={t.id}>{t.name} ({t.capacity}p)</option>)}</optgroup>)}
+                </select>
+              </div>
+            )}
+            <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} rows={2} placeholder="Notas..." className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm resize-none"/>
+            <div className="flex gap-2"><button onClick={() => setShowAdd(false)} className="flex-1 border border-gray-300 rounded-xl py-2 text-sm">Cancelar</button><button onClick={createReservation} className="flex-1 bg-indigo-600 text-white rounded-xl py-2 text-sm font-medium">Crear {unit}</button></div>
           </div>
         </div>
       )}
