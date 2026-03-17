@@ -4,158 +4,205 @@ import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import Link from 'next/link'
 
-const PD: Record<string,{label:string;calls:number;rate:number;price:number;color:string}> = {
-  free:     {label:'Trial gratuito',calls:10, rate:0,    price:0,  color:'#d97706'},
-  trial:    {label:'Trial gratuito',calls:10, rate:0,    price:0,  color:'#d97706'},
-  starter:  {label:'Starter',       calls:50, rate:0.90, price:99, color:'#1d4ed8'},
-  pro:      {label:'Pro',           calls:200,rate:0.70, price:299,color:'#7c3aed'},
-  business: {label:'Business',      calls:600,rate:0.50, price:499,color:'#059669'},
+const PLAN_INFO:Record<string,{label:string;color:string;bg:string;price:number;calls:number;rate:number}> = {
+  trial:    {label:'Trial',    color:'#d97706',bg:'#fffbeb',price:0,  calls:10, rate:0},
+  free:     {label:'Trial',    color:'#d97706',bg:'#fffbeb',price:0,  calls:10, rate:0},
+  starter:  {label:'Starter',  color:'#1d4ed8',bg:'#eff6ff',price:99, calls:50, rate:0.90},
+  pro:      {label:'Pro',      color:'#7c3aed',bg:'#f5f3ff',price:299,calls:200,rate:0.70},
+  business: {label:'Business', color:'#059669',bg:'#f0fdf4',price:499,calls:600,rate:0.50},
+  enterprise:{label:'Business',color:'#059669',bg:'#f0fdf4',price:499,calls:600,rate:0.50},
 }
 
-export default function FacturacionPage() {
-  const [tenant,setTenant] = useState<any>(null)
+export default function FacturacionPage(){
   const [loading,setLoading] = useState(true)
+  const [billing,setBilling] = useState<any>(null)
+  const [history,setHistory] = useState<any[]>([])
+  const [tid,setTid] = useState<string|null>(null)
+  const [upgrading,setUpgrading] = useState(false)
 
-  useEffect(() => {
-    ;(async () => {
-      const {data:{user}} = await supabase.auth.getUser()
-      if (!user) return
-      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).single()
-      if (!p?.tenant_id) return
-      const {data:t} = await supabase.from('tenants').select('*').eq('id',p.tenant_id).single()
-      setTenant(t); setLoading(false)
+  useEffect(()=>{
+    (async()=>{
+      const {data:{user}} = await supabase.auth.getUser(); if(!user) return
+      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).single(); if(!p?.tenant_id) return
+      setTid(p.tenant_id)
+      // Usar RPC get_billing_summary para datos precisos del backend
+      const {data:b} = await supabase.rpc('get_billing_summary', {p_tenant_id: p.tenant_id})
+      setBilling(b)
+      // Historial billing
+      const {data:h} = await supabase.from('billing_history')
+        .select('*').eq('tenant_id',p.tenant_id).order('cycle_start',{ascending:false}).limit(6)
+      setHistory(h||[])
+      setLoading(false)
     })()
   },[])
 
-  if (loading) return <PageLoader/>
-  if (!tenant) return null
+  async function handleUpgrade(plan:string){
+    if(!tid||upgrading) return
+    setUpgrading(true)
+    try {
+      const {data:{user}} = await supabase.auth.getUser(); if(!user) return
+      const res = await fetch('/api/stripe/checkout', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ plan, tenant_id: tid, user_id: user.id })
+      })
+      const d = await res.json()
+      if (d.url) window.location.href = d.url
+      else alert('Error: '+d.error)
+    } catch(e:any) { alert('Error: '+e.message) }
+    finally { setUpgrading(false) }
+  }
 
-  const plan     = tenant.plan || 'free'
-  const pd       = PD[plan] || PD.free
-  const isTrial  = plan === 'free' || plan === 'trial'
-  const used     = isTrial ? (tenant.free_calls_used||0) : (tenant.plan_calls_used||0)
-  const included = isTrial ? (tenant.free_calls_limit||10) : (tenant.plan_calls_included||pd.calls)
-  const extra    = Math.max(0, used - included)
-  const extraCost = +(extra * pd.rate).toFixed(2)
-  const remaining = Math.max(0, included - used)
-  const pct      = Math.min(100, Math.round((used/included)*100))
-  const periodStart = tenant.plan_period_start
-    ? new Date(tenant.plan_period_start).toLocaleDateString('es-ES',{day:'numeric',month:'long'})
-    : null
+  if(loading) return <PageLoader/>
+  if(!billing) return null
 
-  const barColor = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : pd.color
+  const pi = PLAN_INFO[billing.plan] || PLAN_INFO.trial
+  const isTrial = billing.is_trial
+  const usedPct = billing.included_calls > 0 ? Math.min(100, Math.round((billing.used_calls/billing.included_calls)*100)) : 0
+  const hasExtra = billing.extra_calls > 0
+  const extraCost = (billing.estimated_extra_cost||0).toFixed(2)
+  const totalEstimated = (pi.price + parseFloat(extraCost)).toFixed(2)
+  const renewDate = billing.billing_cycle_end ? new Date(billing.billing_cycle_end).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}) : null
 
-  return (
-    <div style={{background:'#f8fafc',minHeight:'100vh',fontFamily:"'DM Sans',-apple-system,sans-serif"}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}`}</style>
-
-      <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'16px 28px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-        <div>
-          <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>Uso y facturación</h1>
-          <p style={{fontSize:12,color:'#94a3b8',marginTop:2}}>{tenant.name}</p>
-        </div>
-        <Link href='/precios' style={{padding:'8px 18px',fontSize:13,fontWeight:600,color:'white',background:'linear-gradient(135deg,#1e40af,#3b82f6)',borderRadius:9,textDecoration:'none'}}>
-          {isTrial ? 'Activar plan' : 'Cambiar plan'} →
-        </Link>
+  return(
+    <div style={{background:'#f8fafc',minHeight:'100vh'}}>
+      <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'14px 24px'}}>
+        <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>Facturacion y uso</h1>
+        <p style={{fontSize:12,color:'#94a3b8',marginTop:1}}>Control en tiempo real de tu plan y consumo</p>
       </div>
 
-      <div style={{maxWidth:720,margin:'0 auto',padding:'28px 24px',display:'flex',flexDirection:'column',gap:14}}>
+      <div style={{maxWidth:860,margin:'0 auto',padding:'24px'}}>
 
-        {/* Plan + barra de uso */}
-        <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:14,padding:'22px 24px'}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
-            <div>
-              <p style={{fontSize:11,fontWeight:600,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:4}}>Plan actual</p>
-              <div style={{display:'flex',alignItems:'center',gap:10}}>
-                <div style={{width:10,height:10,borderRadius:'50%',background:pd.color}}/>
-                <p style={{fontSize:20,fontWeight:700,color:'#0f172a'}}>{pd.label}</p>
-                {pd.price > 0 && <p style={{fontSize:14,color:'#64748b'}}>{pd.price}€/mes</p>}
-              </div>
+        {/* PLAN ACTUAL */}
+        <div style={{background:'white',border:'2px solid '+pi.color+'33',borderRadius:16,padding:'20px 24px',marginBottom:16,display:'flex',alignItems:'flex-start',justifyContent:'space-between'}}>
+          <div>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
+              <span style={{fontSize:11,fontWeight:700,padding:'3px 10px',borderRadius:12,background:pi.bg,color:pi.color,textTransform:'uppercase',letterSpacing:'0.05em'}}>{pi.label}</span>
+              <span style={{fontSize:11,padding:'3px 10px',borderRadius:12,background:billing.subscription_status==='active'?'#f0fdf4':'#f8fafc',color:billing.subscription_status==='active'?'#059669':'#94a3b8',fontWeight:600}}>
+                {billing.subscription_status==='active'?'Activo':billing.subscription_status==='past_due'?'Pago pendiente':billing.subscription_status==='cancelled'?'Cancelado':'Sin suscripcion'}
+              </span>
+              {billing.next_plan&&<span style={{fontSize:11,padding:'3px 10px',borderRadius:12,background:'#fffbeb',color:'#d97706',fontWeight:600}}>Cambia a {billing.next_plan} en el prox. ciclo</span>}
             </div>
-            {periodStart && <div style={{textAlign:'right'}}><p style={{fontSize:11,color:'#94a3b8'}}>Ciclo desde</p><p style={{fontSize:13,fontWeight:600,color:'#374151'}}>{periodStart}</p></div>}
+            <p style={{fontSize:28,fontWeight:800,color:'#0f172a',letterSpacing:'-0.025em'}}>{isTrial?'Gratis':pi.price+'€/mes'}</p>
+            <p style={{fontSize:12,color:'#64748b',marginTop:2}}>{pi.calls} llamadas incluidas{!isTrial?' · '+pi.rate+'€ por llamada extra':''}</p>
+            {renewDate&&!isTrial&&<p style={{fontSize:12,color:'#94a3b8',marginTop:4}}>Siguiente factura: {renewDate}</p>}
           </div>
-          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-            <span style={{fontSize:13,color:'#374151'}}>Llamadas usadas</span>
-            <span style={{fontSize:13,fontWeight:700,color:pct>=90?'#dc2626':'#0f172a'}}>{used} / {included}</span>
+          {isTrial&&(
+            <Link href='/precios' style={{padding:'10px 20px',fontSize:13,fontWeight:700,color:'white',background:'linear-gradient(135deg,#1e40af,#3b82f6)',borderRadius:10,textDecoration:'none',whiteSpace:'nowrap'}}>
+              Activar plan
+            </Link>
+          )}
+        </div>
+
+        {/* USO DEL CICLO — LA PARTE CRITICA */}
+        <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:16,padding:'20px 24px',marginBottom:16}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}}>
+            <div>
+              <p style={{fontSize:14,fontWeight:700,color:'#0f172a',marginBottom:2}}>Uso del ciclo actual</p>
+              <p style={{fontSize:12,color:'#94a3b8'}}>{isTrial?'Llamadas del trial':'Ciclo mensual'}</p>
+            </div>
+            <div style={{textAlign:'right'}}>
+              <p style={{fontSize:22,fontWeight:800,color:hasExtra?'#dc2626':pi.color}}>{billing.used_calls} / {billing.included_calls}</p>
+              <p style={{fontSize:11,color:'#94a3b8'}}>llamadas {isTrial?'usadas':'del plan'}</p>
+            </div>
           </div>
-          <div style={{height:10,background:'#f1f5f9',borderRadius:5,overflow:'hidden',marginBottom:10}}>
-            <div style={{height:'100%',width:pct+'%',background:barColor,borderRadius:5,transition:'width 0.5s'}}/>
+
+          {/* Barra de progreso */}
+          <div style={{height:10,background:'#f1f5f9',borderRadius:5,overflow:'hidden',marginBottom:8}}>
+            <div style={{height:'100%',width:usedPct+'%',background:usedPct>=100?'#ef4444':usedPct>=80?'#f59e0b':pi.color,borderRadius:5,transition:'width 0.5s'}}/>
           </div>
           <div style={{display:'flex',justifyContent:'space-between'}}>
-            <span style={{fontSize:12,color:'#64748b'}}>{remaining} llamadas restantes</span>
-            {!isTrial && pd.rate > 0 && <span style={{fontSize:12,color:'#64748b'}}>{pd.rate}€/llamada extra</span>}
+            <span style={{fontSize:11,color:'#94a3b8'}}>{billing.remaining_calls} llamadas restantes</span>
+            <span style={{fontSize:11,color:'#94a3b8'}}>{usedPct}% usado</span>
           </div>
-        </div>
 
-        {/* KPIs */}
-        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
-          {[
-            {label:'Incluidas',value:included,icon:'📋',color:'#1d4ed8'},
-            {label:'Usadas',value:used,icon:'📞',color:used>included?'#dc2626':'#059669'},
-            {label:'Extra',value:extra,icon:'➕',color:extra>0?'#d97706':'#64748b'},
-          ].map(m => (
-            <div key={m.label} style={{background:'white',border:'1px solid #e2e8f0',borderRadius:12,padding:'16px 18px'}}>
-              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
-                <span style={{fontSize:18}}>{m.icon}</span>
-                <p style={{fontSize:11,color:'#94a3b8',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.04em'}}>{m.label}</p>
+          {/* Extra calls */}
+          {hasExtra&&(
+            <div style={{marginTop:16,padding:'12px 16px',background:'#fef2f2',border:'1px solid #fecaca',borderRadius:10}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div>
+                  <p style={{fontSize:13,fontWeight:700,color:'#dc2626'}}>Llamadas extra: {billing.extra_calls}</p>
+                  <p style={{fontSize:11,color:'#ef4444',marginTop:1}}>{pi.rate}€ por llamada adicional</p>
+                </div>
+                <div style={{textAlign:'right'}}>
+                  <p style={{fontSize:18,fontWeight:800,color:'#dc2626'}}>{extraCost}€</p>
+                  <p style={{fontSize:10,color:'#ef4444'}}>coste adicional estimado</p>
+                </div>
               </div>
-              <p style={{fontSize:28,fontWeight:700,color:m.color,letterSpacing:'-0.025em'}}>{m.value}</p>
             </div>
-          ))}
-        </div>
+          )}
 
-        {/* Coste extra — solo planes de pago */}
-        {!isTrial && (
-          <div style={{background:extra>0?'#fffbeb':'#f0fdf4',border:'1px solid',borderColor:extra>0?'#fbbf24':'#86efac',borderRadius:14,padding:'20px 24px'}}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          {/* Total estimado del mes */}
+          {!isTrial&&(
+            <div style={{marginTop:12,padding:'12px 16px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div>
-                <p style={{fontSize:13,fontWeight:600,color:extra>0?'#92400e':'#166534',marginBottom:4}}>
-                  {extra > 0 ? 'Coste adicional estimado este mes' : 'Sin coste adicional este mes'}
-                </p>
-                {extra > 0 && <p style={{fontSize:12,color:'#b45309'}}>{extra} llamadas extra x {pd.rate}€ = <strong>{extraCost}€</strong></p>}
-                {extra === 0 && <p style={{fontSize:12,color:'#166534'}}>Dentro del limite de {included} llamadas incluidas.</p>}
+                <p style={{fontSize:12,color:'#64748b'}}>Suscripcion mensual</p>
+                <p style={{fontSize:12,color:'#64748b',marginTop:2}}>{hasExtra?'+ '+extraCost+' de llamadas extra':''}</p>
               </div>
-              <div style={{fontSize:36,fontWeight:800,color:extra>0?'#d97706':'#059669',letterSpacing:'-0.03em'}}>{extra>0?extraCost+'€':'0€'}</div>
+              <div style={{textAlign:'right'}}>
+                <p style={{fontSize:11,color:'#94a3b8',marginBottom:2}}>Total estimado este mes</p>
+                <p style={{fontSize:22,fontWeight:800,color:'#0f172a'}}>{totalEstimated}€</p>
+              </div>
             </div>
-            {extra > 0 && (
-              <div style={{marginTop:12,padding:'10px 14px',background:'rgba(255,255,255,0.6)',borderRadius:9,fontSize:12,color:'#92400e'}}>
-                Este importe se sumara a tu proxima factura. Coste total estimado: <strong>{(pd.price + extraCost).toFixed(2)}€</strong>
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Trial agotado */}
-        {isTrial && remaining <= 3 && (
-          <div style={{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:14,padding:'20px 24px'}}>
-            <p style={{fontSize:14,fontWeight:700,color:'#dc2626',marginBottom:6}}>
-              {remaining===0 ? 'Trial agotado — el agente no responde llamadas' : 'Solo quedan ' + remaining + ' llamadas gratuitas'}
-            </p>
-            <p style={{fontSize:13,color:'#b91c1c',marginBottom:16,lineHeight:1.5}}>
-              Activa un plan para que tu recepcionista continue sin interrupciones.
-            </p>
-            <Link href='/precios' style={{display:'inline-block',padding:'10px 22px',fontSize:13,fontWeight:700,color:'white',background:'#dc2626',borderRadius:9,textDecoration:'none'}}>
-              Ver planes y precios →
-            </Link>
-          </div>
-        )}
-
-        {/* Detalles del plan */}
-        <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:14,padding:'18px 24px'}}>
-          <p style={{fontSize:13,fontWeight:600,color:'#0f172a',marginBottom:12}}>Detalles del plan</p>
+        {/* METRICAS */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:16}}>
           {[
-            {label:'Plan',value:pd.label},
-            {label:'Precio base',value:pd.price>0?pd.price+'€/mes':'Gratuito'},
-            {label:'Llamadas incluidas',value:included+' /mes'},
-            {label:'Precio por llamada extra',value:pd.rate>0?pd.rate+'€':'N/A'},
-            {label:'Suscripcion Stripe',value:tenant.stripe_subscription_id?'Activa':'—'},
-          ].map(row => (
-            <div key={row.label} style={{display:'flex',justifyContent:'space-between',padding:'9px 0',borderBottom:'1px solid #f1f5f9'}}>
-              <span style={{fontSize:13,color:'#64748b'}}>{row.label}</span>
-              <span style={{fontSize:13,fontWeight:500,color:'#0f172a'}}>{row.value}</span>
+            {label:'Llamadas usadas', value:String(billing.used_calls), sub:'este ciclo', color:pi.color},
+            {label:'Llamadas restantes', value:String(Math.max(0,billing.remaining_calls)), sub:'antes de extras', color:billing.remaining_calls<=10?'#dc2626':'#059669'},
+            {label:'Llamadas extra', value:String(billing.extra_calls||0), sub:billing.extra_calls>0?extraCost+'€ adicional':'sin coste extra', color:billing.extra_calls>0?'#dc2626':'#94a3b8'},
+          ].map(m=>(
+            <div key={m.label} style={{background:'white',border:'1px solid #e2e8f0',borderRadius:12,padding:'14px 16px'}}>
+              <p style={{fontSize:22,fontWeight:700,color:m.color}}>{m.value}</p>
+              <p style={{fontSize:11,fontWeight:600,color:'#374151',marginTop:3}}>{m.label}</p>
+              <p style={{fontSize:10,color:'#94a3b8',marginTop:1}}>{m.sub}</p>
             </div>
           ))}
         </div>
+
+        {/* PLANES — upgrade CTA */}
+        {isTrial&&(
+          <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:16,padding:'20px 24px',marginBottom:16}}>
+            <p style={{fontSize:15,fontWeight:700,color:'#0f172a',marginBottom:16}}>Elige tu plan</p>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
+              {(['starter','pro','business'] as const).map(p=>{
+                const pp = PLAN_INFO[p]
+                return(
+                  <div key={p} style={{border:'1px solid #e2e8f0',borderRadius:12,padding:'16px',textAlign:'center'}}>
+                    <p style={{fontSize:13,fontWeight:700,color:pp.color,marginBottom:4}}>{pp.label}</p>
+                    <p style={{fontSize:22,fontWeight:800,color:'#0f172a',marginBottom:2}}>{pp.price}€<span style={{fontSize:11,color:'#94a3b8'}}>/mes</span></p>
+                    <p style={{fontSize:11,color:'#64748b',marginBottom:12}}>{pp.calls} llamadas incluidas</p>
+                    <button onClick={()=>handleUpgrade(p)} disabled={upgrading} style={{width:'100%',padding:'8px',fontSize:12,fontWeight:700,color:'white',background:'linear-gradient(135deg,#1e40af,#3b82f6)',border:'none',borderRadius:8,cursor:'pointer',opacity:upgrading?0.6:1}}>
+                      {upgrading?'Redirigiendo...':'Activar '+pp.label}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* HISTORIAL */}
+        {history.length>0&&(
+          <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:16,overflow:'hidden'}}>
+            <div style={{padding:'14px 20px',borderBottom:'1px solid #f1f5f9'}}>
+              <p style={{fontSize:14,fontWeight:600,color:'#0f172a'}}>Historial de facturacion</p>
+            </div>
+            {history.map((h,i)=>(
+              <div key={h.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 20px',borderTop:i>0?'1px solid #f8fafc':'none'}}>
+                <div>
+                  <p style={{fontSize:13,fontWeight:500,color:'#0f172a'}}>{new Date(h.cycle_start).toLocaleDateString('es-ES',{month:'long',year:'numeric'})}</p>
+                  <p style={{fontSize:11,color:'#94a3b8'}}>{h.used_calls} llamadas · {h.extra_calls} extra</p>
+                </div>
+                <div style={{textAlign:'right'}}>
+                  <p style={{fontSize:14,fontWeight:700,color:'#0f172a'}}>{h.total_amount}€</p>
+                  <span style={{fontSize:10,padding:'1px 7px',borderRadius:8,background:h.status==='paid'?'#f0fdf4':'#f8fafc',color:h.status==='paid'?'#059669':'#94a3b8',fontWeight:600}}>{h.status==='paid'?'Pagado':'Pendiente'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
