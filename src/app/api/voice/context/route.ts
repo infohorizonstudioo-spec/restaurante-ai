@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { BUSINESS_TEMPLATES } from '@/types'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,218 +7,105 @@ const admin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
-const PLAN_LIMITS: Record<string, number> = {
-  free: 10, trial: 10, starter: 50, pro: 200, business: 600,
-}
-
-async function buildContext(tenant: any): Promise<string> {
-  const tid   = tenant.id
-  const today = new Date().toISOString().split('T')[0]
-  const now   = new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' })
-  const day   = new Date().toLocaleDateString('es-ES', { weekday:'long' })
-
-  // Usa el systemPrompt de la plantilla del tipo de negocio
-  const tmpl = (BUSINESS_TEMPLATES as any)[tenant.type] || (BUSINESS_TEMPLATES as any).otro
-  const basePrompt = tmpl?.agentSystemPrompt || 'Gestiona citas y reservas.'
-
-  const [{ data: zones }, { data: tables }, { data: reservasHoy }] = await Promise.all([
-    admin.from('zones').select('id,name,description').eq('tenant_id', tid).eq('active', true),
-    admin.from('tables').select('id,name,capacity,zone_id,notes').eq('tenant_id', tid),
-    admin.from('reservations').select('table_id,zone_id,reservation_time')
-      .eq('tenant_id', tid).eq('date', today).in('status', ['confirmada','pendiente']),
-  ])
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://restaurante-ai.vercel.app'
-
-  let zoneCtx = ''
-  if (zones?.length && tables?.length) {
-    const reservedIds = new Set((reservasHoy||[]).map(r => r.table_id).filter(Boolean))
-    zoneCtx = '\nDISPOSICIÃN DEL LOCAL HOY:\n'
-    for (const z of zones!) {
-      const mesas = (tables||[]).filter(m => (m.zone_id||m.zone) === z.id)
-      const libres = mesas.filter(m => !reservedIds.has(m.id))
-      zoneCtx += `${z.name}${z.description ? ' (' + z.description + ')' : ''}: ${libres.length}/${mesas.length} libres\n`
-      libres.forEach(m => { zoneCtx += `  Mesa ${m.name} ${m.capacity}p${m.notes ? ' â ' + m.notes : ''}\n` })
-    }
-    zoneCtx += 'â Si el cliente pide zona especÃ­fica, asigna mesa libre en esa zona. Si no hay, ofrece alternativa inmediata.\n'
-    zoneCtx += 'â Siempre incluir zone_preference en create_reservation.\n'
-  } else if (tables?.length) {
-    // Mesas sin zonas â asignaciÃ³n sin zona
-    const reservedIds = new Set((reservasHoy||[]).map(r => r.table_id).filter(Boolean))
-    const libres = tables.filter(m => !reservedIds.has(m.id))
-    zoneCtx = `\nMESAS DISPONIBLES HOY: ${libres.length}/${tables.length}\n`
-    libres.slice(0,5).forEach(m => { zoneCtx += `  Mesa ${m.name} (${m.capacity} personas)\n` })
-  }
-
-  const hours = tenant.business_hours?.[day.toLowerCase()]
-  const horario = hours?.closed ? 'CERRADO HOY' : hours ? `${hours.open}â${hours.close}` : 'sin horario'
-
-  return `Eres ${tenant.agent_name || 'SofÃ­a'}, recepcionista de ${tenant.name}. NUNCA digas que eres IA o robot.
-Idioma: ${tenant.language === 'ca' ? 'catalÃ¡n' : tenant.language === 'eu' ? 'euskera' : 'espaÃ±ol'}.
-Hoy: ${day} ${today}, ${now}. Horario: ${horario}.
-Tenant ID (para herramientas): ${tid}.
-
-ROL: ${basePrompt}
-${zoneCtx}
-REGLAS CRÃTICAS:
-1. Respuestas â¤2 frases, naturales.
-2. Cuando confirmes TODOS los datos, usa create_reservation INMEDIATAMENTE.
-3. Para restaurante/bar: asigna mesa automÃ¡ticamente segÃºn disponibilidad y preferencia.
-4. Confirma siempre: nombre, fecha, hora, personas${zones?.length ? ' y zona/mesa' : ''}.
-5. Si el negocio estÃ¡ cerrado hoy, indÃ­calo y ofrece otra fecha.`
+const BUSINESS_CONTEXT: Record<string, string> = {
+  restaurante: 'Eres la recepcionista del restaurante. Gestiona reservas de mesa con amabilidad. Pregunta: nombre, fecha, hora, personas y zona preferida (Interior o Terraza). Confirma siempre los datos antes de crear la reserva.',
+  hotel: 'Eres la recepcionista del hotel. Gestiona reservas de habitacion. Pregunta: nombre, fecha de entrada, fecha de salida, tipo de habitacion y numero de huespedes.',
+  clinica: 'Eres la recepcionista de la clinica. Gestiona citas medicas. Pregunta: nombre del paciente, fecha y hora deseada, tipo de consulta y motivo.',
+  otro: 'Eres la recepcionista virtual del negocio. Atiende al cliente con profesionalidad y gestiona sus reservas o citas.',
 }
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}))
-    const toNumber = body?.call?.to_number || body?.To || ''
-    const callId   = body?.call?.conversation_id || body?.CallSid || ('call_' + Date.now())
+    const body = await req.json()
+    const callerPhone = body.caller_phone || body.from || ''
+    const toPhone     = body.to_number   || body.to   || ''
 
-    let tenant: any = null
-    if (toNumber) {
-      const { data } = await admin.from('tenants').select('*').eq('agent_phone', toNumber).maybeSingle()
-      tenant = data
+    if (!toPhone) return NextResponse.json({ error: 'No destination number' }, { status: 400 })
+
+    // Encontrar tenant por numero de agente
+    const { data: tenant, error: tErr } = await admin.from('tenants')
+      .select('id,name,type,plan,agent_name,free_calls_used,free_calls_limit,plan_calls_used,plan_calls_included,subscription_status,language,business_hours')
+      .eq('agent_phone', toPhone).maybeSingle()
+
+    if (tErr || !tenant) {
+      return NextResponse.json({ error: 'Tenant not found for number: '+toPhone }, { status: 404 })
     }
 
-    if (!tenant) {
-      return NextResponse.json({
-        type: 'conversation_initiation_client_data',
-        conversation_config_override: {
-          agent: {
-            prompt: { prompt: 'Di que la lÃ­nea no estÃ¡ disponible.' },
-            first_message: 'Hola, en este momento no estÃ¡ disponible el servicio. Llame mÃ¡s tarde.',
-          },
-          tts: { model_id: 'eleven_turbo_v2_5', optimize_streaming_latency: 4 },
-        },
-        dynamic_variables: { tenant_id: '', business_name: 'el negocio', agent_name: 'SofÃ­a' }
-      })
-    }
-
-    // ââ CONTROL DE LLAMADAS ATÃMICO ââ
-    // Usamos una RPC/funciÃ³n SQL para hacer el increment y check atÃ³mica
-    // Evita race conditions y deduplicaciÃ³n por call_sid
-    const plan    = tenant.plan || 'free'
-    const isTrial = plan === 'free' || plan === 'trial'
-
+    // FASE 7: Verificar trial ANTES de dar contexto (bloqueo preventivo)
+    const isTrial = ['trial','free'].includes(tenant.plan)
     if (isTrial) {
       const used  = tenant.free_calls_used  || 0
-      const limit = tenant.free_calls_limit || PLAN_LIMITS.free
-      
+      const limit = tenant.free_calls_limit || 10
       if (used >= limit) {
-        // Trial agotado
         return NextResponse.json({
-          type: 'conversation_initiation_client_data',
-          conversation_config_override: {
-            agent: {
-              prompt: { prompt: 'Di que el servicio de atenciÃ³n no estÃ¡ disponible y que el negocio debe activar un plan.' },
-              first_message: `Gracias por llamar a ${tenant.name}. En este momento nuestro servicio no estÃ¡ disponible. Por favor contÃ¡ctenos por otro medio.`,
-            },
-            tts: { model_id: 'eleven_turbo_v2_5', optimize_streaming_latency: 4 },
+          dynamic_variables: {
+            tenant_id: tenant.id,
+            business_name: tenant.name,
+            agent_name: tenant.agent_name || 'Sofia',
+            blocked: 'true',
           },
-          dynamic_variables: { tenant_id: tenant.id, business_name: tenant.name, agent_name: tenant.agent_name || 'SofÃ­a' }
+          tts_override: 'Lo sentimos, el periodo de prueba ha finalizado. Por favor contacte con el administrador del negocio para activar el servicio.',
         })
       }
-
-      // Incremento atÃ³mico via SQL (evita race condition)
-      await admin.rpc('increment_free_calls', { p_tenant_id: tenant.id }).catch(async () => {
-        // Fallback si la RPC no existe
-        await admin.from('tenants').update({ free_calls_used: used + 1 }).eq('id', tenant.id)
-      })
-    } else {
-      // Plan de pago â incremento atÃ³mico via SQL
-      const planUsed = tenant.plan_calls_used || 0
-      await admin.rpc('increment_plan_calls', { p_tenant_id: tenant.id }).catch(async () => {
-        await admin.from('tenants').update({ plan_calls_used: planUsed + 1 }).eq('id', tenant.id)
-      })
     }
 
-    // ââ REGISTRO DE LLAMADA CON DEDUPLICACIÃN ââ
-    // ON CONFLICT DO NOTHING para evitar doble conteo si ElevenLabs llama 2x
-    await admin.from('calls').upsert({
-      tenant_id:   tenant.id,
-      call_sid:    callId,
-      from_number: body?.call?.from_number || 'unknown',
-      to_number:   toNumber,
-      status:      'in-progress',
-      direction:   'inbound',
-    }, { onConflict: 'call_sid', ignoreDuplicates: true }).catch(() => {})
+    // Obtener datos de contexto enriquecido
+    const today = new Date().toISOString().slice(0, 10)
+    const [zonesRes, reservasHoyRes, callerRes] = await Promise.all([
+      admin.from('zones').select('id,name').eq('tenant_id', tenant.id).eq('active', true),
+      admin.from('reservations').select('time,people,customer_name,status').eq('tenant_id', tenant.id).eq('date', today).in('status', ['confirmada','confirmed','pendiente']).order('time'),
+      callerPhone ? admin.from('customers').select('name,total_reservations,vip').eq('tenant_id', tenant.id).eq('phone', callerPhone).maybeSingle() : Promise.resolve({ data: null }),
+    ])
 
-    const systemPrompt = await buildContext(tenant)
-    const appUrl  = process.env.NEXT_PUBLIC_APP_URL || 'https://restaurante-ai.vercel.app'
-    const voiceId = tenant.voice_id || process.env.ELEVENLABS_VOICE_ID || 'ERYLdjEaddaiN9sDjaMX'
+    const zones = zonesRes.data?.map(z => z.name) || []
+    const reservasHoy = reservasHoyRes.data || []
+    const caller = callerRes.data
+
+    // Prompt del sistema adaptado al tipo de negocio
+    const bizType = (tenant.type || 'otro').toLowerCase()
+    const basePrompt = BUSINESS_CONTEXT[bizType] || BUSINESS_CONTEXT.otro
+
+    // Construir contexto completo para el agente
+    const context = [
+      basePrompt,
+      '',
+      'NEGOCIO: '+tenant.name,
+      tenant.language === 'es' ? 'Habla siempre en espanol con tono profesional y cordial.' : '',
+      zones.length > 0 ? 'ZONAS DISPONIBLES: '+zones.join(', ') : '',
+      reservasHoy.length > 0 ? 'RESERVAS HOY ('+reservasHoy.length+'): '+reservasHoy.map(r=>''+r.time+' '+r.people+'p '+r.customer_name).join(' | ') : 'RESERVAS HOY: ninguna aun',
+      caller?.name ? 'CLIENTE CONOCIDO: '+caller.name+(caller.total_reservations ? ', '+caller.total_reservations+' reservas previas' : '')+(caller.vip?' [VIP]':'') : '',
+      '',
+      'TENANT_ID: '+tenant.id,
+      'Siempre pasa el tenant_id "'+tenant.id+'" en las llamadas a check_availability y create_reservation.',
+    ].filter(Boolean).join('\n')
+
+    // Upsert llamada entrante (registrar para billing)
+    if (callerPhone) {
+      await admin.from('calls').upsert({
+        tenant_id:    tenant.id,
+        call_sid:     'voice_'+Date.now()+'_'+callerPhone.replace(/D/g,''),
+        caller_phone: callerPhone,
+        from_number:  callerPhone,
+        to_number:    toPhone,
+        status:       'in-progress',
+        direction:    'inbound',
+        started_at:   new Date().toISOString(),
+        counted_for_billing: false,
+      }, { onConflict: 'call_sid', ignoreDuplicates: true })
+    }
 
     return NextResponse.json({
-      type: 'conversation_initiation_client_data',
-      conversation_config_override: {
-        agent: {
-          prompt: {
-            prompt: systemPrompt,
-            tools: [
-              {
-                type: 'webhook', name: 'check_availability',
-                description: 'Comprueba disponibilidad de mesas/citas para una fecha, hora y personas.',
-                api: { url: `${appUrl}/api/voice/availability`, method: 'POST', headers: { 'Content-Type': 'application/json' } },
-                input_schema: {
-                  type: 'object',
-                  properties: {
-                    tenant_id:  { type: 'string' },
-                    date:       { type: 'string', description: 'YYYY-MM-DD' },
-                    time:       { type: 'string', description: 'HH:MM' },
-                    party_size: { type: 'number' },
-                    zone_name:  { type: 'string', description: 'Zona preferida. Opcional.' },
-                  },
-                  required: ['tenant_id', 'date', 'time', 'party_size'],
-                },
-              },
-              {
-                type: 'webhook', name: 'create_reservation',
-                description: 'Crea la reserva. Ãsala cuando tengas nombre, fecha, hora y personas confirmados.',
-                api: { url: `${appUrl}/api/voice/reservation`, method: 'POST', headers: { 'Content-Type': 'application/json' } },
-                input_schema: {
-                  type: 'object',
-                  properties: {
-                    tenant_id:        { type: 'string' },
-                    customer_name:    { type: 'string' },
-                    customer_phone:   { type: 'string' },
-                    reservation_date: { type: 'string', description: 'YYYY-MM-DD' },
-                    reservation_time: { type: 'string', description: 'HH:MM' },
-                    party_size:       { type: 'number' },
-                    zone_preference:  { type: 'string', description: 'Zona solicitada. Opcional.' },
-                    notes:            { type: 'string' },
-                  },
-                  required: ['tenant_id', 'customer_name', 'reservation_date', 'reservation_time', 'party_size'],
-                },
-              },
-            ],
-          },
-          first_message: `Â¡Hola! Gracias por llamar a ${tenant.name}. Soy ${tenant.agent_name || 'SofÃ­a'}, Â¿en quÃ© le puedo ayudar?`,
-          language: tenant.language || 'es',
-        },
-        tts: {
-          voice_id: voiceId,
-          model_id: 'eleven_turbo_v2_5',
-          optimize_streaming_latency: 4,
-          output_format: 'ulaw_8000',
-        },
-      },
       dynamic_variables: {
         tenant_id:     tenant.id,
         business_name: tenant.name,
-        agent_name:    tenant.agent_name || 'SofÃ­a',
-      },
+        agent_name:    tenant.agent_name || 'Sofia',
+        system_prompt: context,
+        caller_name:   caller?.name || '',
+        is_vip:        caller?.vip ? 'true' : 'false',
+      }
     })
   } catch (e: any) {
-    console.error('voice-context error:', e)
-    return NextResponse.json({
-      type: 'conversation_initiation_client_data',
-      conversation_config_override: {
-        agent: {
-          prompt: { prompt: 'Eres una recepcionista amable.' },
-          first_message: 'Â¡Hola! Â¿En quÃ© puedo ayudarle?',
-        },
-        tts: { model_id: 'eleven_turbo_v2_5', optimize_streaming_latency: 4 },
-      },
-      dynamic_variables: { tenant_id: '', business_name: 'el negocio', agent_name: 'SofÃ­a' }
-    })
+    console.error('voice/context error:', e)
+    return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }
