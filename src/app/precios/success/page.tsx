@@ -1,33 +1,47 @@
 'use client'
-import { Suspense } from 'react'
+import { useEffect, useState, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-function SuccessContent() {
-  return (
-    <div style={{minHeight:'100vh',background:'linear-gradient(135deg,#0f172a,#1e3a5f)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'DM Sans',-apple-system,sans-serif",padding:24}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap'); *{box-sizing:border-box;margin:0;padding:0} @keyframes scaleIn{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}}`}</style>
-      <div style={{maxWidth:480,width:'100%',textAlign:'center',animation:'scaleIn 0.4s ease'}}>
-        <div style={{width:80,height:80,borderRadius:24,background:'linear-gradient(135deg,#059669,#10b981)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 24px',boxShadow:'0 8px 32px rgba(5,150,105,0.4)'}}>
-          <svg width='36' height='36' viewBox='0 0 24 24' fill='none'><path d='M20 6L9 17l-5-5' stroke='white' strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round'/></svg>
-        </div>
-        <h1 style={{fontSize:32,fontWeight:700,color:'white',letterSpacing:'-0.025em',marginBottom:12}}>Plan activado</h1>
-        <p style={{fontSize:16,color:'rgba(255,255,255,0.6)',lineHeight:1.65,marginBottom:36}}>
-          Tu recepcionista virtual ya esta activa y lista para atender llamadas.
-          Puedes ver tu consumo en el panel en cualquier momento.
-        </p>
-        <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
-          <Link href='/panel' style={{padding:'13px 28px',fontSize:15,fontWeight:600,color:'white',background:'linear-gradient(135deg,#1e40af,#3b82f6)',borderRadius:11,textDecoration:'none',boxShadow:'0 4px 16px rgba(59,130,246,0.35)'}}>
-            Ir al panel
-          </Link>
-          <Link href='/configuracion' style={{padding:'13px 24px',fontSize:15,fontWeight:500,color:'rgba(255,255,255,0.75)',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:11,textDecoration:'none'}}>
-            Configurar agente
-          </Link>
-        </div>
+function SuccessContent(){
+  const params = useSearchParams()
+  const router  = useRouter()
+  const session = params.get('session_id')
+  const [dots,setDots] = useState('.')
+
+  useEffect(()=>{
+    // Animar puntos mientras espera confirmacion del webhook
+    const iv = setInterval(()=>setDots(d=>d.length>=3?'.':'d+'.'), 500)
+    // Redirigir al panel despues de 4 segundos (webhook ya procesado)
+    const t = setTimeout(()=>router.push('/panel'), 4500)
+    return ()=>{ clearInterval(iv); clearTimeout(t) }
+  },[router])
+
+  return(
+    <div style={{textAlign:'center',maxWidth:440,padding:'0 24px'}}>
+      <div style={{width:72,height:72,borderRadius:'50%',background:'linear-gradient(135deg,#059669,#34d399)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 24px',boxShadow:'0 8px 32px rgba(5,150,105,0.35)'}}>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
       </div>
+      <h1 style={{fontSize:26,fontWeight:800,color:'white',marginBottom:10,letterSpacing:'-0.025em'}}>Pago completado</h1>
+      <p style={{fontSize:15,color:'#94a3b8',lineHeight:1.7,marginBottom:28}}>
+        Tu suscripcion esta activa. Activando tu plan{dots}
+      </p>
+      <p style={{fontSize:12,color:'#475569',marginBottom:24}}>Seras redirigido al panel automaticamente.</p>
+      <Link href='/panel' style={{display:'inline-block',padding:'12px 28px',fontSize:14,fontWeight:700,color:'white',background:'linear-gradient(135deg,#059669,#10b981)',borderRadius:10,textDecoration:'none'}}>
+        Ir al panel ahora
+      </Link>
     </div>
   )
 }
 
-export default function SuccessPage() {
-  return <Suspense fallback={null}><SuccessContent/></Suspense>
+export default function SuccessPage(){
+  return(
+    <div style={{minHeight:'100vh',background:'linear-gradient(135deg,#0f172a,#1e293b)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <Suspense fallback={<div style={{color:'white'}}>Cargando...</div>}>
+        <SuccessContent/>
+      </Suspense>
+    </div>
+  )
 }
