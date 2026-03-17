@@ -1,158 +1,191 @@
 'use client'
-import{useEffect,useState,useCallback}from'react'
-import{usePathname}from'next/navigation'
-import{supabase}from'@/lib/supabase'
-import{BUSINESS_TEMPLATES}from'@/types'
-import type{Tenant}from'@/types'
+import { useState, useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
-const ICONS:Record<string,string> = {
-  panel:     'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
-  reservas:  'M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z',
-  agenda:    'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z',
-  clientes:  'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
-  llamadas:  'M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z',
-  pedidos:   'M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 6.1 17 7 17h11v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H15c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 19.5 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z',
-  config:    'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
-  precios:   'M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z',
-  logout:    'M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z',
+const PLAN_LABELS: Record<string, string> = {
+  free: 'Trial', trial: 'Trial',
+  starter: 'Starter', pro: 'Pro', business: 'Business',
+}
+const PLAN_COLORS: Record<string, string> = {
+  free: '#d97706', trial: '#d97706',
+  starter: '#1d4ed8', pro: '#7c3aed', business: '#059669',
 }
 
-const MODULE_MAP:Record<string,{icon:string;label:string;href:string}> = {
-  resumen:        {icon:'panel',    label:'Inicio',    href:'/panel'},
-  reservas:       {icon:'reservas', label:'Reservas',  href:'/reservas'},
-  citas:          {icon:'reservas', label:'Citas',     href:'/reservas'},
-  mesas:          {icon:'agenda',   label:'Mesas',     href:'/mesas'},
-  pedidos:        {icon:'pedidos',  label:'Pedidos',   href:'/pedidos'},
-  agenda:         {icon:'agenda',   label:'Agenda',    href:'/agenda'},
-  clientes:       {icon:'clientes', label:'Clientes',  href:'/clientes'},
-  conversaciones: {icon:'llamadas', label:'Llamadas',  href:'/llamadas'},
-  seguimientos:   {icon:'llamadas', label:'Seguim.',   href:'/llamadas'},
-  oportunidades:  {icon:'clientes', label:'Clientes',  href:'/clientes'},
+// SVG icons inline — sin dependencias externas
+function Icon({ d, size = 18 }: { d: string; size?: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d}/></svg>
 }
 
-const PLAN_COLOR:Record<string,string> = {trial:'#f59e0b',starter:'#3b82f6',pro:'#8b5cf6',business:'#10b981'}
+const NAV = [
+  { href:'/panel',          label:'Centro de control', icon:'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', plans: null },
+  { href:'/reservas',       label:'Reservas',          icon:'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', plans: null },
+  { href:'/agenda',         label:'Agenda',            icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', plans: null },
+  { href:'/llamadas',       label:'Llamadas',          icon:'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z', plans: null },
+  { href:'/clientes',       label:'Clientes',          icon:'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', plans: null },
+  { href:'/mesas',          label:'Local y mesas',     icon:'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3', plans: null },
+  { href:'/pedidos',        label:'Pedidos',           icon:'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z', plans: ['pro','business'] },
+  { href:'/estadisticas',   label:'Estadísticas',      icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', plans: ['pro','business'] },
+  { href:'/configuracion',  label:'Configuración',     icon:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', plans: null },
+]
 
-function Icon({path,size=16,color='currentColor'}:{path:string;size?:number;color?:string}){
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={{flexShrink:0}}><path d={path}/></svg>
-}
+export default function Sidebar() {
+  const pathname  = usePathname()
+  const router    = useRouter()
+  const [tenant, setTenant] = useState<any>(null)
+  const [collapsed, setCollapsed] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-function NavItem({icon,label,href,isActive,collapsed}:{icon:string;label:string;href:string;isActive:boolean;collapsed:boolean}){
-  const[h,setH]=useState(false)
-  const bg = isActive?'rgba(59,130,246,0.12)':h?'rgba(255,255,255,0.04)':'transparent'
-  const col = isActive?'#93c5fd':h?'#e2e8f0':'#94a3b8'
-  const border = isActive?'#3b82f6':'transparent'
-  return(
-    <a href={href} title={collapsed?label:undefined}
-      onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)}
-      style={{display:'flex',alignItems:'center',gap:collapsed?0:10,padding:collapsed?'9px 0':'8px 12px',justifyContent:collapsed?'center':'flex-start',borderRadius:8,textDecoration:'none',borderLeft:`2px solid ${border}`,background:bg,color:col,fontSize:13,fontWeight:isActive?600:400,transition:'all 0.12s',whiteSpace:'nowrap',overflow:'hidden'}}>
-      <Icon path={ICONS[icon]||ICONS.panel} size={16} color={col}/>
-      {!collapsed&&<span style={{transition:'opacity 0.15s',color:col}}>{label}</span>}
-    </a>
-  )
-}
-
-export default function Sidebar(){
-  const[tenant,setTenant]=useState<Tenant|null>(null)
-  const[collapsed,setCollapsed]=useState(false)
-  const pathname=usePathname()
-
-  useEffect(()=>{
-    const mq=window.matchMedia('(max-width:1024px)')
-    if(mq.matches)setCollapsed(true)
-    const cb=(e:MediaQueryListEvent)=>setCollapsed(e.matches)
-    mq.addEventListener('change',cb)
-    return()=>mq.removeEventListener('change',cb)
-  },[])
-
-  useEffect(()=>{
-    let mounted=true
-    supabase.auth.getUser().then(({data:{user}})=>{
-      if(!user||!mounted)return
-      supabase.from('profiles').select('tenant_id').eq('id',user.id).single().then(({data:p})=>{
-        if(!(p as any)?.tenant_id||!mounted)return
-        supabase.from('tenants').select('*').eq('id',(p as any).tenant_id).single().then(({data:t})=>{
-          if(mounted)setTenant(t)
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from('profiles').select('tenant_id').eq('id', user.id).single().then(({ data: p }) => {
+        if (!p?.tenant_id) return
+        supabase.from('tenants').select('id,name,plan,free_calls_used,free_calls_limit,plan_calls_used,plan_calls_included,agent_phone,agent_name').eq('id', p.tenant_id).single().then(({ data: t }) => {
+          setTenant(t)
+          setLoading(false)
         })
       })
     })
-    return()=>{mounted=false}
-  },[])
+  }, [])
 
-  const signOut=useCallback(async()=>{await supabase.auth.signOut();window.location.href='/login'},[])
+  async function logout() {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
-  const template=BUSINESS_TEMPLATES[tenant?.type||'otro']||BUSINESS_TEMPLATES.otro
-  const modules=(template.modules as string[]).map(m=>MODULE_MAP[m]).filter(Boolean)
-  const isTrial=!tenant?.plan||tenant.plan==='trial'||tenant.plan==='free'
-  const callsLeft=Math.max(0,(tenant?.free_calls_limit||10)-(tenant?.free_calls_used||0))
-  const planColor=PLAN_COLOR[tenant?.plan||'trial']
-  const width=collapsed?60:224
+  const plan       = tenant?.plan || 'free'
+  const isTrial    = plan === 'free' || plan === 'trial'
+  const planLabel  = PLAN_LABELS[plan] || 'Trial'
+  const planColor  = PLAN_COLORS[plan] || '#d97706'
+  const agentActive = !!tenant?.agent_phone
 
-  return(
-    <aside style={{width,minWidth:width,background:'#0f172a',display:'flex',flexDirection:'column',height:'100vh',position:'sticky',top:0,flexShrink:0,transition:'width 0.2s ease',overflow:'hidden',borderRight:'1px solid rgba(255,255,255,0.06)'}}>
+  // Cálculo de uso de llamadas
+  const callsUsed  = isTrial ? (tenant?.free_calls_used||0) : (tenant?.plan_calls_used||0)
+  const callsLimit = isTrial ? (tenant?.free_calls_limit||10) : (tenant?.plan_calls_included || { starter:50, pro:200, business:600 }[plan] || 50)
+  const callsPct   = Math.min(100, Math.round((callsUsed / callsLimit) * 100))
+  const callsLeft  = Math.max(0, callsLimit - callsUsed)
+
+  const W = collapsed ? 64 : 220
+
+  return (
+    <aside style={{
+      width: W, minHeight: '100vh', background: '#0f172a', color: 'white',
+      display: 'flex', flexDirection: 'column', flexShrink: 0,
+      transition: 'width 0.2s ease', overflow: 'hidden', position: 'relative',
+    }}>
       {/* Header */}
-      <div style={{display:'flex',alignItems:'center',justifyContent:collapsed?'center':'space-between',padding:collapsed?'0':'0 14px',height:56,borderBottom:'1px solid rgba(255,255,255,0.06)',flexShrink:0}}>
-        {!collapsed&&(
-          <>
-            <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}>
-              <div style={{width:26,height:26,background:'linear-gradient(135deg,#1e40af,#3b82f6)',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>
-              </div>
-              <span style={{color:'#f1f5f9',fontWeight:700,fontSize:14,letterSpacing:'-0.01em'}}>Reservo.AI</span>
+      <div style={{ padding: collapsed ? '16px 12px' : '16px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)', minHeight: 60 }}>
+        {!collapsed && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#1e40af,#3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
             </div>
-            <button onClick={()=>setCollapsed(true)} style={{width:24,height:24,display:'flex',alignItems:'center',justifyContent:'center',background:'transparent',border:'none',cursor:'pointer',color:'#475569',borderRadius:5,transition:'color 0.12s'}}
-              onMouseEnter={e=>(e.currentTarget.style.color='#94a3b8')} onMouseLeave={e=>(e.currentTarget.style.color='#475569')}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </button>
-          </>
-        )}
-        {collapsed&&(
-          <div style={{width:26,height:26,background:'linear-gradient(135deg,#1e40af,#3b82f6)',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>
+            <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>Reservo.AI</span>
           </div>
         )}
+        <button onClick={() => setCollapsed(!collapsed)} style={{ padding: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 7, cursor: 'pointer', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d={collapsed ? 'M9 18l6-6-6-6' : 'M15 18l-6-6 6-6'}/></svg>
+        </button>
       </div>
 
-      {/* Tenant pill */}
-      {tenant&&!collapsed&&(
-        <div style={{padding:'10px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)',flexShrink:0}}>
-          <p style={{color:'#cbd5e1',fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:3}}>{tenant.name}</p>
-          <div style={{display:'flex',alignItems:'center',gap:5}}>
-            <div style={{width:6,height:6,borderRadius:'50%',background:planColor,flexShrink:0}}/>
-            <span style={{fontSize:11,fontWeight:600,color:planColor,textTransform:'capitalize'}}>{tenant.plan||'Trial'}</span>
-            {isTrial&&<><span style={{color:'rgba(255,255,255,0.15)',fontSize:10}}>·</span><a href="/precios" style={{fontSize:11,color:callsLeft<=3?'#fbbf24':'#64748b',textDecoration:'none'}}>{callsLeft}/10 llamadas</a></>}
+      {/* Agent status */}
+      {!collapsed && (
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: agentActive ? '#4ade80' : '#f87171', flexShrink: 0, animation: agentActive ? 'spulse 2s infinite' : 'none' }}/>
+            <span style={{ fontSize: 11, color: agentActive ? '#86efac' : '#fca5a5', fontWeight: 500 }}>
+              {agentActive ? (tenant?.agent_name || 'Sofía') + ' activa' : 'Agente sin número'}
+            </span>
           </div>
         </div>
       )}
 
-      {/* Nav */}
-      <nav style={{flex:1,padding:'8px 6px',overflowY:'auto',overflowX:'hidden',scrollbarWidth:'none'}}>
-        <div style={{display:'flex',flexDirection:'column',gap:2}}>
-          {modules.map(m=>{
-            const active=pathname===m.href||(m.href!=='/panel'&&pathname?.startsWith(m.href))
-            return<NavItem key={m.href+m.label} {...m} isActive={active} collapsed={collapsed}/>
-          })}
-          <div style={{height:1,background:'rgba(255,255,255,0.06)',margin:'8px 0'}}/>
-          <NavItem icon="config" label="Configuración" href="/configuracion" isActive={pathname==='/configuracion'} collapsed={collapsed}/>
-          <NavItem icon="precios" label="Planes" href="/precios" isActive={pathname==='/precios'} collapsed={collapsed}/>
-        </div>
+      {/* Navigation */}
+      <nav style={{ flex: 1, padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', overflowX: 'hidden' }}>
+        {NAV.map(item => {
+          const active = pathname === item.href || (item.href !== '/panel' && pathname.startsWith(item.href))
+          const locked = item.plans && !item.plans.includes(plan)
+
+          return (
+            <a key={item.href} href={locked ? '/precios' : item.href}
+              title={collapsed ? item.label + (locked ? ' (requiere ' + item.plans?.join('/') + ')' : '') : undefined}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: collapsed ? '9px 10px' : '8px 10px',
+                borderRadius: 9,
+                background: active ? 'rgba(59,130,246,0.15)' : 'transparent',
+                border: active ? '1px solid rgba(59,130,246,0.2)' : '1px solid transparent',
+                color: active ? '#60a5fa' : locked ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.65)',
+                textDecoration: 'none', cursor: 'pointer',
+                transition: 'all 0.12s',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                position: 'relative',
+                minWidth: 0,
+              }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)' }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+            >
+              <span style={{ flexShrink: 0, opacity: locked ? 0.4 : 1 }}>
+                <Icon d={item.icon} size={17}/>
+              </span>
+              {!collapsed && (
+                <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {item.label}
+                </span>
+              )}
+              {!collapsed && locked && (
+                <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 4, padding: '1px 5px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Pro</span>
+              )}
+              {!collapsed && active && (
+                <div style={{ position: 'absolute', right: 8, width: 5, height: 5, borderRadius: '50%', background: '#3b82f6' }}/>
+              )}
+            </a>
+          )
+        })}
       </nav>
 
-      {/* Footer */}
-      <div style={{padding:'8px 6px',borderTop:'1px solid rgba(255,255,255,0.06)',flexShrink:0}}>
-        {collapsed&&(
-          <button onClick={()=>setCollapsed(false)} style={{width:'100%',padding:'8px 0',display:'flex',alignItems:'center',justifyContent:'center',background:'transparent',border:'none',cursor:'pointer',color:'#475569',borderRadius:8,marginBottom:4,transition:'color 0.12s'}}
-            onMouseEnter={e=>(e.currentTarget.style.color='#94a3b8')} onMouseLeave={e=>(e.currentTarget.style.color='#475569')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
+      {/* Call usage */}
+      {!collapsed && !loading && (
+        <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>Llamadas</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: callsLeft <= 3 ? '#f87171' : 'rgba(255,255,255,0.7)' }}>
+              {callsUsed}/{callsLimit}
+            </span>
+          </div>
+          <div style={{ height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden', marginBottom: 6 }}>
+            <div style={{ height: '100%', width: callsPct + '%', background: callsLeft <= 3 ? '#ef4444' : callsPct > 80 ? '#f59e0b' : '#3b82f6', borderRadius: 2, transition: 'width 0.4s' }}/>
+          </div>
+          {isTrial && callsLeft <= 3 && (
+            <a href="/precios" style={{ display: 'block', fontSize: 11, color: '#f59e0b', textDecoration: 'none', fontWeight: 600 }}>
+              ⚡ {callsLeft} llamadas restantes — Actualizar
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* Plan + Logout */}
+      <div style={{ padding: '10px 8px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        {!collapsed && (
+          <a href="/precios" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 9, textDecoration: 'none', marginBottom: 4, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: planColor, flexShrink: 0 }}/>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'white', letterSpacing: '0.02em' }}>{planLabel}</p>
+              <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{tenant?.name || '—'}</p>
+            </div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+          </a>
         )}
-        <button onClick={signOut} title={collapsed?'Cerrar sesión':undefined}
-          style={{width:'100%',display:'flex',alignItems:'center',gap:collapsed?0:10,justifyContent:collapsed?'center':'flex-start',padding:collapsed?'9px 0':'8px 12px',background:'transparent',border:'none',cursor:'pointer',color:'#64748b',borderRadius:8,fontSize:13,fontWeight:400,transition:'all 0.12s'}}
-          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color='#f87171';(e.currentTarget as HTMLElement).style.background='rgba(248,113,113,0.08)'}}
-          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color='#64748b';(e.currentTarget as HTMLElement).style.background='transparent'}}>
-          <Icon path={ICONS.logout} size={15} color="currentColor"/>
-          {!collapsed&&<span>Cerrar sesión</span>}
+        <button onClick={logout} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '9px 10px' : '8px 10px', borderRadius: 9, background: 'transparent', border: '1px solid transparent', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', justifyContent: collapsed ? 'center' : 'flex-start', transition: 'all 0.12s' }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          {!collapsed && <span style={{ fontSize: 13 }}>Cerrar sesión</span>}
         </button>
       </div>
+      <style>{`@keyframes spulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
     </aside>
   )
 }
