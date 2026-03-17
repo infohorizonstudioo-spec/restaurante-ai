@@ -4,45 +4,17 @@ import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 
 const UT:Record<string,{s:string;p:string;icon:string}> = {
-  restaurante:{s:'Mesa',p:'Mesas',icon:'ðª'},
-  bar:{s:'Mesa',p:'Mesas',icon:'ðª'},
-  cafeteria:{s:'Mesa',p:'Mesas',icon:'â'},
-  hotel:{s:'Habitacion',p:'Habitaciones',icon:'ðï¸'},
-  peluqueria:{s:'Sillen',p:'Sillones',icon:'ð'},
-  spa:{s:'Cabina',p:'Cabinas',icon:'ð§'},
-  clinica:{s:'Consulta',p:'Consultas',icon:'ð¥'},
-  dentista:{s:'Silla',p:'Sillas',icon:'ð¦·'},
-  gym:{s:'Box',p:'Boxes',icon:'ðª'},
-  otro:{s:'Espacio',p:'Espacios',icon:'ð¦'},
-}
-const ZC = ['#1d4ed8','#059669','#7c3aed','#d97706','#dc2626','#0891b2','#be185d']
-
-export default function MesasPage(){
-  const [tenant,setTenant]=useState<any>(null)
-  const [zones,setZones]=useState<any[]>([])
-  const [units,setUnits]=useState<any[]>([])
-  const [loading,setLoading]=useState(true)
-  const [tid,setTid]=useState<string|null>(null)
-  const [tab,setTab]=useState<'units'|'zones'>('units')
-  const [newZone,setNewZone]=useState('')
-  const [editUnit,setEditUnit]=useState<any|null>(null)
-
-  const load=useCallback(async(tenantId:string)=>{
-    const [tr,zr,ur]=await Promise.all([
-      supabase.from('tenants').select('name,type').eq('id',tenantId).single(),
-      supabase.from('zones').select('*').eq('tenant_id',tenantId).eq('active',true).order('created_at'),
-      supabase.from('tables').select('*').eq('tenant_id',tenantId).eq('active',true).order('number'),
-    ])
-    setTenant(tr.data||null);setZones(zr.data||[]);setUnits(ur.data||[])
-    setLoading(false)
-  },[])
-
-  useEffect(()=>{
-    (async()=>{
-      const {data:{user}}=await supabase.auth.getUser();if(!user)return
-      const {data:p}=await supabase.from('profiles').select('tenant_id').eq('id',user.id).single();if(!p?.tenant_id)return
-      setTid(p.tenant_id);await load(p.tenant_id)
-    })()
+  restaurante:{s:'Mesa',p:'Mesas',icon:'[M]'},
+  bar:{s:'Mesa',p:'Mesas',icon:'[M]'},
+  cafeteria:{s:'Mesa',p:'Mesas',icon:'[C]'},
+  hotel:{s:'Habitacion',p:'Habitaciones',icon:'[H]'},
+  peluqueria:{s:'Sillen',p:'Sillones',icon:'[S]'},
+  spa:{s:'Cabina',p:'Cabinas',icon:'[K]'},
+  clinica:{s:'Consulta',p:'Consultas',icon:'[+]'},
+  dentista:{s:'Silla',p:'Sillas',icon:'[D]'},
+  gym:{s:'Box',p:'Boxes',icon:'[G]'},
+  otro:{s:'Espacio',p:'Espacios',icon:'[#]'},
+}()
   },[load])
 
   const ut=UT[(tenant?.type||'otro').toLowerCase()]||UT.otro
@@ -154,7 +126,7 @@ export default function MesasPage(){
             <input value={newZone} onChange={e=>setNewZone(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addZone()} placeholder='Nueva zona (Terraza, Interior...)' style={{flex:1,padding:'9px 14px',fontSize:14,border:'1px solid #e2e8f0',borderRadius:9,outline:'none',fontFamily:'inherit'}}/>
             <button onClick={addZone} disabled={!newZone.trim()} style={{padding:'9px 18px',fontSize:13,fontWeight:600,color:'white',background:'#1d4ed8',border:'none',borderRadius:9,cursor:'pointer',opacity:!newZone.trim()?0.5:1}}>+ Zona</button>
           </div>
-          {zones.length===0&&<div style={{textAlign:'center',padding:'40px 0',color:'#94a3b8'}}><p style={{fontSize:28}}>ðï¸</p><p>Sin zonas. Puedes operar sin ellas.</p></div>}
+          {zones.length===0&&<div style={{textAlign:'center',padding:'40px 0',color:'#94a3b8'}}><p style={{fontSize:28}}>Ã°ÂÂÂÃ¯Â¸Â</p><p>Sin zonas. Puedes operar sin ellas.</p></div>}
           {zones.map((z,zi)=>(
             <ZoneRow key={z.id} zone={z} color={ZC[zi%ZC.length]} count={units.filter(u=>(u.zone_id||u.zone)===z.id).length} onRename={(n:string)=>renZone(z.id,n)} onDelete={()=>delZone(z.id)}/>
           ))}
@@ -176,8 +148,8 @@ function Grid({units,ut,color,onEdit,onDel,onAdd}:any){
           <p style={{fontSize:11,color:'#94a3b8'}}>{u.capacity||1} persona{(u.capacity||1)!==1?'s':''}</p>
           {u.notes&&<p style={{fontSize:10,color:'#64748b',marginTop:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontStyle:'italic'}}>{u.notes}</p>}
           <div style={{position:'absolute',top:8,right:8,display:'flex',gap:3}}>
-            <button onClick={()=>onEdit(u)} style={{padding:'2px 6px',fontSize:11,background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:5,cursor:'pointer'}}>âï¸</button>
-            <button onClick={()=>onDel(u.id)} style={{padding:'2px 6px',fontSize:11,background:'#fef2f2',border:'1px solid #fecaca',borderRadius:5,cursor:'pointer',color:'#dc2626'}}>â</button>
+            <button onClick={()=>onEdit(u)} style={{padding:'2px 6px',fontSize:11,background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:5,cursor:'pointer'}}>Ã¢ÂÂÃ¯Â¸Â</button>
+            <button onClick={()=>onDel(u.id)} style={{padding:'2px 6px',fontSize:11,background:'#fef2f2',border:'1px solid #fecaca',borderRadius:5,cursor:'pointer',color:'#dc2626'}}>Ã¢ÂÂ</button>
           </div>
         </div>
       ))}
@@ -201,7 +173,7 @@ function ZoneRow({zone,color,count,onRename,onDelete}:any){
         :<p style={{flex:1,fontSize:14,fontWeight:500,color:'#0f172a',cursor:'pointer'}} onClick={()=>setEditing(true)}>{zone.name}</p>
       }
       <span style={{fontSize:12,color:'#94a3b8'}}>{count} unid.</span>
-      <button onClick={()=>setEditing(true)} style={{padding:'4px 8px',fontSize:12,background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:7,cursor:'pointer'}}>âï¸</button>
+      <button onClick={()=>setEditing(true)} style={{padding:'4px 8px',fontSize:12,background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:7,cursor:'pointer'}}>Ã¢ÂÂÃ¯Â¸Â</button>
       <button onClick={onDelete} style={{padding:'4px 8px',fontSize:12,background:'#fef2f2',border:'1px solid #fecaca',borderRadius:7,cursor:'pointer',color:'#dc2626'}}>Eliminar</button>
     </div>
   )
