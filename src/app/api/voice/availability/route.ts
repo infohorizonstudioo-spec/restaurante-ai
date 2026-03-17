@@ -10,88 +10,55 @@ const admin = createClient(
 export async function POST(req: Request) {
   try {
     const { tenant_id, date, time, party_size, zone_name } = await req.json()
-
     if (!tenant_id || !date || !time || !party_size) {
-      return NextResponse.json({ available: false, message: 'Faltan datos para comprobar disponibilidad.' }, { status: 400 })
+      return NextResponse.json({ available: false, message: 'Faltan datos.' }, { status: 400 })
     }
-
-    // Carga zonas y mesas activas
+    const ps = parseInt(String(party_size))
     const [{ data: zones }, { data: tables }, { data: reservas }] = await Promise.all([
       admin.from('zones').select('*').eq('tenant_id', tenant_id).eq('active', true),
       admin.from('tables').select('*').eq('tenant_id', tenant_id),
-      admin.from('reservations').select('*')
+      admin.from('reservations')
+        .select('table_id,zone_id,people')
         .eq('tenant_id', tenant_id)
-        .eq('reservation_date', date)
-        .eq('reservation_time', time)
-        .in('status', ['confirmada', 'pendiente']),
+        .eq('date', date)
+        .eq('time', time)
+        .in('status', ['confirmed','pending','confirmada','pendiente']),
     ])
-
-    if (!tables || tables.length === 0) {
-      // Sin mesas configuradas → disponible (sin asignación específica)
-      return NextResponse.json({
-        available: true,
-        message: `Hay disponibilidad el ${date} a las ${time} para ${party_size} personas.`,
-        tables_available: [],
-        zone_info: 'El local no tiene zonas configuradas aún.',
-      })
+    if (!tables?.length) {
+      return NextResponse.json({ available: true, message: 'Disponible el '+date+' a las '+time+' para '+ps+' persona'+(ps!==1?'s':'')+'.', tables_available: 0, zones: [] })
     }
-
-    // IDs de mesas ya reservadas en ese slot
-    const reservedTableIds = new Set((reservas || []).map(r => r.table_id).filter(Boolean))
-
-    // Filtra mesas libres con capacidad suficiente
-    let mesasLibres = tables.filter(m =>
-      !reservedTableIds.has(m.id) &&
-      m.capacity >= Number(party_size)
-    )
-
-    // Si pide zona específica, filtra por zona
-    let zonaFiltrada: any = null
-    if (zone_name && zones && zones.length > 0) {
+    const reservedIds = new Set((reservas||[]).map(r => r.table_id).filter(Boolean))
+    let free = tables.filter(m => !reservedIds.has(m.id) && (m.capacity||0) >= ps)
+    if (!free.length) {
+      const totalOcup = reservas?.length || 0
+      return NextResponse.json({ available: false, message: 'No hay disponibilidad el '+date+' a las '+time+' para '+ps+' persona'+(ps!==1?'s':'')+'. Hay '+totalOcup+' reserva'+(totalOcup!==1?'s':'')+' en ese horario.', tables_available: 0 })
+    }
+    let zoneInfo = ''
+    if (zone_name && zones?.length) {
       const zn = zone_name.toLowerCase()
-      zonaFiltrada = zones.find(z => z.name.toLowerCase().includes(zn) || zn.includes(z.name.toLowerCase()))
-      if (zonaFiltrada) {
-        const mesasEnZona = mesasLibres.filter(m => m.zone_id === zonaFiltrada.id)
-        if (mesasEnZona.length > 0) {
-          mesasLibres = mesasEnZona
+      const zona = zones.find(z => z.name?.toLowerCase().includes(zn) || zn.includes(z.name?.toLowerCase()))
+      if (zona) {
+        const freeInZone = free.filter(m => m.zone_id === zona.id)
+        if (freeInZone.length) {
+          zoneInfo = ' en '+zona.name
+          free = freeInZone
         } else {
-          // No hay en esa zona, informa y ofrece alternativas
-          const alternativas = mesasLibres.map(m => {
-            const z = zones.find(z => z.id === m.zone_id)
-            return z ? z.name : 'sin zona'
-          }).filter((v, i, a) => a.indexOf(v) === i)
-
-          return NextResponse.json({
-            available: mesasLibres.length > 0,
-            message: mesasLibres.length > 0
-              ? `No hay disponibilidad en ${zone_name} para ${party_size} personas a las ${time}, pero sí en: ${alternativas.join(', ')}. ¿Le viene bien alguna de estas zonas?`
-              : `Lo siento, no hay disponibilidad para ${party_size} personas el ${date} a las ${time}.`,
-            tables_available: mesasLibres.slice(0, 3).map(m => ({
-              id: m.id, name: m.name, capacity: m.capacity,
-              zone_name: zones.find(z => z.id === m.zone_id)?.name || null
-            })),
-          })
+          zoneInfo = ' ('+zona.name+' sin disponibilidad, asignando otra zona)'
         }
       }
     }
-
-    const available = mesasLibres.length > 0
-
+    const zonasList = zones?.length ? zones.map(z => {
+      const f = free.filter(m => m.zone_id === z.id).length
+      return z.name+(f>0?' ('+f+' mesas)':' (lleno)')
+    }).join(', ') : ''
     return NextResponse.json({
-      available,
-      message: available
-        ? `Sí, hay disponibilidad el ${date} a las ${time} para ${party_size} personas${zonaFiltrada ? ' en ' + zonaFiltrada.name : ''}.`
-        : `Lo siento, no hay disponibilidad para ${party_size} personas el ${date} a las ${time}.`,
-      tables_available: mesasLibres.slice(0, 5).map(m => ({
-        id: m.id, name: m.name, capacity: m.capacity,
-        zone_name: zones?.find(z => z.id === m.zone_id)?.name || null,
-      })),
-      zones_with_availability: zones
-        ? [...new Set(mesasLibres.map(m => zones.find(z => z.id === m.zone_id)?.name).filter(Boolean))]
-        : [],
+      available: true,
+      message: 'Disponible el '+date+' a las '+time+' para '+ps+' persona'+(ps!==1?'s':'')+zoneInfo+'. '+free.length+' mesa'+(free.length!==1?'s':'')+' libre'+(free.length!==1?'s':'')+''+(zonasList?' — '+zonasList:'')+'.',
+      tables_available: free.length,
+      zones: zones?.map(z => z.name) || [],
     })
-  } catch (e: any) {
-    console.error('Availability error:', e)
-    return NextResponse.json({ available: false, message: 'Error al comprobar disponibilidad.' }, { status: 500 })
+  } catch(e:any) {
+    console.error('availability error:', e)
+    return NextResponse.json({ available: false, message: 'Error al verificar disponibilidad.' }, { status: 500 })
   }
 }
