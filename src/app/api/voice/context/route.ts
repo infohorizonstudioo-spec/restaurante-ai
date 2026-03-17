@@ -7,7 +7,15 @@ const admin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
-// Construye contexto rico pero compacto (prompts más cortos = respuestas más rápidas)
+// Límites por plan
+const PLAN_LIMITS: Record<string, number> = {
+  free:     10,
+  trial:    10,
+  starter:  50,
+  pro:      200,
+  business: 600,
+}
+
 async function buildContext(tenant: any): Promise<string> {
   const tid   = tenant.id
   const today = new Date().toISOString().split('T')[0]
@@ -59,11 +67,7 @@ Ahora: ${day} ${today} ${now}. Horario: ${horario}.
 Tenant ID: ${tid}.
 ${typePrompt[tenant.type]||typePrompt.otro}
 ${zoneCtx}
-REGLAS: Respuestas ≤2 frases. Cuando tengas todos los datos, llama create_reservation inmediatamente. Confirma siempre con: nombre, fecha, hora, personas y mesa/zona.
-
-HERRAMIENTAS:
-- check_availability: úsala si preguntan disponibilidad antes de reservar
-- create_reservation: úsala cuando confirmes la reserva`
+REGLAS: Respuestas ≤2 frases. Cuando tengas todos los datos, llama create_reservation inmediatamente. Confirma siempre con: nombre, fecha, hora, personas y mesa/zona.`
 }
 
 export async function POST(req: Request) {
@@ -82,7 +86,7 @@ export async function POST(req: Request) {
         type: 'conversation_initiation_client_data',
         conversation_config_override: {
           agent: {
-            prompt: { prompt: 'Eres una recepcionista. Di que no hay línea disponible ahora.' },
+            prompt: { prompt: 'Di que no hay línea disponible ahora.' },
             first_message: 'Hola, en este momento no está disponible la línea. Llame más tarde.',
           },
           tts: { model_id: 'eleven_turbo_v2_5', optimize_streaming_latency: 4 },
@@ -91,19 +95,47 @@ export async function POST(req: Request) {
       })
     }
 
-    // Contador de llamadas + registrar en paralelo (no bloqueante)
+    // ── CONTROL DE LÍMITE DE LLAMADAS (CRÍTICO) ──
+    const plan = tenant.plan || 'free'
+    const isTrial = plan === 'free' || plan === 'trial'
+    
+    if (isTrial) {
+      const used  = tenant.free_calls_used || 0
+      const limit = tenant.free_calls_limit || PLAN_LIMITS.free
+      if (used >= limit) {
+        // Trial agotado — no contestar, redirigir a precios
+        return NextResponse.json({
+          type: 'conversation_initiation_client_data',
+          conversation_config_override: {
+            agent: {
+              prompt: { prompt: 'Di que el servicio no está disponible y que el negocio debe renovar su plan.' },
+              first_message: `Gracias por llamar a ${tenant.name}. En este momento nuestro servicio no está disponible. Por favor inténtelo más tarde.`,
+            },
+            tts: { model_id: 'eleven_turbo_v2_5', optimize_streaming_latency: 4 },
+          },
+          dynamic_variables: { tenant_id: tenant.id, business_name: tenant.name, agent_name: tenant.agent_name||'Sofía' }
+        })
+      }
+      // Descontar llamada del trial
+      await admin.from('tenants').update({ free_calls_used: used + 1 }).eq('id', tenant.id).catch(()=>{})
+    } else {
+      // Plan de pago — verificar límite del plan
+      const planLimit = PLAN_LIMITS[plan] || PLAN_LIMITS.starter
+      const used = tenant.plan_calls_used || 0
+      // No bloquear en planes de pago, pero registrar llamada extra
+      await admin.from('tenants').update({ plan_calls_used: used + 1 }).eq('id', tenant.id).catch(()=>{})
+    }
+
+    // Registrar llamada (no bloqueante)
     const callId = body?.call?.conversation_id || ('call_'+Date.now())
-    Promise.all([
-      admin.from('tenants').update({ call_count: (tenant.call_count||0)+1 }).eq('id', tenant.id),
-      admin.from('calls').insert({
-        tenant_id: tenant.id,
-        call_sid: callId,
-        from_number: body?.call?.from_number || 'unknown',
-        to_number: toNumber,
-        status: 'in-progress',
-        direction: 'inbound',
-      }),
-    ]).catch(()=>{})
+    admin.from('calls').insert({
+      tenant_id: tenant.id,
+      call_sid: callId,
+      from_number: body?.call?.from_number || 'unknown',
+      to_number: toNumber,
+      status: 'in-progress',
+      direction: 'inbound',
+    }).catch(()=>{})
 
     const systemPrompt = await buildContext(tenant)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://restaurante-ai.vercel.app'
@@ -115,7 +147,6 @@ export async function POST(req: Request) {
         agent: {
           prompt: {
             prompt: systemPrompt,
-            llm: 'claude-haiku-4-5',
             tools: [
               {
                 type: 'webhook',
@@ -159,14 +190,11 @@ export async function POST(req: Request) {
           first_message: `¡Hola! Gracias por llamar a ${tenant.name}. Soy ${tenant.agent_name||'Sofía'}, ¿en qué le puedo ayudar?`,
           language: tenant.language || 'es',
         },
-        // ── LATENCIA MÍNIMA ──
-        // eleven_turbo_v2_5: ~75ms vs ~300ms del modelo estándar
-        // optimize_streaming_latency: 4 = máxima optimización
         tts: {
           voice_id: voiceId,
           model_id: 'eleven_turbo_v2_5',
           optimize_streaming_latency: 4,
-          output_format: 'ulaw_8000',  // Formato nativo de Twilio — sin reencoding
+          output_format: 'ulaw_8000',
         },
       },
       dynamic_variables: {
