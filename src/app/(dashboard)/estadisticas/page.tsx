@@ -1,188 +1,192 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { PageLoader, PageHeader } from '@/components/ui'
+import { PageLoader } from '@/components/ui'
 import Link from 'next/link'
 
-function Metric({ label, value, sub, color = '#1d4ed8' }: { label: string; value: string | number; sub?: string; color?: string }) {
-  return (
-    <div style={{ background:'white', border:'1px solid #e2e8f0', borderRadius:12, padding:'18px 20px', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
-      <p style={{ fontSize:28, fontWeight:700, color, letterSpacing:'-0.025em' }}>{value}</p>
-      <p style={{ fontSize:12, color:'#374151', fontWeight:500, marginTop:4 }}>{label}</p>
-      {sub && <p style={{ fontSize:11, color:'#94a3b8', marginTop:2 }}>{sub}</p>}
-    </div>
-  )
-}
+export default function EstadisticasPage(){
+  const [plan,setPlan]   = useState<string>('free')
+  const [loading,setLoad]= useState(true)
+  const [data,setData]   = useState<any>(null)
+  const [tid,setTid]     = useState<string|null>(null)
 
-function Bar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
-  const pct = max > 0 ? Math.round((value/max)*100) : 0
-  return (
-    <div style={{ marginBottom:12 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
-        <span style={{ fontSize:13, color:'#374151' }}>{label}</span>
-        <span style={{ fontSize:13, fontWeight:600, color:'#0f172a' }}>{value}</span>
-      </div>
-      <div style={{ height:7, background:'#f1f5f9', borderRadius:4, overflow:'hidden' }}>
-        <div style={{ height:'100%', width:pct+'%', background:color, borderRadius:4, transition:'width 0.6s ease' }}/>
-      </div>
-    </div>
-  )
-}
+  useEffect(()=>{
+    (async()=>{
+      const {data:{user}} = await supabase.auth.getUser(); if(!user) return
+      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).single(); if(!p?.tenant_id) return
+      const {data:t} = await supabase.from('tenants').select('plan,free_calls_used,free_calls_limit,plan_calls_used,plan_calls_included,plan_extra_rate,name').eq('id',p.tenant_id).single()
+      setPlan(t?.plan||'free'); setTid(p.tenant_id)
 
-export default function EstadisticasPage() {
-  const [tenant, setTenant]   = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [data, setData]       = useState<any>({})
+      const isPro = (t?.plan==='pro'||t?.plan==='business')
+      if (!isPro) { setLoad(false); return }
 
-  const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data: p } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
-    if (!p?.tenant_id) return
-    const { data: t } = await supabase.from('tenants').select('*').eq('id', p.tenant_id).single()
-    setTenant(t)
-    if (!t) { setLoading(false); return }
-    const tid = p.tenant_id
-    const now = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-    const lastMonth  = new Date(now.getFullYear(), now.getMonth()-1, 1).toISOString().split('T')[0]
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0]
+      const today = new Date().toISOString().slice(0,10)
+      const monthStart = today.slice(0,7)+'-01'
+      const prevMonthEnd = new Date(new Date(monthStart).getTime()-86400000).toISOString().slice(0,10)
+      const prevMonthStart = prevMonthEnd.slice(0,7)+'-01'
 
-    const [calls, reservas, clientes, ordenes] = await Promise.all([
-      supabase.from('calls').select('*').eq('tenant_id', tid),
-      supabase.from('reservations').select('*').eq('tenant_id', tid),
-      supabase.from('customers').select('*').eq('tenant_id', tid),
-      supabase.from('orders').select('*').eq('tenant_id', tid),
-    ])
+      const [callsR, resR, custR] = await Promise.all([
+        supabase.from('calls').select('status,intent,started_at,duration_seconds').eq('tenant_id',p.tenant_id),
+        supabase.from('reservations').select('status,date,people,source').eq('tenant_id',p.tenant_id),
+        supabase.from('customers').select('id,created_at,total_reservations').eq('tenant_id',p.tenant_id),
+      ])
 
-    const allCalls = calls.data || []
-    const allRes   = reservas.data || []
-    const allCli   = clientes.data || []
-    const allOrd   = ordenes.data || []
+      const calls = callsR.data||[]
+      const res   = resR.data||[]
+      const custs = custR.data||[]
 
-    const callsThisMonth    = allCalls.filter(c => c.created_at >= monthStart+'T00:00:00')
-    const callsLastMonth    = allCalls.filter(c => c.created_at >= lastMonth+'T00:00:00' && c.created_at <= lastMonthEnd+'T23:59:59')
-    const resThisMonth      = allRes.filter(r => r.reservation_date >= monthStart)
-    const resCompleted      = allRes.filter(r => r.status === 'completada' || r.status === 'confirmada')
-    const voiceRes          = allRes.filter(r => r.source === 'voice_agent')
-    const completedCalls    = allCalls.filter(c => c.status === 'completed')
-    const totalCallMin      = Math.round(allCalls.reduce((s,c) => s+(c.duration||0),0) / 60)
-    const newCliThisMonth   = allCli.filter(c => c.created_at >= monthStart+'T00:00:00')
-    const ordThisMonth      = allOrd.filter(o => o.created_at >= monthStart+'T00:00:00')
+      // KPIs
+      const callsTotal  = calls.length
+      const callsMonth  = calls.filter(c=>(c.started_at||'').slice(0,7)===today.slice(0,7)).length
+      const resTotal    = res.length
+      const resMonth    = res.filter(r=>(r.date||'').slice(0,7)===today.slice(0,7)).length
+      const resConfirm  = res.filter(r=>r.status==='confirmada'||r.status==='confirmed')
+      const convRate    = callsMonth>0 ? Math.round((resMonth/callsMonth)*100) : 0
 
-    // Reservas por día de semana
-    const byDay: Record<string,number> = { Lun:0, Mar:0, Mié:0, Jue:0, Vie:0, Sáb:0, Dom:0 }
-    const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
-    allRes.forEach(r => {
-      if (r.reservation_date) {
-        const d = new Date(r.reservation_date).getDay()
-        byDay[dayNames[d]] = (byDay[dayNames[d]]||0) + 1
-      }
-    })
+      // Hora pico (basado en calls con started_at)
+      const hourCounts:Record<number,number> = {}
+      calls.forEach(c=>{ if(c.started_at){ const h=new Date(c.started_at).getHours(); hourCounts[h]=(hourCounts[h]||0)+1 } })
+      const peakHour = Object.entries(hourCounts).sort((a,b)=>b[1]-a[1])[0]
 
-    // Hora pico
-    const byHour: Record<string,number> = {}
-    allRes.forEach(r => {
-      if (r.reservation_time) { const h = r.reservation_time.slice(0,2); byHour[h] = (byHour[h]||0)+1 }
-    })
-    const peakHour = Object.entries(byHour).sort((a,b)=>b[1]-a[1])[0]
+      // Intenciones
+      const intents:Record<string,number> = {}
+      calls.forEach(c=>{ if(c.intent){ intents[c.intent]=(intents[c.intent]||0)+1 } })
+      const topIntents = Object.entries(intents).sort((a,b)=>b[1]-a[1]).slice(0,5)
 
-    setData({ allCalls, allRes, allCli, allOrd, callsThisMonth, callsLastMonth, resThisMonth, resCompleted, voiceRes, completedCalls, totalCallMin, newCliThisMonth, ordThisMonth, byDay, peakHour })
-    setLoading(false)
-  }, [])
+      // Personas promedio
+      const avgPeople = res.length>0 ? (res.reduce((s,r)=>s+(r.people||r.party_size||2),0)/res.length).toFixed(1) : '—'
 
-  useEffect(() => { load() }, [load])
+      // Reservas por dia de la semana
+      const dayNames = ['Dom','Lun','Mar','Mie','Jue','Vie','Sab']
+      const dayCounts:Record<number,number> = {}
+      res.forEach(r=>{ if(r.date){ const d=new Date(r.date+'T12:00:00').getDay(); dayCounts[d]=(dayCounts[d]||0)+1 } })
+      const maxDay = Math.max(...Object.values(dayCounts),1)
 
-  if (loading) return <PageLoader/>
+      // Fuente reservas
+      const srcVoice = res.filter(r=>r.source==='voice_agent').length
+      const srcManual= res.filter(r=>r.source==='manual'||!r.source).length
 
-  // Plan gate — Pro y Business
-  const plan = tenant?.plan
-  if (plan !== 'pro' && plan !== 'business') {
-    return (
-      <div style={{ background:'#f8fafc', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <div style={{ maxWidth:460, textAlign:'center', padding:'0 24px' }}>
-          <div style={{ width:64, height:64, borderRadius:16, background:'#eff6ff', border:'1px solid #bfdbfe', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', fontSize:30 }}>📊</div>
-          <h2 style={{ fontSize:22, fontWeight:700, color:'#0f172a', marginBottom:10 }}>Estadísticas avanzadas</h2>
-          <p style={{ fontSize:14, color:'#64748b', lineHeight:1.65, marginBottom:28 }}>
-            Las estadísticas detalladas están disponibles en el plan <strong>Pro</strong> y <strong>Business</strong>.
-            Ve llamadas, conversiones, horas pico y tendencias de clientes.
-          </p>
-          <Link href="/precios" style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'12px 24px', background:'linear-gradient(135deg,#1e40af,#3b82f6)', color:'white', borderRadius:10, fontSize:14, fontWeight:600, textDecoration:'none' }}>
-            Ver planes →
-          </Link>
+      setData({ callsTotal,callsMonth,resTotal,resMonth,resConfirm:resConfirm.length,convRate,peakHour,topIntents,avgPeople,dayCounts,maxDay,dayNames,srcVoice,srcManual,custs:custs.length })
+      setLoad(false)
+    })()
+  },[])
+
+  if(loading) return <PageLoader/>
+
+  const isPro = plan==='pro'||plan==='business'
+
+  if(!isPro) return (
+    <div style={{background:'#f8fafc',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+      <div style={{maxWidth:440,textAlign:'center'}}>
+        <div style={{width:64,height:64,borderRadius:16,background:'linear-gradient(135deg,#7c3aed,#a78bfa)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',boxShadow:'0 8px 24px rgba(124,58,237,0.25)'}}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         </div>
+        <h2 style={{fontSize:22,fontWeight:700,color:'#0f172a',marginBottom:10}}>Estadísticas avanzadas</h2>
+        <p style={{fontSize:14,color:'#64748b',lineHeight:1.6,marginBottom:24}}>Analiza el rendimiento de tu recepcionista: tasa de conversión, hora pico, tendencias de reservas y más. Disponible en Pro y Business.</p>
+        <Link href="/precios" style={{display:'inline-block',padding:'12px 28px',fontSize:14,fontWeight:600,color:'white',background:'linear-gradient(135deg,#7c3aed,#a78bfa)',borderRadius:10,textDecoration:'none',boxShadow:'0 4px 16px rgba(124,58,237,0.3)'}}>
+          Ver planes →
+        </Link>
       </div>
-    )
-  }
+    </div>
+  )
 
-  const maxDay = Math.max(...Object.values(data.byDay || {}), 1)
+  const d = data
+  if (!d) return null
 
   return (
-    <div style={{ background:'#f8fafc', minHeight:'100vh' }}>
-      <PageHeader title="Estadísticas" subtitle="Rendimiento de tu recepcionista"/>
-      <div style={{ maxWidth:1100, margin:'0 auto', padding:24 }}>
+    <div style={{background:'#f8fafc',minHeight:'100vh'}}>
+      <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'14px 24px'}}>
+        <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>Estadísticas</h1>
+        <p style={{fontSize:12,color:'#94a3b8',marginTop:1}}>Rendimiento de tu recepcionista y reservas</p>
+      </div>
+      <div style={{maxWidth:1000,margin:'0 auto',padding:'24px'}}>
 
         {/* KPIs */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
-          <Metric label="Llamadas este mes" value={data.callsThisMonth?.length||0} sub={`${data.callsLastMonth?.length||0} el mes anterior`} color='#1d4ed8'/>
-          <Metric label="Reservas gestionadas" value={data.resThisMonth?.length||0} sub={`${data.voiceRes?.length||0} por el agente`} color='#059669'/>
-          <Metric label="Clientes nuevos" value={data.newCliThisMonth?.length||0} sub={`${data.allCli?.length||0} en total`} color='#7c3aed'/>
-          <Metric label="Minutos gestionados" value={data.totalCallMin||0 + 'min'} sub={`${data.completedCalls?.length||0} llamadas completadas`} color='#d97706'/>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
+          {[
+            {label:'Llamadas este mes',value:d.callsMonth,sub:'Total: '+d.callsTotal,color:'#1d4ed8'},
+            {label:'Reservas este mes', value:d.resMonth,  sub:'Total: '+d.resTotal,   color:'#059669'},
+            {label:'Tasa conversión',   value:d.convRate+'%',sub:'Llamadas → Reservas', color:d.convRate>=30?'#059669':d.convRate>=15?'#d97706':'#dc2626'},
+            {label:'Clientes',          value:d.custs,    sub:'Personas/reserva: '+d.avgPeople, color:'#7c3aed'},
+          ].map(k=>(
+            <div key={k.label} style={{background:'white',border:'1px solid #e2e8f0',borderRadius:14,padding:'18px 20px'}}>
+              <p style={{fontSize:28,fontWeight:700,color:k.color,letterSpacing:'-0.025em'}}>{k.value}</p>
+              <p style={{fontSize:12,color:'#374151',fontWeight:500,marginTop:4}}>{k.label}</p>
+              <p style={{fontSize:11,color:'#94a3b8',marginTop:1}}>{k.sub}</p>
+            </div>
+          ))}
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
           {/* Reservas por día */}
-          <div style={{ background:'white', border:'1px solid #e2e8f0', borderRadius:12, padding:'20px' }}>
-            <p style={{ fontSize:14, fontWeight:600, color:'#0f172a', marginBottom:16 }}>Reservas por día de la semana</p>
-            {Object.entries(data.byDay||{}).map(([day, count]: [string, any]) => (
-              <Bar key={day} label={day} value={count} max={maxDay} color='#3b82f6'/>
-            ))}
-            {(!data.byDay || Object.values(data.byDay).every(v=>v===0)) && (
-              <p style={{ fontSize:13, color:'#94a3b8', textAlign:'center', padding:'20px 0' }}>Sin datos aún</p>
-            )}
+          <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:14,padding:'18px 20px'}}>
+            <p style={{fontSize:13,fontWeight:600,color:'#0f172a',marginBottom:14}}>Reservas por día de la semana</p>
+            <div style={{display:'flex',gap:8,alignItems:'flex-end',height:100}}>
+              {[1,2,3,4,5,6,0].map(day=>{
+                const cnt = d.dayCounts[day]||0
+                const h   = d.maxDay>0 ? Math.round((cnt/d.maxDay)*100) : 0
+                const isPeak = cnt===d.maxDay&&cnt>0
+                return (
+                  <div key={day} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                    <p style={{fontSize:10,color:'#374151',fontWeight:600}}>{cnt||''}</p>
+                    <div style={{width:'100%',height:h+'%',minHeight:4,background:isPeak?'#1d4ed8':'#bfdbfe',borderRadius:4,transition:'height 0.5s'}}/>
+                    <p style={{fontSize:10,color:'#94a3b8'}}>{d.dayNames[day]}</p>
+                  </div>
+                )
+              })}
+            </div>
           </div>
 
-          {/* Métricas de agente */}
-          <div style={{ background:'white', border:'1px solid #e2e8f0', borderRadius:12, padding:'20px' }}>
-            <p style={{ fontSize:14, fontWeight:600, color:'#0f172a', marginBottom:16 }}>Métricas del agente</p>
-            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-              {[
-                { label:'Tasa de conversión (llamada → reserva)', value: data.allCalls?.length > 0 ? Math.round((data.voiceRes?.length/data.allCalls?.length)*100)+'%' : '—', color:'#059669' },
-                { label:'Llamadas completadas', value: data.completedCalls?.length||0, color:'#1d4ed8' },
-                { label:'Reservas creadas por el agente', value: data.voiceRes?.length||0, color:'#7c3aed' },
-                { label:'Hora pico', value: data.peakHour ? data.peakHour[0]+':00h ('+data.peakHour[1]+' reservas)' : '—', color:'#d97706' },
-                { label:'Total clientes registrados', value: data.allCli?.length||0, color:'#0891b2' },
-              ].map(m => (
-                <div key={m.label} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #f1f5f9' }}>
-                  <p style={{ fontSize:13, color:'#64748b' }}>{m.label}</p>
-                  <p style={{ fontSize:16, fontWeight:700, color:m.color }}>{m.value}</p>
+          {/* Hora pico + fuente */}
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:14,padding:'16px 20px',flex:1}}>
+              <p style={{fontSize:13,fontWeight:600,color:'#0f172a',marginBottom:8}}>Hora pico</p>
+              {d.peakHour ? (
+                <div style={{display:'flex',alignItems:'center',gap:12}}>
+                  <div style={{fontSize:32,fontWeight:800,color:'#1d4ed8'}}>{d.peakHour[0]}h</div>
+                  <div>
+                    <p style={{fontSize:13,color:'#374151'}}>{d.peakHour[1]} llamadas</p>
+                    <p style={{fontSize:11,color:'#94a3b8'}}>El horario más activo</p>
+                  </div>
                 </div>
-              ))}
+              ) : <p style={{fontSize:13,color:'#94a3b8'}}>Sin datos de llamadas</p>}
+            </div>
+            <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:14,padding:'16px 20px',flex:1}}>
+              <p style={{fontSize:13,fontWeight:600,color:'#0f172a',marginBottom:8}}>Origen reservas</p>
+              <div style={{display:'flex',gap:16}}>
+                <div>
+                  <p style={{fontSize:22,fontWeight:700,color:'#7c3aed'}}>{d.srcVoice}</p>
+                  <p style={{fontSize:11,color:'#94a3b8'}}>Via agente voz</p>
+                </div>
+                <div>
+                  <p style={{fontSize:22,fontWeight:700,color:'#64748b'}}>{d.srcManual}</p>
+                  <p style={{fontSize:11,color:'#94a3b8'}}>Manuales</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Llamadas este mes vs anterior */}
-        <div style={{ background:'white', border:'1px solid #e2e8f0', borderRadius:12, padding:'20px' }}>
-          <p style={{ fontSize:14, fontWeight:600, color:'#0f172a', marginBottom:6 }}>Comparativa mensual</p>
-          <p style={{ fontSize:12, color:'#94a3b8', marginBottom:16 }}>Llamadas recibidas</p>
-          <div style={{ display:'flex', gap:16, alignItems:'flex-end', height:100 }}>
-            {[
-              { label:'Mes anterior', value:data.callsLastMonth?.length||0, color:'#bfdbfe' },
-              { label:'Este mes', value:data.callsThisMonth?.length||0, color:'#3b82f6' },
-            ].map(b => {
-              const maxV = Math.max(data.callsLastMonth?.length||0, data.callsThisMonth?.length||0, 1)
-              const h = Math.round((b.value/maxV)*80)+4
-              return (
-                <div key={b.label} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
-                  <span style={{ fontSize:14, fontWeight:700, color:'#0f172a' }}>{b.value}</span>
-                  <div style={{ width:60, height:h, background:b.color, borderRadius:'6px 6px 0 0', transition:'height 0.5s' }}/>
-                  <span style={{ fontSize:11, color:'#94a3b8' }}>{b.label}</span>
-                </div>
-              )
-            })}
+        {/* Intenciones */}
+        {d.topIntents.length>0&&(
+          <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:14,padding:'18px 20px'}}>
+            <p style={{fontSize:13,fontWeight:600,color:'#0f172a',marginBottom:14}}>Intenciones detectadas</p>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {d.topIntents.map(([intent,cnt]:any)=>{
+                const pct = Math.round((cnt/d.callsTotal)*100)
+                return (
+                  <div key={intent} style={{display:'flex',alignItems:'center',gap:10}}>
+                    <p style={{fontSize:13,color:'#374151',width:160,flexShrink:0,textTransform:'capitalize'}}>{intent.replace(/_/g,' ')}</p>
+                    <div style={{flex:1,height:8,background:'#f1f5f9',borderRadius:4,overflow:'hidden'}}>
+                      <div style={{height:'100%',width:pct+'%',background:'#1d4ed8',borderRadius:4}}/>
+                    </div>
+                    <p style={{fontSize:12,color:'#94a3b8',width:40,textAlign:'right',flexShrink:0}}>{cnt}</p>
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
