@@ -1,111 +1,134 @@
 'use client'
-export const dynamic='force-dynamic'
-import{useEffect,useState,useMemo,useCallback}from'react'
-import{supabase}from'@/lib/supabase'
-import{BUSINESS_TEMPLATES}from'@/types'
-import{CalendarDays,Bot,Users,ChevronLeft,ChevronRight}from'lucide-react'
-import{PageLoader,PageHeader}from'@/components/ui'
+import { useEffect, useState, useCallback } from 'react'
+import { supabase } from '@/lib/supabase'
+import { PageLoader } from '@/components/ui'
 
-const HOURS=Array.from({length:17},(_,i)=>`${String(i+7).padStart(2,'0')}:00`)
-function isoDate(d:Date){return d.toISOString().split('T')[0]}
+const HOURS = Array.from({length:14},(_,i)=>(i+9).toString().padStart(2,'0')+':00')
+const DAYS = ['LU','MA','MI','JU','VI','SA','DO']
+
+function getWeekMon(base: Date) {
+  const d = new Date(base)
+  const day = d.getDay()
+  const diff = day===0?-6:1-day
+  d.setDate(d.getDate()+diff)
+  return Array.from({length:7},(_,i)=>{ const dd=new Date(d); dd.setDate(d.getDate()+i); return dd })
+}
+
+const STATUS_COL:Record<string,string> = {
+  confirmada:'#1d4ed8',confirmed:'#1d4ed8',
+  pendiente:'#d97706',pending:'#d97706',
+  cancelada:'#dc2626',cancelled:'#dc2626',
+  completada:'#059669',completed:'#059669',
+}
 
 export default function AgendaPage(){
-  const[reservations,setRes]=useState<any[]>([])
-  const[loading,setLoading]=useState(true)
-  const[tenantType,setType]=useState('otro')
-  const[selectedDate,setDate]=useState(isoDate(new Date()))
+  const [base,setBase]   = useState(new Date())
+  const [res,setRes]     = useState<any[]>([])
+  const [loading,setLoad]= useState(true)
+  const [tid,setTid]     = useState<string|null>(null)
+  const [hoverRes,setHover] = useState<any|null>(null)
 
-  const loadData=useCallback(async()=>{
-    const{data:{user}}=await supabase.auth.getUser()
-    if(!user)return
-    const{data:p}=await supabase.from('profiles').select('tenant_id').eq('id',user.id).single()
-    if(!p?.tenant_id)return
-    const tid=(p as any).tenant_id
-    const[{data:r},{data:t}]=await Promise.all([
-      supabase.from('reservations').select('*').eq('tenant_id',tid).eq('reservation_date',selectedDate).order('reservation_time'),
-      supabase.from('tenants').select('type').eq('id',tid).single(),
-    ])
-    setRes(r||[]);if(t?.type)setType(t.type);setLoading(false)
-  },[selectedDate])
+  const load = useCallback(async(tenantId:string)=>{
+    const week = getWeekMon(base)
+    const from = week[0].toISOString().slice(0,10)
+    const to   = week[6].toISOString().slice(0,10)
+    const {data} = await supabase.from('reservations').select('*')
+      .eq('tenant_id',tenantId).gte('date',from).lte('date',to)
+      .in('status',['confirmada','confirmed','pendiente','pending'])
+    setRes(data||[])
+    setLoad(false)
+  },[base])
 
-  useEffect(()=>{loadData()},[loadData])
+  useEffect(()=>{
+    (async()=>{
+      const {data:{user}} = await supabase.auth.getUser(); if(!user) return
+      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).single(); if(!p?.tenant_id) return
+      setTid(p.tenant_id); await load(p.tenant_id)
+    })()
+  },[load])
 
-  const today=isoDate(new Date())
-  const nowHour=new Date().getHours()
-  const isToday=selectedDate===today
+  if(loading) return <PageLoader/>
+  const week = getWeekMon(base)
+  const today = new Date().toISOString().slice(0,10)
 
-  const weekDays=useMemo(()=>{
-    const pivot=new Date(selectedDate+'T12:00')
-    return Array.from({length:7},(_,i)=>{
-      const d=new Date(pivot);d.setDate(pivot.getDate()-3+i)
-      const iso=isoDate(d)
-      return{iso,num:d.getDate(),wd:d.toLocaleDateString('es-ES',{weekday:'short'}).slice(0,2).toUpperCase(),isToday:iso===today}
+  function getRes(dayIso:string, hour:string) {
+    return res.filter(r => {
+      const d = r.date||r.reservation_date||''
+      const t = (r.time||r.reservation_time||'00:00').slice(0,5)
+      return d===dayIso && t>=hour && t<(parseInt(hour)+1).toString().padStart(2,'0')+':00'
     })
-  },[selectedDate])
+  }
 
-  const byHour=useMemo(()=>{
-    const m:Record<string,typeof reservations>={}
-    reservations.forEach(r=>{const h=r.reservation_time?.slice(0,5)?.replace(/:d+$/,':00')||'??:00';if(!m[h])m[h]=[];m[h].push(r)})
-    return m
-  },[reservations])
+  return (
+    <div style={{background:'#f8fafc',minHeight:'100vh',display:'flex',flexDirection:'column'}}>
+      <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div>
+          <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>Agenda semanal</h1>
+          <p style={{fontSize:12,color:'#94a3b8',marginTop:1}}>{res.length} reservas esta semana</p>
+        </div>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()-7);return n})} style={{padding:'6px 12px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13}}>‹ Anterior</button>
+          <button onClick={()=>setBase(new Date())} style={{padding:'6px 12px',background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:8,cursor:'pointer',fontSize:13,color:'#1d4ed8',fontWeight:600}}>Hoy</button>
+          <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n})} style={{padding:'6px 12px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13}}>Siguiente ›</button>
+        </div>
+      </div>
 
-  function navigate(days:number){const d=new Date(selectedDate+'T12:00');d.setDate(d.getDate()+days);setDate(isoDate(d))}
-
-  if(loading)return<PageLoader/>
-  const template=BUSINESS_TEMPLATES[tenantType]||BUSINESS_TEMPLATES.otro
-  const unit=template.reservationUnit==='mesa'?'reservas':'citas'
-  const dateLabel=new Date(selectedDate+'T12:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})
-
-  return(
-    <div style={{background:'var(--color-bg)',minHeight:'100vh'}}>
-      <PageHeader title="Agenda" subtitle={`${reservations.length} ${unit} · ${dateLabel}`}
-        actions={
-          <div style={{display:'flex',alignItems:'center',gap:4}}>
-            <button onClick={()=>navigate(-1)} className="btn btn-secondary btn-sm" style={{padding:'6px 9px'}}><ChevronLeft size={14}/></button>
-            <button onClick={()=>setDate(today)} className="btn btn-secondary btn-sm">Hoy</button>
-            <button onClick={()=>navigate(1)} className="btn btn-secondary btn-sm" style={{padding:'6px 9px'}}><ChevronRight size={14}/></button>
-            <input type="date" value={selectedDate} onChange={e=>setDate(e.target.value)} className="input-base" style={{width:140,marginLeft:4}}/>
+      <div style={{flex:1,overflow:'auto',padding:'0 0 20px'}}>
+        <div style={{minWidth:800}}>
+          {/* Header días */}
+          <div style={{display:'grid',gridTemplateColumns:'60px repeat(7,1fr)',background:'white',borderBottom:'2px solid #e2e8f0',position:'sticky',top:0,zIndex:10}}>
+            <div/>
+            {week.map((d,i)=>{
+              const iso = d.toISOString().slice(0,10)
+              const isToday = iso===today
+              const cnt = res.filter(r=>(r.date||r.reservation_date)===iso).length
+              return (
+                <div key={iso} style={{padding:'10px 4px',textAlign:'center',borderLeft:'1px solid #f1f5f9'}}>
+                  <p style={{fontSize:10,fontWeight:700,color:isToday?'#1d4ed8':'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>{DAYS[i]}</p>
+                  <p style={{fontSize:18,fontWeight:isToday?700:500,color:isToday?'#1d4ed8':'#374151'}}>{d.getDate()}</p>
+                  {cnt>0&&<span style={{fontSize:10,background:isToday?'#1d4ed8':'#e2e8f0',color:isToday?'white':'#374151',borderRadius:8,padding:'1px 6px',fontWeight:600}}>{cnt}</span>}
+                </div>
+              )
+            })}
           </div>
-        }/>
-      <div style={{maxWidth:900,margin:'0 auto',padding:'var(--content-pad)'}}>
-        <div style={{display:'flex',gap:4,background:'var(--color-surface)',border:'1px solid var(--color-border)',borderRadius:'var(--radius-lg)',padding:6,marginBottom:16}}>
-          {weekDays.map(d=>(
-            <button key={d.iso} onClick={()=>setDate(d.iso)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',padding:'7px 4px',borderRadius:8,border:'none',cursor:'pointer',background:selectedDate===d.iso?'var(--color-brand)':d.isToday?'var(--color-brand-muted)':'transparent',color:selectedDate===d.iso?'#fff':d.isToday?'var(--color-brand)':'var(--color-text-muted)',transition:'all 0.12s'}}>
-              <span style={{fontSize:10,fontWeight:600,opacity:0.75}}>{d.wd}</span>
-              <span style={{fontSize:15,fontWeight:700,marginTop:2}}>{d.num}</span>
-            </button>
+
+          {/* Grid horas */}
+          {HOURS.map(hour=>(
+            <div key={hour} style={{display:'grid',gridTemplateColumns:'60px repeat(7,1fr)',borderBottom:'1px solid #f1f5f9'}}>
+              <div style={{padding:'8px 6px',textAlign:'right',fontSize:11,color:'#94a3b8',fontWeight:600,paddingTop:10}}>{hour}</div>
+              {week.map((d,di)=>{
+                const iso = d.toISOString().slice(0,10)
+                const cellRes = getRes(iso, hour)
+                const isToday = iso===today
+                return (
+                  <div key={di} style={{borderLeft:'1px solid #f1f5f9',minHeight:52,padding:'2px 3px',background:isToday?'#fafcff':'transparent',position:'relative'}}>
+                    {cellRes.map(r=>{
+                      const color = STATUS_COL[r.status]||'#1d4ed8'
+                      const ppl = r.people||r.party_size||1
+                      return (
+                        <div key={r.id}
+                          onMouseEnter={()=>setHover(r)} onMouseLeave={()=>setHover(null)}
+                          style={{background:color+'18',border:'1px solid '+color+'44',borderLeft:'3px solid '+color,borderRadius:5,padding:'3px 5px',marginBottom:2,cursor:'pointer',position:'relative'}}>
+                          <p style={{fontSize:11,fontWeight:700,color,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.customer_name||'—'}</p>
+                          <p style={{fontSize:10,color:'#64748b'}}>{(r.time||r.reservation_time||'').slice(0,5)} · {ppl}p</p>
+                          {hoverRes?.id===r.id&&(
+                            <div style={{position:'absolute',left:'100%',top:0,zIndex:50,background:'white',border:'1px solid #e2e8f0',borderRadius:10,padding:'10px 14px',width:200,boxShadow:'0 4px 16px rgba(0,0,0,0.12)',pointerEvents:'none'}}>
+                              <p style={{fontSize:13,fontWeight:700,color:'#0f172a',marginBottom:4}}>{r.customer_name}</p>
+                              <p style={{fontSize:12,color:'#64748b'}}>{(r.date||r.reservation_date)?.slice(0,10)} {(r.time||r.reservation_time||'').slice(0,5)}</p>
+                              <p style={{fontSize:12,color:'#64748b'}}>{ppl} persona{ppl!==1?'s':''}{r.table_name?' · '+r.table_name:''}</p>
+                              {r.notes&&<p style={{fontSize:11,color:'#94a3b8',marginTop:4,fontStyle:'italic'}}>{r.notes}</p>}
+                              <span style={{fontSize:10,fontWeight:700,color,background:color+'18',padding:'2px 7px',borderRadius:6,display:'inline-block',marginTop:4}}>{r.status}</span>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
           ))}
         </div>
-        <div className="card" style={{overflow:'hidden'}}>
-          {HOURS.map((hour,idx)=>{
-            const slots=byHour[hour]||[]
-            const hourNum=parseInt(hour)
-            const isPast=isToday&&hourNum<nowHour
-            const isNow=isToday&&hourNum===nowHour
-            return(
-              <div key={hour} style={{display:'flex',alignItems:'stretch',borderTop:idx>0?'1px solid var(--color-border-light)':'none',background:isNow?'rgba(79,70,229,0.03)':'transparent',minHeight:44}}>
-                <div style={{width:60,flexShrink:0,padding:'12px 0 12px 16px',display:'flex',alignItems:'flex-start',gap:4}}>
-                  <span className="text-mono" style={{fontSize:12,fontWeight:500,color:isNow?'var(--color-brand)':isPast?'var(--color-text-disabled)':'var(--color-text-muted)'}}>{hour}</span>
-                  {isNow&&<div style={{width:5,height:5,borderRadius:'50%',background:'var(--color-brand)',marginTop:4,flexShrink:0}}/>}
-                </div>
-                <div style={{flex:1,padding:'8px 12px 8px 4px',display:'flex',alignItems:'center',flexWrap:'wrap' as any,gap:6}}>
-                  {slots.length===0
-                    ? <div style={{width:'100%',height:1,background:'var(--color-border-light)'}}/>
-                    : slots.map((r:any)=>(
-                        <div key={r.id} style={{display:'inline-flex',alignItems:'center',gap:8,background:r.status==='cancelada'?'var(--color-danger-light)':'var(--color-brand)',color:r.status==='cancelada'?'var(--color-danger)':'#fff',borderRadius:8,padding:'6px 12px',fontSize:12,fontWeight:500,opacity:r.status==='cancelada'?0.7:1}}>
-                          <div>
-                            <div style={{display:'flex',alignItems:'center',gap:5}}><span style={{fontWeight:700}}>{r.customer_name}</span>{r.source==='voice_agent'&&<Bot size={11} style={{opacity:0.8}}/>}</div>
-                            <div style={{opacity:0.8,fontSize:11,marginTop:1}}><Users size={10} style={{display:'inline',marginRight:3}}/>{r.party_size} pers.{r.table_name&&` · ${r.table_name}`}</div>
-                          </div>
-                        </div>
-                      ))
-                  }
-                </div>
-              </div>
-            )
-          })}
-        </div>
-        {reservations.length===0&&<p className="text-body-sm" style={{color:'var(--color-text-muted)',textAlign:'center',marginTop:20}}>Sin {unit} para este día</p>}
       </div>
     </div>
   )
