@@ -1,32 +1,41 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Suspense } from 'react'
+import Link from 'next/link'
 
-const NAMES: Record<string,string> = { starter:'Starter', pro:'Pro', business:'Business' }
-const CALLS: Record<string,number> = { starter:50, pro:200, business:600 }
-
-function SuccessContent() {
+export default function SuccessPage() {
   const params = useSearchParams()
-  const plan = params.get('plan') || 'pro'
-  const [sec, setSec] = useState(5)
+  const [show, setShow] = useState(false)
+
   useEffect(() => {
-    const t = setInterval(() => setSec(s => { if (s<=1) { clearInterval(t); window.location.href='/panel'; return 0 } return s-1 }), 1000)
-    return () => clearInterval(t)
+    const t = setTimeout(() => setShow(true), 300)
+    return () => clearTimeout(t)
   }, [])
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
-      <div className="bg-slate-800 rounded-3xl border border-slate-700 p-12 max-w-md w-full text-center">
-        <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6"><span className="text-4xl">✅</span></div>
-        <h1 className="text-3xl font-bold text-white mb-3">¡Plan {NAMES[plan]} activado!</h1>
-        <p className="text-slate-400 mb-2">Tu suscripción está activa.</p>
-        <p className="text-indigo-400 font-semibold mb-8">{CALLS[plan]} llamadas incluidas este mes.</p>
-        <div className="bg-slate-700/50 rounded-2xl p-4 mb-6">
-          <p className="text-slate-300 text-sm">Redirigiendo en <span className="text-white font-bold">{sec}s</span></p>
+    <div style={{minHeight:'100vh',background:'linear-gradient(135deg,#0f172a,#1e3a5f)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'DM Sans',-apple-system,sans-serif",padding:24}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap'); *{box-sizing:border-box;margin:0;padding:0} @keyframes scaleIn{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}} @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <div style={{maxWidth:480,width:'100%',textAlign:'center',animation:'scaleIn 0.4s ease'}}>
+        <div style={{width:80,height:80,borderRadius:24,background:'linear-gradient(135deg,#059669,#10b981)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 24px',boxShadow:'0 8px 32px rgba(5,150,105,0.4)'}}>
+          <svg width='36' height='36' viewBox='0 0 24 24' fill='none'><path d='M20 6L9 17l-5-5' stroke='white' strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round'/></svg>
         </div>
-        <a href="/panel" className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-semibold hover:bg-indigo-500 transition-colors inline-block">Ir al centro de control →</a>
+        <h1 style={{fontSize:32,fontWeight:700,color:'white',letterSpacing:'-0.025em',marginBottom:12}}>Plan activado</h1>
+        <p style={{fontSize:16,color:'rgba(255,255,255,0.6)',lineHeight:1.65,marginBottom:36}}>
+          Tu recepcionista virtual ya está activa y lista para atender llamadas.
+          Puedes ver tu consumo en el panel en cualquier momento.
+        </p>
+        <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
+          <Link href='/panel' style={{padding:'13px 28px',fontSize:15,fontWeight:600,color:'white',background:'linear-gradient(135deg,#1e40af,#3b82f6)',borderRadius:11,textDecoration:'none',boxShadow:'0 4px 16px rgba(59,130,246,0.35)'}}>
+            Ir al panel →
+          </Link>
+          <Link href='/configuracion' style={{padding:'13px 24px',fontSize:15,fontWeight:500,color:'rgba(255,255,255,0.75)',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:11,textDecoration:'none'}}>
+            Configurar agente
+          </Link>
+        </div>
+        <p style={{marginTop:32,fontSize:13,color:'rgba(255,255,255,0.3)'}}>
+          ¿Dudas? <a href='mailto:hola@reservo.ai' style={{color:'rgba(255,255,255,0.5)',textDecoration:'none'}}>hola@reservo.ai</a>
+        </p>
       </div>
     </div>
   )
 }
-export default function SuccessPage() { return <Suspense><SuccessContent/></Suspense> }
