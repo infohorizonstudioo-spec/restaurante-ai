@@ -1,69 +1,178 @@
 'use client'
-export const dynamic='force-dynamic'
-import{useEffect,useState,useMemo}from'react'
-import{supabase}from'@/lib/supabase'
-import{Phone,PhoneIncoming,PhoneOff,Zap,Clock,Search}from'lucide-react'
-import{PageLoader,PageHeader,Badge,Card,EmptyState,Input,Select}from'@/components/ui'
-const SC:Record<string,{label:string;variant:'green'|'blue'|'red'|'slate';icon:any}>={completed:{label:'Completada',variant:'green',icon:PhoneIncoming},active:{label:'Activa',variant:'blue',icon:PhoneIncoming},missed:{label:'Perdida',variant:'red',icon:PhoneOff}}
-export default function LlamadasPage(){
-  const[calls,setCalls]=useState<any[]>([]);const[loading,setLoading]=useState(true);const[search,setSearch]=useState('');const[filter,setFilter]=useState('all')
-  useEffect(()=>{
-    let m=true
-    async function load(){
-      const{data:{user}}=await supabase.auth.getUser();if(!user)return
-      const{data:p}=await supabase.from('profiles').select('tenant_id').eq('id',user.id).single();if(!p?.tenant_id)return
-      const tid=(p as any).tenant_id
-      const{data:c}=await supabase.from('calls').select('*').eq('tenant_id',tid).order('created_at',{ascending:false}).limit(100)
-      if(m){setCalls(c||[]);setLoading(false)}
-      const ch=supabase.channel('calls-rt').on('postgres_changes',{event:'INSERT',schema:'public',table:'calls',filter:`tenant_id=eq.${tid}`},pl=>setCalls(prev=>[pl.new as any,...prev])).subscribe()
-      return()=>supabase.removeChannel(ch)
-    }
-    load();return()=>{m=false}
-  },[])
-  const filtered=useMemo(()=>calls.filter(c=>{if(filter!=='all'&&c.status!==filter)return false;if(search&&!c.from_number?.includes(search)&&!c.summary?.toLowerCase().includes(search.toLowerCase()))return false;return true}),[calls,search,filter])
-  const grouped=useMemo(()=>{const g:Record<string,typeof calls>={};filtered.forEach(c=>{const d=c.created_at?c.created_at.split('T')[0]:'?';if(!g[d])g[d]=[];g[d].push(c)});return Object.entries(g).sort(([a],[b])=>b.localeCompare(a))},[filtered])
-  if(loading)return<PageLoader/>
-  const today=new Date().toISOString().split('T')[0];const yesterday=new Date(Date.now()-86400000).toISOString().split('T')[0]
-  function dl(iso:string){if(iso===today)return'Hoy';if(iso===yesterday)return'Ayer';return new Date(iso+'T12:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}
-  return(
-    <div style={{background:'var(--color-bg)',minHeight:'100vh'}}>
-      <PageHeader title="Llamadas" subtitle={`${calls.length} registradas`} actions={<div style={{display:'flex',alignItems:'center',gap:5,fontSize:12,color:'var(--color-text-muted)'}}><div style={{width:7,height:7,borderRadius:'50%',background:'var(--color-success)'}}/>Tiempo real</div>}/>
-      <div style={{maxWidth:800,margin:'0 auto',padding:'var(--content-pad)'}}>
-        <div style={{display:'flex',gap:8,marginBottom:16}}>
-          <Input icon={<Search size={14}/>} placeholder="Buscar..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:260}}/>
-          <Select value={filter} onChange={e=>setFilter(e.target.value)} style={{maxWidth:160}}>
-            <option value="all">Todos</option><option value="completed">Completadas</option><option value="missed">Perdidas</option><option value="active">Activas</option>
-          </Select>
-        </div>
-        {filtered.length===0?<div className="card"><EmptyState icon={<Phone size={22}/>} title="Sin llamadas" description="Las llamadas del agente aparecerán aquí en tiempo real"/></div>:
-        <div style={{display:'flex',flexDirection:'column',gap:20}}>
-          {grouped.map(([date,dc])=>(
-            <div key={date}>
-              <p className="text-label" style={{color:'var(--color-text-muted)',marginBottom:8,paddingLeft:4}}>{dl(date)} · {dc.length} llamada{dc.length!==1?'s':''}</p>
-              <div className="card" style={{overflow:'hidden'}}>
-                {dc.map((c:any,i:number)=>{
-                  const sc=SC[c.status]||SC.completed;const Icon=sc.icon
-                  return(
-                    <div key={c.id} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'14px 20px',borderTop:i>0?'1px solid var(--color-border-light)':'none'}}>
-                      <div style={{width:36,height:36,borderRadius:10,flexShrink:0,marginTop:1,background:c.status==='completed'?'var(--color-success-light)':c.status==='missed'?'var(--color-danger-light)':'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                        <Icon size={15} style={{color:c.status==='completed'?'var(--color-success)':c.status==='missed'?'var(--color-danger)':'var(--color-info)'}}/>
-                      </div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap' as any,marginBottom:3}}><p className="text-body" style={{fontWeight:600}}>{c.from_number||'Número desconocido'}</p><Badge variant={sc.variant} dot>{sc.label}</Badge></div>
-                        {c.summary&&<p className="text-body-sm" style={{color:'var(--color-text-secondary)',marginBottom:4}}>{c.summary}</p>}
-                        {c.action_suggested&&<div style={{display:'inline-flex',alignItems:'center',gap:5,background:'var(--color-brand-muted)',color:'var(--color-brand)',padding:'3px 9px',borderRadius:'var(--radius-full)',fontSize:11,fontWeight:600}}><Zap size={10}/>{c.action_suggested}</div>}
-                      </div>
-                      <div style={{textAlign:'right',flexShrink:0}}>
-                        <p className="text-caption" style={{color:'var(--color-text-muted)'}}>{c.created_at?new Date(c.created_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):''}</p>
-                        {c.duration&&<p className="text-caption" style={{color:'var(--color-text-muted)',marginTop:3,display:'flex',alignItems:'center',gap:3,justifyContent:'flex-end'}}><Clock size={10}/>{Math.floor(c.duration/60)}:{String(c.duration%60).padStart(2,'0')}</p>}
-                      </div>
-                    </div>
-                  )
-                })}
+import { useEffect, useState, useCallback } from 'react'
+import { supabase } from '@/lib/supabase'
+import { PageLoader, PageHeader, Badge, EmptyState } from '@/components/ui'
+
+function dur(s?: number) {
+  if (!s) return null
+  const m = Math.floor(s/60), sec = s%60
+  return m>0 ? `${m}m ${sec}s` : `${sec}s`
+}
+function timeAgo(d: string) {
+  const diff = (Date.now() - new Date(d).getTime()) / 1000
+  if (diff < 60) return 'hace un momento'
+  if (diff < 3600) return `hace ${Math.floor(diff/60)}min`
+  if (diff < 86400) return `hace ${Math.floor(diff/3600)}h`
+  return new Date(d).toLocaleDateString('es-ES', { day:'numeric', month:'short' })
+}
+function groupByDate(calls: any[]) {
+  const groups: Record<string, any[]> = {}
+  calls.forEach(c => {
+    const d = c.created_at ? new Date(c.created_at).toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' }) : 'Sin fecha'
+    if (!groups[d]) groups[d] = []
+    groups[d].push(c)
+  })
+  return groups
+}
+
+const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
+  completed:   { label: 'Completada', color: '#059669', bg: '#f0fdf4' },
+  'in-progress':{ label: 'En curso',  color: '#d97706', bg: '#fffbeb' },
+  failed:      { label: 'Fallida',    color: '#dc2626', bg: '#fef2f2' },
+  missed:      { label: 'Perdida',    color: '#6b7280', bg: '#f9fafb' },
+}
+
+export default function LlamadasPage() {
+  const [calls, setCalls]       = useState<any[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const [tenantId, setTenantId] = useState<string>('')
+
+  const load = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: p } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
+    if (!p?.tenant_id) return
+    setTenantId(p.tenant_id)
+    const { data } = await supabase.from('calls').select('*').eq('tenant_id', p.tenant_id).order('created_at', { ascending: false }).limit(100)
+    setCalls(data || [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    load()
+    // Real-time updates
+    const ch = supabase.channel('calls-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'calls' }, load)
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [load])
+
+  if (loading) return <PageLoader/>
+
+  const groups = groupByDate(calls)
+  const total = calls.length
+  const completed = calls.filter(c => c.status === 'completed').length
+  const totalMin = Math.round(calls.reduce((s, c) => s + (c.duration || 0), 0) / 60)
+
+  return (
+    <div style={{ background: '#f8fafc', minHeight: '100vh' }}>
+      <PageHeader title="Llamadas" subtitle={`${total} llamadas registradas`}/>
+      <div style={{ maxWidth: 820, margin: '0 auto', padding: 24 }}>
+
+        {/* Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
+          {[
+            { label: 'Total recibidas', value: total, icon: '📞' },
+            { label: 'Completadas', value: completed, icon: '✅' },
+            { label: 'Minutos gestionados', value: totalMin + 'min', icon: '⏱' },
+          ].map(s => (
+            <div key={s.label} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ fontSize: 24 }}>{s.icon}</div>
+              <div>
+                <p style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em' }}>{s.value}</p>
+                <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>{s.label}</p>
               </div>
             </div>
           ))}
-        </div>}
+        </div>
+
+        {total === 0
+          ? <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+              <EmptyState icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="#94a3b8"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>} title="Sin llamadas aún" description="Las llamadas de tu recepcionista aparecerán aquí en tiempo real"/>
+            </div>
+          : Object.entries(groups).map(([date, dayCalls]) => (
+              <div key={date} style={{ marginBottom: 28 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{date}</span>
+                  <div style={{ flex: 1, height: 1, background: '#e2e8f0' }}/>
+                  <span style={{ fontSize: 11, color: '#94a3b8' }}>{dayCalls.length} llamada{dayCalls.length!==1?'s':''}</span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {dayCalls.map(call => {
+                    const st = STATUS_MAP[call.status] || STATUS_MAP.completed
+                    const isOpen = expanded === call.id
+                    return (
+                      <div key={call.id} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', transition: 'box-shadow 0.15s' }}>
+                        {/* Main row */}
+                        <button onClick={() => setExpanded(isOpen ? null : call.id)} style={{ width: '100%', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' as const, fontFamily: 'inherit' }}>
+                          {/* Icon */}
+                          <div style={{ width: 38, height: 38, borderRadius: '50%', background: st.bg, border: `1px solid ${st.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill={st.color}><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+                          </div>
+                          {/* Info */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                              <p style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{call.from_number || 'Número oculto'}</p>
+                              <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: st.bg, color: st.color }}>{st.label}</span>
+                            </div>
+                            {/* Summary preview */}
+                            {call.summary && <p style={{ fontSize: 12, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 420 }}>{call.summary}</p>}
+                            {!call.summary && call.status === 'in-progress' && <p style={{ fontSize: 12, color: '#d97706' }}>Llamada en curso...</p>}
+                          </div>
+                          {/* Right */}
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                            {call.duration && <span style={{ fontSize: 12, fontWeight: 600, color: '#374151', fontFamily: 'monospace' }}>{dur(call.duration)}</span>}
+                            <span style={{ fontSize: 11, color: '#94a3b8' }}>{call.created_at ? timeAgo(call.created_at) : ''}</span>
+                          </div>
+                          {/* Chevron */}
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>
+                            <path d="M6 9l6 6 6-6" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+
+                        {/* Expanded detail */}
+                        {isOpen && (
+                          <div style={{ padding: '0 18px 18px', borderTop: '1px solid #f1f5f9' }}>
+                            <div style={{ paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              {/* Summary box */}
+                              {call.summary && (
+                                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '12px 14px' }}>
+                                  <p style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.04em', marginBottom: 6 }}>Resumen de la llamada</p>
+                                  <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.6 }}>{call.summary}</p>
+                                </div>
+                              )}
+                              {/* Action */}
+                              {call.action_suggested && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 14px' }}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#1d4ed8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                  <p style={{ fontSize: 13, color: '#1d4ed8', fontWeight: 500 }}>{call.action_suggested}</p>
+                                </div>
+                              )}
+                              {/* Meta */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+                                {[
+                                  { label: 'Número', value: call.from_number || '—' },
+                                  { label: 'Duración', value: dur(call.duration) || '—' },
+                                  { label: 'ID', value: call.call_sid?.slice(-8) || '—' },
+                                ].map(m => (
+                                  <div key={m.label} style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px' }}>
+                                    <p style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.04em', marginBottom: 3 }}>{m.label}</p>
+                                    <p style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>{m.value}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))
+        }
       </div>
     </div>
   )
