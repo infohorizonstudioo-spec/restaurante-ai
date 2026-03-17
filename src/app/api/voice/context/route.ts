@@ -26,7 +26,7 @@ async function buildContext(tenant: any): Promise<string> {
     admin.from('zones').select('id,name,description').eq('tenant_id', tid).eq('active', true),
     admin.from('tables').select('id,name,capacity,zone_id,notes').eq('tenant_id', tid),
     admin.from('reservations').select('table_id,zone_id,reservation_time')
-      .eq('tenant_id', tid).eq('reservation_date', today).in('status', ['confirmada','pendiente']),
+      .eq('tenant_id', tid).eq('date', today).in('status', ['confirmada','pendiente']),
   ])
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://restaurante-ai.vercel.app'
@@ -34,17 +34,17 @@ async function buildContext(tenant: any): Promise<string> {
   let zoneCtx = ''
   if (zones?.length && tables?.length) {
     const reservedIds = new Set((reservasHoy||[]).map(r => r.table_id).filter(Boolean))
-    zoneCtx = '\nDISPOSICIÓN DEL LOCAL HOY:\n'
+    zoneCtx = '\nDISPOSICIÃN DEL LOCAL HOY:\n'
     for (const z of zones!) {
-      const mesas = (tables||[]).filter(m => m.zone_id === z.id)
+      const mesas = (tables||[]).filter(m => (m.zone_id||m.zone) === z.id)
       const libres = mesas.filter(m => !reservedIds.has(m.id))
       zoneCtx += `${z.name}${z.description ? ' (' + z.description + ')' : ''}: ${libres.length}/${mesas.length} libres\n`
-      libres.forEach(m => { zoneCtx += `  Mesa ${m.name} ${m.capacity}p${m.notes ? ' – ' + m.notes : ''}\n` })
+      libres.forEach(m => { zoneCtx += `  Mesa ${m.name} ${m.capacity}p${m.notes ? ' â ' + m.notes : ''}\n` })
     }
-    zoneCtx += '→ Si el cliente pide zona específica, asigna mesa libre en esa zona. Si no hay, ofrece alternativa inmediata.\n'
-    zoneCtx += '→ Siempre incluir zone_preference en create_reservation.\n'
+    zoneCtx += 'â Si el cliente pide zona especÃ­fica, asigna mesa libre en esa zona. Si no hay, ofrece alternativa inmediata.\n'
+    zoneCtx += 'â Siempre incluir zone_preference en create_reservation.\n'
   } else if (tables?.length) {
-    // Mesas sin zonas — asignación sin zona
+    // Mesas sin zonas â asignaciÃ³n sin zona
     const reservedIds = new Set((reservasHoy||[]).map(r => r.table_id).filter(Boolean))
     const libres = tables.filter(m => !reservedIds.has(m.id))
     zoneCtx = `\nMESAS DISPONIBLES HOY: ${libres.length}/${tables.length}\n`
@@ -52,21 +52,21 @@ async function buildContext(tenant: any): Promise<string> {
   }
 
   const hours = tenant.business_hours?.[day.toLowerCase()]
-  const horario = hours?.closed ? 'CERRADO HOY' : hours ? `${hours.open}–${hours.close}` : 'sin horario'
+  const horario = hours?.closed ? 'CERRADO HOY' : hours ? `${hours.open}â${hours.close}` : 'sin horario'
 
-  return `Eres ${tenant.agent_name || 'Sofía'}, recepcionista de ${tenant.name}. NUNCA digas que eres IA o robot.
-Idioma: ${tenant.language === 'ca' ? 'catalán' : tenant.language === 'eu' ? 'euskera' : 'español'}.
+  return `Eres ${tenant.agent_name || 'SofÃ­a'}, recepcionista de ${tenant.name}. NUNCA digas que eres IA o robot.
+Idioma: ${tenant.language === 'ca' ? 'catalÃ¡n' : tenant.language === 'eu' ? 'euskera' : 'espaÃ±ol'}.
 Hoy: ${day} ${today}, ${now}. Horario: ${horario}.
 Tenant ID (para herramientas): ${tid}.
 
 ROL: ${basePrompt}
 ${zoneCtx}
-REGLAS CRÍTICAS:
-1. Respuestas ≤2 frases, naturales.
+REGLAS CRÃTICAS:
+1. Respuestas â¤2 frases, naturales.
 2. Cuando confirmes TODOS los datos, usa create_reservation INMEDIATAMENTE.
-3. Para restaurante/bar: asigna mesa automáticamente según disponibilidad y preferencia.
+3. Para restaurante/bar: asigna mesa automÃ¡ticamente segÃºn disponibilidad y preferencia.
 4. Confirma siempre: nombre, fecha, hora, personas${zones?.length ? ' y zona/mesa' : ''}.
-5. Si el negocio está cerrado hoy, indícalo y ofrece otra fecha.`
+5. Si el negocio estÃ¡ cerrado hoy, indÃ­calo y ofrece otra fecha.`
 }
 
 export async function POST(req: Request) {
@@ -86,18 +86,18 @@ export async function POST(req: Request) {
         type: 'conversation_initiation_client_data',
         conversation_config_override: {
           agent: {
-            prompt: { prompt: 'Di que la línea no está disponible.' },
-            first_message: 'Hola, en este momento no está disponible el servicio. Llame más tarde.',
+            prompt: { prompt: 'Di que la lÃ­nea no estÃ¡ disponible.' },
+            first_message: 'Hola, en este momento no estÃ¡ disponible el servicio. Llame mÃ¡s tarde.',
           },
           tts: { model_id: 'eleven_turbo_v2_5', optimize_streaming_latency: 4 },
         },
-        dynamic_variables: { tenant_id: '', business_name: 'el negocio', agent_name: 'Sofía' }
+        dynamic_variables: { tenant_id: '', business_name: 'el negocio', agent_name: 'SofÃ­a' }
       })
     }
 
-    // ── CONTROL DE LLAMADAS ATÓMICO ──
-    // Usamos una RPC/función SQL para hacer el increment y check atómica
-    // Evita race conditions y deduplicación por call_sid
+    // ââ CONTROL DE LLAMADAS ATÃMICO ââ
+    // Usamos una RPC/funciÃ³n SQL para hacer el increment y check atÃ³mica
+    // Evita race conditions y deduplicaciÃ³n por call_sid
     const plan    = tenant.plan || 'free'
     const isTrial = plan === 'free' || plan === 'trial'
 
@@ -111,29 +111,29 @@ export async function POST(req: Request) {
           type: 'conversation_initiation_client_data',
           conversation_config_override: {
             agent: {
-              prompt: { prompt: 'Di que el servicio de atención no está disponible y que el negocio debe activar un plan.' },
-              first_message: `Gracias por llamar a ${tenant.name}. En este momento nuestro servicio no está disponible. Por favor contáctenos por otro medio.`,
+              prompt: { prompt: 'Di que el servicio de atenciÃ³n no estÃ¡ disponible y que el negocio debe activar un plan.' },
+              first_message: `Gracias por llamar a ${tenant.name}. En este momento nuestro servicio no estÃ¡ disponible. Por favor contÃ¡ctenos por otro medio.`,
             },
             tts: { model_id: 'eleven_turbo_v2_5', optimize_streaming_latency: 4 },
           },
-          dynamic_variables: { tenant_id: tenant.id, business_name: tenant.name, agent_name: tenant.agent_name || 'Sofía' }
+          dynamic_variables: { tenant_id: tenant.id, business_name: tenant.name, agent_name: tenant.agent_name || 'SofÃ­a' }
         })
       }
 
-      // Incremento atómico via SQL (evita race condition)
+      // Incremento atÃ³mico via SQL (evita race condition)
       await admin.rpc('increment_free_calls', { p_tenant_id: tenant.id }).catch(async () => {
         // Fallback si la RPC no existe
         await admin.from('tenants').update({ free_calls_used: used + 1 }).eq('id', tenant.id)
       })
     } else {
-      // Plan de pago — incremento atómico via SQL
+      // Plan de pago â incremento atÃ³mico via SQL
       const planUsed = tenant.plan_calls_used || 0
       await admin.rpc('increment_plan_calls', { p_tenant_id: tenant.id }).catch(async () => {
         await admin.from('tenants').update({ plan_calls_used: planUsed + 1 }).eq('id', tenant.id)
       })
     }
 
-    // ── REGISTRO DE LLAMADA CON DEDUPLICACIÓN ──
+    // ââ REGISTRO DE LLAMADA CON DEDUPLICACIÃN ââ
     // ON CONFLICT DO NOTHING para evitar doble conteo si ElevenLabs llama 2x
     await admin.from('calls').upsert({
       tenant_id:   tenant.id,
@@ -173,7 +173,7 @@ export async function POST(req: Request) {
               },
               {
                 type: 'webhook', name: 'create_reservation',
-                description: 'Crea la reserva. Úsala cuando tengas nombre, fecha, hora y personas confirmados.',
+                description: 'Crea la reserva. Ãsala cuando tengas nombre, fecha, hora y personas confirmados.',
                 api: { url: `${appUrl}/api/voice/reservation`, method: 'POST', headers: { 'Content-Type': 'application/json' } },
                 input_schema: {
                   type: 'object',
@@ -192,7 +192,7 @@ export async function POST(req: Request) {
               },
             ],
           },
-          first_message: `¡Hola! Gracias por llamar a ${tenant.name}. Soy ${tenant.agent_name || 'Sofía'}, ¿en qué le puedo ayudar?`,
+          first_message: `Â¡Hola! Gracias por llamar a ${tenant.name}. Soy ${tenant.agent_name || 'SofÃ­a'}, Â¿en quÃ© le puedo ayudar?`,
           language: tenant.language || 'es',
         },
         tts: {
@@ -205,7 +205,7 @@ export async function POST(req: Request) {
       dynamic_variables: {
         tenant_id:     tenant.id,
         business_name: tenant.name,
-        agent_name:    tenant.agent_name || 'Sofía',
+        agent_name:    tenant.agent_name || 'SofÃ­a',
       },
     })
   } catch (e: any) {
@@ -215,11 +215,11 @@ export async function POST(req: Request) {
       conversation_config_override: {
         agent: {
           prompt: { prompt: 'Eres una recepcionista amable.' },
-          first_message: '¡Hola! ¿En qué puedo ayudarle?',
+          first_message: 'Â¡Hola! Â¿En quÃ© puedo ayudarle?',
         },
         tts: { model_id: 'eleven_turbo_v2_5', optimize_streaming_latency: 4 },
       },
-      dynamic_variables: { tenant_id: '', business_name: 'el negocio', agent_name: 'Sofía' }
+      dynamic_variables: { tenant_id: '', business_name: 'el negocio', agent_name: 'SofÃ­a' }
     })
   }
 }
