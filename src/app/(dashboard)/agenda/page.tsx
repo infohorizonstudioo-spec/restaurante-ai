@@ -1,50 +1,111 @@
 'use client'
-export const dynamic = 'force-dynamic'
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { CalendarDays, Bot } from 'lucide-react'
-const HOURS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00']
-export default function AgendaPage() {
-  const [reservations, setReservations] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: p } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
-      if (!p?.tenant_id) return
-      const { data: r } = await supabase.from('reservations').select('*').eq('tenant_id', (p as any).tenant_id).eq('reservation_date', selectedDate).order('reservation_time')
-      setReservations(r || []); setLoading(false)
-    }
-    load()
-  }, [selectedDate])
-  const today = new Date().toISOString().split('T')[0]
-  const weekDays = Array.from({length:7},(_,i) => { const d = new Date(); d.setDate(d.getDate()-3+i); return { date: d.toISOString().split('T')[0], day: d.toLocaleDateString('es-ES',{weekday:'short'}).slice(0,3), num: d.getDate(), isToday: d.toISOString().split('T')[0]===today }})
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"/></div>
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-2"><CalendarDays size={16} className="text-slate-400"/><h1 className="text-sm font-semibold text-slate-900">Agenda</h1></div>
-        <input type="date" value={selectedDate} onChange={e=>setSelectedDate(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-      </header>
-      <div className="max-w-4xl mx-auto px-6 py-5 space-y-4">
-        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1.5">
-          {weekDays.map(d=><button key={d.date} onClick={()=>setSelectedDate(d.date)} className={`flex-1 flex flex-col items-center py-2 rounded-lg text-xs font-medium transition-all ${selectedDate===d.date?'bg-indigo-600 text-white':d.isToday?'text-indigo-600 bg-indigo-50':'text-slate-500 hover:bg-slate-50'}`}><span className="capitalize text-[10px] opacity-75">{d.day}</span><span className="text-sm font-bold mt-0.5">{d.num}</span></button>)}
+export const dynamic='force-dynamic'
+import{useEffect,useState,useMemo,useCallback}from'react'
+import{supabase}from'@/lib/supabase'
+import{BUSINESS_TEMPLATES}from'@/types'
+import{CalendarDays,Bot,Users,ChevronLeft,ChevronRight}from'lucide-react'
+import{PageLoader,PageHeader}from'@/components/ui'
+
+const HOURS=Array.from({length:17},(_,i)=>`${String(i+7).padStart(2,'0')}:00`)
+function isoDate(d:Date){return d.toISOString().split('T')[0]}
+
+export default function AgendaPage(){
+  const[reservations,setRes]=useState<any[]>([])
+  const[loading,setLoading]=useState(true)
+  const[tenantType,setType]=useState('otro')
+  const[selectedDate,setDate]=useState(isoDate(new Date()))
+
+  const loadData=useCallback(async()=>{
+    const{data:{user}}=await supabase.auth.getUser()
+    if(!user)return
+    const{data:p}=await supabase.from('profiles').select('tenant_id').eq('id',user.id).single()
+    if(!p?.tenant_id)return
+    const tid=(p as any).tenant_id
+    const[{data:r},{data:t}]=await Promise.all([
+      supabase.from('reservations').select('*').eq('tenant_id',tid).eq('reservation_date',selectedDate).order('reservation_time'),
+      supabase.from('tenants').select('type').eq('id',tid).single(),
+    ])
+    setRes(r||[]);if(t?.type)setType(t.type);setLoading(false)
+  },[selectedDate])
+
+  useEffect(()=>{loadData()},[loadData])
+
+  const today=isoDate(new Date())
+  const nowHour=new Date().getHours()
+  const isToday=selectedDate===today
+
+  const weekDays=useMemo(()=>{
+    const pivot=new Date(selectedDate+'T12:00')
+    return Array.from({length:7},(_,i)=>{
+      const d=new Date(pivot);d.setDate(pivot.getDate()-3+i)
+      const iso=isoDate(d)
+      return{iso,num:d.getDate(),wd:d.toLocaleDateString('es-ES',{weekday:'short'}).slice(0,2).toUpperCase(),isToday:iso===today}
+    })
+  },[selectedDate])
+
+  const byHour=useMemo(()=>{
+    const m:Record<string,typeof reservations>={}
+    reservations.forEach(r=>{const h=r.reservation_time?.slice(0,5)?.replace(/:d+$/,':00')||'??:00';if(!m[h])m[h]=[];m[h].push(r)})
+    return m
+  },[reservations])
+
+  function navigate(days:number){const d=new Date(selectedDate+'T12:00');d.setDate(d.getDate()+days);setDate(isoDate(d))}
+
+  if(loading)return<PageLoader/>
+  const template=BUSINESS_TEMPLATES[tenantType]||BUSINESS_TEMPLATES.otro
+  const unit=template.reservationUnit==='mesa'?'reservas':'citas'
+  const dateLabel=new Date(selectedDate+'T12:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})
+
+  return(
+    <div style={{background:'var(--color-bg)',minHeight:'100vh'}}>
+      <PageHeader title="Agenda" subtitle={`${reservations.length} ${unit} · ${dateLabel}`}
+        actions={
+          <div style={{display:'flex',alignItems:'center',gap:4}}>
+            <button onClick={()=>navigate(-1)} className="btn btn-secondary btn-sm" style={{padding:'6px 9px'}}><ChevronLeft size={14}/></button>
+            <button onClick={()=>setDate(today)} className="btn btn-secondary btn-sm">Hoy</button>
+            <button onClick={()=>navigate(1)} className="btn btn-secondary btn-sm" style={{padding:'6px 9px'}}><ChevronRight size={14}/></button>
+            <input type="date" value={selectedDate} onChange={e=>setDate(e.target.value)} className="input-base" style={{width:140,marginLeft:4}}/>
+          </div>
+        }/>
+      <div style={{maxWidth:900,margin:'0 auto',padding:'var(--content-pad)'}}>
+        <div style={{display:'flex',gap:4,background:'var(--color-surface)',border:'1px solid var(--color-border)',borderRadius:'var(--radius-lg)',padding:6,marginBottom:16}}>
+          {weekDays.map(d=>(
+            <button key={d.iso} onClick={()=>setDate(d.iso)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',padding:'7px 4px',borderRadius:8,border:'none',cursor:'pointer',background:selectedDate===d.iso?'var(--color-brand)':d.isToday?'var(--color-brand-muted)':'transparent',color:selectedDate===d.iso?'#fff':d.isToday?'var(--color-brand)':'var(--color-text-muted)',transition:'all 0.12s'}}>
+              <span style={{fontSize:10,fontWeight:600,opacity:0.75}}>{d.wd}</span>
+              <span style={{fontSize:15,fontWeight:700,marginTop:2}}>{d.num}</span>
+            </button>
+          ))}
         </div>
-        <p className="text-sm font-medium text-slate-700 capitalize">{new Date(selectedDate+'T12:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})} · <span className="text-slate-400 font-normal">{reservations.length} {reservations.length===1?'reserva':'reservas'}</span></p>
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          {HOURS.map(hour=>{
-            const res = reservations.filter(r=>r.reservation_time?.slice(0,5)===hour)
-            const isPast = selectedDate===today && parseInt(hour)<new Date().getHours()
-            return <div key={hour} className={`flex items-start border-b last:border-0 border-slate-50 ${res.length>0?'bg-indigo-50/30':isPast?'bg-slate-50/50':''}`}>
-              <div className={`w-16 flex-shrink-0 px-4 py-3.5 text-xs font-mono font-medium ${isPast?'text-slate-300':'text-slate-400'}`}>{hour}</div>
-              <div className="flex-1 px-3 py-2.5 min-h-[44px] flex items-center flex-wrap gap-2">
-                {res.length===0?<div className="w-full h-px bg-slate-100"/>:res.map(r=><div key={r.id} className="inline-flex items-center gap-2 bg-indigo-600 text-white rounded-lg px-3 py-1.5 text-xs"><span className="font-semibold">{r.customer_name}</span><span className="opacity-75">{r.party_size}p</span>{r.table_name&&<span className="opacity-75">· {r.table_name}</span>}{r.source==='voice_agent'&&<Bot size={10} className="opacity-75"/>}</div>)}
+        <div className="card" style={{overflow:'hidden'}}>
+          {HOURS.map((hour,idx)=>{
+            const slots=byHour[hour]||[]
+            const hourNum=parseInt(hour)
+            const isPast=isToday&&hourNum<nowHour
+            const isNow=isToday&&hourNum===nowHour
+            return(
+              <div key={hour} style={{display:'flex',alignItems:'stretch',borderTop:idx>0?'1px solid var(--color-border-light)':'none',background:isNow?'rgba(79,70,229,0.03)':'transparent',minHeight:44}}>
+                <div style={{width:60,flexShrink:0,padding:'12px 0 12px 16px',display:'flex',alignItems:'flex-start',gap:4}}>
+                  <span className="text-mono" style={{fontSize:12,fontWeight:500,color:isNow?'var(--color-brand)':isPast?'var(--color-text-disabled)':'var(--color-text-muted)'}}>{hour}</span>
+                  {isNow&&<div style={{width:5,height:5,borderRadius:'50%',background:'var(--color-brand)',marginTop:4,flexShrink:0}}/>}
+                </div>
+                <div style={{flex:1,padding:'8px 12px 8px 4px',display:'flex',alignItems:'center',flexWrap:'wrap' as any,gap:6}}>
+                  {slots.length===0
+                    ? <div style={{width:'100%',height:1,background:'var(--color-border-light)'}}/>
+                    : slots.map((r:any)=>(
+                        <div key={r.id} style={{display:'inline-flex',alignItems:'center',gap:8,background:r.status==='cancelada'?'var(--color-danger-light)':'var(--color-brand)',color:r.status==='cancelada'?'var(--color-danger)':'#fff',borderRadius:8,padding:'6px 12px',fontSize:12,fontWeight:500,opacity:r.status==='cancelada'?0.7:1}}>
+                          <div>
+                            <div style={{display:'flex',alignItems:'center',gap:5}}><span style={{fontWeight:700}}>{r.customer_name}</span>{r.source==='voice_agent'&&<Bot size={11} style={{opacity:0.8}}/>}</div>
+                            <div style={{opacity:0.8,fontSize:11,marginTop:1}}><Users size={10} style={{display:'inline',marginRight:3}}/>{r.party_size} pers.{r.table_name&&` · ${r.table_name}`}</div>
+                          </div>
+                        </div>
+                      ))
+                  }
+                </div>
               </div>
-            </div>
+            )
           })}
         </div>
+        {reservations.length===0&&<p className="text-body-sm" style={{color:'var(--color-text-muted)',textAlign:'center',marginTop:20}}>Sin {unit} para este día</p>}
       </div>
     </div>
   )
