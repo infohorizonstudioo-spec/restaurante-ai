@@ -1,135 +1,311 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { Table, Zone, Tenant, Reservation } from '@/types'
+import { PageLoader, PageHeader, Button, Input, Textarea, Modal, Badge, EmptyState, Alert } from '@/components/ui'
+
+const ZONE_COLORS = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#84cc16','#f97316']
 
 export default function MesasPage() {
-  const [tenant, setTenant] = useState<Tenant | null>(null)
-  const [zones, setZones] = useState<Zone[]>([])
-  const [tables, setTables] = useState<Table[]>([])
-  const [reservations, setReservations] = useState<Reservation[]>([])
+  const [tenant, setTenant]   = useState(null)
+  const [zones, setZones]     = useState([])
+  const [tables, setTables]   = useState([])
   const [loading, setLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  const [showAddZone, setShowAddZone] = useState(false)
-  const [showAddTable, setShowAddTable] = useState(false)
-  const [newZone, setNewZone] = useState({ name: '', description: '' })
-  const [newTable, setNewTable] = useState({ name: '', zone_id: '', capacity: 4, combinable: false })
+  const [saving, setSaving]   = useState(false)
+  const [msg, setMsg]         = useState(null) // { type, text }
 
-  useEffect(() => { loadData() }, [selectedDate])
+  // Modals
+  const [zoneModal, setZoneModal] = useState(false)
+  const [tableModal, setTableModal] = useState(false)
+  const [editZone, setEditZone] = useState(null)
+  const [editTable, setEditTable] = useState(null)
+  const [zoneForm, setZoneForm] = useState({ name: '', description: '' })
+  const [tableForm, setTableForm] = useState({ name: '', capacity: 4, zone_id: '', notes: '', combinable: false })
 
-  async function loadData() {
+  const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
-    if (!profile) return
-    const tid = (profile as any).tenant_id
-    const [{ data: t }, { data: z }, { data: tb }, { data: r }] = await Promise.all([
+    const { data: p } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
+    if (!p?.tenant_id) return
+    const tid = p.tenant_id
+    const [{ data: t }, { data: z }, { data: tb }] = await Promise.all([
       supabase.from('tenants').select('*').eq('id', tid).single(),
       supabase.from('zones').select('*').eq('tenant_id', tid).order('name'),
       supabase.from('tables').select('*').eq('tenant_id', tid).order('name'),
-      supabase.from('reservations').select('*').eq('tenant_id', tid).eq('reservation_date', selectedDate).in('status', ['confirmada', 'pendiente'])
     ])
-    setTenant(t); setZones(z || []); setTables(tb || []); setReservations(r || [])
-    setLoading(false)
+    setTenant(t); setZones(z || []); setTables(tb || []); setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  function notify(type, text) {
+    setMsg({ type, text })
+    setTimeout(() => setMsg(null), 3500)
   }
 
-  async function addZone() {
-    if (!tenant || !newZone.name) return
-    await supabase.from('zones').insert({ tenant_id: tenant.id, ...newZone, active: true })
-    setNewZone({ name: '', description: '' }); setShowAddZone(false); loadData()
-  }
-
-  async function addTable() {
-    if (!tenant || !newTable.name || !newTable.zone_id) return
-    await supabase.from('tables').insert({ tenant_id: tenant.id, ...newTable, status: 'libre' })
-    setNewTable({ name: '', zone_id: '', capacity: 4, combinable: false }); setShowAddTable(false); loadData()
-  }
-
-  async function updateTableStatus(id: string, status: string) {
-    await supabase.from('tables').update({ status }).eq('id', id)
-    setTables(prev => prev.map(t => t.id === id ? { ...t, status: status as any } : t))
-  }
-
-  async function autoAssign() {
-    for (const res of reservations.filter(r => !r.table_id)) {
-      const avail = tables.filter(t => {
-        const busy = reservations.some(r2 => r2.table_id === t.id && r2.reservation_time === res.reservation_time && r2.id !== res.id)
-        return !busy && t.capacity >= res.party_size && t.status !== 'bloqueada'
-      }).sort((a,b) => a.capacity - b.capacity)
-      if (avail[0]) await supabase.from('reservations').update({ table_id: avail[0].id, table_name: avail[0].name }).eq('id', res.id)
+  // ── Zonas ──
+  async function saveZone() {
+    if (!zoneForm.name.trim()) return
+    setSaving(true)
+    if (editZone) {
+      await supabase.from('zones').update({ name: zoneForm.name.trim(), description: zoneForm.description.trim() }).eq('id', editZone.id)
+      notify('success', 'Zona actualizada')
+    } else {
+      await supabase.from('zones').insert({ tenant_id: tenant.id, name: zoneForm.name.trim(), description: zoneForm.description.trim(), active: true })
+      notify('success', 'Zona creada')
     }
-    loadData()
+    setSaving(false); setZoneModal(false); setEditZone(null); setZoneForm({ name: '', description: '' }); load()
   }
 
-  const sc: Record<string,string> = { libre:'bg-green-100 border-green-300 text-green-800', reservada:'bg-blue-100 border-blue-300 text-blue-800', ocupada:'bg-red-100 border-red-300 text-red-800', bloqueada:'bg-gray-100 border-gray-300 text-gray-600' }
+  async function deleteZone(z) {
+    const mesasEnZona = tables.filter(t => t.zone_id === z.id)
+    if (mesasEnZona.length > 0) { notify('error', `No puedes borrar "${z.name}" mientras tenga ${mesasEnZona.length} mesas`); return }
+    if (!confirm(`¿Eliminar zona "${z.name}"?`)) return
+    await supabase.from('zones').delete().eq('id', z.id)
+    notify('success', 'Zona eliminada'); load()
+  }
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Cargando mesas...</div>
+  async function toggleZone(z) {
+    await supabase.from('zones').update({ active: !z.active }).eq('id', z.id)
+    load()
+  }
+
+  // ── Mesas ──
+  async function saveTable() {
+    if (!tableForm.name.trim() || !tableForm.capacity) return
+    setSaving(true)
+    const payload = {
+      tenant_id: tenant.id,
+      name: tableForm.name.trim(),
+      capacity: parseInt(tableForm.capacity),
+      zone_id: tableForm.zone_id || null,
+      notes: tableForm.notes.trim() || null,
+      combinable: tableForm.combinable,
+      status: 'libre',
+    }
+    if (editTable) {
+      await supabase.from('tables').update(payload).eq('id', editTable.id)
+      notify('success', 'Mesa actualizada')
+    } else {
+      await supabase.from('tables').insert(payload)
+      notify('success', 'Mesa creada')
+    }
+    setSaving(false); setTableModal(false); setEditTable(null); setTableForm({ name: '', capacity: 4, zone_id: '', notes: '', combinable: false }); load()
+  }
+
+  async function deleteTable(t) {
+    if (!confirm(`¿Eliminar mesa "${t.name}"?`)) return
+    await supabase.from('tables').delete().eq('id', t.id)
+    notify('success', 'Mesa eliminada'); load()
+  }
+
+  function openNewZone() { setEditZone(null); setZoneForm({ name: '', description: '' }); setZoneModal(true) }
+  function openEditZone(z) { setEditZone(z); setZoneForm({ name: z.name, description: z.description || '' }); setZoneModal(true) }
+  function openNewTable(zoneId) { setEditTable(null); setTableForm({ name: '', capacity: 4, zone_id: zoneId || '', notes: '', combinable: false }); setTableModal(true) }
+  function openEditTable(t) { setEditTable(t); setTableForm({ name: t.name, capacity: t.capacity, zone_id: t.zone_id || '', notes: t.notes || '', combinable: t.combinable || false }); setTableModal(true) }
+
+  if (loading) return <PageLoader/>
+  if (!tenant) return null
+
+  const mesasSinZona = tables.filter(t => !t.zone_id)
+  const isRestaurantType = ['restaurante', 'bar'].includes(tenant.type)
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div><h1 className="text-2xl font-bold text-gray-900">Gestión de Mesas</h1><p className="text-gray-500 text-sm">{tables.length} mesas · {zones.length} zonas</p></div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="border border-gray-300 rounded-xl px-3 py-2 text-sm"/>
-          <button onClick={autoAssign} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700">✨ Auto-asignar</button>
-          <button onClick={() => setShowAddZone(true)} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl text-sm">+ Zona</button>
-          <button onClick={() => setShowAddTable(true)} className="bg-gray-800 text-white px-4 py-2 rounded-xl text-sm">+ Mesa</button>
+    <div style={{ background: '#f8fafc', minHeight: '100vh' }}>
+      <PageHeader title='Gestión del local' subtitle='Zonas y mesas de tu establecimiento'
+        actions={<Button icon={<span>+</span>} onClick={openNewZone}>Nueva zona</Button>}/>
+
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: 24 }}>
+        {msg && <Alert variant={msg.type} style={{ marginBottom: 16 }}>{msg.text}</Alert>}
+
+        {!isRestaurantType && (
+          <Alert variant='info' style={{ marginBottom: 20 }}>
+            La gestión de mesas y zonas está pensada principalmente para restaurantes y bares.
+            Tu tipo de negocio ({tenant.type}) usa citas sin asignación de mesa.
+          </Alert>
+        )}
+
+        {/* Resumen */}
+        {zones.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
+            {[
+              { label: 'Zonas activas', value: zones.filter(z => z.active).length },
+              { label: 'Total mesas', value: tables.length },
+              { label: 'Capacidad total', value: tables.reduce((s, t) => s + (t.capacity || 0), 0) + ' personas' },
+            ].map(s => (
+              <div key={s.label} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 18px' }}>
+                <p style={{ fontSize: 22, fontWeight: 700, color: '#0f172a' }}>{s.value}</p>
+                <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{s.label}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Sin zonas */}
+        {zones.length === 0 && (
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+            <EmptyState
+              icon={<svg width='22' height='22' viewBox='0 0 24 24' fill='#94a3b8'><path d='M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'/></svg>}
+              title='Crea las zonas de tu local'
+              description='Define terraza, interior, sala VIP... El agente usará esta información para asignar mesas automáticamente cuando reciba llamadas.'
+              action={<Button icon={<span>+</span>} onClick={openNewZone}>Crear primera zona</Button>}
+            />
+          </div>
+        )}
+
+        {/* Zonas con mesas */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {zones.map((zone, zi) => {
+            const color = ZONE_COLORS[zi % ZONE_COLORS.length]
+            const mesasZona = tables.filter(t => t.zone_id === zone.id)
+            const capacidad = mesasZona.reduce((s, t) => s + (t.capacity || 0), 0)
+
+            return (
+              <div key={zone.id} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
+                {/* Zone header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: mesasZona.length > 0 ? '1px solid #f1f5f9' : 'none', background: '#fafafa' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <p style={{ fontSize: 15, fontWeight: 600, color: '#0f172a' }}>{zone.name}</p>
+                        {!zone.active && <Badge variant='slate'>Inactiva</Badge>}
+                      </div>
+                      {zone.description && <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>{zone.description}</p>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginLeft: 12 }}>
+                      <span style={{ fontSize: 12, color: '#64748b' }}>{mesasZona.length} mesas</span>
+                      <span style={{ color: '#d1d5db' }}>·</span>
+                      <span style={{ fontSize: 12, color: '#64748b' }}>{capacidad} personas</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => openNewTable(zone.id)} style={{ padding: '5px 12px', fontSize: 12, fontWeight: 600, color: color, background: color + '18', border: '1px solid ' + color + '30', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      + Mesa
+                    </button>
+                    <button onClick={() => openEditZone(zone)} style={{ padding: '5px 10px', fontSize: 12, color: '#64748b', background: 'transparent', border: '1px solid #e2e8f0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Editar
+                    </button>
+                    <button onClick={() => toggleZone(zone)} style={{ padding: '5px 10px', fontSize: 12, color: '#64748b', background: 'transparent', border: '1px solid #e2e8f0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      {zone.active ? 'Desactivar' : 'Activar'}
+                    </button>
+                    <button onClick={() => deleteZone(zone)} style={{ padding: '5px 10px', fontSize: 12, color: '#ef4444', background: 'transparent', border: '1px solid #fecaca', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Borrar
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mesas grid */}
+                {mesasZona.length > 0 && (
+                  <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+                    {mesasZona.map(mesa => (
+                      <div key={mesa.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '12px 14px', position: 'relative' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, marginTop: 4 }} />
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button onClick={() => openEditTable(mesa)} style={{ fontSize: 11, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>✏️</button>
+                            <button onClick={() => deleteTable(mesa)} style={{ fontSize: 11, color: '#fca5a5', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>🗑</button>
+                          </div>
+                        </div>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', marginBottom: 3 }}>{mesa.name}</p>
+                        <p style={{ fontSize: 12, color: '#64748b' }}>{mesa.capacity} personas</p>
+                        {mesa.notes && <p style={{ fontSize: 10, color: '#94a3b8', marginTop: 3, fontStyle: 'italic' }}>{mesa.notes}</p>}
+                        {mesa.combinable && <p style={{ fontSize: 10, color: '#3b82f6', marginTop: 3 }}>↔ Combinable</p>}
+                      </div>
+                    ))}
+                    {/* Add table */}
+                    <button onClick={() => openNewTable(zone.id)} style={{ border: '2px dashed #e2e8f0', borderRadius: 10, padding: '12px 14px', cursor: 'pointer', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 90, color: '#94a3b8', fontSize: 24, fontFamily: 'inherit' }}>
+                      +
+                    </button>
+                  </div>
+                )}
+
+                {mesasZona.length === 0 && (
+                  <div style={{ padding: '20px', textAlign: 'center' }}>
+                    <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 10 }}>Sin mesas en esta zona</p>
+                    <button onClick={() => openNewTable(zone.id)} style={{ padding: '6px 14px', fontSize: 12, fontWeight: 600, color: color, background: color + '18', border: '1px solid ' + color + '30', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      + Añadir mesa
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {/* Mesas sin zona */}
+          {mesasSinZona.length > 0 && (
+            <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
+              <div style={{ padding: '14px 20px', background: '#fafafa', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#94a3b8' }} />
+                  <p style={{ fontSize: 15, fontWeight: 600, color: '#64748b' }}>Sin zona asignada</p>
+                  <span style={{ fontSize: 12, color: '#94a3b8' }}>{mesasSinZona.length} mesas</span>
+                </div>
+                <button onClick={() => openNewTable('')} style={{ padding: '5px 12px', fontSize: 12, fontWeight: 600, color: '#64748b', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit' }}>+ Mesa</button>
+              </div>
+              <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+                {mesasSinZona.map(mesa => (
+                  <div key={mesa.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4, marginBottom: 6 }}>
+                      <button onClick={() => openEditTable(mesa)} style={{ fontSize: 11, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer' }}>✏️</button>
+                      <button onClick={() => deleteTable(mesa)} style={{ fontSize: 11, color: '#fca5a5', background: 'none', border: 'none', cursor: 'pointer' }}>🗑</button>
+                    </div>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', marginBottom: 3 }}>{mesa.name}</p>
+                    <p style={{ fontSize: 12, color: '#64748b' }}>{mesa.capacity} personas</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Info de cómo usa Gabriela esto */}
+        {(zones.length > 0 || tables.length > 0) && (
+          <div style={{ marginTop: 20, background: 'linear-gradient(135deg,#eff6ff,#f0fdf4)', border: '1px solid #bfdbfe', borderRadius: 12, padding: '16px 20px' }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#1d4ed8', marginBottom: 6 }}>🤖 Cómo usa Gabriela este esquema</p>
+            <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.6 }}>
+              Cuando un cliente llama y dice <em>"quiero una mesa en la terraza"</em>, Gabriela comprobará automáticamente
+              qué mesas de la terraza están libres para esa fecha y hora, y asignará la mejor opción.
+              Si la zona está llena, ofrecerá alternativas. Al confirmar, dirá algo como:
+              <em> "Perfecto, te he reservado la Mesa 4 en la terraza para el viernes a las 21:00."</em>
+            </p>
+          </div>
+        )}
       </div>
 
-      {zones.length === 0 ? (
-        <div className="bg-white rounded-2xl border p-12 text-center">
-          <p className="text-4xl mb-3">🏪</p><p className="text-gray-500 font-medium">Configura tu local</p>
-          <p className="text-sm text-gray-400 mt-1">Añade zonas y mesas para gestionar la ocupación</p>
-          <button onClick={() => setShowAddZone(true)} className="mt-4 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium">Crear primera zona</button>
+      {/* MODAL ZONA */}
+      <Modal open={zoneModal} onClose={() => { setZoneModal(false); setEditZone(null); setZoneForm({ name: '', description: '' }) }}
+        title={editZone ? 'Editar zona' : 'Nueva zona'}
+        footer={<><Button variant='secondary' style={{ flex: 1 }} onClick={() => { setZoneModal(false); setEditZone(null) }}>Cancelar</Button><Button style={{ flex: 1 }} loading={saving} onClick={saveZone}>{editZone ? 'Guardar' : 'Crear zona'}</Button></>}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Input label='Nombre de la zona *' value={zoneForm.name} placeholder='Terraza, Interior, Sala VIP...' onChange={e => setZoneForm({ ...zoneForm, name: e.target.value })}/>
+          <Textarea label='Descripción (opcional)' value={zoneForm.description} rows={2} placeholder='Ej: Zona exterior con vistas al mar, acceso directo desde entrada...' onChange={e => setZoneForm({ ...zoneForm, description: e.target.value })}/>
+          <Alert variant='info'>El nombre de la zona es lo que Gabriela entenderá cuando el cliente la mencione por teléfono.</Alert>
         </div>
-      ) : zones.map(zone => {
-        const zt = tables.filter(t => t.zone_id === zone.id)
-        return (
-          <div key={zone.id} className="bg-white rounded-2xl border overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
-              <div><h3 className="font-semibold">{zone.name}</h3><p className="text-sm text-gray-500">{zt.length} mesas · {zt.filter(t=>t.status==='libre').length} libres</p></div>
-            </div>
-            <div className="p-6 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-              {zt.map(table => {
-                const tr = reservations.find(r => r.table_id === table.id)
-                return (
-                  <div key={table.id} className={`rounded-xl border-2 p-3 cursor-pointer hover:shadow-md ${sc[table.status]||sc.libre}`}
-                    onClick={() => { const ns: Record<string,string> = {libre:'ocupada',ocupada:'libre',reservada:'libre',bloqueada:'libre'}; updateTableStatus(table.id, ns[table.status]||'libre') }}>
-                    <p className="font-bold text-lg text-center">{table.name}</p>
-                    <p className="text-xs text-center opacity-75">{table.capacity}p</p>
-                    {tr && <p className="text-xs text-center mt-1 truncate">{tr.customer_name}</p>}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })}
+      </Modal>
 
-      {showAddZone && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-            <h3 className="font-bold text-lg mb-4">Nueva zona</h3>
-            <input value={newZone.name} onChange={e => setNewZone({...newZone, name: e.target.value})} placeholder="Nombre (Terraza, Interior...)" className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm mb-4"/>
-            <div className="flex gap-2"><button onClick={() => setShowAddZone(false)} className="flex-1 border border-gray-300 rounded-xl py-2 text-sm">Cancelar</button><button onClick={addZone} className="flex-1 bg-indigo-600 text-white rounded-xl py-2 text-sm font-medium">Crear</button></div>
+      {/* MODAL MESA */}
+      <Modal open={tableModal} onClose={() => { setTableModal(false); setEditTable(null) }}
+        title={editTable ? 'Editar mesa' : 'Nueva mesa'}
+        footer={<><Button variant='secondary' style={{ flex: 1 }} onClick={() => { setTableModal(false); setEditTable(null) }}>Cancelar</Button><Button style={{ flex: 1 }} loading={saving} onClick={saveTable}>{editTable ? 'Guardar' : 'Crear mesa'}</Button></>}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: 12 }}>
+            <Input label='Nombre *' value={tableForm.name} placeholder='Mesa 1, M-01, Reservada...' onChange={e => setTableForm({ ...tableForm, name: e.target.value })}/>
+            <Input label='Personas *' type='number' min='1' max='30' value={String(tableForm.capacity)} onChange={e => setTableForm({ ...tableForm, capacity: parseInt(e.target.value) || 2 })}/>
           </div>
-        </div>
-      )}
-      {showAddTable && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md space-y-3">
-            <h3 className="font-bold text-lg">Nueva mesa</h3>
-            <input value={newTable.name} onChange={e => setNewTable({...newTable, name: e.target.value})} placeholder="Nombre o número" className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm"/>
-            <select value={newTable.zone_id} onChange={e => setNewTable({...newTable, zone_id: e.target.value})} className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm">
-              <option value="">Selecciona zona</option>
+          <div>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#374151', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Zona</label>
+            <select value={tableForm.zone_id} onChange={e => setTableForm({ ...tableForm, zone_id: e.target.value })} style={{ width: '100%', fontFamily: 'inherit', fontSize: 14, color: '#0f172a', background: '#fafafa', border: '1px solid #d1d5db', borderRadius: 9, padding: '9px 12px', outline: 'none' }}>
+              <option value=''>Sin zona</option>
               {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
             </select>
-            <input type="number" value={newTable.capacity} onChange={e => setNewTable({...newTable, capacity: parseInt(e.target.value)})} min={1} max={30} className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm" placeholder="Capacidad"/>
-            <div className="flex gap-2"><button onClick={() => setShowAddTable(false)} className="flex-1 border border-gray-300 rounded-xl py-2 text-sm">Cancelar</button><button onClick={addTable} className="flex-1 bg-indigo-600 text-white rounded-xl py-2 text-sm font-medium">Crear</button></div>
           </div>
+          <Input label='Notas (opcional)' value={tableForm.notes} placeholder='Ej: Junto a la ventana, accesible...' onChange={e => setTableForm({ ...tableForm, notes: e.target.value })}/>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+            <input type='checkbox' checked={tableForm.combinable} onChange={e => setTableForm({ ...tableForm, combinable: e.target.checked })} style={{ width: 16, height: 16, accentColor: '#3b82f6' }}/>
+            <span style={{ fontSize: 13, color: '#374151' }}>Mesa combinable (puede unirse con otras para grupos grandes)</span>
+          </label>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }
