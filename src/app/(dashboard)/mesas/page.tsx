@@ -1,177 +1,251 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { PageLoader, Button } from '@/components/ui'
+import { PageLoader } from '@/components/ui'
 
-const COLORS = ['#1d4ed8','#059669','#7c3aed','#d97706','#dc2626','#0891b2']
-const SHAPES = ['circle','square','rectangle']
+const UT:Record<string,{s:string;p:string;icon:string}> = {
+  restaurante:{s:'Mesa',p:'Mesas',icon:'🪑'},
+  bar:{s:'Mesa',p:'Mesas',icon:'🪑'},
+  cafeteria:{s:'Mesa',p:'Mesas',icon:'☕'},
+  hotel:{s:'Habitacion',p:'Habitaciones',icon:'🛏️'},
+  peluqueria:{s:'Sillen',p:'Sillones',icon:'💈'},
+  spa:{s:'Cabina',p:'Cabinas',icon:'🧖'},
+  clinica:{s:'Consulta',p:'Consultas',icon:'🏥'},
+  dentista:{s:'Silla',p:'Sillas',icon:'🦷'},
+  gym:{s:'Box',p:'Boxes',icon:'💪'},
+  otro:{s:'Espacio',p:'Espacios',icon:'📦'},
+}
+const ZC = ['#1d4ed8','#059669','#7c3aed','#d97706','#dc2626','#0891b2','#be185d']
 
-export default function MesasPage() {
-  const [zones,setZones]   = useState<any[]>([])
-  const [tables,setTables] = useState<any[]>([])
-  const [loading,setLoading] = useState(true)
-  const [tid,setTid]       = useState<string|null>(null)
-  const [editZone,setEditZone] = useState<any|null>(null)
-  const [newZone,setNewZone]   = useState('')
-  const [saving,setSaving]     = useState(false)
-  const [activeZone,setActiveZone] = useState<string|null>(null)
+export default function MesasPage(){
+  const [tenant,setTenant]=useState<any>(null)
+  const [zones,setZones]=useState<any[]>([])
+  const [units,setUnits]=useState<any[]>([])
+  const [loading,setLoading]=useState(true)
+  const [tid,setTid]=useState<string|null>(null)
+  const [tab,setTab]=useState<'units'|'zones'>('units')
+  const [newZone,setNewZone]=useState('')
+  const [editUnit,setEditUnit]=useState<any|null>(null)
 
-  const load = useCallback(async (tenantId:string) => {
-    const [zr,tr] = await Promise.all([
+  const load=useCallback(async(tenantId:string)=>{
+    const [tr,zr,ur]=await Promise.all([
+      supabase.from('tenants').select('name,type').eq('id',tenantId).single(),
       supabase.from('zones').select('*').eq('tenant_id',tenantId).eq('active',true).order('created_at'),
       supabase.from('tables').select('*').eq('tenant_id',tenantId).eq('active',true).order('number'),
     ])
-    setZones(zr.data||[]); setTables(tr.data||[])
-    if (zr.data?.length && !activeZone) setActiveZone(zr.data[0].id)
+    setTenant(tr.data||null);setZones(zr.data||[]);setUnits(ur.data||[])
     setLoading(false)
-  },[activeZone])
+  },[])
 
   useEffect(()=>{
     (async()=>{
-      const {data:{user}} = await supabase.auth.getUser()
-      if (!user) return
-      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).single()
-      if (!p?.tenant_id) return
-      setTid(p.tenant_id); await load(p.tenant_id)
+      const {data:{user}}=await supabase.auth.getUser();if(!user)return
+      const {data:p}=await supabase.from('profiles').select('tenant_id').eq('id',user.id).single();if(!p?.tenant_id)return
+      setTid(p.tenant_id);await load(p.tenant_id)
     })()
   },[load])
 
-  async function addZone() {
-    if (!tid||!newZone.trim()) return
-    setSaving(true)
-    const {data} = await supabase.from('zones').insert({tenant_id:tid,name:newZone.trim(),active:true}).select().single()
-    setNewZone('')
-    if (data) setActiveZone(data.id)
-    await load(tid!)
-    setSaving(false)
-  }
+  const ut=UT[(tenant?.type||'otro').toLowerCase()]||UT.otro
 
-  async function deleteZone(id:string) {
-    if (!confirm('¿Eliminar esta zona y sus mesas?')) return
-    await supabase.from('tables').update({active:false}).eq('zone_id',id)
-    await supabase.from('zones').update({active:false}).eq('id',id)
-    if (activeZone===id) setActiveZone(zones.find(z=>z.id!==id)?.id||null)
-    await load(tid!)
-  }
-
-  async function addTable(zoneId:string) {
-    if (!tid) return
-    const zoneTables = tables.filter(m=>m.zone_id===zoneId)
-    const num = (zoneTables.length>0 ? Math.max(...zoneTables.map(m=>m.number||0)) : 0) + 1
-    await supabase.from('tables').insert({
-      tenant_id:tid, zone_id:zoneId, number:num, table_name:'Mesa '+num, name:'Mesa '+num,
-      capacity:4, min_capacity:1, active:true, status:'available', shape:'rectangle'
-    })
+  async function addUnit(zoneId?:string){
+    if(!tid)return
+    const same=zoneId?units.filter(u=>u.zone_id===zoneId):units.filter(u=>!u.zone_id)
+    const num=(same.length>0?Math.max(...same.map(u=>u.number||0)):0)+1
+    const name=ut.s+' '+num
+    const {data}=await supabase.from('tables').insert({
+      tenant_id:tid,zone_id:zoneId||null,number:num,
+      table_name:name,name,capacity:2,min_capacity:1,active:true,status:'available'
+    }).select().single()
+    if(data)setEditUnit(data)
     await load(tid)
   }
 
-  async function updateTable(id:string, updates:any) {
-    await supabase.from('tables').update({...updates, name:updates.table_name||updates.name, table_name:updates.table_name||updates.name}).eq('id',id)
-    await load(tid!)
+  async function saveUnit(id:string,updates:any){
+    const n=updates.table_name||updates.name||''
+    await supabase.from('tables').update({...updates,table_name:n,name:n}).eq('id',id)
+    setEditUnit(null);await load(tid!)
   }
 
-  async function deleteTable(id:string) {
+  async function delUnit(id:string){
+    if(!confirm('Eliminar?'))return
     await supabase.from('tables').update({active:false}).eq('id',id)
     await load(tid!)
   }
 
-  if (loading) return <PageLoader/>
+  async function addZone(){
+    if(!tid||!newZone.trim())return
+    await supabase.from('zones').insert({tenant_id:tid,name:newZone.trim(),active:true})
+    setNewZone('');await load(tid)
+  }
 
-  const activeZoneData = zones.find(z=>z.id===activeZone)
-  const zoneTables = tables.filter(m=>m.zone_id===activeZone)
+  async function delZone(zoneId:string){
+    if(!confirm('Eliminar zona? Las unidades quedan sin zona.'))return
+    await supabase.from('tables').update({zone_id:null}).eq('zone_id',zoneId)
+    await supabase.from('zones').update({active:false}).eq('id',zoneId)
+    await load(tid!)
+  }
 
-  return (
+  async function renZone(zoneId:string,name:string){
+    await supabase.from('zones').update({name}).eq('id',zoneId);await load(tid!)
+  }
+
+  if(loading)return<PageLoader/>
+
+  const byZone:Record<string,any[]>={'__none__':[]}
+  zones.forEach(z=>{byZone[z.id]=[]})
+  units.forEach(u=>{const k=u.zone_id&&byZone[u.zone_id]!==undefined?u.zone_id:'__none__';byZone[k].push(u)})
+
+  return(
     <div style={{background:'#f8fafc',minHeight:'100vh'}}>
       <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div>
-          <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>Local y mesas</h1>
-          <p style={{fontSize:12,color:'#94a3b8',marginTop:1}}>{zones.length} zonas · {tables.length} mesas</p>
+          <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>{ut.icon} {ut.p}</h1>
+          <p style={{fontSize:12,color:'#94a3b8',marginTop:1}}>{units.length} {ut.p.toLowerCase()} &middot; {zones.length} zonas</p>
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          {(['units','zones'] as const).map(t=>(
+            <button key={t} onClick={()=>setTab(t)} style={{padding:'7px 16px',fontSize:13,fontWeight:600,border:'1px solid',borderColor:tab===t?'#1d4ed8':'#e2e8f0',background:tab===t?'#eff6ff':'white',color:tab===t?'#1d4ed8':'#64748b',borderRadius:8,cursor:'pointer',fontFamily:'inherit'}}>
+              {t==='units'?ut.p:'Zonas'}
+            </button>
+          ))}
         </div>
       </div>
-      <div style={{display:'flex',gap:0,height:'calc(100vh - 61px)'}}>
-        {/* Zonas sidebar */}
-        <div style={{width:200,background:'white',borderRight:'1px solid #e2e8f0',display:'flex',flexDirection:'column',overflow:'hidden'}}>
-          <div style={{padding:'12px 14px',borderBottom:'1px solid #f1f5f9'}}>
-            <p style={{fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10}}>Zonas</p>
-            {zones.map((z,i)=>(
-              <div key={z.id} onClick={()=>setActiveZone(z.id)} style={{padding:'8px 10px',borderRadius:9,marginBottom:2,cursor:'pointer',display:'flex',alignItems:'center',gap:8,
-                background:activeZone===z.id?'#eff6ff':'transparent',transition:'background 0.1s'}}
-                onMouseEnter={e=>{if(activeZone!==z.id)(e.currentTarget as HTMLElement).style.background='#f9fafb'}}
-                onMouseLeave={e=>{if(activeZone!==z.id)(e.currentTarget as HTMLElement).style.background='transparent'}}>
-                <div style={{width:10,height:10,borderRadius:'50%',background:COLORS[i%COLORS.length],flexShrink:0}}/>
-                <span style={{fontSize:13,fontWeight:activeZone===z.id?600:400,color:activeZone===z.id?'#1d4ed8':'#374151',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{z.name}</span>
-                <span style={{fontSize:11,color:'#94a3b8'}}>{tables.filter(m=>m.zone_id===z.id).length}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{padding:'12px 14px'}}>
-            <input value={newZone} onChange={e=>setNewZone(e.target.value)}
-              onKeyDown={e=>e.key==='Enter'&&addZone()}
-              placeholder="Nueva zona..."
-              style={{width:'100%',padding:'7px 10px',fontSize:12,border:'1px solid #e2e8f0',borderRadius:8,outline:'none',fontFamily:'inherit'}}/>
-            <button onClick={addZone} disabled={!newZone.trim()||saving} style={{width:'100%',marginTop:6,padding:'7px',fontSize:12,fontWeight:600,color:'white',background:'#1d4ed8',border:'none',borderRadius:8,cursor:'pointer',opacity:!newZone.trim()?0.5:1}}>
-              + Añadir zona
-            </button>
-          </div>
-        </div>
 
-        {/* Mesas */}
-        <div style={{flex:1,padding:20,overflowY:'auto'}}>
-          {!activeZone ? (
-            <div style={{textAlign:'center',padding:'60px 0',color:'#94a3b8'}}>
-              <div style={{fontSize:40,marginBottom:10}}>🗺️</div>
-              <p>Crea una zona para empezar</p>
-            </div>
-          ) : (
+      {tab==='units'&&(
+        <div style={{maxWidth:1000,margin:'0 auto',padding:'20px 24px'}}>
+          {zones.length===0&&(
             <>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-                <div style={{display:'flex',alignItems:'center',gap:10}}>
-                  <div style={{width:12,height:12,borderRadius:'50%',background:COLORS[zones.indexOf(activeZoneData!)%COLORS.length]}}/>
-                  <p style={{fontSize:15,fontWeight:700,color:'#0f172a'}}>{activeZoneData?.name}</p>
-                  <span style={{fontSize:12,color:'#94a3b8'}}>{zoneTables.length} mesa{zoneTables.length!==1?'s':''}</span>
-                </div>
-                <div style={{display:'flex',gap:8}}>
-                  <button onClick={()=>addTable(activeZone)} style={{padding:'7px 14px',fontSize:12,fontWeight:600,color:'white',background:'#1d4ed8',border:'none',borderRadius:8,cursor:'pointer'}}>
-                    + Mesa
-                  </button>
-                  <button onClick={()=>deleteZone(activeZone)} style={{padding:'7px 14px',fontSize:12,fontWeight:600,color:'#dc2626',background:'#fef2f2',border:'1px solid #fecaca',borderRadius:8,cursor:'pointer'}}>
-                    Eliminar zona
-                  </button>
-                </div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+                <p style={{fontSize:13,color:'#64748b'}}>{units.length===0?('Anade '+ut.p.toLowerCase()+' para que el agente las asigne automaticamente'):units.length+' '+ut.p.toLowerCase()}</p>
+                <button onClick={()=>addUnit()} style={{padding:'8px 18px',fontSize:13,fontWeight:600,color:'white',background:'linear-gradient(135deg,#1e40af,#3b82f6)',border:'none',borderRadius:9,cursor:'pointer'}}>+ {ut.s}</button>
               </div>
-
-              {zoneTables.length===0 ? (
-                <div style={{background:'white',border:'2px dashed #e2e8f0',borderRadius:14,padding:'40px 24px',textAlign:'center',cursor:'pointer'}} onClick={()=>addTable(activeZone)}>
-                  <p style={{fontSize:14,color:'#94a3b8'}}>+ Añadir primera mesa a esta zona</p>
-                </div>
-              ) : (
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:12}}>
-                  {zoneTables.map(m=>(
-                    <div key={m.id} style={{background:'white',border:'1px solid #e2e8f0',borderRadius:12,padding:14,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
-                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
-                        <div style={{width:40,height:40,borderRadius:m.shape==='circle'?'50%':m.shape==='square'?8:6,background:COLORS[zones.indexOf(activeZoneData!)%COLORS.length]+'22',border:'2px solid '+COLORS[zones.indexOf(activeZoneData!)%COLORS.length],display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:COLORS[zones.indexOf(activeZoneData!)%COLORS.length]}}>
-                          {m.number||'M'}
-                        </div>
-                        <button onClick={()=>deleteTable(m.id)} style={{padding:'3px 7px',fontSize:11,color:'#dc2626',background:'#fef2f2',border:'1px solid #fecaca',borderRadius:6,cursor:'pointer'}}>✕</button>
-                      </div>
-                      <input value={m.table_name||m.name||''} onChange={e=>updateTable(m.id,{table_name:e.target.value})}
-                        style={{width:'100%',fontSize:13,fontWeight:600,border:'none',background:'transparent',color:'#0f172a',outline:'none',marginBottom:6,fontFamily:'inherit'}}/>
-                      <div style={{display:'flex',alignItems:'center',gap:6}}>
-                        <span style={{fontSize:11,color:'#94a3b8'}}>Cap:</span>
-                        <input type='number' value={m.capacity||4} min={1} max={20}
-                          onChange={e=>updateTable(m.id,{capacity:parseInt(e.target.value)||4})}
-                          style={{width:45,fontSize:13,fontWeight:600,border:'1px solid #e2e8f0',borderRadius:6,padding:'2px 6px',outline:'none',fontFamily:'inherit'}}/>
-                        <span style={{fontSize:11,color:'#94a3b8'}}>personas</span>
-                      </div>
-                      {m.notes!==undefined&&<input value={m.notes||''} onChange={e=>updateTable(m.id,{notes:e.target.value})}
-                        placeholder="Notas..."
-                        style={{width:'100%',marginTop:6,fontSize:11,color:'#64748b',border:'none',background:'transparent',outline:'none',fontFamily:'inherit'}}/>}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <Grid units={units} ut={ut} color='#1d4ed8' onEdit={setEditUnit} onDel={delUnit} onAdd={()=>addUnit()}/>
             </>
           )}
+          {zones.length>0&&zones.map((z,zi)=>(
+            <div key={z.id} style={{marginBottom:24}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <div style={{width:10,height:10,borderRadius:'50%',background:ZC[zi%ZC.length]}}/>
+                  <p style={{fontSize:14,fontWeight:700,color:'#0f172a'}}>{z.name}</p>
+                  <span style={{fontSize:12,color:'#94a3b8'}}>{(byZone[z.id]||[]).length}</span>
+                </div>
+                <button onClick={()=>addUnit(z.id)} style={{padding:'5px 12px',fontSize:12,fontWeight:600,color:ZC[zi%ZC.length],background:ZC[zi%ZC.length]+'14',border:'1px solid '+ZC[zi%ZC.length]+'33',borderRadius:7,cursor:'pointer'}}>+ {ut.s}</button>
+              </div>
+              <Grid units={byZone[z.id]||[]} ut={ut} color={ZC[zi%ZC.length]} onEdit={setEditUnit} onDel={delUnit} onAdd={()=>addUnit(z.id)}/>
+            </div>
+          ))}
+          {zones.length>0&&byZone['__none__']?.length>0&&(
+            <div style={{marginBottom:24}}>
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+                <div style={{width:10,height:10,borderRadius:'50%',background:'#94a3b8'}}/>
+                <p style={{fontSize:14,fontWeight:600,color:'#94a3b8'}}>Sin zona &middot; {byZone['__none__'].length}</p>
+              </div>
+              <Grid units={byZone['__none__']} ut={ut} color='#94a3b8' onEdit={setEditUnit} onDel={delUnit} onAdd={()=>addUnit()}/>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab==='zones'&&(
+        <div style={{maxWidth:600,margin:'0 auto',padding:'20px 24px'}}>
+          <p style={{fontSize:13,color:'#64748b',marginBottom:16,lineHeight:1.6}}>Las zonas son opcionales. El agente puede sugerir zonas al cliente.</p>
+          <div style={{display:'flex',gap:8,marginBottom:20}}>
+            <input value={newZone} onChange={e=>setNewZone(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addZone()} placeholder='Nueva zona (Terraza, Interior...)' style={{flex:1,padding:'9px 14px',fontSize:14,border:'1px solid #e2e8f0',borderRadius:9,outline:'none',fontFamily:'inherit'}}/>
+            <button onClick={addZone} disabled={!newZone.trim()} style={{padding:'9px 18px',fontSize:13,fontWeight:600,color:'white',background:'#1d4ed8',border:'none',borderRadius:9,cursor:'pointer',opacity:!newZone.trim()?0.5:1}}>+ Zona</button>
+          </div>
+          {zones.length===0&&<div style={{textAlign:'center',padding:'40px 0',color:'#94a3b8'}}><p style={{fontSize:28}}>🗂️</p><p>Sin zonas. Puedes operar sin ellas.</p></div>}
+          {zones.map((z,zi)=>(
+            <ZoneRow key={z.id} zone={z} color={ZC[zi%ZC.length]} count={units.filter(u=>u.zone_id===z.id).length} onRename={(n:string)=>renZone(z.id,n)} onDelete={()=>delZone(z.id)}/>
+          ))}
+        </div>
+      )}
+
+      {editUnit&&<EditModal unit={editUnit} ut={ut} zones={zones} onSave={(u:any)=>saveUnit(editUnit.id,u)} onClose={()=>setEditUnit(null)}/>}
+    </div>
+  )
+}
+
+function Grid({units,ut,color,onEdit,onDel,onAdd}:any){
+  return(
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(155px,1fr))',gap:10}}>
+      {units.map((u:any)=>(
+        <div key={u.id} style={{background:'white',border:'1px solid #e2e8f0',borderRadius:12,padding:'12px 14px',position:'relative',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+          <div style={{width:36,height:36,borderRadius:10,background:color+'14',border:'1.5px solid '+color+'44',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,marginBottom:8}}>{ut.icon}</div>
+          <p style={{fontSize:13,fontWeight:700,color:'#0f172a',marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.table_name||u.name||ut.s}</p>
+          <p style={{fontSize:11,color:'#94a3b8'}}>{u.capacity||1} persona{(u.capacity||1)!==1?'s':''}</p>
+          {u.notes&&<p style={{fontSize:10,color:'#64748b',marginTop:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontStyle:'italic'}}>{u.notes}</p>}
+          <div style={{position:'absolute',top:8,right:8,display:'flex',gap:3}}>
+            <button onClick={()=>onEdit(u)} style={{padding:'2px 6px',fontSize:11,background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:5,cursor:'pointer'}}>✏️</button>
+            <button onClick={()=>onDel(u.id)} style={{padding:'2px 6px',fontSize:11,background:'#fef2f2',border:'1px solid #fecaca',borderRadius:5,cursor:'pointer',color:'#dc2626'}}>✕</button>
+          </div>
+        </div>
+      ))}
+      <button onClick={onAdd} style={{height:100,border:'2px dashed #e2e8f0',borderRadius:12,background:'transparent',cursor:'pointer',fontSize:22,color:'#94a3b8',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2}}>
+        <span>+</span>
+        <span style={{fontSize:11}}>{ut.s}</span>
+      </button>
+    </div>
+  )
+}
+
+function ZoneRow({zone,color,count,onRename,onDelete}:any){
+  const [editing,setEditing]=useState(false)
+  const [name,setName]=useState(zone.name)
+  function save(){if(name.trim()&&name!==zone.name)onRename(name.trim());setEditing(false)}
+  return(
+    <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:12,padding:'14px 16px',marginBottom:10,display:'flex',alignItems:'center',gap:12}}>
+      <div style={{width:12,height:12,borderRadius:'50%',background:color,flexShrink:0}}/>
+      {editing
+        ?<input value={name} onChange={e=>setName(e.target.value)} onBlur={save} onKeyDown={e=>{if(e.key==='Enter')save();if(e.key==='Escape')setEditing(false)}} autoFocus style={{flex:1,fontSize:14,border:'1px solid #1d4ed8',borderRadius:7,padding:'4px 8px',outline:'none',fontFamily:'inherit'}}/>
+        :<p style={{flex:1,fontSize:14,fontWeight:500,color:'#0f172a',cursor:'pointer'}} onClick={()=>setEditing(true)}>{zone.name}</p>
+      }
+      <span style={{fontSize:12,color:'#94a3b8'}}>{count} unid.</span>
+      <button onClick={()=>setEditing(true)} style={{padding:'4px 8px',fontSize:12,background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:7,cursor:'pointer'}}>✏️</button>
+      <button onClick={onDelete} style={{padding:'4px 8px',fontSize:12,background:'#fef2f2',border:'1px solid #fecaca',borderRadius:7,cursor:'pointer',color:'#dc2626'}}>Eliminar</button>
+    </div>
+  )
+}
+
+function EditModal({unit,ut,zones,onSave,onClose}:any){
+  const [name,setName]=useState(unit.table_name||unit.name||ut.s)
+  const [cap,setCap]=useState(unit.capacity||2)
+  const [zoneId,setZoneId]=useState(unit.zone_id||'')
+  const [notes,setNotes]=useState(unit.notes||'')
+  function save(){onSave({table_name:name.trim()||ut.s,name:name.trim()||ut.s,capacity:Math.max(1,cap),zone_id:zoneId||null,notes:notes.trim()||null})}
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16}} onClick={onClose}>
+      <div style={{background:'white',borderRadius:16,padding:24,width:'100%',maxWidth:380,boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+          <p style={{fontSize:16,fontWeight:700,color:'#0f172a'}}>Editar {ut.s}</p>
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#94a3b8'}}>x</button>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          <div>
+            <p style={{fontSize:11,fontWeight:600,color:'#374151',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:5}}>Nombre *</p>
+            <input value={name} onChange={e=>setName(e.target.value)} style={{width:'100%',padding:'9px 12px',fontSize:14,border:'1px solid #e2e8f0',borderRadius:8,outline:'none',fontFamily:'inherit'}}/>
+          </div>
+          <div>
+            <p style={{fontSize:11,fontWeight:600,color:'#374151',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:5}}>Capacidad</p>
+            <input type='number' value={cap} min={1} max={9999} onChange={e=>setCap(parseInt(e.target.value)||1)} style={{width:'100%',padding:'9px 12px',fontSize:14,border:'1px solid #e2e8f0',borderRadius:8,outline:'none',fontFamily:'inherit'}}/>
+          </div>
+          {zones.length>0&&(
+            <div>
+              <p style={{fontSize:11,fontWeight:600,color:'#374151',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:5}}>Zona (opcional)</p>
+              <select value={zoneId} onChange={e=>setZoneId(e.target.value)} style={{width:'100%',padding:'9px 12px',fontSize:14,border:'1px solid #e2e8f0',borderRadius:8,outline:'none',fontFamily:'inherit',background:'white'}}>
+                <option value=''>Sin zona</option>
+                {zones.map((z:any)=><option key={z.id} value={z.id}>{z.name}</option>)}
+              </select>
+            </div>
+          )}
+          <div>
+            <p style={{fontSize:11,fontWeight:600,color:'#374151',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:5}}>Descripcion</p>
+            <input value={notes} onChange={e=>setNotes(e.target.value)} placeholder='Junto a la ventana, accesible...' style={{width:'100%',padding:'9px 12px',fontSize:14,border:'1px solid #e2e8f0',borderRadius:8,outline:'none',fontFamily:'inherit'}}/>
+          </div>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={onClose} style={{flex:1,padding:'10px',fontSize:13,fontWeight:500,background:'white',border:'1px solid #e2e8f0',borderRadius:9,cursor:'pointer',color:'#374151',fontFamily:'inherit'}}>Cancelar</button>
+            <button onClick={save} style={{flex:2,padding:'10px',fontSize:13,fontWeight:700,background:'linear-gradient(135deg,#1e40af,#3b82f6)',border:'none',borderRadius:9,cursor:'pointer',color:'white',fontFamily:'inherit'}}>Guardar</button>
+          </div>
         </div>
       </div>
     </div>
