@@ -1,165 +1,83 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { Settings, Bot, Phone, Globe, CreditCard, TrendingUp, Check } from 'lucide-react'
-
-export default function ConfiguracionPage() {
-  const [tenant, setTenant] = useState<any>(null)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [form, setForm] = useState({ agent_name: '', agent_phone: '', language: 'es' })
-
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: p } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
-      if (!p?.tenant_id) return
-      const { data: t } = await supabase.from('tenants').select('*').eq('id', (p as any).tenant_id).single()
-      setTenant(t)
-      setForm({ agent_name: t?.agent_name || 'Gabriela', agent_phone: t?.agent_phone || '', language: t?.language || 'es' })
+import{useEffect,useState,useCallback}from'react'
+import{supabase}from'@/lib/supabase'
+import{Bot,Phone,CreditCard,Check,Shield,Zap,ChevronRight,Copy,CheckCheck}from'lucide-react'
+import{PageLoader,PageHeader,Button,Input,Select,Badge,Alert,Card,CardHeader}from'@/components/ui'
+const PC:Record<string,{label:string;variant:'amber'|'blue'|'indigo'|'green';calls:number;extra:string}>={trial:{label:'Trial gratuito',variant:'amber',calls:10,extra:'—'},starter:{label:'Starter',variant:'blue',calls:50,extra:'0,90€/llamada'},pro:{label:'Pro',variant:'indigo',calls:200,extra:'0,70€/llamada'},business:{label:'Business',variant:'green',calls:600,extra:'0,50€/llamada'}}
+function Sec({title,subtitle,icon,children}:{title:string;subtitle?:string;icon:React.ReactNode;children:React.ReactNode}){return<Card><CardHeader title={title} subtitle={subtitle} icon={icon}/><div style={{padding:'20px'}}>{children}</div></Card>}
+export default function ConfiguracionPage(){
+  const[tenant,setTenant]=useState<any>(null);const[loading,setLoading]=useState(true);const[saving,setSaving]=useState(false);const[saved,setSaved]=useState(false);const[copied,setCopied]=useState(false)
+  const[form,setForm]=useState({agent_name:'',agent_phone:'',language:'es',business_description:''});const[errors,setErrors]=useState<Record<string,string>>({})
+  useEffect(()=>{
+    let m=true
+    async function load(){
+      const{data:{user}}=await supabase.auth.getUser();if(!user)return
+      const{data:p}=await supabase.from('profiles').select('tenant_id').eq('id',user.id).single();if(!p?.tenant_id)return
+      const{data:t}=await supabase.from('tenants').select('*').eq('id',(p as any).tenant_id).single()
+      if(!m)return;setTenant(t);setForm({agent_name:t?.agent_name||'Gabriela',agent_phone:t?.agent_phone||'',language:t?.language||'es',business_description:t?.business_description||''});setLoading(false)
     }
-    load()
-  }, [])
-
-  async function save() {
-    if (!tenant) return
-    setSaving(true)
-    await supabase.from('tenants').update(form).eq('id', tenant.id)
-    setSaving(false); setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-    setTenant({ ...tenant, ...form })
-  }
-
-  if (!tenant) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"/></div>
-
-  const isTrial = !tenant.plan || tenant.plan === 'trial' || tenant.plan === 'free'
-  const callsLeft = Math.max(0, (tenant.free_calls_limit || 10) - (tenant.free_calls_used || 0))
-  const PLAN_BADGE: Record<string, { label: string; cls: string }> = {
-    trial:    { label: 'Trial',    cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-    starter:  { label: 'Starter',  cls: 'bg-sky-50 text-sky-700 border-sky-200' },
-    pro:      { label: 'Pro',      cls: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-    business: { label: 'Business', cls: 'bg-violet-50 text-violet-700 border-violet-200' },
-  }
-  const badge = PLAN_BADGE[tenant.plan] || PLAN_BADGE.trial
-
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 h-14 flex items-center">
-        <div className="flex items-center gap-2">
-          <Settings size={16} className="text-slate-400" />
-          <h1 className="text-sm font-semibold text-slate-900">Configuración</h1>
-        </div>
-      </header>
-
-      <div className="max-w-2xl mx-auto px-6 py-6 space-y-4">
-        
-        {/* Plan actual */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <CreditCard size={15} className="text-slate-400" />
-              <h2 className="text-sm font-semibold text-slate-900">Plan actual</h2>
+    load();return()=>{m=false}
+  },[])
+  const save=useCallback(async()=>{
+    if(!tenant)return;const e:Record<string,string>={};if(!form.agent_name.trim())e.agent_name='Requerido'
+    if(Object.keys(e).length){setErrors(e);return};setErrors({});setSaving(true)
+    await supabase.from('tenants').update({agent_name:form.agent_name.trim(),agent_phone:form.agent_phone.trim(),language:form.language,business_description:form.business_description.trim()}).eq('id',tenant.id)
+    setSaving(false);setSaved(true);setTenant({...tenant,...form});setTimeout(()=>setSaved(false),2500)
+  },[tenant,form])
+  if(loading)return<PageLoader/>;if(!tenant)return null
+  const plan=PC[tenant.plan]||PC.trial;const isTrial=!tenant.plan||tenant.plan==='trial'||tenant.plan==='free'
+  const cLeft=Math.max(0,(tenant.free_calls_limit||10)-(tenant.free_calls_used||0))
+  const pct=!isTrial&&tenant.plan_calls_included?Math.min(100,((tenant.plan_calls_used||0)/tenant.plan_calls_included)*100):0
+  return(
+    <div style={{background:'var(--color-bg)',minHeight:'100vh'}}>
+      <PageHeader title="Configuración" actions={<Button onClick={save} loading={saving} icon={saved?<Check size={14}/>:undefined} style={{background:saved?'var(--color-success)':undefined}}>{saved?'Guardado':'Guardar cambios'}</Button>}/>
+      <div style={{maxWidth:680,margin:'0 auto',padding:'var(--content-pad)',display:'flex',flexDirection:'column',gap:14}}>
+        <Sec title="Plan activo" icon={<CreditCard size={15}/>}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+            <Badge variant={plan.variant} dot>{plan.label}</Badge>
+            <a href="/precios" className="btn btn-ghost btn-sm" style={{textDecoration:'none',color:'var(--color-brand)',gap:4}}>{isTrial?'Activar plan':'Cambiar plan'}<ChevronRight size={12}/></a>
+          </div>
+          {isTrial?(
+            <div>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}><span className="text-body-sm" style={{color:'var(--color-text-secondary)'}}>Llamadas gratuitas</span><span className="text-body-sm" style={{fontWeight:600,color:cLeft<=3?'var(--color-danger)':'inherit'}}>{cLeft}/{tenant.free_calls_limit||10}</span></div>
+              <div style={{height:6,background:'var(--color-surface-2)',borderRadius:3,overflow:'hidden'}}><div style={{height:'100%',width:`${Math.round(((tenant.free_calls_used||0)/(tenant.free_calls_limit||10))*100)}%`,background:cLeft<=3?'var(--color-danger)':'var(--color-brand)',borderRadius:3,transition:'width 0.4s'}}/></div>
+              {cLeft<=3&&<Alert variant="warning" className="mt-3">Quedan pocas llamadas. <a href="/precios" style={{fontWeight:600}}>Activa un plan →</a></Alert>}
             </div>
-            <a href="/precios" className="text-xs text-indigo-600 font-medium hover:text-indigo-700 transition-colors">
-              {isTrial ? 'Activar plan →' : 'Cambiar plan →'}
-            </a>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-md border ${badge.cls}`}>{badge.label}</span>
-            {isTrial ? (
-              <span className={`text-sm text-slate-600`}>{callsLeft} de {tenant.free_calls_limit || 10} llamadas gratis</span>
-            ) : (
-              <span className="text-sm text-slate-600">{tenant.plan_calls_used || 0} / {tenant.plan_calls_included || 50} llamadas este mes</span>
-            )}
-          </div>
-          {!isTrial && (
-            <div className="mt-3">
-              <div className="flex justify-between text-xs text-slate-400 mb-1">
-                <span>Uso mensual</span>
-                <span>{Math.round(((tenant.plan_calls_used || 0) / (tenant.plan_calls_included || 50)) * 100)}%</span>
-              </div>
-              <div className="bg-slate-100 rounded-full h-1.5">
-                <div className="bg-indigo-600 h-1.5 rounded-full transition-all"
-                  style={{ width: `${Math.min(100, ((tenant.plan_calls_used || 0) / (tenant.plan_calls_included || 50)) * 100)}%` }} />
-              </div>
+          ):(
+            <div>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}><span className="text-body-sm" style={{color:'var(--color-text-secondary)'}}>Uso mensual</span><span className="text-body-sm" style={{fontWeight:600}}>{tenant.plan_calls_used||0}/{plan.calls}</span></div>
+              <div style={{height:6,background:'var(--color-surface-2)',borderRadius:3,overflow:'hidden'}}><div style={{height:'100%',width:`${pct}%`,background:pct>85?'var(--color-warning)':'var(--color-brand)',borderRadius:3,transition:'width 0.4s'}}/></div>
+              <p className="text-body-sm" style={{color:'var(--color-text-muted)',marginTop:6}}>Extra: {plan.extra}</p>
             </div>
           )}
-        </div>
-
-        {/* Agente */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Bot size={15} className="text-slate-400" />
-            <h2 className="text-sm font-semibold text-slate-900">Recepcionista AI</h2>
-          </div>
-          <div className="space-y-4">
+        </Sec>
+        <Sec title="Recepcionista AI" subtitle="Personaliza el agente" icon={<Bot size={15}/>}>
+          <div style={{display:'flex',flexDirection:'column',gap:14}}>
+            <Input label="Nombre del agente" value={form.agent_name} error={errors.agent_name} placeholder="Gabriela" hint={`Se presentará como: "${form.agent_name||'Gabriela'} de ${tenant.name}"`} onChange={e=>setForm({...form,agent_name:e.target.value})}/>
+            <Select label="Idioma" value={form.language} onChange={e=>setForm({...form,language:e.target.value})}>
+              <option value="es">Español</option><option value="ca">Català</option><option value="eu">Euskera</option><option value="en">English</option><option value="fr">Français</option>
+            </Select>
             <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">Nombre del agente</label>
-              <input value={form.agent_name} onChange={e => setForm({...form, agent_name: e.target.value})}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"/>
-              <p className="text-xs text-slate-400 mt-1">Se presentará como: "Hola, soy {form.agent_name} de {tenant.name}"</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block flex items-center gap-1">
-                <Globe size={11} /> Idioma
-              </label>
-              <select value={form.language} onChange={e => setForm({...form, language: e.target.value})}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                <option value="es">Español</option>
-                <option value="en">English</option>
-                <option value="ca">Català</option>
-              </select>
+              <label className="text-label" style={{color:'var(--color-text-muted)',marginBottom:6,display:'block'}}>Descripción del negocio</label>
+              <textarea value={form.business_description} onChange={e=>setForm({...form,business_description:e.target.value})} rows={3} placeholder="Describe tu negocio..." className="input-base" style={{resize:'none'}}/>
             </div>
           </div>
-        </div>
-
-        {/* Teléfono */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Phone size={15} className="text-slate-400" />
-            <h2 className="text-sm font-semibold text-slate-900">Número de teléfono</h2>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">Número Twilio del agente</label>
-            <input value={form.agent_phone} onChange={e => setForm({...form, agent_phone: e.target.value})}
-              placeholder="+1 213 875 3573"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"/>
-            {form.agent_phone
-              ? <p className="text-xs text-emerald-600 mt-1.5 flex items-center gap-1"><Check size={11} /> Agente activo en {form.agent_phone}</p>
-              : <p className="text-xs text-amber-600 mt-1.5">Sin número asignado. El agente no puede recibir llamadas.</p>}
-          </div>
-        </div>
-
-        {/* Info negocio */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={15} className="text-slate-400" />
-            <h2 className="text-sm font-semibold text-slate-900">Estadísticas</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { label: 'Nombre', value: tenant.name },
-              { label: 'Tipo', value: tenant.type?.replace('_',' ') },
-              { label: 'Total llamadas', value: tenant.call_count || 0 },
-              { label: 'Clientes', value: '—' },
-            ].map(item => (
-              <div key={item.label}>
-                <p className="text-xs text-slate-400">{item.label}</p>
-                <p className="text-sm font-medium text-slate-900 mt-0.5 capitalize">{item.value}</p>
-              </div>
+        </Sec>
+        <Sec title="Número de teléfono" subtitle="Número Twilio del agente" icon={<Phone size={15}/>}>
+          <Input label="Número" value={form.agent_phone} placeholder="+1 213 875 3573" onChange={e=>setForm({...form,agent_phone:e.target.value})}
+            iconRight={form.agent_phone?<button onClick={()=>{navigator.clipboard?.writeText(form.agent_phone);setCopied(true);setTimeout(()=>setCopied(false),2000)}} style={{background:'none',border:'none',cursor:'pointer',color:'var(--color-brand)'}}>{copied?<CheckCheck size={14}/>:<Copy size={14}/>}</button>:undefined}/>
+          {form.agent_phone?<div style={{display:'flex',alignItems:'center',gap:5,marginTop:8,color:'var(--color-success)',fontSize:12}}><Check size={13}/>Activo en {form.agent_phone}</div>:<Alert variant="warning" className="mt-3">Sin número — el agente no puede recibir llamadas.</Alert>}
+        </Sec>
+        <Sec title="Información del negocio" icon={<Shield size={15}/>}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+            {[{l:'Nombre',v:tenant.name},{l:'Tipo',v:(tenant.type||'otro').replace('_',' ')},{l:'ID',v:tenant.id?.slice(0,8)+'...'},{l:'Plan',v:plan.label}].map(i=>(
+              <div key={i.l}><p className="text-label" style={{color:'var(--color-text-muted)',marginBottom:3}}>{i.l}</p><p className="text-body" style={{fontWeight:500,textTransform:'capitalize'}}>{i.v}</p></div>
             ))}
           </div>
-        </div>
-
-        <button onClick={save} disabled={saving}
-          className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-            saved ? 'bg-emerald-600 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'
-          } disabled:opacity-50`}>
-          {saving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>Guardando...</>
-           : saved ? <><Check size={15} />Guardado</>
-           : 'Guardar cambios'}
-        </button>
+        </Sec>
+        <Button onClick={save} loading={saving} size="lg" icon={saved?<Check size={16}/>:<Zap size={16}/>} style={{background:saved?'var(--color-success)':undefined,transition:'background 0.3s'}}>
+          {saved?'Cambios guardados':'Guardar configuración'}
+        </Button>
       </div>
     </div>
   )
