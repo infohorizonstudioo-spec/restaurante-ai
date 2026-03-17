@@ -1,287 +1,260 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-const STEPS = [
-  { id: 1, title: 'Prueba gratuita', emoji: '🎁' },
-  { id: 2, title: 'Configura tu recepcionista', emoji: '⚙️' },
-  { id: 3, title: '¡Lista para usar!', emoji: '🚀' },
-]
+const STEPS_RESTAURANT = ['Configurar agente', 'Configurar local', 'Activar']
+const STEPS_DEFAULT = ['Configurar agente', 'Activar']
 
-const IDIOMAS = [
-  { value: 'es', label: '🇪🇸 Español' },
-  { value: 'en', label: '🇬🇧 English' },
-  { value: 'ca', label: '🏴 Català' },
-  { value: 'eu', label: '🏴 Euskera' },
-]
-
-const TIPOS_LABEL: Record<string,string> = { restaurant:'Restaurante', bar:'Bar', clinic:'Clínica', advisory:'Asesoría', beauty:'Peluquería', other:'Negocio' }
+const DAYS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
+const DEFAULT_HOURS = { open: '09:00', close: '21:00', closed: false }
 
 export default function OnboardingPage() {
-  const router = useRouter()
-  const [step, setStep] = useState(1)
   const [tenant, setTenant] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
-  const [config, setConfig] = useState({ agentName: '', agentPhone: '', phoneOption: 'new', language: 'es' })
+
+  // Step 1 - Agent config
+  const [agentName, setAgentName] = useState('Gabriela')
+  const [language, setLanguage] = useState('es')
+  const [hours, setHours] = useState(() => Object.fromEntries(DAYS.map((d, i) => [d, { ...DEFAULT_HOURS, closed: i >= 5 }])))
+
+  // Step 2 - Local (restaurant only)
+  const [zones, setZones] = useState([
+    { name: 'Interior', tables: 8 },
+    { name: 'Terraza', tables: 6 },
+  ])
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
+      if (!user) { window.location.href = '/login'; return }
       const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
-      if (!profile?.tenant_id) { router.push('/dashboard'); return }
-      const { data: t } = await supabase.from('tenants').select('*').eq('id', profile.tenant_id).single()
-      if (!t) { router.push('/dashboard'); return }
-      if (t.onboarding_complete) { router.push('/panel'); return }
+      if (!profile?.tenant_id) return
+      const { data: t } = await supabase.from('tenants').select('*').eq('id', (profile as any).tenant_id).single()
+      if (t?.onboarding_complete) { window.location.href = '/panel'; return }
       setTenant(t)
-      setConfig(c => ({ ...c, agentName: t.agent_name || ('Recepcionista de ' + t.name), agentPhone: t.agent_phone || '' }))
-      setStep(t.onboarding_step > 0 ? t.onboarding_step : 1)
-      setLoading(false)
+      if (t?.agent_name) setAgentName(t.agent_name)
     }
     load()
   }, [])
 
-  async function saveStep(nextStep: number, data?: any) {
+  const isRestaurant = tenant?.type === 'restaurante' || tenant?.type === 'bar'
+  const totalSteps = isRestaurant ? 3 : 2
+  const stepLabels = isRestaurant ? STEPS_RESTAURANT : STEPS_DEFAULT
+
+  async function saveStep1() {
     setSaving(true)
-    const updates: any = { onboarding_step: nextStep }
-    if (data) Object.assign(updates, data)
-    await supabase.from('tenants').update(updates).eq('id', tenant.id)
-    setTenant((t: any) => ({ ...t, ...updates }))
+    await supabase.from('tenants').update({ agent_name: agentName, language, business_hours: hours, onboarding_step: 2 }).eq('id', tenant.id)
     setSaving(false)
-    if (nextStep > 3) {
-      await supabase.from('tenants').update({ onboarding_complete: true }).eq('id', tenant.id)
-      router.push('/panel')
-    } else {
-      setStep(nextStep)
-    }
+    setStep(2)
   }
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#070710] flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"/>
+  async function saveStep2Restaurant() {
+    setSaving(true)
+    // Crear zonas y mesas automáticamente
+    for (const zone of zones) {
+      if (!zone.name || zone.tables < 1) continue
+      const { data: z } = await supabase.from('zones').insert({ tenant_id: tenant.id, name: zone.name, active: true }).select().single()
+      if (z) {
+        const tablesToInsert = Array.from({ length: zone.tables }, (_, i) => ({
+          tenant_id: tenant.id, zone_id: z.id, name: `${zone.name[0]}${i+1}`, capacity: 4, status: 'libre', combinable: false
+        }))
+        await supabase.from('tables').insert(tablesToInsert)
+      }
+    }
+    await supabase.from('tenants').update({ onboarding_step: 3 }).eq('id', tenant.id)
+    setSaving(false)
+    setStep(3)
+  }
+
+  async function completeOnboarding() {
+    setSaving(true)
+    await supabase.from('tenants').update({ onboarding_complete: true, onboarding_step: totalSteps }).eq('id', tenant.id)
+    setSaving(false)
+    window.location.href = '/panel'
+  }
+
+  if (!tenant) return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"/>
     </div>
   )
 
-  const callsLeft = (tenant?.free_calls_limit || 10) - (tenant?.free_calls_used || 0)
-
   return (
-    <div className="min-h-screen bg-[#070710] text-white">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-violet-600/6 rounded-full blur-3xl"/>
-      </div>
-
-      {/* Header */}
-      <div className="relative max-w-2xl mx-auto px-6 pt-10 pb-4">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-sm font-black shadow-lg shadow-violet-500/20">R</div>
-            <span className="font-bold text-sm">Reservo.AI</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl font-black text-white">R</span>
           </div>
-          <div className="text-xs text-white/30">Paso {step} de 3</div>
+          <h1 className="text-2xl font-bold text-white">Configura Reservo.AI</h1>
+          <p className="text-slate-400 mt-1">Para {tenant.name}</p>
         </div>
 
         {/* Progress */}
-        <div className="flex items-center gap-2 mb-10">
-          {STEPS.map((s, i) => (
-            <div key={s.id} className="flex items-center flex-1">
-              <div className={`flex items-center gap-2 ${s.id <= step ? 'opacity-100' : 'opacity-30'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${s.id < step ? 'bg-emerald-500 text-white' : s.id === step ? 'bg-violet-600 text-white ring-4 ring-violet-500/30' : 'bg-white/10 text-white/40'}`}>
-                  {s.id < step ? '✓' : s.id}
+        <div className="flex items-center gap-2 mb-8 px-4">
+          {stepLabels.map((label, i) => (
+            <div key={i} className="flex items-center gap-2 flex-1 last:flex-none">
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${step > i+1 ? 'bg-green-500 text-white' : step === i+1 ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-400'}`}>
+                  {step > i+1 ? '✓' : i+1}
                 </div>
-                <span className={`text-xs hidden sm:block ${s.id === step ? 'text-white font-medium' : 'text-white/40'}`}>{s.title}</span>
+                <span className={`text-sm hidden sm:block ${step === i+1 ? 'text-white font-medium' : 'text-slate-500'}`}>{label}</span>
               </div>
-              {i < STEPS.length - 1 && <div className={`flex-1 h-px mx-3 ${s.id < step ? 'bg-emerald-500/50' : 'bg-white/10'}`}/>}
+              {i < stepLabels.length - 1 && <div className={`flex-1 h-0.5 mx-2 ${step > i+1 ? 'bg-green-500' : 'bg-slate-700'}`}/>}
             </div>
           ))}
         </div>
 
-        {/* ─── PASO 1: PRUEBA GRATUITA ─── */}
-        {step === 1 && (
-          <div className="space-y-6">
-            <div className="text-center">
-              <div className="text-5xl mb-4">🎁</div>
-              <h1 className="text-3xl font-black mb-3">Prueba tu recepcionista AI<br/>con 10 llamadas gratuitas</h1>
-              <p className="text-white/50 text-base max-w-lg mx-auto">
-                Puedes probar cómo funciona Reservo.AI con hasta <strong className="text-white">10 llamadas de clientes</strong> antes de elegir un plan.
-                Sin tarjeta de crédito. Sin compromisos.
-              </p>
-            </div>
-
-            {/* Counter */}
-            <div className="bg-gradient-to-br from-violet-500/10 to-indigo-500/10 border border-violet-500/20 rounded-2xl p-6 text-center">
-              <div className="text-6xl font-black text-violet-400 mb-1">{callsLeft}</div>
-              <div className="text-white/60 text-sm">llamadas gratuitas disponibles de {tenant?.free_calls_limit || 10}</div>
-              <div className="mt-4 w-full bg-white/10 rounded-full h-2 overflow-hidden">
-                <div className="bg-gradient-to-r from-violet-500 to-indigo-500 h-full rounded-full transition-all" style={{ width: `${(callsLeft / (tenant?.free_calls_limit || 10)) * 100}%` }}/>
-              </div>
-            </div>
-
-            {/* Features */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {[
-                { icon: '📞', title: 'Atiende llamadas', desc: 'Tu IA responde automáticamente 24/7' },
-                { icon: '📅', title: 'Toma reservas', desc: 'Registra y gestiona reservas al instante' },
-                { icon: '🛒', title: 'Registra pedidos', desc: 'Anota pedidos sin que muevas un dedo' },
-              ].map(f => (
-                <div key={f.title} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-center">
-                  <div className="text-2xl mb-2">{f.icon}</div>
-                  <div className="font-semibold text-sm mb-1">{f.title}</div>
-                  <div className="text-xs text-white/40">{f.desc}</div>
-                </div>
-              ))}
-            </div>
-
-            <button onClick={() => setStep(2)}
-              className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-4 rounded-xl text-base transition-all active:scale-95 shadow-lg shadow-violet-500/25">
-              Configurar mi recepcionista →
-            </button>
-          </div>
-        )}
-
-        {/* ─── PASO 2: CONFIGURACIÓN ─── */}
-        {step === 2 && (
-          <div className="space-y-6">
+        <div className="bg-slate-800/80 backdrop-blur rounded-3xl border border-slate-700 p-8">
+          
+          {/* STEP 1: Agent config */}
+          {step === 1 && (
             <div>
-              <h1 className="text-2xl font-black mb-1">Configura tu recepcionista AI</h1>
-              <p className="text-white/40 text-sm">Personaliza cómo tu recepcionista se presentará a tus clientes</p>
-            </div>
+              <h2 className="text-xl font-bold text-white mb-1">Configura tu recepcionista AI</h2>
+              <p className="text-slate-400 text-sm mb-6">Personaliza cómo atenderá tus llamadas</p>
+              
+              <div className="space-y-6">
+                <div>
+                  <label className="text-sm font-medium text-slate-300 mb-2 block">Nombre del agente</label>
+                  <input value={agentName} onChange={e => setAgentName(e.target.value)}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500"/>
+                  <p className="text-slate-500 text-xs mt-1">Así se presentará al teléfono: "Hola, soy {agentName}..."</p>
+                </div>
 
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 space-y-5">
-              {/* Nombre agente */}
-              <div>
-                <label className="text-xs text-white/50 mb-1.5 block font-medium">Nombre del agente AI</label>
-                <input type="text" value={config.agentName} onChange={e => setConfig(c => ({...c, agentName: e.target.value}))}
-                  placeholder="Ej: María, Asistente, Recepcionista..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-violet-500/60 transition-all"/>
-                <p className="text-[11px] text-white/25 mt-1">Así se presentará cuando atienda una llamada</p>
-              </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-300 mb-2 block">Idioma</label>
+                  <select value={language} onChange={e => setLanguage(e.target.value)}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500">
+                    <option value="es">🇪🇸 Español</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="ca">🇪🇸 Català</option>
+                  </select>
+                </div>
 
-              {/* Idioma */}
-              <div>
-                <label className="text-xs text-white/50 mb-1.5 block font-medium">Idioma principal</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {IDIOMAS.map(l => (
-                    <button key={l.value} type="button" onClick={() => setConfig(c => ({...c, language: l.value}))}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm transition-all ${config.language === l.value ? 'bg-violet-600/20 border-violet-500/50 text-white' : 'bg-white/5 border-white/10 text-white/50 hover:border-white/25'}`}>
-                      {l.label}
-                    </button>
-                  ))}
+                <div>
+                  <label className="text-sm font-medium text-slate-300 mb-3 block">Horario del negocio</label>
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {DAYS.map(day => (
+                      <div key={day} className="flex items-center gap-3 bg-slate-700/50 rounded-xl px-4 py-2.5">
+                        <span className="text-sm text-slate-300 w-20">{day}</span>
+                        <label className="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
+                          <input type="checkbox" checked={!hours[day].closed}
+                            onChange={e => setHours(h => ({...h, [day]: {...h[day], closed: !e.target.checked}}))}
+                            className="rounded accent-indigo-500"/>
+                          Abierto
+                        </label>
+                        {!hours[day].closed && (
+                          <>
+                            <input type="time" value={hours[day].open}
+                              onChange={e => setHours(h => ({...h, [day]: {...h[day], open: e.target.value}}))}
+                              className="bg-slate-600 border border-slate-500 rounded-lg px-2 py-1 text-white text-xs focus:outline-none"/>
+                            <span className="text-slate-500 text-xs">—</span>
+                            <input type="time" value={hours[day].close}
+                              onChange={e => setHours(h => ({...h, [day]: {...h[day], close: e.target.value}}))}
+                              className="bg-slate-600 border border-slate-500 rounded-lg px-2 py-1 text-white text-xs focus:outline-none"/>
+                          </>
+                        )}
+                        {hours[day].closed && <span className="text-slate-500 text-xs">Cerrado</span>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Teléfono */}
-              <div>
-                <label className="text-xs text-white/50 mb-2 block font-medium">Número de teléfono del negocio</label>
-                <div className="space-y-2">
-                  <button onClick={() => setConfig(c => ({...c, phoneOption: 'new'}))}
-                    className={`w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-all ${config.phoneOption === 'new' ? 'bg-violet-600/15 border-violet-500/40 text-white' : 'bg-white/5 border-white/10 text-white/60 hover:border-white/20'}`}>
-                    <div className={`w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 ${config.phoneOption === 'new' ? 'border-violet-500 bg-violet-500' : 'border-white/30'}`}/>
-                    <div>
-                      <div className="font-medium text-sm">Generar un número nuevo para el agente</div>
-                      <div className="text-xs text-white/40 mt-0.5">Se asigna un número de teléfono dedicado para tu recepcionista IA</div>
-                    </div>
-                  </button>
-                  <button onClick={() => setConfig(c => ({...c, phoneOption: 'redirect'}))}
-                    className={`w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-all ${config.phoneOption === 'redirect' ? 'bg-violet-600/15 border-violet-500/40 text-white' : 'bg-white/5 border-white/10 text-white/60 hover:border-white/20'}`}>
-                    <div className={`w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 ${config.phoneOption === 'redirect' ? 'border-violet-500 bg-violet-500' : 'border-white/30'}`}/>
-                    <div>
-                      <div className="font-medium text-sm">Usar mi número actual con desvío de llamadas</div>
-                      <div className="text-xs text-white/40 mt-0.5">Desvía las llamadas de tu número actual al agente IA</div>
-                    </div>
-                  </button>
-                </div>
-                {config.phoneOption === 'redirect' && (
-                  <input type="tel" value={config.agentPhone} onChange={e => setConfig(c => ({...c, agentPhone: e.target.value}))}
-                    placeholder="Tu número de teléfono actual"
-                    className="mt-2 w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-violet-500/60"/>
-                )}
-              </div>
-
-              {/* Horario */}
-              <div>
-                <label className="text-xs text-white/50 mb-1.5 block font-medium">Horario del negocio</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                  {['Lun-Vie','Sábado','Domingo','Festivos'].map(d => (
-                    <div key={d} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-center">
-                      <div className="text-white/40 mb-1">{d}</div>
-                      <div className="text-white/70 font-medium">{d === 'Festivos' ? 'Cerrado' : '09:00–21:00'}</div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[11px] text-white/25 mt-2">Personalizable desde el Panel de control</p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button onClick={() => setStep(1)} className="px-6 py-3 rounded-xl bg-white/5 text-white/60 text-sm hover:bg-white/10 transition-all">← Atrás</button>
-              <button onClick={() => saveStep(3, { agent_name: config.agentName, agent_phone: config.phoneOption === 'redirect' ? config.agentPhone : '+34 900 XXX XXX', language: config.language })}
-                disabled={saving || !config.agentName.trim()}
-                className="flex-1 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl text-sm transition-all">
-                {saving ? 'Guardando...' : 'Guardar configuración →'}
+              <button onClick={saveStep1} disabled={saving}
+                className="w-full mt-8 bg-indigo-600 text-white py-3.5 rounded-2xl font-bold hover:bg-indigo-500 transition-colors disabled:opacity-50">
+                {saving ? 'Guardando...' : 'Continuar →'}
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ─── PASO 3: ACTIVACIÓN ─── */}
-        {step === 3 && (
-          <div className="space-y-6 text-center">
+          {/* STEP 2: Local config (restaurant) */}
+          {step === 2 && isRestaurant && (
             <div>
-              <div className="relative inline-flex items-center justify-center w-24 h-24 mb-4">
-                <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping"/>
-                <div className="relative w-24 h-24 bg-emerald-500/20 border-2 border-emerald-500/40 rounded-full flex items-center justify-center text-4xl">🚀</div>
+              <h2 className="text-xl font-bold text-white mb-1">Configura tu local</h2>
+              <p className="text-slate-400 text-sm mb-6">Define las zonas y mesas de tu negocio</p>
+              
+              <div className="space-y-4 mb-6">
+                {zones.map((zone, i) => (
+                  <div key={i} className="bg-slate-700/50 rounded-2xl p-4">
+                    <div className="flex items-center gap-3">
+                      <input value={zone.name} onChange={e => { const z = [...zones]; z[i].name = e.target.value; setZones(z) }}
+                        placeholder="Nombre de la zona"
+                        className="flex-1 bg-slate-600 border border-slate-500 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500"/>
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-400 text-sm">Mesas:</span>
+                        <input type="number" value={zone.tables} min={1} max={50}
+                          onChange={e => { const z = [...zones]; z[i].tables = parseInt(e.target.value)||1; setZones(z) }}
+                          className="w-16 bg-slate-600 border border-slate-500 rounded-xl px-2 py-2 text-white text-sm text-center focus:outline-none"/>
+                      </div>
+                      {zones.length > 1 && (
+                        <button onClick={() => setZones(zones.filter((_,j) => j !== i))} className="text-red-400 hover:text-red-300 text-lg">✕</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <h1 className="text-3xl font-black mb-2">¡Tu recepcionista AI está lista!</h1>
-              <p className="text-white/50">Hemos configurado tu recepcionista para <strong className="text-white">{tenant?.name}</strong></p>
-            </div>
 
-            {/* Número asignado */}
-            <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl p-6">
-              <p className="text-sm text-white/50 mb-2">Número de teléfono de tu recepcionista</p>
-              <div className="text-3xl font-black text-emerald-400 tracking-wide mb-3">
-                {tenant?.agent_phone || '+34 900 123 456'}
-              </div>
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 text-sm text-emerald-300">
-                📞 Llama a este número para probar tu recepcionista AI
+              <button onClick={() => setZones([...zones, { name: '', tables: 4 }])}
+                className="w-full border border-dashed border-slate-600 text-slate-400 py-3 rounded-2xl text-sm hover:border-indigo-500 hover:text-indigo-400 transition-colors mb-6">
+                + Añadir zona
+              </button>
+
+              <p className="text-slate-500 text-xs mb-6">Las mesas se crean automáticamente. Podrás personalizarlas desde el panel.</p>
+
+              <div className="flex gap-3">
+                <button onClick={() => setStep(1)} className="px-5 py-3.5 rounded-2xl border border-slate-600 text-slate-300 hover:border-slate-400">← Atrás</button>
+                <button onClick={saveStep2Restaurant} disabled={saving}
+                  className="flex-1 bg-indigo-600 text-white py-3.5 rounded-2xl font-bold hover:bg-indigo-500 disabled:opacity-50">
+                  {saving ? 'Creando mesas...' : 'Continuar →'}
+                </button>
               </div>
             </div>
+          )}
 
-            {/* Info del agente */}
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 text-left space-y-3">
-              <h3 className="font-semibold text-sm">Configuración de tu agente</h3>
-              {[
-                { label: 'Nombre del agente', value: tenant?.agent_name || config.agentName },
-                { label: 'Negocio', value: tenant?.name },
-                { label: 'Tipo', value: (TIPOS_LABEL as any)[tenant?.type] || tenant?.type },
-                { label: 'Idioma', value: IDIOMAS.find(l => l.value === (tenant?.language || 'es'))?.label },
-                { label: 'Llamadas gratuitas', value: `${(tenant?.free_calls_limit || 10) - (tenant?.free_calls_used || 0)} de ${tenant?.free_calls_limit || 10} disponibles` },
-              ].map(item => (
-                <div key={item.label} className="flex justify-between text-sm">
-                  <span className="text-white/40">{item.label}</span>
-                  <span className="font-medium">{item.value}</span>
+          {/* STEP 2 (non-restaurant) or STEP 3: Activation */}
+          {((step === 2 && !isRestaurant) || (step === 3 && isRestaurant)) && (
+            <div className="text-center">
+              <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-4xl">🎉</span>
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-3">¡Todo listo!</h2>
+              <p className="text-slate-400 mb-6">Tu recepcionista AI <span className="text-white font-semibold">{agentName}</span> está configurada para <span className="text-white font-semibold">{tenant.name}</span></p>
+
+              <div className="bg-slate-700/50 rounded-2xl p-5 mb-6 text-left space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-green-400">✓</span>
+                  <span className="text-slate-300 text-sm">Agente configurado: <span className="text-white font-medium">{agentName}</span></span>
                 </div>
-              ))}
-            </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-green-400">✓</span>
+                  <span className="text-slate-300 text-sm">Horario guardado</span>
+                </div>
+                {isRestaurant && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-green-400">✓</span>
+                    <span className="text-slate-300 text-sm">{zones.reduce((a,z) => a+z.tables,0)} mesas creadas en {zones.length} zonas</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <span className="text-amber-400">⏳</span>
+                  <span className="text-slate-300 text-sm">10 llamadas gratuitas disponibles</span>
+                </div>
+              </div>
 
-            {/* Instrucciones */}
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-left text-sm text-blue-200">
-              <div className="font-semibold mb-2">📋 Cómo probar tu recepcionista</div>
-              <ol className="space-y-1 text-xs text-blue-300/80 list-decimal list-inside">
-                <li>Llama al número de tu recepcionista desde tu móvil</li>
-                <li>Di que quieres hacer una reserva o pregunta sobre el negocio</li>
-                <li>Observa cómo la IA gestiona la conversación</li>
-                <li>Revisa las reservas y pedidos en tu Panel de control</li>
-              </ol>
-            </div>
+              <button onClick={completeOnboarding} disabled={saving}
+                className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white py-4 rounded-2xl font-bold text-lg hover:from-indigo-500 hover:to-violet-500 transition-all shadow-xl disabled:opacity-50">
+                {saving ? 'Activando...' : 'Ir al centro de control →'}
+              </button>
 
-            <button onClick={() => saveStep(4)}
-              className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-4 rounded-xl text-base transition-all active:scale-95 shadow-lg shadow-violet-500/25">
-              Ir al Panel de control →
-            </button>
-          </div>
-        )}
+              <p className="text-slate-500 text-xs mt-4">
+                Podrás activar el número de teléfono desde la configuración
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
