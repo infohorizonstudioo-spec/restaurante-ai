@@ -8,46 +8,45 @@ const admin = createClient(
 )
 
 async function assignBestTable(tenantId: string, date: string, time: string, partySize: number, zonePreference?: string) {
-  const [{ data: zones }, { data: tables }, { data: reservas }] = await Promise.all([
+  const [{ data: zones }, { data: tables }, { data: existing }] = await Promise.all([
     admin.from('zones').select('*').eq('tenant_id', tenantId).eq('active', true),
     admin.from('tables').select('*').eq('tenant_id', tenantId),
-    admin.from('reservations').select('table_id,zone_id')
-      .eq('tenant_id', tenantId)
-      .eq('date', date)
-      .eq('time', time)
-      .in('status', ['confirmed','pending','confirmada','pendiente']),
+    admin.from('reservations').select('table_id,zone_id,zone')
+      .eq('tenant_id', tenantId).eq('date', date).eq('time', time)
+      .in('status', ['confirmada','confirmed','pendiente','pending']),
   ])
   if (!tables?.length) return null
-  const reservedIds = new Set((reservas||[]).map(r => r.table_id).filter(Boolean))
-  let candidates = tables.filter(m => !reservedIds.has(m.id) && (m.capacity||0) >= partySize)
+  const reservedIds = new Set((existing||[]).map(r => r.table_id).filter(Boolean))
+  let candidates = tables.filter(t => {
+    const cap = t.capacity || 0
+    const reserved = reservedIds.has(t.id)
+    return !reserved && cap >= partySize
+  })
   if (zonePreference && zones?.length) {
     const zn = zonePreference.toLowerCase()
     const zona = zones.find(z => z.name?.toLowerCase().includes(zn) || zn.includes(z.name?.toLowerCase()))
     if (zona) {
-      const enZona = candidates.filter(m => m.zone_id === zona.id)
-      if (enZona.length) candidates = enZona
+      const inZone = candidates.filter(t => t.zone === zona.id)
+      if (inZone.length) candidates = inZone
     }
   }
   if (!candidates.length) return null
-  candidates.sort((a,b) => (a.capacity||0) - (b.capacity||0))
+  candidates.sort((a, b) => (a.capacity||0) - (b.capacity||0))
   const table = candidates[0]
-  const zone = zones?.find(z => z.id === table.zone_id) || null
+  const zone = zones?.find(z => z.id === table.zone) || null
   return { table, zone }
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const {
-      tenant_id, customer_name, customer_phone = '',
+    const { tenant_id, customer_name, customer_phone = '',
       reservation_date, reservation_time, party_size,
-      zone_preference = '', notes = '',
-    } = body
+      zone_preference = '', notes = '' } = body
 
     if (!tenant_id || !customer_name || !reservation_date || !reservation_time || !party_size) {
       return NextResponse.json({ success: false, error: 'Faltan datos obligatorios.' }, { status: 400 })
     }
-
     const ps = parseInt(String(party_size))
 
     // Crear/actualizar cliente
@@ -58,7 +57,7 @@ export async function POST(req: Request) {
       if (existing) {
         await admin.from('customers').update({
           name: customer_name,
-          total_reservations: (existing.total_reservations||0)+1,
+          total_reservations: (existing.total_reservations||0) + 1,
           last_visit: reservation_date,
         }).eq('id', existing.id)
         customerId = existing.id
@@ -74,52 +73,50 @@ export async function POST(req: Request) {
     // Asignar mesa
     const assignment = await assignBestTable(tenant_id, reservation_date, reservation_time, ps, zone_preference)
 
-    const notaFull = [notes, assignment?.zone ? 'Zona: '+assignment.zone.name : zone_preference ? 'Preferencia: '+zone_preference : ''].filter(Boolean).join(' | ')
+    const notaFull = [notes, assignment?.zone ? 'Zona: '+assignment.zone.name : zone_preference ? 'Preferencia: '+zone_preference : '']
+      .filter(Boolean).join(' | ')
 
-    // Insertar reserva — usando AMBOS nombres de columna para compatibilidad
+    // Insertar reserva con valores correctos de la DB
     const { data: reservation, error } = await admin.from('reservations').insert({
       tenant_id,
-      customer_id: customerId,
+      customer_id:   customerId,
       customer_name,
       customer_phone,
-      // columnas reales
-      date: reservation_date,
-      time: reservation_time,
-      people: ps,
-      // columnas alias (el trigger las sincroniza pero las ponemos igual)
-      reservation_date,
-      reservation_time,
-      party_size: ps,
-      table_id: assignment?.table?.id || null,
-      table_name: assignment?.table?.table_name || assignment?.table?.name || null,
-      zone_id: assignment?.zone?.id || null,
-      notes: notaFull || null,
-      status: 'confirmada',
-      source: 'voice_agent',
+      date:          reservation_date,
+      time:          reservation_time,
+      people:        ps,
+      table_id:      assignment?.table?.id || null,
+      zone_id:       assignment?.zone?.id || null,
+      zone:          assignment?.zone?.id || (zone_preference ? zone_preference : null),
+      notes:         notaFull || null,
+      status:        'confirmada',
+      source:        'voice_agent',
     }).select().single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Reservation insert error:', error)
+      throw error
+    }
 
-    // Actualizar llamada con resumen
-    const summary = ['Reserva: '+customer_name, reservation_date+' '+reservation_time, ps+'p',
-      assignment ? 'Mesa '+(assignment.table.table_name||assignment.table.name)+' ('+(assignment.zone?.name||'sin zona')+')' : null,
-      notes||null].filter(Boolean).join(' · ')
-
-    admin.from('calls').update({ summary, action_suggested: 'Reserva creada', status: 'completed' })
-      .eq('tenant_id', tenant_id).eq('status', 'in-progress')
-      .order('started_at', { ascending: false }).limit(1).catch(()=>{})
+    // Actualizar call con resumen
+    admin.from('calls').update({
+      summary: customer_name + ' ' + reservation_date + ' ' + reservation_time + ' ' + ps + 'p' + (assignment ? ' ' + (assignment.zone?.name||'') : ''),
+      action_suggested: 'Reserva creada',
+      status: 'completed'
+    }).eq('tenant_id', tenant_id).eq('status', 'in-progress')
+      .order('started_at', { ascending: false }).limit(1).catch(() => {})
 
     const tableInfo = assignment
-      ? 'Mesa '+(assignment.table.table_name||assignment.table.name)+' en '+(assignment.zone?.name||'el local')
-      : zone_preference ? '(zona '+zone_preference+')' : '(sin mesa específica)'
+      ? 'Mesa ' + assignment.table.number + ' en ' + (assignment.zone?.name || 'el local')
+      : zone_preference ? '(zona ' + zone_preference + ')' : ''
 
     return NextResponse.json({
       success: true,
       reservation_id: reservation.id,
-      message: 'Reserva confirmada para '+customer_name+' el '+reservation_date+' a las '+reservation_time+', '+ps+' persona'+(ps!==1?'s':'')+'. '+tableInfo+'. Hasta pronto!',
-      details: { customer_name, date: reservation_date, time: reservation_time, party_size: ps, table_name: assignment?.table?.table_name||null, zone_name: assignment?.zone?.name||zone_preference||null }
+      message: 'Reserva confirmada para ' + customer_name + ' el ' + reservation_date + ' a las ' + reservation_time + ', ' + ps + ' persona' + (ps !== 1 ? 's' : '') + '. ' + tableInfo + ' Hasta pronto!',
+      details: { customer_name, date: reservation_date, time: reservation_time, party_size: ps, table_number: assignment?.table?.number || null, zone_name: assignment?.zone?.name || zone_preference || null }
     })
-  } catch (e:any) {
+  } catch (e: any) {
     console.error('Reservation error:', e)
     return NextResponse.json({ success: false, error: e.message }, { status: 500 })
   }
