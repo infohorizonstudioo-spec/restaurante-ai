@@ -2,77 +2,62 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-01-27.acacia' })
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
+const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } })
 
-// Map price_id → plan name (fuente de verdad)
-const PRICE_TO_PLAN: Record<string, string> = {
-  'price_1TBtxK0yU3RZWdR1MP4Z1lwj': 'starter',
-  'price_1TBtxM0yU3RZWdR1DGs87LNC': 'pro',
-  'price_1TBtxN0yU3RZWdR1dAiCDE3n': 'business',
+// Price IDs con limites embebidos en metadata
+const PLANS: Record<string, { priceId: string; name: string; calls: number; rate: number; amount: number }> = {
+  starter:  { priceId: 'price_1TBtxK0yU3RZWdR1MP4Z1lwj', name: 'Starter',  calls: 50,  rate: 0.90, amount: 9900 },
+  pro:      { priceId: 'price_1TBtxM0yU3RZWdR1DGs87LNC', name: 'Pro',      calls: 200, rate: 0.70, amount: 29900 },
+  business: { priceId: 'price_1TBtxN0yU3RZWdR1dAiCDE3n', name: 'Business', calls: 600, rate: 0.50, amount: 49900 },
 }
 
 export async function POST(req: Request) {
   try {
-    const { priceId, tenantId } = await req.json()
+    const { plan, tenant_id, user_id } = await req.json()
 
-    if (!priceId || !tenantId) {
-      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
-    }
+    // SEGURIDAD: validar plan contra whitelist
+    if (!PLANS[plan]) return NextResponse.json({ error: 'Plan invalido' }, { status: 400 })
+    if (!tenant_id)   return NextResponse.json({ error: 'Tenant requerido' }, { status: 400 })
 
-    const plan = PRICE_TO_PLAN[priceId]
-    if (!plan) {
-      return NextResponse.json({ error: 'Plan no válido' }, { status: 400 })
-    }
+    // Verificar tenant existe
+    const { data: tenant } = await admin.from('tenants').select('id,name,stripe_customer_id,plan').eq('id', tenant_id).single()
+    if (!tenant) return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 })
 
-    const { data: tenant, error: tErr } = await admin
-      .from('tenants').select('*').eq('id', tenantId).single()
-    if (tErr || !tenant) {
-      return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 })
-    }
+    const planData = PLANS[plan]
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://restaurante-ai.vercel.app'
-
-    // Crear o recuperar cliente de Stripe
+    // Crear o recuperar customer de Stripe
     let customerId = tenant.stripe_customer_id
     if (!customerId) {
+      const { data: profile } = await admin.from('profiles').select('id').eq('tenant_id', tenant_id).limit(1).single()
+      const { data: user } = profile ? await admin.auth.admin.getUserById(profile.id) : { data: null }
       const customer = await stripe.customers.create({
-        email: tenant.email || undefined,
+        email: user?.user?.email || '',
         name: tenant.name,
-        metadata: { tenant_id: tenantId, plan },
+        metadata: { tenant_id, app: 'reservo_ai' }
       })
       customerId = customer.id
-      await admin.from('tenants').update({ stripe_customer_id: customerId }).eq('id', tenantId)
+      await admin.from('tenants').update({ stripe_customer_id: customerId }).eq('id', tenant_id)
     }
 
+    // Crear sesión de checkout
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/precios/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/precios`,
-      metadata: {
-        tenant_id: tenantId,
-        plan,          // ← CRÍTICO: pasar nombre del plan para el webhook
-        price_id: priceId,
-      },
+      line_items: [{ price: planData.priceId, quantity: 1 }],
+      success_url: process.env.NEXT_PUBLIC_APP_URL + '/precios/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url:  process.env.NEXT_PUBLIC_APP_URL + '/precios',
+      metadata: { tenant_id, plan, included_calls: String(planData.calls), extra_rate: String(planData.rate) },
       subscription_data: {
-        metadata: {
-          tenant_id: tenantId,
-          plan,
-        },
+        metadata: { tenant_id, plan, included_calls: String(planData.calls), extra_rate: String(planData.rate) }
       },
-      locale: 'es',
+      allow_promotion_codes: true,
     })
 
-    return NextResponse.json({ url: session.url })
+    return NextResponse.json({ url: session.url, session_id: session.id })
   } catch (e: any) {
-    console.error('Stripe checkout error:', e)
-    return NextResponse.json({ error: e.message || 'Error al procesar' }, { status: 500 })
+    console.error('Checkout error:', e)
+    return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }
