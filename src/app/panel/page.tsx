@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { BUSINESS_TEMPLATES } from '@/types'
 import type { Tenant, Call, Reservation } from '@/types'
 
@@ -9,7 +9,6 @@ export default function PanelPage() {
   const [calls, setCalls] = useState<Call[]>([])
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => { loadData() }, [])
 
@@ -48,65 +47,45 @@ export default function PanelPage() {
       </div>
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <a href="/panel/llamadas" className="bg-white rounded-2xl border p-5 hover:shadow-md transition-all">
-            <p className="text-2xl mb-1">📞</p>
-            <p className="text-3xl font-bold">{calls.length}</p>
-            <p className="text-sm text-gray-500">Llamadas</p>
-          </a>
-          <a href="/panel/reservas" className="bg-white rounded-2xl border p-5 hover:shadow-md transition-all">
-            <p className="text-2xl mb-1">{template.reservationUnit === 'mesa' ? '🪑' : '📅'}</p>
-            <p className="text-3xl font-bold">{todayRes.length}</p>
-            <p className="text-sm text-gray-500">{template.reservationUnit === 'mesa' ? 'Reservas' : 'Citas'} hoy</p>
-          </a>
-          <a href="/panel/clientes" className="bg-white rounded-2xl border p-5 hover:shadow-md transition-all">
-            <p className="text-2xl mb-1">👥</p>
-            <p className="text-3xl font-bold">0</p>
-            <p className="text-sm text-gray-500">Clientes</p>
-          </a>
-          {tenant.plan === 'trial' && (
-            <a href="/precios" className="bg-amber-50 rounded-2xl border border-amber-200 p-5 hover:shadow-md transition-all">
-              <p className="text-2xl mb-1">⏳</p>
-              <p className="text-3xl font-bold text-amber-700">{callsLeft}</p>
-              <p className="text-sm text-amber-600">Llamadas gratis</p>
-            </a>
+          <a href="/panel/llamadas" className="bg-white rounded-2xl border p-5 hover:shadow-md transition-all"><p className="text-2xl mb-1">📞</p><p className="text-3xl font-bold">{calls.length}</p><p className="text-sm text-gray-500">Llamadas</p></a>
+          <a href="/panel/reservas" className="bg-white rounded-2xl border p-5 hover:shadow-md transition-all"><p className="text-2xl mb-1">{template.reservationUnit === 'mesa' ? '🪑' : '📅'}</p><p className="text-3xl font-bold">{todayRes.length}</p><p className="text-sm text-gray-500">{template.reservationUnit === 'mesa' ? 'Reservas' : 'Citas'} hoy</p></a>
+          <a href="/panel/clientes" className="bg-white rounded-2xl border p-5 hover:shadow-md transition-all"><p className="text-2xl mb-1">👥</p><p className="text-3xl font-bold">0</p><p className="text-sm text-gray-500">Clientes</p></a>
+          {tenant.plan === 'trial' ? (
+            <a href="/precios" className="bg-amber-50 rounded-2xl border border-amber-200 p-5 hover:shadow-md transition-all"><p className="text-2xl mb-1">⏳</p><p className="text-3xl font-bold text-amber-700">{callsLeft}</p><p className="text-sm text-amber-600">Llamadas gratis</p></a>
+          ) : (
+            <a href="/panel/llamadas" className="bg-white rounded-2xl border p-5 hover:shadow-md transition-all"><p className="text-2xl mb-1">💬</p><p className="text-3xl font-bold">{calls.length}</p><p className="text-sm text-gray-500">Total llamadas</p></a>
           )}
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white rounded-2xl border">
-            <div className="flex items-center justify-between px-6 py-4 border-b">
-              <h2 className="font-semibold">Últimas llamadas</h2>
-              <a href="/panel/llamadas" className="text-sm text-indigo-600">Ver todas</a>
-            </div>
-            {calls.length === 0 ? (
-              <div className="p-10 text-center text-gray-400"><p className="text-3xl mb-2">📞</p><p>Sin llamadas aún</p></div>
-            ) : calls.slice(0,6).map(c => (
-              <div key={c.id} className="px-6 py-3 border-b last:border-0 flex justify-between">
-                <div>
-                  <p className="font-medium text-sm">{c.from_number || 'Desconocido'}</p>
-                  <p className="text-xs text-gray-500 truncate max-w-xs">{c.summary || 'Sin resumen'}</p>
+            <div className="flex items-center justify-between px-6 py-4 border-b"><h2 className="font-semibold">Últimas llamadas</h2><a href="/panel/llamadas" className="text-sm text-indigo-600">Ver todas</a></div>
+            {calls.length === 0 ? <div className="p-10 text-center text-gray-400"><p className="text-3xl mb-2">📞</p><p>Sin llamadas aún</p></div> :
+              calls.slice(0,6).map(c => (
+                <div key={c.id} className="px-6 py-3 border-b last:border-0 flex justify-between items-start">
+                  <div><p className="font-medium text-sm">{c.from_number || 'Desconocido'}</p><p className="text-xs text-gray-500 truncate max-w-xs">{c.summary || 'Sin resumen'}</p></div>
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full shrink-0">{c.status || 'ok'}</span>
                 </div>
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full self-start">{c.status || 'ok'}</span>
-              </div>
-            ))}
+              ))
+            }
           </div>
           <div className="bg-white rounded-2xl border">
-            <div className="flex items-center justify-between px-6 py-4 border-b">
-              <h2 className="font-semibold">{template.reservationUnit === 'mesa' ? 'Reservas' : 'Citas'}</h2>
-              <a href="/panel/reservas" className="text-sm text-indigo-600">Ver</a>
-            </div>
-            {todayRes.length === 0 ? (
-              <div className="p-10 text-center text-gray-400"><p className="text-3xl mb-2">📅</p><p>Ninguna hoy</p></div>
-            ) : todayRes.slice(0,8).map(r => (
-              <div key={r.id} className="px-6 py-3 border-b last:border-0 flex justify-between">
-                <div>
-                  <p className="font-medium text-sm">{r.customer_name}</p>
-                  <p className="text-xs text-gray-500">{r.party_size} pers.</p>
+            <div className="flex items-center justify-between px-6 py-4 border-b"><h2 className="font-semibold">{template.reservationUnit === 'mesa' ? 'Reservas' : 'Citas'} hoy</h2><a href="/panel/reservas" className="text-sm text-indigo-600">Ver</a></div>
+            {todayRes.length === 0 ? <div className="p-10 text-center text-gray-400"><p className="text-3xl mb-2">📅</p><p>Ninguna hoy</p></div> :
+              todayRes.slice(0,8).map(r => (
+                <div key={r.id} className="px-6 py-3 border-b last:border-0 flex justify-between items-center">
+                  <div><p className="font-medium text-sm">{r.customer_name}</p><p className="text-xs text-gray-500">{r.party_size} pers.</p></div>
+                  <p className="font-mono text-sm">{r.reservation_time?.slice(0,5)}</p>
                 </div>
-                <p className="font-mono text-sm">{r.reservation_time?.slice(0,5)}</p>
-              </div>
-            ))}
+              ))
+            }
           </div>
+        </div>
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+          {template.modules.map((mod: string) => {
+            const m: Record<string,{icon:string;label:string;href:string}> = {resumen:{icon:'📊',label:'Resumen',href:'/panel'},reservas:{icon:'📅',label:'Reservas',href:'/panel/reservas'},citas:{icon:'📅',label:'Citas',href:'/panel/reservas'},mesas:{icon:'🪑',label:'Mesas',href:'/panel/mesas'},pedidos:{icon:'📦',label:'Pedidos',href:'/panel/pedidos'},agenda:{icon:'🗓️',label:'Agenda',href:'/panel/agenda'},clientes:{icon:'👥',label:'Clientes',href:'/panel/clientes'},conversaciones:{icon:'💬',label:'Llamadas',href:'/panel/llamadas'},seguimientos:{icon:'🔔',label:'Seguim.',href:'/panel/llamadas'},oportunidades:{icon:'⭐',label:'Oport.',href:'/panel/clientes'}}
+            const cfg = m[mod] || {icon:'📌',label:mod,href:'/panel'}
+            return <a key={mod} href={cfg.href} className="bg-white border border-gray-200 rounded-xl p-3 text-center hover:border-indigo-300 hover:shadow-sm transition-all"><div className="text-xl mb-1">{cfg.icon}</div><p className="text-xs font-medium text-gray-700">{cfg.label}</p></a>
+          })}
         </div>
       </div>
     </div>
