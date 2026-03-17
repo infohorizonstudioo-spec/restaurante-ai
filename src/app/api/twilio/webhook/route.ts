@@ -1,30 +1,46 @@
 import { NextResponse } from 'next/server'
-function safe(s: string) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+import { createClient } from '@supabase/supabase-js'
+
+const admin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+)
+
 export async function POST(req: Request) {
-  const host = req.headers.get('host') || 'restaurante-ai.vercel.app'
-  const url = `https://${host}/api/twilio/webhook`
   try {
-    const text = await req.text()
-    const params = new URLSearchParams(text)
-    const speech = (params.get('SpeechResult') || '').trim()
-    let respuesta = 'Hola, gracias por llamar. ¿En qué puedo ayudarte?'
-    if (speech) {
-      const ctrl = new AbortController()
-      const timer = setTimeout(() => ctrl.abort(), 7000)
-      try {
-        const r = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST', signal: ctrl.signal,
-          headers: { 'anthropic-version': '2023-06-01', 'x-api-key': process.env.ANTHROPIC_API_KEY || '', 'content-type': 'application/json' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 80, system: 'Eres una recepcionista española amable. Responde SIEMPRE en español, máximo 2 frases.', messages: [{ role: 'user', content: speech }] })
-        })
-        clearTimeout(timer)
-        const d = await r.json()
-        if (d.content?.[0]?.text) respuesta = d.content[0].text
-      } catch(e) { clearTimeout(timer) }
-    }
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Conchita" language="es-ES">${safe(respuesta)}</Say><Gather input="speech" language="es-ES" timeout="10" speechTimeout="auto" action="${url}" method="POST"><Say voice="Polly.Conchita" language="es-ES">Le escucho.</Say></Gather><Say voice="Polly.Conchita" language="es-ES">Gracias.</Say></Response>`
-    return new NextResponse(twiml, { headers: { 'Content-Type': 'text/xml; charset=utf-8' } })
-  } catch(e) {
-    return new NextResponse('<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Conchita" language="es-ES">Gracias por llamar.</Say></Response>', { headers: { 'Content-Type': 'text/xml; charset=utf-8' } })
+    const body = await req.formData()
+    const callSid    = body.get('CallSid')?.toString() || ''
+    const callerPhone= body.get('From')?.toString()    || ''
+    const toPhone    = body.get('To')?.toString()      || ''
+    const callStatus = body.get('CallStatus')?.toString() || 'in-progress'
+    const duration   = parseInt(body.get('CallDuration')?.toString()||'0')||0
+
+    if (!callSid) return NextResponse.json({ ok: true })
+
+    // Find tenant by agent_phone
+    const { data: tenant } = await admin.from('tenants')
+      .select('id').eq('agent_phone', toPhone).maybeSingle()
+
+    if (!tenant) return NextResponse.json({ ok: true })
+
+    // Upsert call record usando columnas reales de la tabla calls
+    await admin.from('calls').upsert({
+      tenant_id:    tenant.id,
+      call_sid:     callSid,
+      caller_phone: callerPhone,
+      from_number:  callerPhone,
+      to_number:    toPhone,
+      status:       callStatus === 'completed' ? 'completed' : callStatus,
+      direction:    'inbound',
+      duration_seconds: duration > 0 ? duration : null,
+      duration:     duration > 0 ? duration : null,
+      started_at:   new Date().toISOString(),
+    }, { onConflict: 'call_sid', ignoreDuplicates: false })
+
+    return NextResponse.json({ ok: true })
+  } catch(e: any) {
+    console.error('Twilio webhook error:', e)
+    return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }
