@@ -4,43 +4,68 @@ import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 
 const UT:Record<string,{s:string;p:string;icon:string}> = {
-  restaurante:{s:'Mesa',p:'Mesas',icon:'[M]'},
-  bar:{s:'Mesa',p:'Mesas',icon:'[M]'},
-  cafeteria:{s:'Mesa',p:'Mesas',icon:'[C]'},
-  hotel:{s:'Habitacion',p:'Habitaciones',icon:'[H]'},
-  peluqueria:{s:'Sillen',p:'Sillones',icon:'[S]'},
-  spa:{s:'Cabina',p:'Cabinas',icon:'[K]'},
-  clinica:{s:'Consulta',p:'Consultas',icon:'[+]'},
-  dentista:{s:'Silla',p:'Sillas',icon:'[D]'},
-  gym:{s:'Box',p:'Boxes',icon:'[G]'},
-  otro:{s:'Espacio',p:'Espacios',icon:'[#]'},
-}()
+  restaurante:{s:'Mesa',p:'Mesas',icon:'M'},bar:{s:'Mesa',p:'Mesas',icon:'M'},
+  cafeteria:{s:'Mesa',p:'Mesas',icon:'M'},hotel:{s:'Hab',p:'Habitaciones',icon:'H'},
+  peluqueria:{s:'Sillen',p:'Sillones',icon:'S'},spa:{s:'Cabina',p:'Cabinas',icon:'K'},
+  clinica:{s:'Consulta',p:'Consultas',icon:'+'},dentista:{s:'Silla',p:'Sillas',icon:'D'},
+  gym:{s:'Box',p:'Boxes',icon:'G'},otro:{s:'Espacio',p:'Espacios',icon:'#'},
+}
+const ZC=['#1d4ed8','#059669','#7c3aed','#d97706','#dc2626','#0891b2','#be185d']
+
+export default function MesasPage(){
+  const [tenant,setTenant]=useState<any>(null)
+  const [zones,setZones]=useState<any[]>([])
+  const [units,setUnits]=useState<any[]>([])
+  const [loading,setLoading]=useState(true)
+  const [tid,setTid]=useState<string|null>(null)
+  const [tab,setTab]=useState<'units'|'zones'>('units')
+  const [newZone,setNewZone]=useState('')
+  const [editUnit,setEditUnit]=useState<any|null>(null)
+
+  const load=useCallback(async(tenantId:string)=>{
+    const [tr,zr,ur]=await Promise.all([
+      supabase.from('tenants').select('name,type').eq('id',tenantId).single(),
+      supabase.from('zones').select('*').eq('tenant_id',tenantId).eq('active',true).order('created_at'),
+      supabase.from('tables').select('*').eq('tenant_id',tenantId).order('number'),
+    ])
+    setTenant(tr.data||null);setZones(zr.data||[]);setUnits(ur.data||[])
+    setLoading(false)
+  },[])
+
+  useEffect(()=>{
+    (async()=>{
+      const {data:{user}}=await supabase.auth.getUser();if(!user)return
+      const {data:p}=await supabase.from('profiles').select('tenant_id').eq('id',user.id).single();if(!p?.tenant_id)return
+      setTid(p.tenant_id);await load(p.tenant_id)
+    })()
   },[load])
 
   const ut=UT[(tenant?.type||'otro').toLowerCase()]||UT.otro
 
   async function addUnit(zoneId?:string){
     if(!tid)return
-    const same=zoneId?units.filter(u=>u.zone_id===zoneId):units.filter(u=>!u.zone_id)
-    const num=(same.length>0?Math.max(...same.map(u=>u.number||0)):0)+1
+    const same=zoneId?units.filter(u=>(u.zone_id||u.zone)===zoneId):units.filter(u=>!u.zone_id&&!u.zone)
+    const num=String((same.length>0?Math.max(...same.map(u=>parseInt(u.number)||0)):0)+1)
     const name=ut.s+' '+num
     const {data}=await supabase.from('tables').insert({
-      tenant_id:tid,zone_id:zoneId||null,zone:zoneId||null,number:num,
-      table_name:name,name,capacity:2,min_capacity:1,active:true,status:'available'
+      tenant_id:tid,zone:zoneId||null,zone_id:zoneId||null,number:num,
+      capacity:2,min_capacity:1,status:'libre',shape:'rectangle'
     }).select().single()
     if(data)setEditUnit(data)
     await load(tid)
   }
 
   async function saveUnit(id:string,updates:any){
-    const n=updates.table_name||updates.name||''
-    await supabase.from('tables').update({...updates,table_name:n,name:n,zone:updates.zone_id||updates.zone||null}).eq('id',id)
+    await supabase.from('tables').update({
+      zone:updates.zone_id||null,zone_id:updates.zone_id||null,
+      capacity:updates.capacity,notes:updates.notes||null
+    }).eq('id',id)
     setEditUnit(null);await load(tid!)
   }
 
   async function delUnit(id:string){
     if(!confirm('Eliminar?'))return
-    await supabase.from('tables').update({active:false}).eq('id',id)
+    await supabase.from('tables').delete().eq('id',id)
     await load(tid!)
   }
 
@@ -52,7 +77,7 @@ const UT:Record<string,{s:string;p:string;icon:string}> = {
 
   async function delZone(zoneId:string){
     if(!confirm('Eliminar zona? Las unidades quedan sin zona.'))return
-    await supabase.from('tables').update({zone_id:null}).eq('zone_id',zoneId)
+    await supabase.from('tables').update({zone:null,zone_id:null}).or('zone.eq.'+zoneId+',zone_id.eq.'+zoneId)
     await supabase.from('zones').update({active:false}).eq('id',zoneId)
     await load(tid!)
   }
@@ -71,7 +96,7 @@ const UT:Record<string,{s:string;p:string;icon:string}> = {
     <div style={{background:'#f8fafc',minHeight:'100vh'}}>
       <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div>
-          <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>{ut.icon} {ut.p}</h1>
+          <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>{ut.p}</h1>
           <p style={{fontSize:12,color:'#94a3b8',marginTop:1}}>{units.length} {ut.p.toLowerCase()} &middot; {zones.length} zonas</p>
         </div>
         <div style={{display:'flex',gap:8}}>
@@ -126,7 +151,7 @@ const UT:Record<string,{s:string;p:string;icon:string}> = {
             <input value={newZone} onChange={e=>setNewZone(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addZone()} placeholder='Nueva zona (Terraza, Interior...)' style={{flex:1,padding:'9px 14px',fontSize:14,border:'1px solid #e2e8f0',borderRadius:9,outline:'none',fontFamily:'inherit'}}/>
             <button onClick={addZone} disabled={!newZone.trim()} style={{padding:'9px 18px',fontSize:13,fontWeight:600,color:'white',background:'#1d4ed8',border:'none',borderRadius:9,cursor:'pointer',opacity:!newZone.trim()?0.5:1}}>+ Zona</button>
           </div>
-          {zones.length===0&&<div style={{textAlign:'center',padding:'40px 0',color:'#94a3b8'}}><p style={{fontSize:28}}>ÃÂ°ÃÂÃÂÃÂÃÂ¯ÃÂ¸ÃÂ</p><p>Sin zonas. Puedes operar sin ellas.</p></div>}
+          {zones.length===0&&<div style={{textAlign:'center',padding:'40px 0',color:'#94a3b8'}}><p>Sin zonas. Puedes operar sin ellas.</p></div>}
           {zones.map((z,zi)=>(
             <ZoneRow key={z.id} zone={z} color={ZC[zi%ZC.length]} count={units.filter(u=>(u.zone_id||u.zone)===z.id).length} onRename={(n:string)=>renZone(z.id,n)} onDelete={()=>delZone(z.id)}/>
           ))}
@@ -140,22 +165,20 @@ const UT:Record<string,{s:string;p:string;icon:string}> = {
 
 function Grid({units,ut,color,onEdit,onDel,onAdd}:any){
   return(
-    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(155px,1fr))',gap:10}}>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:10}}>
       {units.map((u:any)=>(
-        <div key={u.id} style={{background:'white',border:'1px solid #e2e8f0',borderRadius:12,padding:'12px 14px',position:'relative',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
-          <div style={{width:36,height:36,borderRadius:10,background:color+'14',border:'1.5px solid '+color+'44',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,marginBottom:8}}>{ut.icon}</div>
-          <p style={{fontSize:13,fontWeight:700,color:'#0f172a',marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.table_name||u.name||ut.s}</p>
+        <div key={u.id} style={{background:'white',border:'1px solid #e2e8f0',borderRadius:12,padding:'12px 14px',position:'relative'}}>
+          <div style={{width:34,height:34,borderRadius:10,background:color+'14',border:'1.5px solid '+color+'44',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color,marginBottom:8}}>{ut.icon}</div>
+          <p style={{fontSize:13,fontWeight:700,color:'#0f172a',marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.number?ut.s+' '+u.number:ut.s}</p>
           <p style={{fontSize:11,color:'#94a3b8'}}>{u.capacity||1} persona{(u.capacity||1)!==1?'s':''}</p>
-          {u.notes&&<p style={{fontSize:10,color:'#64748b',marginTop:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontStyle:'italic'}}>{u.notes}</p>}
           <div style={{position:'absolute',top:8,right:8,display:'flex',gap:3}}>
-            <button onClick={()=>onEdit(u)} style={{padding:'2px 6px',fontSize:11,background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:5,cursor:'pointer'}}>ÃÂ¢ÃÂÃÂÃÂ¯ÃÂ¸ÃÂ</button>
-            <button onClick={()=>onDel(u.id)} style={{padding:'2px 6px',fontSize:11,background:'#fef2f2',border:'1px solid #fecaca',borderRadius:5,cursor:'pointer',color:'#dc2626'}}>ÃÂ¢ÃÂÃÂ</button>
+            <button onClick={()=>onEdit(u)} style={{padding:'2px 6px',fontSize:11,background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:5,cursor:'pointer'}}>e</button>
+            <button onClick={()=>onDel(u.id)} style={{padding:'2px 6px',fontSize:11,background:'#fef2f2',border:'1px solid #fecaca',borderRadius:5,cursor:'pointer',color:'#dc2626'}}>x</button>
           </div>
         </div>
       ))}
-      <button onClick={onAdd} style={{height:100,border:'2px dashed #e2e8f0',borderRadius:12,background:'transparent',cursor:'pointer',fontSize:22,color:'#94a3b8',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2}}>
-        <span>+</span>
-        <span style={{fontSize:11}}>{ut.s}</span>
+      <button onClick={onAdd} style={{height:90,border:'2px dashed #e2e8f0',borderRadius:12,background:'transparent',cursor:'pointer',fontSize:22,color:'#94a3b8',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2}}>
+        <span>+</span><span style={{fontSize:11}}>{ut.s}</span>
       </button>
     </div>
   )
@@ -173,30 +196,25 @@ function ZoneRow({zone,color,count,onRename,onDelete}:any){
         :<p style={{flex:1,fontSize:14,fontWeight:500,color:'#0f172a',cursor:'pointer'}} onClick={()=>setEditing(true)}>{zone.name}</p>
       }
       <span style={{fontSize:12,color:'#94a3b8'}}>{count} unid.</span>
-      <button onClick={()=>setEditing(true)} style={{padding:'4px 8px',fontSize:12,background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:7,cursor:'pointer'}}>ÃÂ¢ÃÂÃÂÃÂ¯ÃÂ¸ÃÂ</button>
-      <button onClick={onDelete} style={{padding:'4px 8px',fontSize:12,background:'#fef2f2',border:'1px solid #fecaca',borderRadius:7,cursor:'pointer',color:'#dc2626'}}>Eliminar</button>
+      <button onClick={()=>setEditing(true)} style={{padding:'4px 8px',fontSize:12,background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:7,cursor:'pointer'}}>Edit</button>
+      <button onClick={onDelete} style={{padding:'4px 8px',fontSize:12,background:'#fef2f2',border:'1px solid #fecaca',borderRadius:7,cursor:'pointer',color:'#dc2626'}}>Del</button>
     </div>
   )
 }
 
 function EditModal({unit,ut,zones,onSave,onClose}:any){
-  const [name,setName]=useState(unit.table_name||unit.name||ut.s)
   const [cap,setCap]=useState(unit.capacity||2)
-  const [zoneId,setZoneId]=useState(unit.zone_id||'')
+  const [zoneId,setZoneId]=useState(unit.zone_id||unit.zone||'')
   const [notes,setNotes]=useState(unit.notes||'')
-  function save(){onSave({table_name:name.trim()||ut.s,name:name.trim()||ut.s,capacity:Math.max(1,cap),zone_id:zoneId||null,zone:zoneId||null,notes:notes.trim()||null})}
+  function save(){onSave({zone_id:zoneId||null,capacity:Math.max(1,cap),notes:notes.trim()||null})}
   return(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16}} onClick={onClose}>
-      <div style={{background:'white',borderRadius:16,padding:24,width:'100%',maxWidth:380,boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}} onClick={e=>e.stopPropagation()}>
+      <div style={{background:'white',borderRadius:16,padding:24,width:'100%',maxWidth:360,boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}} onClick={e=>e.stopPropagation()}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-          <p style={{fontSize:16,fontWeight:700,color:'#0f172a'}}>Editar {ut.s}</p>
+          <p style={{fontSize:16,fontWeight:700,color:'#0f172a'}}>{ut.s} {unit.number}</p>
           <button onClick={onClose} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#94a3b8'}}>x</button>
         </div>
         <div style={{display:'flex',flexDirection:'column',gap:14}}>
-          <div>
-            <p style={{fontSize:11,fontWeight:600,color:'#374151',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:5}}>Nombre *</p>
-            <input value={name} onChange={e=>setName(e.target.value)} style={{width:'100%',padding:'9px 12px',fontSize:14,border:'1px solid #e2e8f0',borderRadius:8,outline:'none',fontFamily:'inherit'}}/>
-          </div>
           <div>
             <p style={{fontSize:11,fontWeight:600,color:'#374151',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:5}}>Capacidad</p>
             <input type='number' value={cap} min={1} max={9999} onChange={e=>setCap(parseInt(e.target.value)||1)} style={{width:'100%',padding:'9px 12px',fontSize:14,border:'1px solid #e2e8f0',borderRadius:8,outline:'none',fontFamily:'inherit'}}/>
@@ -210,12 +228,8 @@ function EditModal({unit,ut,zones,onSave,onClose}:any){
               </select>
             </div>
           )}
-          <div>
-            <p style={{fontSize:11,fontWeight:600,color:'#374151',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:5}}>Descripcion</p>
-            <input value={notes} onChange={e=>setNotes(e.target.value)} placeholder='Junto a la ventana, accesible...' style={{width:'100%',padding:'9px 12px',fontSize:14,border:'1px solid #e2e8f0',borderRadius:8,outline:'none',fontFamily:'inherit'}}/>
-          </div>
           <div style={{display:'flex',gap:8}}>
-            <button onClick={onClose} style={{flex:1,padding:'10px',fontSize:13,fontWeight:500,background:'white',border:'1px solid #e2e8f0',borderRadius:9,cursor:'pointer',color:'#374151',fontFamily:'inherit'}}>Cancelar</button>
+            <button onClick={onClose} style={{flex:1,padding:'10px',fontSize:13,background:'white',border:'1px solid #e2e8f0',borderRadius:9,cursor:'pointer',fontFamily:'inherit'}}>Cancelar</button>
             <button onClick={save} style={{flex:2,padding:'10px',fontSize:13,fontWeight:700,background:'linear-gradient(135deg,#1e40af,#3b82f6)',border:'none',borderRadius:9,cursor:'pointer',color:'white',fontFamily:'inherit'}}>Guardar</button>
           </div>
         </div>
