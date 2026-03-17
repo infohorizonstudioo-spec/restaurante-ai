@@ -1,134 +1,182 @@
 'use client'
-import{useEffect,useState,useCallback,useMemo}from'react'
-import{supabase}from'@/lib/supabase'
-import{BUSINESS_TEMPLATES}from'@/types'
-import{PageLoader,Button,Input,Select,Textarea,Badge,Modal,EmptyState,PageHeader}from'@/components/ui'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
+import { PageLoader } from '@/components/ui'
 
-const S={confirmada:{l:'Confirmada',v:'green'},pendiente:{l:'Pendiente',v:'amber'},cancelada:{l:'Cancelada',v:'red'},completada:{l:'Completada',v:'slate'}}
-const EF={customer_name:'',customer_phone:'',reservation_date:'',reservation_time:'13:00',party_size:2,zone_id:'',table_id:'',notes:'',status:'confirmada'}
+const DAYS = ['DO','LU','MA','MI','JU','VI','SA']
+const STATUS_STYLES:Record<string,{bg:string;color:string;label:string}> = {
+  confirmada: {bg:'#f0fdf4',color:'#059669',label:'Confirmada'},
+  confirmed:  {bg:'#f0fdf4',color:'#059669',label:'Confirmada'},
+  pendiente:  {bg:'#fffbeb',color:'#d97706',label:'Pendiente'},
+  pending:    {bg:'#fffbeb',color:'#d97706',label:'Pendiente'},
+  cancelada:  {bg:'#fef2f2',color:'#dc2626',label:'Cancelada'},
+  cancelled:  {bg:'#fef2f2',color:'#dc2626',label:'Cancelada'},
+  completada: {bg:'#eff6ff',color:'#1d4ed8',label:'Completada'},
+  completed:  {bg:'#eff6ff',color:'#1d4ed8',label:'Completada'},
+}
 
-function CalIco(){return<svg width='15' height='15' viewBox='0 0 24 24' fill='#94a3b8'><path d='M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z'/></svg>}
-function PlusIco(){return<svg width='14' height='14' viewBox='0 0 24 24' fill='white'><path d='M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z'/></svg>}
-function BotIco(){return<svg width='10' height='10' viewBox='0 0 24 24' fill='currentColor'><path d='M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2M5 14v1a7 7 0 0 0 14 0v-1H5z'/></svg>}
+function getWeek(base: Date) {
+  const d = new Date(base)
+  d.setDate(d.getDate() - d.getDay())
+  return Array.from({length:7},(_,i)=>{
+    const dd = new Date(d); dd.setDate(d.getDate()+i)
+    return dd
+  })
+}
 
-export default function ReservasPage(){
-  const[tenant,setTenant]=useState(null)
-  const[reservations,setRes]=useState([])
-  const[tables,setTables]=useState([])
-  const[zones,setZones]=useState([])
-  const[loading,setLoading]=useState(true)
-  const[saving,setSaving]=useState(false)
-  const[selectedDate,setDate]=useState(new Date().toISOString().split('T')[0])
-  const[search,setSearch]=useState('')
-  const[showModal,setShowModal]=useState(false)
-  const[form,setForm]=useState({...EF,reservation_date:new Date().toISOString().split('T')[0]})
-  const[formErr,setFormErr]=useState({})
+export default function ReservasPage() {
+  const [base,setBase]       = useState(new Date())
+  const [selected,setSelected] = useState(new Date().toISOString().slice(0,10))
+  const [reservas,setReservas] = useState<any[]>([])
+  const [loading,setLoading] = useState(true)
+  const [tid,setTid]         = useState<string|null>(null)
+  const [modal,setModal]     = useState<any|null>(null)
+  const [search,setSearch]   = useState('')
 
-  const loadData=useCallback(async()=>{
-    const{data:{user}}=await supabase.auth.getUser();if(!user)return
-    const{data:p}=await supabase.from('profiles').select('tenant_id').eq('id',user.id).single();if(!p?.tenant_id)return
-    const tid=p.tenant_id
-    const[{data:t},{data:r},{data:tb},{data:z}]=await Promise.all([
-      supabase.from('tenants').select('*').eq('id',tid).single(),
-      supabase.from('reservations').select('*').eq('tenant_id',tid).eq('reservation_date',selectedDate).order('reservation_time'),
-      supabase.from('tables').select('*').eq('tenant_id',tid).order('name'),
-      supabase.from('zones').select('*').eq('tenant_id',tid).order('name'),
-    ])
-    setTenant(t);setRes(r||[]);setTables(tb||[]);setZones(z||[]);setLoading(false)
-  },[selectedDate])
+  const load = useCallback(async (tenantId:string) => {
+    const week = getWeek(base)
+    const from = week[0].toISOString().slice(0,10)
+    const to   = week[6].toISOString().slice(0,10)
+    const {data} = await supabase.from('reservations')
+      .select('*').eq('tenant_id',tenantId)
+      .gte('date',from).lte('date',to)
+      .order('date').order('time')
+    setReservas(data||[])
+    setLoading(false)
+  },[base])
 
-  useEffect(()=>{loadData()},[loadData])
+  useEffect(()=>{
+    (async()=>{
+      const {data:{user}} = await supabase.auth.getUser()
+      if (!user) return
+      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).single()
+      if (!p?.tenant_id) return
+      setTid(p.tenant_id); await load(p.tenant_id)
+    })()
+  },[load])
 
-  const weekDays=useMemo(()=>{
-    const t=new Date();return Array.from({length:7},(_,i)=>{const d=new Date(t);d.setDate(t.getDate()-3+i);const iso=d.toISOString().split('T')[0];return{iso,num:d.getDate(),wd:d.toLocaleDateString('es-ES',{weekday:'short'}).slice(0,2).toUpperCase(),isToday:iso===new Date().toISOString().split('T')[0]}})
-  },[])
+  useEffect(()=>{
+    if (!tid) return
+    const ch = supabase.channel('res-rt')
+      .on('postgres_changes',{event:'*',schema:'public',table:'reservations',filter:'tenant_id=eq.'+tid},()=>load(tid))
+      .subscribe()
+    return ()=>{ supabase.removeChannel(ch) }
+  },[tid,load])
 
-  const filtered=useMemo(()=>{if(!search)return reservations;const q=search.toLowerCase();return reservations.filter(r=>r.customer_name?.toLowerCase().includes(q)||r.customer_phone?.includes(search))},[reservations,search])
+  if (loading) return <PageLoader/>
 
-  async function create(){
-    const e={};if(!form.customer_name.trim())e.customer_name='Requerido';if(!form.reservation_date)e.reservation_date='Requerida';if(!form.reservation_time)e.reservation_time='Requerida';setFormErr(e);if(Object.keys(e).length)return
-    setSaving(true)
-    const tbl=form.table_id?tables.find(t=>t.id===form.table_id):null
-    await supabase.from('reservations').insert({tenant_id:tenant.id,customer_name:form.customer_name.trim(),customer_phone:form.customer_phone.trim(),reservation_date:form.reservation_date,reservation_time:form.reservation_time,party_size:Number(form.party_size),table_id:form.table_id||null,table_name:tbl?.name||null,notes:form.notes.trim()||null,status:form.status,source:'manual'})
-    setSaving(false);setShowModal(false);setForm({...EF,reservation_date:selectedDate});setFormErr({});loadData()
-  }
+  const week    = getWeek(base)
+  const dayRes  = reservas.filter(r => (r.date||r.reservation_date)===selected)
+  const filtered = search ? dayRes.filter(r =>
+    (r.customer_name||'').toLowerCase().includes(search.toLowerCase()) ||
+    (r.customer_phone||'').includes(search)
+  ) : dayRes
+  const today = new Date().toISOString().slice(0,10)
 
-  async function updateStatus(id,status){
+  async function updateStatus(id:string, status:string) {
     await supabase.from('reservations').update({status}).eq('id',id)
-    setRes(prev=>prev.map(r=>r.id===id?{...r,status}:r))
+    if (tid) load(tid)
+    setModal(null)
   }
 
-  if(loading)return<PageLoader/>
-  const template=BUSINESS_TEMPLATES[tenant?.type||'otro']||BUSINESS_TEMPLATES.otro
-  const unit=template.reservationUnit==='mesa'?'reserva':'cita'
-  const unitPl=unit==='reserva'?'Reservas':'Citas'
-  const hasZones=template.hasTableManagement&&zones.length>0
-
-  return(
+  return (
     <div style={{background:'#f8fafc',minHeight:'100vh'}}>
-      <PageHeader title={unitPl} subtitle={filtered.length+' '+unit+'s para hoy'}
-        actions={<Button icon={<PlusIco/>} onClick={()=>setShowModal(true)}>Nueva {unit}</Button>}/>
-      <div style={{maxWidth:1100,margin:'0 auto',padding:24}}>
-        {/* Week nav */}
-        <div style={{display:'flex',gap:4,background:'white',border:'1px solid #e2e8f0',borderRadius:12,padding:5,marginBottom:16}}>
-          {weekDays.map(d=>(
-            <button key={d.iso} onClick={()=>setDate(d.iso)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',padding:'8px 4px',borderRadius:8,border:'none',cursor:'pointer',background:selectedDate===d.iso?'#1e40af':d.isToday?'#eff6ff':'transparent',color:selectedDate===d.iso?'white':d.isToday?'#1e40af':'#94a3b8',transition:'all 0.12s'}}>
-              <span style={{fontSize:10,fontWeight:600,opacity:.75}}>{d.wd}</span>
-              <span style={{fontSize:15,fontWeight:700,marginTop:2}}>{d.num}</span>
-            </button>
-          ))}
+      <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10}}>
+        <div>
+          <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>Reservas</h1>
+          <p style={{fontSize:12,color:'#94a3b8',marginTop:1}}>{dayRes.length} para el {new Date(selected+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
         </div>
-        {/* Search */}
-        <div style={{marginBottom:12}}>
-          <Input placeholder={'Buscar '+unit+'s...'} value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:320}}/>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar citas..." style={{padding:'7px 12px',fontSize:13,border:'1px solid #e2e8f0',borderRadius:8,outline:'none',width:180}}/>
         </div>
-        {/* Table */}
-        {filtered.length===0
-          ?<div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:12}}><EmptyState icon={<CalIco/>} title={'Sin '+unit+'s'} description={'No hay '+unit+'s para esta fecha'} action={<Button icon={<PlusIco/>} onClick={()=>setShowModal(true)}>Nueva {unit}</Button>}/></div>
-          :<div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:12,overflow:'hidden'}}>
-            <table style={{width:'100%',borderCollapse:'collapse'}}>
-              <thead><tr style={{background:'#fafafa'}}>
-                {['Hora','Cliente','Pers.','Mesa','Estado'].map(h=><th key={h} style={{textAlign:'left',padding:'10px 16px',fontSize:11,fontWeight:600,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',borderBottom:'1px solid #e2e8f0'}}>{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {filtered.map((res,i)=>{
-                  const sc=S[res.status]||S.confirmada
-                  return(
-                    <tr key={res.id} style={{borderTop:i>0?'1px solid #f1f5f9':'none'}}>
-                      <td style={{padding:'13px 16px'}}><span style={{fontFamily:'monospace',fontWeight:600,fontSize:14}}>{res.reservation_time?.slice(0,5)}</span></td>
-                      <td style={{padding:'13px 16px'}}>
-                        <div style={{display:'flex',alignItems:'center',gap:10}}>
-                          <div style={{width:30,height:30,borderRadius:'50%',background:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'#1d4ed8',flexShrink:0}}>{res.customer_name?.[0]?.toUpperCase()||'?'}</div>
-                          <div>
-                            <div style={{display:'flex',alignItems:'center',gap:6}}><p style={{fontSize:13,fontWeight:500}}>{res.customer_name}</p>{res.source==='voice_agent'&&<span style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:10,fontWeight:600,color:'#1d4ed8',background:'#eff6ff',padding:'1px 6px',borderRadius:20}}><BotIco/>IA</span>}</div>
-                            {res.customer_phone&&<p style={{fontSize:11,color:'#94a3b8'}}>{res.customer_phone}</p>}
-                            {res.notes&&<p style={{fontSize:11,color:'#94a3b8',fontStyle:'italic'}}>{res.notes}</p>}
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{padding:'13px 16px'}}><span style={{fontSize:13,color:'#64748b'}}>{res.party_size}</span></td>
-                      <td style={{padding:'13px 16px'}}>{res.table_name?<Badge variant='slate'>{res.table_name}</Badge>:<span style={{color:'#d1d5db'}}>—</span>}</td>
-                      <td style={{padding:'13px 16px'}}>
-                        <select value={res.status||'confirmada'} onChange={e=>updateStatus(res.id,e.target.value)} style={{fontFamily:'inherit',fontSize:11,fontWeight:600,border:'none',background:'none',cursor:'pointer',color:sc.v==='green'?'#065f46':sc.v==='amber'?'#92400e':sc.v==='red'?'#991b1b':'#475569'}}>
-                          {Object.entries(S).map(([k,v])=><option key={k} value={k}>{v.l}</option>)}
-                        </select>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>}
       </div>
-      <Modal open={showModal} onClose={()=>{setShowModal(false);setFormErr({})}} title={'Nueva '+unit} footer={<><Button variant='secondary' style={{flex:1}} onClick={()=>{setShowModal(false);setFormErr({})}}>Cancelar</Button><Button style={{flex:1}} loading={saving} onClick={create}>Crear {unit}</Button></>}>
-        <div style={{display:'flex',flexDirection:'column',gap:14}}>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}><Input label='Nombre *' value={form.customer_name} error={formErr.customer_name} placeholder='Juan García' onChange={e=>setForm({...form,customer_name:e.target.value})}/><Input label='Teléfono' value={form.customer_phone} placeholder='+34 600 000 000' onChange={e=>setForm({...form,customer_phone:e.target.value})}/></div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 80px',gap:12}}><Input label='Fecha *' type='date' value={form.reservation_date} error={formErr.reservation_date} onChange={e=>setForm({...form,reservation_date:e.target.value})}/><Input label='Hora *' type='time' value={form.reservation_time} error={formErr.reservation_time} onChange={e=>setForm({...form,reservation_time:e.target.value})}/><Input label='Personas' type='number' min='1' value={String(form.party_size)} onChange={e=>setForm({...form,party_size:parseInt(e.target.value)||1})}/></div>
-          {hasZones&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}><Select label='Zona' value={form.zone_id} onChange={e=>setForm({...form,zone_id:e.target.value,table_id:''})}><option value=''>Sin zona</option>{zones.map(z=><option key={z.id} value={z.id}>{z.name}</option>)}</Select><Select label='Mesa' value={form.table_id} onChange={e=>setForm({...form,table_id:e.target.value})}><option value=''>Sin asignar</option>{tables.filter(t=>!form.zone_id||t.zone_id===form.zone_id).map(t=><option key={t.id} value={t.id}>{t.name} ({t.capacity}p)</option>)}</Select></div>}
-          <Select label='Estado' value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>{Object.entries(S).map(([k,v])=><option key={k} value={k}>{v.l}</option>)}</Select>
-          <Textarea label='Notas' value={form.notes} rows={2} placeholder='Alergias, peticiones especiales...' onChange={e=>setForm({...form,notes:e.target.value})}/>
+
+      {/* Week nav */}
+      <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'0 24px',display:'flex',alignItems:'stretch',gap:0}}>
+        <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()-7);return n})} style={{padding:'12px',background:'none',border:'none',cursor:'pointer',color:'#64748b',fontSize:18}}>‹</button>
+        {week.map(d => {
+          const iso = d.toISOString().slice(0,10)
+          const count = reservas.filter(r=>(r.date||r.reservation_date)===iso).length
+          const isSel = iso===selected, isToday = iso===today
+          return (
+            <button key={iso} onClick={()=>setSelected(iso)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',padding:'10px 4px',background:'none',border:'none',cursor:'pointer',borderBottom:isSel?'2px solid #1d4ed8':'2px solid transparent',transition:'all 0.12s'}}>
+              <span style={{fontSize:10,color:isToday?'#1d4ed8':'#94a3b8',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>{DAYS[d.getDay()]}</span>
+              <span style={{fontSize:17,fontWeight:isSel?700:500,color:isSel?'#1d4ed8':isToday?'#1d4ed8':'#374151',marginTop:1}}>{d.getDate()}</span>
+              {count>0&&<span style={{width:18,height:18,borderRadius:'50%',background:isSel?'#1d4ed8':'#e2e8f0',color:isSel?'white':'#374151',fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',marginTop:2}}>{count}</span>}
+            </button>
+          )
+        })}
+        <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n})} style={{padding:'12px',background:'none',border:'none',cursor:'pointer',color:'#64748b',fontSize:18}}>›</button>
+      </div>
+
+      {/* List */}
+      <div style={{maxWidth:760,margin:'0 auto',padding:'20px 24px'}}>
+        {filtered.length===0 ? (
+          <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:14,padding:'60px 24px',textAlign:'center'}}>
+            <div style={{fontSize:36,marginBottom:10}}>📅</div>
+            <p style={{fontSize:15,fontWeight:600,color:'#374151',marginBottom:4}}>Sin citas este día</p>
+            <p style={{fontSize:13,color:'#94a3b8'}}>No hay reservas para el día seleccionado.</p>
+          </div>
+        ) : filtered.map((r,i)=>{
+          const ss = STATUS_STYLES[r.status]||STATUS_STYLES.pendiente
+          const time = r.time||r.reservation_time||''
+          const name = r.customer_name||'Sin nombre'
+          const people = r.people||r.party_size||1
+          return (
+            <div key={r.id} onClick={()=>setModal(r)} style={{background:'white',border:'1px solid #e2e8f0',borderRadius:12,padding:'14px 16px',marginBottom:10,cursor:'pointer',display:'flex',alignItems:'center',gap:12,transition:'all 0.12s',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}
+              onMouseEnter={e=>(e.currentTarget as HTMLElement).style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'}
+              onMouseLeave={e=>(e.currentTarget as HTMLElement).style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'}>
+              <div style={{width:42,height:42,borderRadius:'50%',background:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,color:'#1d4ed8',flexShrink:0}}>
+                {name[0]?.toUpperCase()||'?'}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <p style={{fontSize:14,fontWeight:600,color:'#0f172a'}}>{name}</p>
+                <p style={{fontSize:12,color:'#64748b',marginTop:1}}>
+                  {time.slice(0,5)} · {people} persona{people!==1?'s':''}
+                  {r.table_name?' · '+r.table_name:''}
+                  {r.notes?' · '+r.notes.slice(0,40)+(r.notes.length>40?'...':''):''}
+                </p>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
+                <span style={{fontSize:11,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,flexShrink:0}}>{ss.label}</span>
+                {r.customer_phone&&<p style={{fontSize:11,color:'#94a3b8'}}>{r.customer_phone}</p>}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Modal */}
+      {modal&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16}} onClick={()=>setModal(null)}>
+          <div style={{background:'white',borderRadius:16,padding:24,width:'100%',maxWidth:440,boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
+              <div>
+                <p style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>{modal.customer_name||'Sin nombre'}</p>
+                <p style={{fontSize:13,color:'#64748b',marginTop:2}}>
+                  {(modal.date||modal.reservation_date)?.slice(0,10)} · {(modal.time||modal.reservation_time||'').slice(0,5)} · {modal.people||modal.party_size} persona{(modal.people||modal.party_size)!==1?'s':''}
+                </p>
+              </div>
+              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:'#94a3b8'}}>×</button>
+            </div>
+            {modal.customer_phone&&<p style={{fontSize:13,color:'#374151',marginBottom:8}}>📞 {modal.customer_phone}</p>}
+            {modal.table_name&&<p style={{fontSize:13,color:'#374151',marginBottom:8}}>🪑 {modal.table_name}</p>}
+            {modal.notes&&<p style={{fontSize:13,color:'#374151',marginBottom:16}}>📝 {modal.notes}</p>}
+            {modal.source==='voice_agent'&&<p style={{fontSize:12,color:'#7c3aed',marginBottom:16,background:'#f5f3ff',padding:'6px 10px',borderRadius:8}}>📞 Reserva creada por el agente de voz</p>}
+            <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>
+              {['confirmada','pendiente','cancelada','completada'].map(s=>(
+                <button key={s} onClick={()=>updateStatus(modal.id,s)}
+                  style={{padding:'7px 14px',fontSize:12,fontWeight:600,borderRadius:8,border:'1px solid',
+                    borderColor: STATUS_STYLES[s]?.color||'#e2e8f0',
+                    background: modal.status===s ? STATUS_STYLES[s]?.bg||'#f1f5f9' : 'white',
+                    color: STATUS_STYLES[s]?.color||'#374151',cursor:'pointer'}}>
+                  {STATUS_STYLES[s]?.label||s}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-      </Modal>
+      )}
     </div>
   )
 }
