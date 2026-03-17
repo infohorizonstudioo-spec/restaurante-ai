@@ -13,16 +13,22 @@ function Ico({d,s=17}:{d:string;s?:number}){
 
 const NAV = [
   {href:'/panel',        label:'Centro de control', icon:'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', plans:null},
-  {href:'/reservas',     label:'Reservas',           icon:'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', plans:null},
-  {href:'/agenda',       label:'Agenda',             icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', plans:null},
-  {href:'/llamadas',     label:'Llamadas',           icon:'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z', plans:null},
-  {href:'/clientes',     label:'Clientes',           icon:'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', plans:null},
-  {href:'/mesas',        label:'Local y mesas',      icon:'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4', plans:null},
-  {href:'/pedidos',      label:'Pedidos',            icon:'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z', plans:['pro','business']},
-  {href:'/estadisticas', label:'Estadísticas',       icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', plans:['pro','business']},
-  {href:'/facturacion',  label:'Uso y facturación',  icon:'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z', plans:null},
-  {href:'/configuracion',label:'Configuración',      icon:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', plans:null},
+  {href:'/reservas',     label:'Reservas',          icon:'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', plans:null},
+  {href:'/agenda',       label:'Agenda',            icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', plans:null},
+  {href:'/llamadas',     label:'Llamadas',          icon:'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z', plans:null},
+  {href:'/clientes',     label:'Clientes',          icon:'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', plans:null},
+  {href:'/mesas',        label:'Local y mesas',     icon:'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4', plans:null},
+  {href:'/pedidos',      label:'Pedidos',           icon:'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z', plans:['pro','business']},
+  {href:'/estadisticas', label:'Estadísticas',      icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', plans:['pro','business']},
+  {href:'/facturacion',  label:'Facturación',       icon:'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z', plans:null},
+  {href:'/configuracion',label:'Configuración',     icon:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', plans:null},
 ]
+
+function navTitle(item: typeof NAV[0], collapsed: boolean): string | undefined {
+  if (!collapsed) return undefined
+  if (item.plans) return item.label + ' (requiere ' + item.plans.join('/') + ')'
+  return item.label
+}
 
 export default function Sidebar() {
   const pathname = usePathname()
@@ -58,7 +64,7 @@ export default function Sidebar() {
   const W = collapsed ? 64 : 220
 
   return (
-    <aside style={{width:W,minHeight:'100vh',background:'#0f172a',color:'white',display:'flex',flexDirection:'column',flexShrink:0,transition:'width 0.2s ease',overflow:'hidden',position:'relative'}}>
+    <aside style={{width:W,minHeight:'100vh',background:'#0f172a',color:'white',display:'flex',flexDirection:'column',flexShrink:0,transition:'width 0.2s ease',overflow:'hidden'}}>
 
       {/* Header */}
       <div style={{padding:collapsed?'16px 12px':'16px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(255,255,255,0.07)',minHeight:60}}>
@@ -91,33 +97,32 @@ export default function Sidebar() {
       <nav style={{flex:1,padding:'10px 8px',display:'flex',flexDirection:'column',gap:2,overflowY:'auto',overflowX:'hidden'}}>
         {NAV.map(item => {
           const active = pathname===item.href || (item.href!=='/panel' && pathname.startsWith(item.href))
-          const locked = item.plans && !item.plans.includes(plan)
+          const locked = item.plans ? !item.plans.includes(plan) : false
+          const href   = locked ? '/precios' : item.href
           return (
-            <a key={item.href} href={locked?'/precios':item.href}
-              title={collapsed?item.label+(locked?' (requiere '+item.plans?.join('/')+')'):'':undefined}
+            <a key={item.href} href={href} title={navTitle(item, collapsed)}
               style={{display:'flex',alignItems:'center',gap:10,padding:collapsed?'9px 10px':'8px 10px',borderRadius:9,
                 background:active?'rgba(59,130,246,0.15)':'transparent',
                 border:active?'1px solid rgba(59,130,246,0.2)':'1px solid transparent',
                 color:active?'#60a5fa':locked?'rgba(255,255,255,0.25)':'rgba(255,255,255,0.65)',
-                textDecoration:'none',cursor:'pointer',transition:'all 0.12s',
+                textDecoration:'none',transition:'all 0.12s',
                 justifyContent:collapsed?'center':'flex-start',minWidth:0}}
               onMouseEnter={e=>{if(!active)(e.currentTarget as HTMLElement).style.background='rgba(255,255,255,0.06)'}}
               onMouseLeave={e=>{if(!active)(e.currentTarget as HTMLElement).style.background='transparent'}}
             >
               <span style={{flexShrink:0,opacity:locked?0.4:1}}><Ico d={item.icon}/></span>
               {!collapsed && <span style={{fontSize:13,fontWeight:active?600:400,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.label}</span>}
-              {!collapsed && locked && <span style={{marginLeft:'auto',fontSize:9,fontWeight:700,color:'#f59e0b',background:'rgba(245,158,11,0.12)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:4,padding:'1px 5px',flexShrink:0,textTransform:'uppercase',letterSpacing:'0.03em'}}>Pro</span>}
-              {!collapsed && active && <div style={{position:'absolute',right:8,width:5,height:5,borderRadius:'50%',background:'#3b82f6'}}/>}
+              {!collapsed && locked && <span style={{marginLeft:'auto',fontSize:9,fontWeight:700,color:'#f59e0b',background:'rgba(245,158,11,0.12)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:4,padding:'1px 5px',flexShrink:0,textTransform:'uppercase' as const,letterSpacing:'0.03em'}}>Pro</span>}
             </a>
           )
         })}
       </nav>
 
-      {/* Call usage bar */}
+      {/* Call usage */}
       {!collapsed && !loading && (
         <div style={{padding:'10px 14px',borderTop:'1px solid rgba(255,255,255,0.07)'}}>
           <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}>
-            <span style={{fontSize:10,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.04em',fontWeight:600}}>Llamadas</span>
+            <span style={{fontSize:10,color:'rgba(255,255,255,0.35)',textTransform:'uppercase' as const,letterSpacing:'0.04em',fontWeight:600}}>Llamadas</span>
             <span style={{fontSize:11,fontWeight:700,color:callsLeft<=3?'#f87171':'rgba(255,255,255,0.7)'}}>{callsUsed}/{callsLim}</span>
           </div>
           <div style={{height:4,background:'rgba(255,255,255,0.08)',borderRadius:2,overflow:'hidden',marginBottom:6}}>
