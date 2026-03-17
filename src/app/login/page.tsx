@@ -1,72 +1,98 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleLogin() {
     if (!email || !password) { setError('Rellena todos los campos'); return }
     setLoading(true); setError('')
-    const { data, error: err } = await supabase.auth.signInWithPassword({ email, password })
-    if (err) { setError('Email o contraseña incorrectos'); setLoading(false); return }
-    const { data: profile } = await supabase.from('profiles').select('role, tenant_id').eq('id', data.user.id).single()
-    if (profile?.role === 'superadmin') { router.push('/admin'); return }
-    if (!profile?.tenant_id) { router.push('/onboarding'); return }
-    const { data: tenant } = await supabase.from('tenants').select('onboarding_complete').eq('id', profile.tenant_id).single()
-    router.push(tenant?.onboarding_complete ? '/panel' : '/onboarding')
-    router.refresh()
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
+      if (authError) throw authError
+      if (!data.user) throw new Error('Error de autenticación')
+      
+      // Obtener perfil para saber a dónde redirigir
+      const { data: profile } = await supabase.from('profiles').select('role, tenant_id').eq('id', data.user.id).single()
+      
+      if ((profile as any)?.role === 'superadmin') {
+        window.location.href = '/admin'
+      } else if ((profile as any)?.tenant_id) {
+        // Ver si tiene onboarding completo
+        const { data: tenant } = await supabase.from('tenants').select('onboarding_complete').eq('id', (profile as any).tenant_id).single()
+        window.location.href = tenant?.onboarding_complete ? '/panel' : '/onboarding'
+      } else {
+        window.location.href = '/panel'
+      }
+    } catch(e: any) {
+      const msg = e.message || ''
+      if (msg.includes('Invalid login') || msg.includes('invalid_credentials')) {
+        setError('Email o contraseña incorrectos')
+      } else if (msg.includes('Email not confirmed')) {
+        setError('Confirma tu email antes de entrar')
+      } else {
+        setError('Error al iniciar sesión. Inténtalo de nuevo.')
+      }
+    } finally { setLoading(false) }
   }
 
   return (
-    <div className="min-h-screen bg-[#070710] flex items-center justify-center p-4">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-violet-600/8 rounded-full blur-3xl"/>
-      </div>
-      <div className="relative w-full max-w-sm">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 text-2xl font-black shadow-2xl shadow-violet-500/30 mb-4">R</div>
-          <h1 className="text-2xl font-bold text-white">Reservo.AI</h1>
-          <p className="text-white/40 text-sm mt-1">Tu recepcionista con IA</p>
-        </div>
-        <form onSubmit={handleLogin}>
-          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 space-y-4 backdrop-blur-sm">
-            {error && <div className="bg-red-500/10 border border-red-500/25 text-red-300 text-xs px-3 py-2.5 rounded-xl">⚠ {error}</div>}
-            <div>
-              <label className="text-xs text-white/40 mb-1.5 block">Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" autoFocus
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-violet-500/60 transition-all"/>
-            </div>
-            <div>
-              <label className="text-xs text-white/40 mb-1.5 block">Contraseña</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-violet-500/60 transition-all"/>
-            </div>
-            <button type="submit" disabled={loading}
-              className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-all active:scale-95">
-              {loading ? 'Accediendo...' : 'Entrar'}
-            </button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-500/30">
+            <span className="text-3xl font-black text-white">R</span>
           </div>
-        </form>
-        <div className="mt-5 space-y-2 text-center">
-          <p className="text-sm text-white/30">
-            ¿No tienes cuenta?{' '}
-            <Link href="/registro" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">
-              Empieza gratis →
-            </Link>
-          </p>
-          <p className="text-xs text-white/20">
-            <Link href="/precios" className="hover:text-white/40 transition-colors">Ver planes · desde 350€/mes</Link>
-          </p>
+          <h1 className="text-3xl font-bold text-white">Reservo.AI</h1>
+          <p className="text-slate-400 mt-1">Tu recepcionista con IA</p>
         </div>
-        <p className="text-center text-xs text-white/15 mt-4">Reservo.AI © 2026 · Horizon Studio</p>
+
+        <div className="bg-slate-800/80 backdrop-blur rounded-3xl border border-slate-700 p-8 shadow-2xl">
+          <h2 className="text-xl font-bold text-white mb-6">Iniciar sesión</h2>
+          <div className="space-y-4 mb-6">
+            <div>
+              <label className="text-sm font-medium text-slate-300 mb-2 block">Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="tu@email.com" autoComplete="email"
+                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                className="w-full bg-slate-700 border border-slate-600 rounded-2xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"/>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-300 mb-2 block">Contraseña</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="Tu contraseña" autoComplete="current-password"
+                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                className="w-full bg-slate-700 border border-slate-600 rounded-2xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"/>
+            </div>
+          </div>
+
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-3 mb-4">
+              <p className="text-red-400 text-sm">⚠️ {error}</p>
+            </div>
+          )}
+
+          <button onClick={handleLogin} disabled={loading}
+            className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-bold hover:bg-indigo-500 transition-all disabled:opacity-50 shadow-lg shadow-indigo-500/20">
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
+                Entrando...
+              </span>
+            ) : 'Entrar'}
+          </button>
+
+          <div className="flex items-center justify-between mt-6 text-sm">
+            <a href="/registro" className="text-indigo-400 hover:underline">¿Sin cuenta? Empieza gratis →</a>
+            <a href="/reset" className="text-slate-500 hover:text-slate-300">¿Olvidaste la contraseña?</a>
+          </div>
+
+          <p className="text-center text-slate-600 text-xs mt-4">Ver planes · desde 99€/mes</p>
+        </div>
       </div>
     </div>
   )
