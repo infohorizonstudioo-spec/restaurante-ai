@@ -1,310 +1,218 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 const PLANS = [
   {
-    id:'starter', name:'Starter', price:99, calls:50, extra:'0,90',
-    badge: null,
-    desc: 'Para autónomos y pequeños negocios',
-    color: '#3b82f6',
-    features: [
-      'Recepcionista virtual 24/7',
-      '50 llamadas al mes',
-      'Reservas y citas automáticas',
-      'Panel de control completo',
-      'Historial de clientes',
-      'Resumen automático de cada llamada',
-      'Soporte por email',
-    ],
+    id: 'starter', name: 'Starter', price: 99, calls: 50, extra: 0.90,
+    badge: null, highlight: false,
+    desc: 'Para autónomos y pequeños negocios que empiezan a automatizar.',
+    features: ['Recepcionista virtual 24/7','Panel de control completo','Gestión de reservas y citas','Historial de clientes','Resumen automático de llamadas','50 llamadas incluidas/mes'],
+    priceId: 'price_1TBtxK0yU3RZWdR1MP4Z1lwj',
   },
   {
-    id:'pro', name:'Pro', price:299, calls:200, extra:'0,70',
-    badge: 'Más popular',
-    desc: 'Para negocios en crecimiento',
-    color: '#ffffff',
-    features: [
-      'Todo del plan Starter',
-      '200 llamadas al mes',
-      'Disponibilidad automática por zonas',
-      'Gestión de mesas y espacios',
-      'Confirmaciones automáticas',
-      'Recordatorios y seguimientos',
-      'Analíticas avanzadas',
-      'Soporte prioritario',
-    ],
+    id: 'pro', name: 'Pro', price: 299, calls: 200, extra: 0.70,
+    badge: 'Más popular', highlight: true,
+    desc: 'Para negocios en crecimiento que necesitan más volumen y funciones.',
+    features: ['Todo lo del plan Starter','Zonas y mesas del local','Confirmaciones automáticas','Recordatorios de cita','Recuperación de llamadas perdidas','Estadísticas avanzadas','200 llamadas incluidas/mes'],
+    priceId: 'price_1TBtxM0yU3RZWdR1DGs87LNC',
   },
   {
-    id:'business', name:'Business', price:499, calls:600, extra:'0,50',
-    badge: null,
-    desc: 'Para cadenas y grandes volúmenes',
-    color: '#7c3aed',
-    features: [
-      'Todo del plan Pro',
-      '600 llamadas al mes',
-      'Multi-ubicación',
-      'Panel multi-negocio',
-      'Acceso API completo',
-      'Gestor de cuenta dedicado',
-      'SLA garantizado',
-      'Soporte 24/7',
-    ],
+    id: 'business', name: 'Business', price: 499, calls: 600, extra: 0.50,
+    badge: null, highlight: false,
+    desc: 'Para cadenas y franquicias con alto volumen de llamadas.',
+    features: ['Todo lo del plan Pro','Multi-ubicación','Acceso API completo','Gestor de cuenta dedicado','SLA garantizado','600 llamadas incluidas/mes'],
+    priceId: 'price_1TBtxN0yU3RZWdR1dAiCDE3n',
   },
-]
-
-const COMPARE_ROWS = [
-  { f: 'Llamadas incluidas/mes', vals: ['50', '200', '600'] },
-  { f: 'Llamada extra', vals: ['0,90€', '0,70€', '0,50€'] },
-  { f: 'Recepcionista virtual 24/7', vals: [true, true, true] },
-  { f: 'Reservas automáticas', vals: [true, true, true] },
-  { f: 'Historial de clientes', vals: [true, true, true] },
-  { f: 'Resumen de llamadas', vals: [true, true, true] },
-  { f: 'Gestión de mesas y zonas', vals: [false, true, true] },
-  { f: 'Analíticas avanzadas', vals: [false, true, true] },
-  { f: 'Multi-ubicación', vals: [false, false, true] },
-  { f: 'Soporte', vals: ['Email', 'Prioritario', '24/7 + gestor'] },
-]
-
-const FAQS = [
-  { q: 'Qué pasa si supero las llamadas del plan', a: 'Puedes seguir recibiendo llamadas. Cada llamada extra se factura al precio de tu plan (0,90€ Starter / 0,70€ Pro / 0,50€ Business).' },
-  { q: 'Puedo cambiar de plan en cualquier momento', a: 'Sí. Puedes subir o bajar de plan cuando quieras. El cambio es inmediato y se prorratea el coste del mes en curso.' },
-  { q: 'Necesito instalar algo', a: 'No. Todo funciona en la nube. Solo necesitas configurar el número de teléfono en la sección de configuración y ya está listo.' },
-  { q: 'Qué pasa con mis datos si cancelo', a: 'Tus datos están disponibles durante 30 días tras la cancelación para que puedas exportarlos. Luego se eliminan de forma segura.' },
 ]
 
 export default function PreciosPage() {
-  const [tenant, setTenant]       = useState<any>(null)
-  const [loading, setLoading]     = useState(false)
-  const [currentPlan, setCurrentPlan] = useState('free')
+  const [tenant, setTenant] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState('')
 
   useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+    supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
-      const { data: p } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
-      if (!(p as any)?.tenant_id) return
-      const { data: t } = await supabase.from('tenants').select('*').eq('id', (p as any).tenant_id).single()
-      setTenant(t)
-      setCurrentPlan(t?.plan || 'free')
-    })()
+      supabase.from('profiles').select('tenant_id').eq('id', user.id).single().then(({ data: p }) => {
+        if (!p?.tenant_id) return
+        supabase.from('tenants').select('*').eq('id', p.tenant_id).single().then(({ data: t }) => setTenant(t))
+      })
+    })
   }, [])
 
-  async function checkout(planId: string) {
-    setLoading(true)
+  async function checkout(priceId: string) {
+    setLoading(true); setErr('')
     try {
-      const priceEnvMap: Record<string, string> = {
-        starter:  'STRIPE_PRICE_STARTER',
-        pro:      'STRIPE_PRICE_PRO',
-        business: 'STRIPE_PRICE_BUSINESS',
-      }
-      const r = await fetch('/api/stripe/checkout', {
+      const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ priceId, tenantId: tenant?.id }),
       })
-      const { url } = await r.json()
-      if (url) window.location.href = url
-    } catch (e) { console.error(e) }
-    finally { setLoading(false) }
+      const { url, error } = await res.json()
+      if (error) throw new Error(error)
+      window.location.href = url
+    } catch (e: any) {
+      setErr(e.message || 'Error al procesar el pago')
+      setLoading(false)
+    }
   }
 
-  const isTrial    = !currentPlan || currentPlan === 'trial' || currentPlan === 'free'
-  const callsLeft  = tenant ? Math.max(0, (tenant.free_calls_limit || 10) - (tenant.free_calls_used || 0)) : 10
-
-  const Check = ({ dark }: { dark?: boolean }) => (
-    <div style={{ width: 18, height: 18, borderRadius: '50%', background: dark ? 'rgba(255,255,255,0.14)' : '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-      <svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke={dark ? 'rgba(255,255,255,0.85)' : '#059669'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-    </div>
-  )
+  const currentPlan = tenant?.plan
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'DM Sans',-apple-system,sans-serif", color: '#0f172a' }}>
+    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'DM Sans',-apple-system,sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        .pc{background:white;border:1px solid #e2e8f0;border-radius:18px;padding:32px 26px;display:flex;flex-direction:column;transition:all 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
-        .pc:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,0.09)}
-        .pcf{background:linear-gradient(150deg,#1e3a8a,#1e40af);border-color:transparent;box-shadow:0 20px 48px rgba(30,64,175,0.28)}
-        .pcf:hover{transform:translateY(-4px);box-shadow:0 28px 56px rgba(30,64,175,0.32)}
-        .pb{width:100%;padding:13px;font-family:inherit;font-size:14px;font-weight:600;border:none;border-radius:10px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:7px}
-        .pb:hover:not(:disabled){opacity:0.88;transform:translateY(-1px)}
-        .pb:disabled{opacity:0.5;cursor:default;transform:none}
-        @media(max-width:900px){.pgrid{grid-template-columns:1fr!important}}
-        @media(max-width:600px){.pgrid{gap:12px!important}.cmptbl{display:none}}
+        body{font-family:'DM Sans',sans-serif}
+        .plan-card{transition:transform 0.2s,box-shadow 0.2s}
+        .plan-card:hover{transform:translateY(-4px)}
+        .feat-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
       `}</style>
 
-      {/* Top nav */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56 }}>
-        <Link href="/panel" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+      {/* Nav */}
+      <nav style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 clamp(16px,4vw,48px)', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
           <div style={{ width: 28, height: 28, background: 'linear-gradient(135deg,#1e40af,#3b82f6)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
           </div>
-          <span style={{ fontWeight: 700, fontSize: 14 }}>Reservo.AI</span>
+          <span style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>Reservo.AI</span>
         </Link>
-        <Link href="/panel" style={{ fontSize: 13, color: '#64748b', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#64748b" strokeWidth="2" strokeLinecap="round"/></svg>
-          Volver al panel
-        </Link>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {tenant
+            ? <Link href="/panel" style={{ padding: '7px 16px', fontSize: 13, fontWeight: 500, color: '#1d4ed8', textDecoration: 'none' }}>← Mi panel</Link>
+            : <><Link href="/login" style={{ padding: '7px 16px', fontSize: 13, color: '#64748b', textDecoration: 'none' }}>Iniciar sesión</Link>
+               <Link href="/registro" style={{ padding: '7px 16px', fontSize: 13, fontWeight: 600, color: 'white', background: 'linear-gradient(135deg,#1e40af,#3b82f6)', borderRadius: 8, textDecoration: 'none' }}>Empezar gratis</Link></>
+          }
+        </div>
+      </nav>
+
+      {/* Header */}
+      <div style={{ textAlign: 'center', padding: 'clamp(40px,6vw,72px) 24px 48px' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 20, padding: '4px 14px', marginBottom: 20 }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#3b82f6', animation: 'pulse 2s infinite' }}/>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#1d4ed8', letterSpacing: '0.04em' }}>SIN PERMANENCIA · CANCELA CUANDO QUIERAS</span>
+        </div>
+        <h1 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 700, letterSpacing: '-0.03em', color: '#0f172a', marginBottom: 12 }}>Elige tu plan</h1>
+        <p style={{ fontSize: 16, color: '#64748b', maxWidth: 440, margin: '0 auto 16px' }}>Empieza con 10 llamadas gratis. Sin tarjeta de crédito.</p>
+
+        {/* Trial badge */}
+        {tenant && (currentPlan === 'free' || currentPlan === 'trial' || !currentPlan) && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg,#fef3c7,#fde68a)', border: '1px solid #fbbf24', borderRadius: 10, padding: '8px 18px', marginTop: 8 }}>
+            <span style={{ fontSize: 16 }}>⚡</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#92400e' }}>
+              Te quedan {Math.max(0, (tenant.free_calls_limit || 10) - (tenant.free_calls_used || 0))} llamadas gratuitas
+            </span>
+          </div>
+        )}
+        {tenant && currentPlan && !['free','trial'].includes(currentPlan) && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: '8px 18px', marginTop: 8 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#166534' }}>Plan activo: {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}</span>
+          </div>
+        )}
       </div>
 
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '52px 24px 80px' }}>
+      {/* Cards */}
+      <div style={{ maxWidth: 1060, margin: '0 auto', padding: '0 clamp(16px,4vw,40px) 80px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 20, alignItems: 'start' }}>
+        {PLANS.map(plan => {
+          const isCurrent = currentPlan === plan.id
+          const isHighlight = plan.highlight
 
-        {/* Hero */}
-        <div style={{ textAlign: 'center', marginBottom: 52 }}>
-          {isTrial && callsLeft > 0 && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 20, padding: '5px 14px', marginBottom: 18 }}>
-              <span>⚡</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#92400e' }}>Te quedan {callsLeft} llamadas gratuitas</span>
-            </div>
-          )}
-          {isTrial && callsLeft === 0 && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 20, padding: '5px 14px', marginBottom: 18 }}>
-              <span>⚠️</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#dc2626' }}>Llamadas agotadas — activa un plan</span>
-            </div>
-          )}
-          <h1 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 14, lineHeight: 1.15 }}>
-            Elige tu plan
-          </h1>
-          <p style={{ fontSize: 17, color: '#64748b', maxWidth: 440, margin: '0 auto 18px', lineHeight: 1.6 }}>
-            Empieza con 10 llamadas gratis. Sin tarjeta de crédito.
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
-            {['Sin permanencia', 'Cancela cuando quieras', 'Listo en 5 minutos'].map(txt => (
-              <div key={txt} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#64748b' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                {txt}
-              </div>
-            ))}
-          </div>
-        </div>
+          return (
+            <div key={plan.id} className="plan-card" style={{
+              background: isHighlight ? 'linear-gradient(155deg,#1e3a8a,#1e40af)' : 'white',
+              borderRadius: 18,
+              border: isHighlight ? 'none' : isCurrent ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+              padding: '30px 26px 26px',
+              boxShadow: isHighlight ? '0 20px 60px rgba(30,64,175,0.3)' : isCurrent ? '0 0 0 4px rgba(59,130,246,0.1)' : '0 1px 4px rgba(0,0,0,0.06)',
+              color: isHighlight ? 'white' : '#0f172a',
+              position: 'relative',
+              overflow: 'hidden',
+            }}>
+              {/* Shine effect for highlight */}
+              {isHighlight && <div style={{ position: 'absolute', top: -40, right: -40, width: 120, height: 120, background: 'rgba(255,255,255,0.05)', borderRadius: '50%', pointerEvents: 'none' }}/>}
 
-        {/* Plan cards */}
-        <div className="pgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, alignItems: 'start', marginBottom: 64 }}>
-          {PLANS.map(plan => {
-            const isFeat   = plan.id === 'pro'
-            const isActive = currentPlan === plan.id
-            return (
-              <div key={plan.id} className={`pc${isFeat ? ' pcf' : ''}`} style={{ position: 'relative' }}>
-                {plan.badge && (
-                  <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: '#f59e0b', color: 'white', borderRadius: 20, padding: '4px 14px', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(245,158,11,0.35)' }}>
-                    ★ {plan.badge.toUpperCase()}
-                  </div>
-                )}
-
-                <div style={{ marginBottom: 18 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                    <div style={{ width: 9, height: 9, borderRadius: '50%', background: isFeat ? 'rgba(255,255,255,0.5)' : plan.color }} />
-                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: isFeat ? 'rgba(255,255,255,0.55)' : '#94a3b8' }}>{plan.name}</span>
-                    {isActive && (
-                      <span style={{ fontSize: 10, fontWeight: 700, background: isFeat ? 'rgba(255,255,255,0.15)' : '#d1fae5', color: isFeat ? 'white' : '#059669', padding: '2px 8px', borderRadius: 20 }}>ACTIVO</span>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: 5 }}>
-                    <span style={{ fontSize: 46, fontWeight: 700, letterSpacing: '-0.04em', color: isFeat ? 'white' : '#0f172a', lineHeight: 1 }}>{plan.price}</span>
-                    <span style={{ fontSize: 15, color: isFeat ? 'rgba(255,255,255,0.5)' : '#94a3b8' }}>€/mes</span>
-                  </div>
-                  <p style={{ fontSize: 13, color: isFeat ? 'rgba(255,255,255,0.5)' : '#64748b', marginBottom: 10 }}>{plan.desc}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: isFeat ? 'rgba(255,255,255,0.8)' : '#374151' }}>
-                      {plan.calls} llamadas/mes
-                    </span>
-                    <span style={{ fontSize: 11, color: isFeat ? 'rgba(255,255,255,0.35)' : '#94a3b8' }}>+{plan.extra}€ extra</span>
-                  </div>
+              {/* Badge */}
+              {plan.badge && (
+                <div style={{ position: 'absolute', top: 18, right: 18, background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 20, padding: '3px 12px', fontSize: 11, fontWeight: 700, color: 'white', letterSpacing: '0.03em' }}>
+                  {plan.badge}
                 </div>
+              )}
+              {isCurrent && !isHighlight && (
+                <div style={{ position: 'absolute', top: 18, right: 18, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 20, padding: '3px 12px', fontSize: 11, fontWeight: 700, color: '#1d4ed8' }}>
+                  Plan actual
+                </div>
+              )}
 
-                <div style={{ height: 1, background: isFeat ? 'rgba(255,255,255,0.1)' : '#f1f5f9', marginBottom: 18 }} />
+              {/* Plan name */}
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: isHighlight ? 'rgba(255,255,255,0.6)' : '#94a3b8', marginBottom: 12 }}>{plan.name}</p>
 
-                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24, flex: 1 }}>
-                  {plan.features.map(f => (
-                    <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, fontSize: 13 }}>
-                      <Check dark={isFeat} />
-                      <span style={{ color: isFeat ? 'rgba(255,255,255,0.82)' : '#374151', lineHeight: 1.5 }}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <button
-                  className="pb"
-                  disabled={loading || isActive}
-                  onClick={() => checkout(plan.id)}
-                  style={{
-                    marginTop: 'auto',
-                    background: isFeat ? 'rgba(255,255,255,0.15)' : plan.color,
-                    color: 'white',
-                    border: isFeat ? '1px solid rgba(255,255,255,0.25)' : 'none',
-                    boxShadow: isFeat ? 'none' : `0 2px 10px ${plan.color}44`,
-                  }}>
-                  {loading ? (
-                    <><div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />Procesando...</>
-                  ) : isActive ? (
-                    <><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>Plan activo</>
-                  ) : (
-                    <>Empezar con {plan.name} <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></>
-                  )}
-                </button>
+              {/* Price */}
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, marginBottom: 8 }}>
+                <span style={{ fontSize: 48, fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1, color: isHighlight ? 'white' : '#0f172a' }}>{plan.price}</span>
+                <span style={{ fontSize: 15, fontWeight: 400, color: isHighlight ? 'rgba(255,255,255,0.55)' : '#94a3b8', paddingBottom: 6 }}>€/mes</span>
               </div>
-            )
-          })}
-        </div>
+              <p style={{ fontSize: 12, color: isHighlight ? 'rgba(255,255,255,0.5)' : '#94a3b8', marginBottom: 6 }}>{plan.calls} llamadas incluidas · {plan.extra}€ extra</p>
+              <p style={{ fontSize: 13, color: isHighlight ? 'rgba(255,255,255,0.65)' : '#64748b', lineHeight: 1.55, marginBottom: 24, minHeight: 40 }}>{plan.desc}</p>
 
-        {/* Comparativa */}
-        <div className="cmptbl" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 16, overflow: 'hidden', marginBottom: 60, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-          <div style={{ padding: '18px 24px', borderBottom: '1px solid #f1f5f9', background: '#fafafa' }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700 }}>Comparativa completa</h2>
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ background: '#fafafa' }}>
-                <th style={{ textAlign: 'left', padding: '11px 20px', color: '#94a3b8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', width: '40%' }}>Característica</th>
-                {PLANS.map(p => <th key={p.id} style={{ textAlign: 'center', padding: '11px 14px', color: p.id === 'pro' ? '#1d4ed8' : '#0f172a', fontSize: 12, fontWeight: 700, borderBottom: '1px solid #e2e8f0' }}>{p.name}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {COMPARE_ROWS.map((row, ri) => (
-                <tr key={row.f} style={{ borderTop: '1px solid #f1f5f9', background: ri % 2 === 0 ? '#fafbfd' : 'white' }}>
-                  <td style={{ padding: '10px 20px', color: '#374151', fontWeight: 500 }}>{row.f}</td>
-                  {row.vals.map((v, vi) => (
-                    <td key={vi} style={{ textAlign: 'center', padding: '10px 14px', color: PLANS[vi].id === 'pro' ? '#1d4ed8' : '#374151', fontWeight: typeof v === 'string' ? 500 : 400 }}>
-                      {typeof v === 'boolean'
-                        ? v
-                          ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto', display: 'block' }}><path d="M20 6L9 17l-5-5" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          : <span style={{ color: '#d1d5db', fontSize: 18 }}>—</span>
-                        : v}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              {/* CTA */}
+              {err && <p style={{ fontSize: 12, color: isHighlight ? '#fca5a5' : '#dc2626', marginBottom: 10 }}>{err}</p>}
+              {isCurrent
+                ? <div style={{ padding: '11px', background: isHighlight ? 'rgba(255,255,255,0.1)' : '#f8fafc', border: '1px solid', borderColor: isHighlight ? 'rgba(255,255,255,0.15)' : '#e2e8f0', borderRadius: 10, fontSize: 14, fontWeight: 600, color: isHighlight ? 'rgba(255,255,255,0.7)' : '#94a3b8', textAlign: 'center' as const }}>
+                    Plan activo ✓
+                  </div>
+                : tenant
+                  ? <button onClick={() => checkout(plan.priceId)} disabled={loading} style={{ width: '100%', padding: '12px', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, color: isHighlight ? '#1e40af' : 'white', background: isHighlight ? 'white' : 'linear-gradient(135deg,#1e40af,#3b82f6)', border: 'none', borderRadius: 10, cursor: 'pointer', boxShadow: isHighlight ? '0 4px 16px rgba(0,0,0,0.1)' : '0 2px 8px rgba(59,130,246,0.3)', transition: 'all 0.15s', opacity: loading ? 0.6 : 1 }}>
+                      {loading ? 'Procesando...' : isCurrent ? 'Plan actual' : 'Seleccionar plan'}
+                    </button>
+                  : <Link href="/registro" style={{ display: 'block', padding: '12px', fontSize: 14, fontWeight: 600, color: isHighlight ? '#1e40af' : 'white', background: isHighlight ? 'white' : 'linear-gradient(135deg,#1e40af,#3b82f6)', borderRadius: 10, textAlign: 'center' as const, textDecoration: 'none', boxShadow: isHighlight ? '0 4px 16px rgba(0,0,0,0.1)' : '0 2px 8px rgba(59,130,246,0.3)' }}>
+                      Empezar ahora →
+                    </Link>
+              }
 
-        {/* FAQ */}
-        <div style={{ maxWidth: 660, margin: '0 auto 60px' }}>
-          <h2 style={{ fontSize: 22, fontWeight: 700, textAlign: 'center', marginBottom: 24, letterSpacing: '-0.02em' }}>Preguntas frecuentes</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {FAQS.map((item, i) => (
-              <div key={i} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px 20px' }}>
-                <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 7 }}>¿{item.q}?</p>
-                <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.65 }}>{item.a}</p>
+              {/* Divider */}
+              <div style={{ height: 1, background: isHighlight ? 'rgba(255,255,255,0.1)' : '#f1f5f9', margin: '22px 0' }}/>
+
+              {/* Features */}
+              <div>
+                {plan.features.map(f => (
+                  <div key={f} className="feat-item">
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: isHighlight ? 'rgba(255,255,255,0.12)' : '#eff6ff', border: '1px solid', borderColor: isHighlight ? 'rgba(255,255,255,0.2)' : '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke={isHighlight ? '#86efac' : '#1d4ed8'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                    <span style={{ fontSize: 13, color: isHighlight ? 'rgba(255,255,255,0.8)' : '#475569', lineHeight: 1.4 }}>{f}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* FAQ strip */}
+      <div style={{ background: 'white', borderTop: '1px solid #e2e8f0', padding: '48px clamp(16px,4vw,48px)' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto' }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#0f172a', marginBottom: 28, textAlign: 'center' as const }}>Preguntas frecuentes</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 20 }}>
+            {[
+              { q: '¿Puedo cancelar en cualquier momento?', a: 'Sí. Sin permanencia ni penalizaciones. Cancela desde tu panel con un clic.' },
+              { q: '¿Qué pasa si supero las llamadas incluidas?', a: 'Se factura automáticamente al precio extra de tu plan. Siempre visible en tu panel.' },
+              { q: '¿Puedo cambiar de plan?', a: 'En cualquier momento. Si subes de plan, el cambio es inmediato. Si bajas, se aplica al siguiente ciclo.' },
+              { q: '¿Cómo funciona el trial gratuito?', a: '10 llamadas completamente gratis. Sin tarjeta de crédito. Sin compromiso.' },
+            ].map(faq => (
+              <div key={faq.q} style={{ padding: '18px 20px', background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0' }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', marginBottom: 7 }}>{faq.q}</p>
+                <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>{faq.a}</p>
               </div>
             ))}
           </div>
         </div>
-
-        {/* CTA final */}
-        <div style={{ background: 'linear-gradient(135deg,#0f172a,#1e3a5f)', borderRadius: 20, padding: '44px 40px', textAlign: 'center', color: 'white' }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>🚀</div>
-          <h2 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.025em', marginBottom: 10 }}>Empieza gratis, sin compromiso</h2>
-          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 15, marginBottom: 28 }}>10 llamadas sin coste. Sin tarjeta. Sin permanencia.</p>
-          <Link href="/registro" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 28px', background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: 'white', borderRadius: 11, fontSize: 15, fontWeight: 600, textDecoration: 'none', boxShadow: '0 4px 16px rgba(59,130,246,0.35)' }}>
-            Crear cuenta gratis
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </Link>
-        </div>
       </div>
+
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
     </div>
   )
 }
