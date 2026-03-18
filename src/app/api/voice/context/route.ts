@@ -132,19 +132,23 @@ export async function POST(req: Request) {
     const agentSystemContext = tmpl.agentContext
 
     // ── Registrar sesión aislada al INICIO de la llamada ─────────────────
-    // Cada llamada crea su propia fila en calls con session_state='iniciando'.
-    // Esto hace que las llamadas activas sean visibles en el dashboard en tiempo real.
-    // upsert_call_session usa ON CONFLICT DO UPDATE → idempotente si ElevenLabs
-    // llama a context varias veces para la misma conversación.
-    const sessionSid = convId || ('ctx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7))
-    admin.rpc('upsert_call_session', {
-      p_call_sid:        sessionSid,
-      p_tenant_id:       tenant.id,
-      p_caller_phone:    callerPhone || '',
-      p_agent_phone:     agentPhone  || '',
-      p_conversation_id: convId      || null,
-      p_session_state:   'iniciando',
-    }).catch((e: any) => console.error('upsert_call_session error:', e.message))
+    // Fire-and-forget con IIFE async — NO usar .catch() encadenado sobre
+    // admin.rpc() (rompe Turbopack/Next.js 16 — ver regla crítica en docs)
+    const sessionSid = convId || ('ctx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
+    (async () => {
+      try {
+        await admin.rpc('upsert_call_session', {
+          p_call_sid:        sessionSid,
+          p_tenant_id:       tenant.id,
+          p_caller_phone:    callerPhone || '',
+          p_agent_phone:     agentPhone  || '',
+          p_conversation_id: convId      || null,
+          p_session_state:   'iniciando',
+        })
+      } catch(e: any) {
+        console.error('upsert_call_session error:', e.message)
+      }
+    })()
 
     console.log('context ok | tenant:', (tenant.id as string).slice(0, 8), '| type:', tenant.type, '| tmpl:', tmpl.id, '| caller:', callerPhone, '| open:', isOpen, '| sid:', sessionSid.slice(0,20), '| ms:', Date.now() - t0)
 
