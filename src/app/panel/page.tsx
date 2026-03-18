@@ -68,8 +68,9 @@ export default function PanelPage(){
   const isTrial=plan==='free'||plan==='trial'
   const planLabel=PLAN_LABELS[plan]||'Trial'
   const planColor=PLAN_COLS[plan]||'#d97706'
+  // Usar los límites reales del tenant (no hardcodeados) para evitar desincronización
   const callsUsed=isTrial?(tenant.free_calls_used||0):(tenant.plan_calls_used||0)
-  const callsLimit=isTrial?(tenant.free_calls_limit||10):(PLAN_LIMITS[plan]||50)
+  const callsLimit=isTrial?(tenant.free_calls_limit||10):(tenant.plan_calls_included||PLAN_LIMITS[plan]||50)
   const callsLeft=Math.max(0,callsLimit-callsUsed)
   const agentActive=!!tenant.agent_phone
 

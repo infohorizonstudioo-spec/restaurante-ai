@@ -60,7 +60,10 @@ export default function FacturacionPage(){
   const usedPct = billing.included_calls > 0 ? Math.min(100, Math.round((billing.used_calls/billing.included_calls)*100)) : 0
   const hasExtra = billing.extra_calls > 0
   const extraCost = (billing.estimated_extra_cost||0).toFixed(2)
-  const totalEstimated = (pi.price + parseFloat(extraCost)).toFixed(2)
+  const IVA_RATE = 0.21 // IVA España
+  const baseTotal = pi.price + parseFloat(extraCost)
+  const totalConIVA = (baseTotal * (1 + IVA_RATE)).toFixed(2)
+  const totalSinIVA = baseTotal.toFixed(2)
   const renewDate = billing.billing_cycle_end ? new Date(billing.billing_cycle_end).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}) : null
 
   return(
@@ -135,12 +138,12 @@ export default function FacturacionPage(){
           {!isTrial&&(
             <div style={{marginTop:12,padding:'12px 16px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div>
-                <p style={{fontSize:12,color:'#64748b'}}>Suscripcion mensual</p>
-                <p style={{fontSize:12,color:'#64748b',marginTop:2}}>{hasExtra?'+ '+extraCost+' de llamadas extra':''}</p>
+                <p style={{fontSize:12,color:'#64748b'}}>Suscripcion mensual ({totalSinIVA}€ + 21% IVA)</p>
+                <p style={{fontSize:12,color:'#64748b',marginTop:2}}>{hasExtra?'+ '+extraCost+'€ de llamadas extra':''}</p>
               </div>
               <div style={{textAlign:'right'}}>
-                <p style={{fontSize:11,color:'#94a3b8',marginBottom:2}}>Total estimado este mes</p>
-                <p style={{fontSize:22,fontWeight:800,color:'#0f172a'}}>{totalEstimated}€</p>
+                <p style={{fontSize:11,color:'#94a3b8',marginBottom:2}}>Total estimado este mes (IVA incl.)</p>
+                <p style={{fontSize:22,fontWeight:800,color:'#0f172a'}}>{totalConIVA}€</p>
               </div>
             </div>
           )}
@@ -184,25 +187,28 @@ export default function FacturacionPage(){
         )}
 
         {/* HISTORIAL */}
-        {history.length>0&&(
-          <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:16,overflow:'hidden'}}>
-            <div style={{padding:'14px 20px',borderBottom:'1px solid #f1f5f9'}}>
-              <p style={{fontSize:14,fontWeight:600,color:'#0f172a'}}>Historial de facturacion</p>
-            </div>
-            {history.map((h,i)=>(
-              <div key={h.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 20px',borderTop:i>0?'1px solid #f8fafc':'none'}}>
-                <div>
-                  <p style={{fontSize:13,fontWeight:500,color:'#0f172a'}}>{new Date(h.cycle_start).toLocaleDateString('es-ES',{month:'long',year:'numeric'})}</p>
-                  <p style={{fontSize:11,color:'#94a3b8'}}>{h.used_calls} llamadas · {h.extra_calls} extra</p>
-                </div>
-                <div style={{textAlign:'right'}}>
-                  <p style={{fontSize:14,fontWeight:700,color:'#0f172a'}}>{h.total_amount}€</p>
-                  <span style={{fontSize:10,padding:'1px 7px',borderRadius:8,background:h.status==='paid'?'#f0fdf4':'#f8fafc',color:h.status==='paid'?'#059669':'#94a3b8',fontWeight:600}}>{h.status==='paid'?'Pagado':'Pendiente'}</span>
-                </div>
-              </div>
-            ))}
+        <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:16,overflow:'hidden'}}>
+          <div style={{padding:'14px 20px',borderBottom:'1px solid #f1f5f9'}}>
+            <p style={{fontSize:14,fontWeight:600,color:'#0f172a'}}>Historial de facturación</p>
           </div>
-        )}
+          {history.length===0 ? (
+            <div style={{padding:'32px 20px',textAlign:'center',color:'#94a3b8'}}>
+              <p style={{fontSize:14,marginBottom:6}}>Sin historial aún</p>
+              <p style={{fontSize:12,lineHeight:1.6}}>El historial de facturas aparecerá aquí después de tu primera renovación mensual con Stripe.</p>
+            </div>
+          ) : history.map((h,i)=>(
+            <div key={h.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 20px',borderTop:i>0?'1px solid #f8fafc':'none'}}>
+              <div>
+                <p style={{fontSize:13,fontWeight:500,color:'#0f172a'}}>{new Date(h.cycle_start).toLocaleDateString('es-ES',{month:'long',year:'numeric'})}</p>
+                <p style={{fontSize:11,color:'#94a3b8'}}>{h.used_calls} llamadas · {h.extra_calls} extra</p>
+              </div>
+              <div style={{textAlign:'right'}}>
+                <p style={{fontSize:14,fontWeight:700,color:'#0f172a'}}>{h.total_amount}€</p>
+                <span style={{fontSize:10,padding:'1px 7px',borderRadius:8,background:h.status==='paid'?'#f0fdf4':'#f8fafc',color:h.status==='paid'?'#059669':'#94a3b8',fontWeight:600}}>{h.status==='paid'?'Pagado':'Pendiente'}</span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

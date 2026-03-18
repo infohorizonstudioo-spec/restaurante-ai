@@ -9,8 +9,8 @@ const DAYS = ['LU','MA','MI','JU','VI','SA','DO']
 function getWeekMon(base: Date) {
   const d = new Date(base)
   const day = d.getDay()
-  const diff = day===0?-6:1-day
-  d.setDate(d.getDate()+diff)
+  const diff = day === 0 ? -6 : 1 - day // semana empieza en lunes
+  d.setDate(d.getDate() + diff)
   return Array.from({length:7},(_,i)=>{ const dd=new Date(d); dd.setDate(d.getDate()+i); return dd })
 }
 

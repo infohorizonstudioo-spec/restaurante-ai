@@ -17,9 +17,12 @@ const STATUS_STYLES:Record<string,{bg:string;color:string;label:string}> = {
 
 function getWeek(base: Date) {
   const d = new Date(base)
-  d.setDate(d.getDate() - d.getDay())
-  return Array.from({length:7},(_,i)=>{
-    const dd = new Date(d); dd.setDate(d.getDate()+i)
+  // Semana empieza en LUNES (1), no domingo (0)
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day // domingo → -6, resto → 1-day
+  d.setDate(d.getDate() + diff)
+  return Array.from({ length: 7 }, (_, i) => {
+    const dd = new Date(d); dd.setDate(d.getDate() + i)
     return dd
   })
 }

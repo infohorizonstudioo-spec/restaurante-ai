@@ -23,9 +23,9 @@ export default function PedidosPage(){
   const [modal,setModal]     = useState<any|null>(null)
 
   const load = useCallback(async(tenantId:string)=>{
-    const {data} = await supabase.from('orders').select('*')
-      .eq('tenant_id',tenantId).order('created_at',{ascending:false}).limit(100)
-    setOrders(data||[])
+    const r = await fetch('/api/orders?tenant_id='+tenantId+'&limit=100')
+    const d = await r.json()
+    setOrders(d.orders||[])
   },[])
 
   useEffect(()=>{
@@ -71,18 +71,22 @@ export default function PedidosPage(){
   const activos  = orders.filter(o=>!['entregado','cancelado'].includes(o.status))
 
   async function cambiarEstado(id:string, status:string) {
-    await supabase.from('orders').update({status}).eq('id',id)
+    await fetch('/api/orders', {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ id, tenant_id: tid, status })
+    })
     setModal(null)
     if(tid) load(tid)
   }
 
   async function nuevoOrder() {
     if(!tid) return
-    const {data} = await supabase.from('orders').insert({
-      tenant_id:tid, customer_name:'Nuevo pedido', type:'local', status:'nuevo',
-      items:[], total:0
-    }).select().single()
-    if(data) setModal(data)
+    const r = await fetch('/api/orders', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ tenant_id: tid, customer_name: 'Nuevo pedido', type: 'local' })
+    })
+    const d = await r.json()
+    if(d.order) setModal(d.order)
     if(tid) load(tid)
   }
 

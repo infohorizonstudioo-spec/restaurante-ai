@@ -15,9 +15,14 @@ const PLAN_COLORS: Record<string,string> = {
   enterprise: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25',
 }
 
-const emptyTenant = { name:'', slug:'', type:'restaurant', email:'', phone:'' }
+const emptyTenant = { name:'', slug:'', type:'restaurante', email:'', phone:'' }
 const emptyUser = { name:'', email:'', password:'', tenantId:'' }
-const TYPE: Record<string,string> = { restaurant:'🍽️ Restaurante', clinic:'🏥 Clínica', advisory:'💼 Asesoría', beauty:'💇 Peluquería', other:'◻ Otro' }
+const TYPE: Record<string,string> = {
+  restaurante:'🍽️ Restaurante', bar:'🍺 Bar', cafeteria:'☕ Cafetería',
+  peluqueria:'✂️ Peluquería/Estética', clinica_dental:'🦷 Clínica Dental',
+  clinica_medica:'🏥 Clínica Médica', asesoria:'💼 Asesoría',
+  seguros:'🛡️ Seguros', inmobiliaria:'🏠 Inmobiliaria', otro:'◻ Otro'
+}
 
 export default function AdminPage() {
   const router = useRouter()
@@ -59,8 +64,10 @@ export default function AdminPage() {
     if (!userForm.email || !userForm.password || !userForm.tenantId) { setMsg('Faltan campos obligatorios'); return }
     if (userForm.password.length < 8) { setMsg('Contraseña mínimo 8 caracteres'); return }
     setSaving(true); setMsg('')
+    const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch('/api/admin/create-user', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer '+(session?.access_token||'') },
       body: JSON.stringify({ email: userForm.email, password: userForm.password, name: userForm.name || userForm.email, tenantId: userForm.tenantId, role: 'client' })
     })
     const data = await res.json(); setSaving(false)
@@ -69,8 +76,10 @@ export default function AdminPage() {
   }
 
   async function changePlan(tenantId: string, plan: string) {
+    const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch('/api/admin/update-plan', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer '+(session?.access_token||'') },
       body: JSON.stringify({ tenantId, plan })
     })
     if (res.ok) {

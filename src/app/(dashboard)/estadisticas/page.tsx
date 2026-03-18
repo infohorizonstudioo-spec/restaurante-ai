@@ -26,8 +26,13 @@ export default function EstadisticasPage(){
       const prevMonthStart = prevMonthEnd.slice(0,7)+'-01'
 
       const [callsR, resR, custR] = await Promise.all([
-        supabase.from('calls').select('status,intent,started_at,duration_seconds').eq('tenant_id',p.tenant_id),
-        supabase.from('reservations').select('status,date,people,source').eq('tenant_id',p.tenant_id),
+        // Limitar a últimos 90 días para evitar queries lentas en tenants con historial largo
+        supabase.from('calls').select('status,intent,started_at,duration_seconds')
+          .eq('tenant_id',p.tenant_id)
+          .gte('started_at', new Date(Date.now()-90*24*60*60*1000).toISOString()),
+        supabase.from('reservations').select('status,date,people,source')
+          .eq('tenant_id',p.tenant_id)
+          .gte('date', new Date(Date.now()-90*24*60*60*1000).toISOString().slice(0,10)),
         supabase.from('customers').select('id,created_at,total_reservations').eq('tenant_id',p.tenant_id),
       ])
 
@@ -38,10 +43,16 @@ export default function EstadisticasPage(){
       // KPIs
       const callsTotal  = calls.length
       const callsMonth  = calls.filter(c=>(c.started_at||'').slice(0,7)===today.slice(0,7)).length
+      // Solo llamadas completadas este mes (excluir activas/fallidas del denominador)
+      const callsMonthCompleted = callsMonth > 0
+        ? calls.filter(c=>(c.started_at||'').slice(0,7)===today.slice(0,7) && (c.status==='completada'||c.status==='completed')).length
+        : 0
       const resTotal    = res.length
       const resMonth    = res.filter(r=>(r.date||'').slice(0,7)===today.slice(0,7)).length
+      const resVoiceMonth = res.filter(r=>(r.date||'').slice(0,7)===today.slice(0,7)&&r.source==='voice_agent').length
       const resConfirm  = res.filter(r=>r.status==='confirmada'||r.status==='confirmed')
-      const convRate    = callsMonth>0 ? Math.round((resMonth/callsMonth)*100) : 0
+      // Tasa de conversión real: reservas creadas por voz / llamadas completadas
+      const convRate = callsMonthCompleted>0 ? Math.round((resVoiceMonth/callsMonthCompleted)*100) : 0
 
       // Hora pico (basado en calls con started_at)
       const hourCounts:Record<number,number> = {}
@@ -66,7 +77,7 @@ export default function EstadisticasPage(){
       const srcVoice = res.filter(r=>r.source==='voice_agent').length
       const srcManual= res.filter(r=>r.source==='manual'||!r.source).length
 
-      setData({ callsTotal,callsMonth,resTotal,resMonth,resConfirm:resConfirm.length,convRate,peakHour,topIntents,avgPeople,dayCounts,maxDay,dayNames,srcVoice,srcManual,custs:custs.length })
+      setData({ callsTotal,callsMonth,callsMonthCompleted,resTotal,resMonth,resVoiceMonth,resConfirm:resConfirm.length,convRate,peakHour,topIntents,avgPeople,dayCounts,maxDay,dayNames,srcVoice,srcManual,custs:custs.length })
       setLoad(false)
     })()
   },[])
@@ -104,9 +115,9 @@ export default function EstadisticasPage(){
         {/* KPIs */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
           {[
-            {label:'Llamadas este mes',value:d.callsMonth,sub:'Total: '+d.callsTotal,color:'#1d4ed8'},
-            {label:'Reservas este mes', value:d.resMonth,  sub:'Total: '+d.resTotal,   color:'#059669'},
-            {label:'Tasa conversión',   value:d.convRate+'%',sub:'Llamadas → Reservas', color:d.convRate>=30?'#059669':d.convRate>=15?'#d97706':'#dc2626'},
+            {label:'Llamadas este mes',value:callsMonth,sub:'Completadas: '+callsMonthCompleted,color:'#1d4ed8'},
+            {label:'Reservas este mes', value:resMonth,  sub:'Via agente: '+resVoiceMonth,   color:'#059669'},
+            {label:'Tasa conversión',   value:convRate+'%',sub:'Reservas voz / llamadas completadas', color:convRate>=30?'#059669':convRate>=15?'#d97706':'#dc2626'},
             {label:'Clientes',          value:d.custs,    sub:'Personas/reserva: '+d.avgPeople, color:'#7c3aed'},
           ].map(k=>(
             <div key={k.label} style={{background:'white',border:'1px solid #e2e8f0',borderRadius:14,padding:'18px 20px'}}>

@@ -60,13 +60,13 @@ export default function ConfiguracionPage(){
     setErrors({});setSaving(true)
     const phone=form.agent_phone.trim()||null
     await supabase.from('tenants').update({
-      agent_name:form.agent_name.trim(),
-      agent_phone:phone,
-      language:form.language,
-      business_description:form.business_description.trim()||null,
+      agent_name:  form.agent_name.trim(),
+      agent_phone: phone,
+      language:    form.language,
+      business_description: form.business_description.trim()||null,
     }).eq('id',tenant.id)
     setSaving(false);setSaved(true)
-    setTenant({...tenant,agent_name:form.agent_name.trim(),agent_phone:phone})
+    setTenant({...tenant, agent_name:form.agent_name.trim(), agent_phone:phone, business_description:form.business_description.trim()||null})
     setTimeout(()=>setSaved(false),2500)
   },[tenant,form])
 

@@ -40,49 +40,86 @@ function fmt(sec:number|null){
 export default function LlamadasPage(){
   const [calls,setCalls]=useState<any[]>([])
   const [loading,setLoading]=useState(true)
+  const [loadingMore,setLoadingMore]=useState(false)
+  const [hasMore,setHasMore]=useState(false)
+  const [page,setPage]=useState(0)
+  const PAGE_SIZE=50
   const [open,setOpen]=useState<Set<string>>(new Set())
   const [tid,setTid]=useState<string|null>(null)
+  const [filter,setFilter]=useState<'all'|'completada'|'activa'|'fallida'|'perdida'>('all')
 
-  const load=useCallback(async(tenantId:string)=>{
-    const {data}=await supabase.from('calls').select('*')
-      .eq('tenant_id',tenantId).order('started_at',{ascending:false}).limit(200)
-    setCalls(data||[]);setLoading(false)
-  },[])
+  const load=useCallback(async(tenantId:string, reset=true)=>{
+    if(reset) setLoading(true)
+    const from = reset ? 0 : page * PAGE_SIZE
+    const {data, count}=await supabase.from('calls').select('*', {count:'exact'})
+      .eq('tenant_id',tenantId).order('started_at',{ascending:false})
+      .range(from, from + PAGE_SIZE - 1)
+    if(reset){
+      setCalls(data||[])
+      setPage(1)
+    } else {
+      setCalls(prev=>[...prev,...(data||[])])
+      setPage(p=>p+1)
+    }
+    setHasMore((count||0) > (reset ? PAGE_SIZE : (page+1)*PAGE_SIZE))
+    setLoading(false); setLoadingMore(false)
+  },[page])
 
   useEffect(()=>{
     (async()=>{
       const {data:{user}}=await supabase.auth.getUser();if(!user)return
       const {data:p}=await supabase.from('profiles').select('tenant_id').eq('id',user.id).single();if(!p?.tenant_id)return
-      setTid(p.tenant_id);await load(p.tenant_id)
+      setTid(p.tenant_id);await load(p.tenant_id, true)
     })()
-  },[load])
+  },[])  // eslint-disable-line
 
   useEffect(()=>{
     if(!tid)return
     const ch=supabase.channel('calls-rt')
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},()=>load(tid))
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},()=>load(tid))
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},()=>load(tid,true))
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},()=>load(tid,true))
       .subscribe()
     return()=>{supabase.removeChannel(ch)}
-  },[tid,load])
+  },[tid])  // eslint-disable-line
 
   if(loading)return<PageLoader/>
-  const groups=groupByDate(calls)
+
+  const filtered = filter==='all'
+    ? calls
+    : calls.filter(c => {
+        const s = c.status||''
+        if(filter==='completada') return s==='completada'||s==='completed'
+        if(filter==='activa')     return s==='activa'||s==='in-progress'
+        if(filter==='fallida')    return s==='fallida'||s==='failed'
+        if(filter==='perdida')    return s==='perdida'||s==='no-answer'||s==='busy'
+        return true
+      })
+  const groups=groupByDate(filtered)
   const today=new Date().toISOString().slice(0,10)
   const toggle=(id:string)=>setOpen(prev=>{const n=new Set(prev);n.has(id)?n.delete(id):n.add(id);return n})
 
   return(
     <div style={{background:'#f8fafc',minHeight:'100vh'}}>
-      <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'16px 28px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+      <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'16px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10}}>
         <div>
           <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>Llamadas</h1>
-          <p style={{fontSize:12,color:'#94a3b8',marginTop:2}}>{calls.length} total</p>
+          <p style={{fontSize:12,color:'#94a3b8',marginTop:2}}>{calls.length} cargadas</p>
         </div>
-        <div style={{display:'flex',gap:8}}>
-          {(['completada','activa','fallida'] as const).map(s=>(
-            <span key={s} style={{fontSize:11,padding:'3px 9px',borderRadius:10,background:SB[s],color:SC[s],fontWeight:600}}>
-              {calls.filter(c=>c.status===s||c.status===(s==='completada'?'completed':s==='activa'?'in-progress':'failed')).length} {SL[s]}
-            </span>
+        <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+          {([
+            {k:'all',    label:'Todas',      count:calls.length},
+            {k:'completada', label:'Completadas', count:calls.filter(c=>c.status==='completada'||c.status==='completed').length},
+            {k:'perdida',    label:'Perdidas',    count:calls.filter(c=>c.status==='perdida'||c.status==='no-answer'||c.status==='busy').length},
+            {k:'fallida',    label:'Fallidas',    count:calls.filter(c=>c.status==='fallida'||c.status==='failed').length},
+          ] as const).map(f=>(
+            <button key={f.k} onClick={()=>setFilter(f.k as any)}
+              style={{fontSize:11,padding:'4px 10px',borderRadius:10,border:'1px solid',
+                borderColor: filter===f.k ? SC[f.k==='all'?'completada':f.k] : '#e2e8f0',
+                background:  filter===f.k ? SB[f.k==='all'?'completada':f.k] : 'white',
+                color:       filter===f.k ? SC[f.k==='all'?'completada':f.k] : '#64748b',
+                fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
+              {f.label} {f.count>0&&<span>({f.count})</span>}
+            </button>
           ))}
         </div>
       </div>
@@ -141,6 +178,14 @@ export default function LlamadasPage(){
             </div>
           </div>
         ))}
+        {hasMore && filter==='all' && (
+          <div style={{textAlign:'center',paddingTop:8}}>
+            <button onClick={()=>{setLoadingMore(true);if(tid)load(tid,false)}} disabled={loadingMore}
+              style={{padding:'9px 24px',fontSize:13,fontWeight:600,color:'#1d4ed8',background:'white',border:'1px solid #bfdbfe',borderRadius:9,cursor:'pointer',fontFamily:'inherit',opacity:loadingMore?0.6:1}}>
+              {loadingMore?'Cargando...':'Cargar más llamadas'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
