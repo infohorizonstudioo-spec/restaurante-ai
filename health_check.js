@@ -158,11 +158,16 @@ async function main() {
     const sid = 'hc_rpc_' + Date.now();
     const r = await fetch(SB + '/rest/v1/rpc/complete_call_session', {
       method: 'POST', headers: h,
-      body: JSON.stringify({ p_call_sid: sid, p_tenant_id: TID, p_duration: 65, p_status: 'completada', p_intent: 'consulta', p_summary: 'HC test', p_source: 'test' })
+      body: JSON.stringify({
+        p_call_sid: sid, p_tenant_id: TID,
+        p_duration: 65, p_status: 'completada',
+        p_intent: 'consulta', p_summary: 'HC test',
+        p_source: 'test', p_action_required: 'Sin acción necesaria'
+      })
     });
     const d = await r.json();
-    if (d.inserted || d.updated || d.created) await fetch(SB + '/rest/v1/calls?call_sid=eq.' + sid, { method: 'DELETE', headers: h });
-    return d.inserted === true || d.updated === true || d.created === true;
+    if (d.call_id) await fetch(SB + '/rest/v1/calls?call_sid=eq.' + sid, { method: 'DELETE', headers: h });
+    return !!d.call_id;
   });
 
   await check('Columna session_state en calls', async () => {
@@ -195,7 +200,21 @@ async function main() {
     return r.status === 200;
   });
 
-  await check('billing_history tabla existe', async () => {
+  await check('RPC get_daily_metrics (nueva)', async () => {
+    const r = await fetch(SB + '/rest/v1/rpc/get_daily_metrics', {
+      method: 'POST', headers: h, body: JSON.stringify({ p_tenant_id: TID })
+    });
+    const d = await r.json();
+    return typeof d.calls_today === 'number' && typeof d.reservas_detected === 'number';
+  });
+
+  await check('Columna action_required en calls', async () => {
+    const r = await fetch(SB + '/rest/v1/calls?tenant_id=eq.' + TID + '&select=action_required&limit=1', { headers: h });
+    const d = await r.json();
+    return Array.isArray(d);
+  });
+
+
     const r = await fetch(SB + '/rest/v1/billing_history?tenant_id=eq.' + TID + '&select=id&limit=1', { headers: h });
     return r.status === 200;
   });
