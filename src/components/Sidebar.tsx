@@ -51,7 +51,18 @@ export default function Sidebar() {
   const agentName       = tenant?.agent_name || 'Sofia'
 
   // módulos de navegación — 100% desde la plantilla
-  const modules = template?.modules || []
+  // Mientras carga, usar módulos base para que el sidebar no desaparezca
+  const DEFAULT_MODULES = [
+    { id:'panel',        href:'/panel',        icon:'grid',  label:'Centro de control' },
+    { id:'reservas',     href:'/reservas',     icon:'cal',   label:'Reservas' },
+    { id:'agenda',       href:'/agenda',       icon:'clock', label:'Agenda' },
+    { id:'llamadas',     href:'/llamadas',     icon:'phone', label:'Llamadas' },
+    { id:'clientes',     href:'/clientes',     icon:'users', label:'Clientes' },
+    { id:'estadisticas', href:'/estadisticas', icon:'bar',   label:'Estadísticas', pro:true },
+    { id:'facturacion',  href:'/facturacion',  icon:'card',  label:'Facturación' },
+    { id:'configuracion',href:'/configuracion',icon:'gear',  label:'Configuración' },
+  ]
+  const modules = template?.modules || DEFAULT_MODULES
 
   return (
     <nav style={{ width: collapsed ? 56 : 220, minWidth: collapsed ? 56 : 220, background: '#0f172a', display: 'flex', flexDirection: 'column', height: '100vh', position: 'sticky', top: 0, transition: 'width 0.2s', overflow: 'hidden', flexShrink: 0 }}>
