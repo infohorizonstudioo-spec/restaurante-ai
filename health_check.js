@@ -190,7 +190,7 @@ async function main() {
     return Array.isArray(d);
   });
 
-
+  await check('Realtime: tabla calls RLS policy', async () => {
     const r = await fetch(SB + '/rest/v1/calls?tenant_id=eq.' + TID + '&select=id&limit=1', { headers: h });
     return r.status === 200;
   });
