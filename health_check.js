@@ -100,6 +100,12 @@ async function main() {
     return d.success === true;
   });
 
+  await check('/api/voice/session (nuevo endpoint mid-call)', async () => {
+    const r = await fetch(BASE + '/api/voice/session');
+    const d = await r.json();
+    return d.status === 'ok' && Array.isArray(d.valid_states);
+  });
+
   // ── APIs SISTEMA ─────────────────────────────────────
   console.log('\n─ APIs sistema ─');
   await check('/api/stripe/checkout (sin auth → error esperado)', async () => {
@@ -155,11 +161,36 @@ async function main() {
       body: JSON.stringify({ p_call_sid: sid, p_tenant_id: TID, p_duration: 65, p_status: 'completada', p_intent: 'consulta', p_summary: 'HC test', p_source: 'test' })
     });
     const d = await r.json();
-    if (d.inserted || d.updated) await fetch(SB + '/rest/v1/calls?call_sid=eq.' + sid, { method: 'DELETE', headers: h });
-    return d.inserted === true || d.updated === true;
+    if (d.inserted || d.updated || d.created) await fetch(SB + '/rest/v1/calls?call_sid=eq.' + sid, { method: 'DELETE', headers: h });
+    return d.inserted === true || d.updated === true || d.created === true;
   });
 
-  await check('Realtime: tabla calls RLS policy', async () => {
+  await check('Columna session_state en calls', async () => {
+    const r = await fetch(SB + '/rest/v1/calls?tenant_id=eq.' + TID + '&select=session_state&limit=1', { headers: h });
+    const d = await r.json();
+    return Array.isArray(d);
+  });
+
+  await check('RPC upsert_call_session (nueva)', async () => {
+    const sid = 'hc_upsert_' + Date.now();
+    const r = await fetch(SB + '/rest/v1/rpc/upsert_call_session', {
+      method: 'POST', headers: h,
+      body: JSON.stringify({ p_call_sid: sid, p_tenant_id: TID, p_caller_phone: '+34600000099', p_agent_phone: '+12138753573', p_session_state: 'iniciando' })
+    });
+    const d = await r.json();
+    if (d.ok) await fetch(SB + '/rest/v1/calls?call_sid=eq.' + sid, { method: 'DELETE', headers: h });
+    return d.ok === true;
+  });
+
+  await check('RPC get_active_calls (nueva)', async () => {
+    const r = await fetch(SB + '/rest/v1/rpc/get_active_calls', {
+      method: 'POST', headers: h, body: JSON.stringify({ p_tenant_id: TID })
+    });
+    const d = await r.json();
+    return Array.isArray(d);
+  });
+
+
     const r = await fetch(SB + '/rest/v1/calls?tenant_id=eq.' + TID + '&select=id&limit=1', { headers: h });
     return r.status === 200;
   });
