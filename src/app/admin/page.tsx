@@ -82,7 +82,7 @@ export default function AdminPage() {
   async function logout() { await supabase.auth.signOut(); router.push('/login') }
 
   const byPlan = (p: string) => tenants.filter(t => t.plan === p)
-  const mrr = byPlan('starter').length * 99 + byPlan('pro').length * 299 + byPlan('business').length * 499
+  const mrr = byPlan('starter').length * 99 + byPlan('pro').length * 299 + byPlan('business').length * 499 + byPlan('enterprise').length * 499
 
   return (
     <div className="min-h-screen bg-[#070710] text-white">
@@ -109,7 +109,7 @@ export default function AdminPage() {
           {[
             { label:'Negocios total', value: tenants.length, color:'from-violet-500/20 to-indigo-500/20', border:'border-violet-500/20' },
             { label:'Plan Starter', value: byPlan('starter').length, color:'from-violet-500/20 to-indigo-500/20', border:'border-violet-500/20' },
-            { label:'Plan Pro', value: byPlan('pro').length, color:'from-amber-500/20 to-orange-500/20', border:'border-amber-500/20' },
+            { label:'Plan Business', value: byPlan('business').length + byPlan('enterprise').length, color:'from-emerald-500/20 to-teal-500/20', border:'border-emerald-500/20' },
             { label:'MRR estimado', value: mrr + '€', color:'from-blue-500/20 to-indigo-500/20', border:'border-blue-500/20' },
           ].map(k => (
             <div key={k.label} className={`bg-gradient-to-br ${k.color} border ${k.border} rounded-2xl p-5`}>
@@ -202,7 +202,7 @@ export default function AdminPage() {
           <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-white/[0.06]">
               <h2 className="font-semibold">Gestión de planes</h2>
-              <p className="text-xs text-white/40 mt-1">Asigna el plan de cada negocio — Starter 350€/mes · Pro 500€/mes</p>
+              <p className="text-xs text-white/40 mt-1">Starter 99€/mes · Pro 299€/mes · Business 499€/mes</p>
             </div>
             <div className="divide-y divide-white/[0.04]">
               {tenants.map(t => (
