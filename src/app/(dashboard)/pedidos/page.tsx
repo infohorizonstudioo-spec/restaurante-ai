@@ -50,7 +50,7 @@ export default function PedidosPage(){
 
   if(loading) return <PageLoader/>
 
-  const isPro = plan==='pro'||plan==='business'
+  const isPro = plan==='pro'||plan==='business'||plan==='enterprise'
 
   if(!isPro) return (
     <div style={{background:'#f8fafc',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>

@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 
     const { data: tenant, error: tenantError } = await admin
       .from('tenants')
-      .insert({ name: businessName, slug, type: businessType || 'restaurant', email, phone: phone || null, plan: 'trial', active: true })
+      .insert({ name: businessName, slug, type: businessType || 'restaurante', email, phone: phone || null, plan: 'trial', active: true, free_calls_limit: 10, free_calls_used: 0 })
       .select().single()
     if (tenantError) return NextResponse.json({ error: tenantError.message }, { status: 400 })
 
