@@ -38,7 +38,7 @@ function analyzeLocally(transcript: string, callerPhone: string): CallAnalysis {
   let intent = 'consulta'
   if (/reserv|mesa|noche|personas?|cena|comida|almuerzo|comer/i.test(t)) intent = 'reserva'
   else if (/pedir|pedido|llevar|domicilio|recoger|pizza|pollo|plato|ración/i.test(t)) intent = 'pedido'
-  else if (/cancelar|cancela|anular|anulo|borro|borrar/i.test(t)) intent = 'cancelacion'
+  else if (/cancelar|cancela|anular|anulo|borro|borrar|anulad/i.test(t)) intent = 'cancelacion'
   else if (/queja|reclamación|problema|incidente|mal|horrible/i.test(t)) intent = 'queja'
   else if (/cita|asesor|consulta fiscal|médico|dentista|peluquería/i.test(t)) intent = 'reserva' // citas = reserva
 
@@ -46,13 +46,14 @@ function analyzeLocally(transcript: string, callerPhone: string): CallAnalysis {
   // Patrones comunes en conversaciones telefónicas
   let customer_name: string | null = null
   const namePatterns = [
-    /(?:a nombre de|soy|me llamo|mi nombre es|nombre:?)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)?)/i,
-    /(?:para|reserva para)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)(?:\s|,|\.)/i,
-    /Cliente:\s+(?:hola[,\s]+)?(?:soy\s+)?([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)?)/i,
+    /(?:a nombre de|soy|me llamo|mi nombre es|nombre:?)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})?)/i,
+    /(?:para|reserva para)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})(?:\s|,|\.)/i,
+    /Cliente:\s+(?:hola[,\s]+)?(?:soy\s+)?([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})?)/i,
   ]
+  const STOP_WORDS = new Set(['hola','bien','vale','buenas','claro','sí','no','quién','reservar','pedir','cancelar','pregunta','llamar','gracias','favor'])
   for (const pat of namePatterns) {
     const m = transcript.match(pat)
-    if (m?.[1] && m[1].length > 2 && !['hola','bien','vale','buenas','claro','sí'].includes(m[1].toLowerCase())) {
+    if (m?.[1] && m[1].length > 2 && !STOP_WORDS.has(m[1].toLowerCase().trim())) {
       customer_name = m[1].trim()
       break
     }
