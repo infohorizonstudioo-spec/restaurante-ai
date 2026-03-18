@@ -88,15 +88,17 @@ export async function POST(req: Request) {
         : ('ctx_'+tsMs+'_'+rand+'_'+digits)
 
       // upsert_call_session es idempotente: ON CONFLICT DO NOTHING
-      await admin.rpc('upsert_call_session', {
-        p_call_sid:     callSid,
-        p_tenant_id:    tenant.id,
-        p_caller_phone: callerPhone,
-        p_agent_phone:  agentPhone,
-        p_conv_id:      convId || null,
-        p_status:       'activa',
-        p_source:       'elevenlabs',
-      }).catch((e:any) => console.log('session upsert warn:', e.message))
+      try {
+        await admin.rpc('upsert_call_session', {
+          p_call_sid:     callSid,
+          p_tenant_id:    tenant.id,
+          p_caller_phone: callerPhone,
+          p_agent_phone:  agentPhone,
+          p_conv_id:      convId || null,
+          p_status:       'activa',
+          p_source:       'elevenlabs',
+        })
+      } catch(rpcErr: any) { console.log('session upsert warn:', rpcErr.message) }
     }
 
     const resumenHoy = resHoy.length > 0
