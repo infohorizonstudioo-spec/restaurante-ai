@@ -57,7 +57,9 @@ export default function OnboardingPage() {
       const { data: z } = await supabase.from('zones').insert({ tenant_id: tenant.id, name: zone.name, active: true }).select().single()
       if (z) {
         const tablesToInsert = Array.from({ length: zone.tables }, (_, i) => ({
-          tenant_id: tenant.id, zone_id: z.id, name: `${zone.name[0]}${i+1}`, capacity: 4, status: 'libre', combinable: false
+          tenant_id: tenant.id, zone_id: z.id, zone: z.id,
+          number: String(i+1), name: `${zone.name} ${i+1}`,
+          capacity: 4, min_capacity: 1, status: 'libre', shape: 'rectangle', combinable: false
         }))
         await supabase.from('tables').insert(tablesToInsert)
       }

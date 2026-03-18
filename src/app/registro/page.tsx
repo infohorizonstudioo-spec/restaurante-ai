@@ -150,7 +150,7 @@ export default function RegistroPage() {
       const slug = form.businessName.toLowerCase().replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-')
       const {data:tenant,error:tErr} = await supabase.from('tenants').insert({name:form.businessName,type:form.businessType,slug,plan:'free',free_calls_limit:10,free_calls_used:0}).select().single()
       if (tErr) throw tErr
-      await supabase.from('profiles').upsert({id:auth.user.id,full_name:form.name,email:form.email.trim().toLowerCase(),tenant_id:(tenant as any).id,role:'admin'})
+      await supabase.from('profiles').upsert({id:auth.user.id,name:form.name,full_name:form.name,email:form.email.trim().toLowerCase(),tenant_id:(tenant as any).id,role:'admin'})
       window.location.href='/onboarding'
     } catch(e:any) {
       if (e.message?.includes('already registered')||e.message?.includes('already been registered')) setError('Este email ya tiene cuenta. Inicia sesión.')

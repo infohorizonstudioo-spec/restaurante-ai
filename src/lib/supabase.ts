@@ -11,10 +11,6 @@ export async function getDemoTenant() {
   const { data: profile } = await supabase
     .from('profiles').select('role, tenant_id').eq('id', user.id).single()
   if (!profile) return null
-  if (profile.role === 'superadmin') {
-    const { data: tenant } = await supabase.from('tenants').select('*').eq('slug', 'la-bahia').single()
-    return tenant
-  }
   if (profile.tenant_id) {
     const { data: tenant } = await supabase.from('tenants').select('*').eq('id', profile.tenant_id).single()
     return tenant

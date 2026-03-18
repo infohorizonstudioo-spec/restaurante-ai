@@ -22,8 +22,7 @@ const PLAN_COL: Record<string,string> = {
 }
 const PLAN_LBL: Record<string,string> = {
   trial:'Trial',free:'Trial',starter:'Starter',pro:'Pro',business:'Business',enterprise:'Business'
-}
-function SvgIcon({ d }: { d: string }) {
+}function SvgIcon({ d }: { d: string }) {
   return (
     <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
       <path d={d}/>
@@ -47,6 +46,7 @@ function Sidebar() {
   const router = useRouter()
   const [billing, setBilling] = useState<Record<string,any> | null>(null)
   const [agentActive, setAgentActive] = useState(false)
+  const [agentName, setAgentName] = useState<string>('')
   const [collapsed, setCollapsed] = useState(false)
   useEffect(() => {
     ;(async () => {
@@ -56,8 +56,9 @@ function Sidebar() {
       if (!p?.tenant_id) return
       const { data: b } = await supabase.rpc('get_billing_summary', { p_tenant_id: p.tenant_id })
       setBilling(b as Record<string,any> | null)
-      const { data: t } = await supabase.from('tenants').select('agent_phone').eq('id', p.tenant_id).single()
+      const { data: t } = await supabase.from('tenants').select('agent_phone,agent_name').eq('id', p.tenant_id).single()
       setAgentActive(!!(t as any)?.agent_phone)
+      setAgentName((t as any)?.agent_name || 'Sofia')
     })()
   }, [])
   const plan: string = billing?.plan || 'trial'
@@ -81,7 +82,7 @@ function Sidebar() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: agentActive ? '#4ade80' : '#ef4444' }} />
             <span style={{ fontSize: 11, color: agentActive ? '#4ade80' : '#ef4444', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {agentActive ? 'Sofia activa' : 'Sin numero configurado'}
+              {agentActive ? (agentName || 'Agente') + ' activa' : 'Sin número configurado'}
             </span>
           </div>
         </div>

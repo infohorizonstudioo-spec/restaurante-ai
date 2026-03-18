@@ -17,7 +17,7 @@ export default function EstadisticasPage(){
       const {data:t} = await supabase.from('tenants').select('plan,free_calls_used,free_calls_limit,plan_calls_used,plan_calls_included,plan_extra_rate,name').eq('id',p.tenant_id).single()
       setPlan(t?.plan||'free'); setTid(p.tenant_id)
 
-      const isPro = (t?.plan==='pro'||t?.plan==='business')
+      const isPro = (t?.plan==='pro'||t?.plan==='business'||t?.plan==='enterprise')
       if (!isPro) { setLoad(false); return }
 
       const today = new Date().toISOString().slice(0,10)
@@ -73,7 +73,7 @@ export default function EstadisticasPage(){
 
   if(loading) return <PageLoader/>
 
-  const isPro = plan==='pro'||plan==='business'
+  const isPro = plan==='pro'||plan==='business'||plan==='enterprise'
 
   if(!isPro) return (
     <div style={{background:'#f8fafc',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>

@@ -110,8 +110,7 @@ export default function PanelPage(){
         )}
 
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
-          <StatCard label='Llamadas hoy' value={calls.filter(c=>{const d=(c.started_at||c.created_at||'')?.slice(0,10);return d===new Date().toISOString().split('T')[0]}).length} color='#1d4ed8' href='/llamadas'/>
-          <StatCard label='Reservas hoy' value={reservas.length} color='#059669' sub={reservas.filter(r=>r.status==='confirmada').length+' confirmadas'} href='/reservas'/>
+          <StatCard label='Llamadas hoy' value={calls.filter(c=>{const d=(c.started_at||c.created_at||'')?.slice(0,10);return d===new Date().toISOString().split('T')[0]}).length} color='#1d4ed8' href='/llamadas'/>          <StatCard label='Reservas hoy' value={reservas.length} color='#059669' sub={reservas.filter(r=>r.status==='confirmada').length+' confirmadas'} href='/reservas'/>
           <StatCard label='Clientes' value={clientes.length} color='#7c3aed' href='/clientes'/>
           <StatCard label={isTrial?'Llamadas restantes':'Llamadas del plan'} value={isTrial?callsLeft+'':callsUsed+'/'+callsLimit} color={callsLeft<=3?'#dc2626':planColor} sub={planLabel} href='/facturacion'/>
         </div>
