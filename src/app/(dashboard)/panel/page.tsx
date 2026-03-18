@@ -29,6 +29,7 @@ export default function PanelPage(){
   const [reservas,setReservas]=useState<any[]>([])
   const [clientes,setClientes]=useState<any[]>([])
   const [activeCalls,setActiveCalls]=useState<any[]>([])
+  const [metrics,setMetrics]=useState<any>(null)
 
   const load=useCallback(async()=>{
     const {data:{user}}=await supabase.auth.getUser()
@@ -42,7 +43,7 @@ export default function PanelPage(){
     }
     const tid=p.tenant_id
     const today=new Date().toISOString().split('T')[0]
-    const [{data:t},{data:c},{data:r},{data:cl},{data:ac}]=await Promise.all([
+    const [{data:t},{data:c},{data:r},{data:cl},{data:ac},m]=await Promise.all([
       supabase.from('tenants').select('*').eq('id',tid).single(),
       supabase.from('calls').select('*').eq('tenant_id',tid).order('started_at',{ascending:false}).limit(10),
       supabase.from('reservations').select('*').eq('tenant_id',tid).eq('date',today).order('time'),
@@ -50,8 +51,11 @@ export default function PanelPage(){
       // Llamadas activas simultáneas — para el widget de llamadas en curso
       supabase.from('calls').select('id,call_sid,caller_phone,session_state,started_at')
         .eq('tenant_id',tid).eq('status','activa').order('started_at',{ascending:false}).limit(10),
+      // Métricas del día via RPC
+      supabase.rpc('get_daily_metrics', { p_tenant_id: tid }),
     ])
     setTenant(t);setCalls(c||[]);setReservas(r||[]);setClientes(cl||[]);setActiveCalls(ac||[])
+    setMetrics(m?.data || null)
     setLoading(false)
   },[router])
 
@@ -152,6 +156,46 @@ export default function PanelPage(){
                 )
               })}
             </div>
+          </div>
+        )}
+
+        {/* Métricas del día — intents detectados (reservas, pedidos, consultas) */}
+        {metrics && (metrics.reservas_detected > 0 || metrics.pedidos_detected > 0 || metrics.calls_failed > 0) && (
+          <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:12,padding:'14px 20px',marginBottom:16,display:'flex',alignItems:'center',gap:20,flexWrap:'wrap'}}>
+            <span style={{fontSize:12,fontWeight:600,color:'#94a3b8',flexShrink:0}}>HOY:</span>
+            {metrics.reservas_detected > 0 && (
+              <div style={{display:'flex',alignItems:'center',gap:6}}>
+                <span style={{fontSize:18}}>📅</span>
+                <div>
+                  <span style={{fontSize:14,fontWeight:700,color:'#059669'}}>{metrics.reservas_detected}</span>
+                  <span style={{fontSize:12,color:'#374151',marginLeft:4}}>reserva{metrics.reservas_detected!==1?'s':''} detectada{metrics.reservas_detected!==1?'s':''}</span>
+                </div>
+              </div>
+            )}
+            {metrics.pedidos_detected > 0 && (
+              <div style={{display:'flex',alignItems:'center',gap:6}}>
+                <span style={{fontSize:18}}>🛍️</span>
+                <div>
+                  <span style={{fontSize:14,fontWeight:700,color:'#7c3aed'}}>{metrics.pedidos_detected}</span>
+                  <span style={{fontSize:12,color:'#374151',marginLeft:4}}>pedido{metrics.pedidos_detected!==1?'s':''} detectado{metrics.pedidos_detected!==1?'s':''}</span>
+                </div>
+              </div>
+            )}
+            {metrics.calls_failed > 0 && (
+              <div style={{display:'flex',alignItems:'center',gap:6}}>
+                <span style={{fontSize:18}}>⚠️</span>
+                <div>
+                  <span style={{fontSize:14,fontWeight:700,color:'#dc2626'}}>{metrics.calls_failed}</span>
+                  <span style={{fontSize:12,color:'#374151',marginLeft:4}}>llamada{metrics.calls_failed!==1?'s':''} fallida{metrics.calls_failed!==1?'s':''}</span>
+                </div>
+              </div>
+            )}
+            {metrics.with_summary > 0 && (
+              <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:4}}>
+                <div style={{width:6,height:6,borderRadius:'50%',background:'#22c55e'}}/>
+                <span style={{fontSize:11,color:'#64748b'}}>{metrics.with_summary} con resumen útil</span>
+              </div>
+            )}
           </div>
         )}
 
