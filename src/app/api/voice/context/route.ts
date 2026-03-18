@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
     // Cargar contexto del negocio — independiente por cada llamada
     const { data: tenant } = await admin.from('tenants')
-      .select('id,name,type,plan,agent_name,free_calls_used,free_calls_limit,language,business_description')
+      .select('id,name,type,plan,agent_name,free_calls_used,free_calls_limit,language')
       .eq('agent_phone', agentPhone).maybeSingle()
 
     if (!tenant) {
