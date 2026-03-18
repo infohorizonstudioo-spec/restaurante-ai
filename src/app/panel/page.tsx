@@ -54,7 +54,9 @@ export default function PanelPage(){
     load()
     const ch=supabase.channel('panel-rt')
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'calls'},load)
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'calls'},load)
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'reservations'},load)
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'reservations'},load)
       .subscribe()
     return()=>{supabase.removeChannel(ch)}
   },[load])
@@ -152,7 +154,7 @@ export default function PanelPage(){
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
                         <p style={{fontSize:13,fontWeight:600,color:'#0f172a'}}>{phone}</p>
-                        <span style={{fontSize:11,padding:'1px 7px',borderRadius:10,background:status==='completed'?'#f0fdf4':'#fef2f2',color:status==='completed'?'#059669':'#dc2626',fontWeight:600}}>{status==='completed'?'Completada':status==='in-progress'?'En curso':'Fallida'}</span>
+                        <span style={{fontSize:11,padding:'1px 7px',borderRadius:10,background:['completada','completed'].includes(status)?'#f0fdf4':['fallida','failed'].includes(status)?'#fef2f2':'#eff6ff',color:['completada','completed'].includes(status)?'#059669':['fallida','failed'].includes(status)?'#dc2626':'#1d4ed8',fontWeight:600}}>{['completada','completed'].includes(status)?'Completada':['activa','in-progress'].includes(status)?'En curso':'Fallida'}</span>
                       </div>
                       {call.summary?<p style={{fontSize:12,color:'#64748b',lineHeight:1.5,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{call.summary}</p>:<p style={{fontSize:12,color:'#94a3b8'}}>Sin resumen</p>}
                     </div>

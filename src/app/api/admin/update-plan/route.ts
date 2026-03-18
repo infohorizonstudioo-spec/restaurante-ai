@@ -5,7 +5,7 @@ export async function POST(req: Request) {
   try {
     const { tenantId, plan } = await req.json()
     if (!tenantId || !plan) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
-    const allowed = ['trial','starter','pro','free']
+    const allowed = ['trial','free','starter','pro','business','enterprise']
     if (!allowed.includes(plan)) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
     const admin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

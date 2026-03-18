@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
-const PLAN_LABELS: Record<string,string> = { trial:'Trial', free:'Free', starter:'Starter 350€/mes', pro:'Pro 500€/mes' }
+const PLAN_LABELS: Record<string,string> = { trial:'Trial', free:'Free', starter:'Starter 99€/mes', pro:'Pro 299€/mes', business:'Business 499€/mes', enterprise:'Enterprise' }
 const PLAN_COLORS: Record<string,string> = {
   trial: 'bg-white/5 text-white/40 border-white/10',
   free: 'bg-white/5 text-white/40 border-white/10',
   starter: 'bg-violet-500/10 text-violet-300 border-violet-500/25',
-  pro: 'bg-amber-500/10 text-amber-300 border-amber-500/25'
+  pro: 'bg-amber-500/10 text-amber-300 border-amber-500/25',
+  business: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25',
+  enterprise: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25',
 }
 
 const emptyTenant = { name:'', slug:'', type:'restaurant', email:'', phone:'' }
@@ -80,7 +82,7 @@ export default function AdminPage() {
   async function logout() { await supabase.auth.signOut(); router.push('/login') }
 
   const byPlan = (p: string) => tenants.filter(t => t.plan === p)
-  const mrr = byPlan('starter').length * 350 + byPlan('pro').length * 500
+  const mrr = byPlan('starter').length * 99 + byPlan('pro').length * 299 + byPlan('business').length * 499
 
   return (
     <div className="min-h-screen bg-[#070710] text-white">
@@ -108,7 +110,7 @@ export default function AdminPage() {
             { label:'Negocios total', value: tenants.length, color:'from-violet-500/20 to-indigo-500/20', border:'border-violet-500/20' },
             { label:'Plan Starter', value: byPlan('starter').length, color:'from-violet-500/20 to-indigo-500/20', border:'border-violet-500/20' },
             { label:'Plan Pro', value: byPlan('pro').length, color:'from-amber-500/20 to-orange-500/20', border:'border-amber-500/20' },
-            { label:'MRR estimado', value: mrr + '€', color:'from-emerald-500/20 to-teal-500/20', border:'border-emerald-500/20' },
+            { label:'MRR estimado', value: mrr + '€', color:'from-blue-500/20 to-indigo-500/20', border:'border-blue-500/20' },
           ].map(k => (
             <div key={k.label} className={`bg-gradient-to-br ${k.color} border ${k.border} rounded-2xl p-5`}>
               <div className="text-3xl font-black mb-1">{k.value}</div>
@@ -213,8 +215,9 @@ export default function AdminPage() {
                   <select value={t.plan} onChange={e => changePlan(t.id, e.target.value)}
                     className={`text-xs px-3 py-2 rounded-lg border cursor-pointer transition-all focus:outline-none ${(PLAN_COLORS as any)[t.plan] || 'bg-white/5 text-white/40 border-white/10'} bg-[#0d0d1a]`}>
                     <option value="trial">Trial (gratis)</option>
-                    <option value="starter">Starter — 350€/mes</option>
-                    <option value="pro">Pro — 500€/mes</option>
+                    <option value="starter">Starter — 99€/mes</option>
+                    <option value="pro">Pro — 299€/mes</option>
+                    <option value="business">Business — 499€/mes</option>
                   </select>
                 </div>
               ))}

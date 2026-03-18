@@ -33,12 +33,16 @@ export async function POST(req: Request) {
 
   try {
     const auth = Buffer.from(`${TWILIO_SID}:${TWILIO_TOKEN}`).toString('base64')
-    const webhookUrl = `https://${req.headers.get('host')}/api/twilio/webhook`
-    
+    // VoiceUrl → ElevenLabs gestiona la llamada
+    // StatusCallback → nuestro post-call para guardar resultado
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${req.headers.get('host')}`
     const body = new URLSearchParams({
       PhoneNumber: phoneNumber,
-      VoiceUrl: webhookUrl,
+      VoiceUrl: 'https://api.us.elevenlabs.io/twilio/inbound_call',
       VoiceMethod: 'POST',
+      StatusCallback: `${appUrl}/api/voice/post-call`,
+      StatusCallbackMethod: 'POST',
+      StatusCallbackEvent: 'completed',
       FriendlyName: `Reservo.AI - ${tenantId}`
     })
     

@@ -10,13 +10,14 @@ const admin = createClient(
 
 async function analyzeWithClaude(transcript: string): Promise<any> {
   try {
+    // Sin key o transcripción muy corta → fallback genérico
     if (!process.env.ANTHROPIC_API_KEY || transcript.length < 20) {
       return { intent: 'consulta', customer_name: null, summary: 'Llamada breve', outcome: 'completado' }
     }
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const msg = await anthropic.messages.create({
       model: 'claude-haiku-4-5', max_tokens: 300,
-      system: 'Eres un analizador de llamadas. Responde SOLO JSON sin markdown.',
+      system: 'Eres un analizador de llamadas. Responde SOLO JSON sin markdown ni backticks.',
       messages: [{ role: 'user', content:
         'Analiza y responde solo JSON:\n{"intent":"reserva|pedido|consulta|cancelacion|otro","customer_name":"nombre o null","summary":"1-2 frases español","outcome":"completado|pendiente|fallido"}\n\nTranscripcion:\n'+transcript
       }]
@@ -28,54 +29,59 @@ async function analyzeWithClaude(transcript: string): Promise<any> {
   }
 }
 
-// Obtener transcripción de ElevenLabs usando el CallSid
-async function getTranscript(callSid: string, tenantId: string): Promise<string> {
+async function getTranscriptFromElevenLabs(callSid: string): Promise<string> {
+  const elKey = process.env.ELEVENLABS_API_KEY
+  if (!elKey) return ''
   try {
-    // Buscar en calls por call_sid para obtener conversation_id
+    // Buscar la conversación por call_sid en ElevenLabs
+    const cr = await fetch('https://api.us.elevenlabs.io/v1/convai/conversations?page_size=20', {
+      headers: { 'xi-api-key': elKey }
+    })
+    if (!cr.ok) return ''
+    const cd = await cr.json()
+    const conv = (cd.conversations || []).find((c: any) =>
+      c.metadata?.phone_call?.call_sid === callSid
+    )
+    if (!conv) return ''
+    const dr = await fetch('https://api.us.elevenlabs.io/v1/convai/conversations/'+conv.conversation_id, {
+      headers: { 'xi-api-key': elKey }
+    })
+    if (!dr.ok) return ''
+    const dd = await dr.json()
+    return (dd.transcript || []).map((m: any) =>
+      (m.role === 'agent' ? 'Sofia' : 'Cliente') + ': ' + m.message
+    ).join('\n')
+  } catch(e) { return '' }
+}
+
+async function getTranscript(callSid: string): Promise<string> {
+  try {
+    // 1. Buscar transcripción ya guardada en DB
     const { data: call } = await admin.from('calls')
       .select('transcript,conversation_id').eq('call_sid', callSid).maybeSingle()
     if (call?.transcript) return call.transcript
 
-    // Si hay conversation_id, pedir a ElevenLabs
+    // 2. Si hay conversation_id, ir directo
     if (call?.conversation_id) {
-      const r = await fetch('https://api.us.elevenlabs.io/v1/convai/conversations/'+call.conversation_id, {
-        headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY || 'sk_0e8a74a121e33004d59cf4695d4abdd637d787ad9fabf21c' }
-      })
-      if (r.ok) {
-        const d = await r.json()
-        const lines = (d.transcript || []).map((m: any) =>
-          (m.role === 'agent' ? 'Sofia' : 'Cliente') + ': ' + m.message
-        ).join('\n')
-        return lines
-      }
-    }
-
-    // Intentar buscar por conversation en ElevenLabs via phone call_sid
-    const cr = await fetch('https://api.us.elevenlabs.io/v1/convai/conversations?page_size=20', {
-      headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY || 'sk_0e8a74a121e33004d59cf4695d4abdd637d787ad9fabf21c' }
-    })
-    if (cr.ok) {
-      const cd = await cr.json()
-      const conv = (cd.conversations || []).find((c: any) =>
-        c.metadata?.phone_call?.call_sid === callSid
-      )
-      if (conv) {
-        const dr = await fetch('https://api.us.elevenlabs.io/v1/convai/conversations/'+conv.conversation_id, {
-          headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY || 'sk_0e8a74a121e33004d59cf4695d4abdd637d787ad9fabf21c' }
+      const elKey = process.env.ELEVENLABS_API_KEY
+      if (elKey) {
+        const r = await fetch('https://api.us.elevenlabs.io/v1/convai/conversations/'+call.conversation_id, {
+          headers: { 'xi-api-key': elKey }
         })
-        if (dr.ok) {
-          const dd = await dr.json()
-          return (dd.transcript || []).map((m: any) =>
+        if (r.ok) {
+          const d = await r.json()
+          return (d.transcript || []).map((m: any) =>
             (m.role === 'agent' ? 'Sofia' : 'Cliente') + ': ' + m.message
           ).join('\n')
         }
       }
     }
-    return ''
+
+    // 3. Buscar en ElevenLabs por call_sid
+    return await getTranscriptFromElevenLabs(callSid)
   } catch(e) { return '' }
 }
 
-// Handler Twilio status_callback
 export async function POST(req: Request) {
   try {
     const contentType = req.headers.get('content-type') || ''
@@ -90,10 +96,10 @@ export async function POST(req: Request) {
       params.forEach((v, k) => { body[k] = v })
     }
 
-    // Extraer campos — soporta tanto Twilio como ElevenLabs post-call
+    // Extraer campos — soporta Twilio y ElevenLabs
     const callSid     = body.CallSid     || body.call_sid     || body.conversation_id || ''
     const callStatus  = body.CallStatus  || body.status       || 'completed'
-    const duration    = parseInt(body.CallDuration || body.duration_seconds || body.Duration || '0')
+    const duration    = parseInt(body.CallDuration || body.duration_seconds || body.Duration || '0') || 0
     const callerPhone = body.From        || body.caller_phone || body.phone_call?.external_number || ''
     const agentPhone  = body.To          || body.agent_phone  || body.phone_call?.agent_number    || ''
     const convId      = body.conversation_id || ''
@@ -108,21 +114,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, skipped: 'no identifiers' })
     }
 
-    // Buscar tenant
+    // Buscar tenant por número del agente
     let tenantId = ''
     if (agentPhone) {
       const { data: t } = await admin.from('tenants').select('id').eq('agent_phone', agentPhone).maybeSingle()
       tenantId = t?.id || ''
     }
+    // Buscar por call_sid en calls ya registradas
     if (!tenantId && callSid) {
       const { data: c } = await admin.from('calls').select('tenant_id').eq('call_sid', callSid).maybeSingle()
       tenantId = c?.tenant_id || ''
     }
-    // Fallback tenant demo
-    if (!tenantId) tenantId = '7be3fb2c-6da4-4129-a49d-3af1c2c45b77'
+    // Si no se encuentra tenant, no procesar — no usar fallback hardcodeado
+    if (!tenantId) {
+      console.log('post-call: tenant not found for agentPhone:', agentPhone, 'callSid:', callSid)
+      return NextResponse.json({ ok: true, skipped: 'tenant not found' })
+    }
 
     // Obtener transcripción
-    const transcript = await getTranscript(callSid, tenantId)
+    const transcript = await getTranscript(callSid)
 
     // Analizar con Claude
     const analysis = await analyzeWithClaude(transcript)
@@ -132,7 +142,7 @@ export async function POST(req: Request) {
 
     // Upsert llamada
     const { data: existing } = await admin.from('calls')
-      .select('id,counted_for_billing').eq('call_sid', key).maybeSingle()
+      .select('id,counted_for_billing,customer_name').eq('call_sid', key).maybeSingle()
 
     if (existing) {
       await admin.from('calls').update({
@@ -141,34 +151,35 @@ export async function POST(req: Request) {
         transcript:       transcript || null,
         summary:          analysis.summary,
         intent:           analysis.intent,
-        customer_name:    analysis.customer_name || existing.customer_name,
+        customer_name:    analysis.customer_name || existing.customer_name || null,
         ended_at:         now,
         action_suggested: analysis.intent === 'reserva' ? 'Reserva gestionada' : analysis.intent,
+        source:           'twilio',
       }).eq('id', existing.id)
     } else {
       await admin.from('calls').insert({
-        tenant_id:          tenantId,
-        call_sid:           key,
-        conversation_id:    convId || null,
-        caller_phone:       callerPhone,
-        from_number:        callerPhone,
-        to_number:          agentPhone,
-        direction:          'inbound',
-        status:             'completada',
-        duration_seconds:   duration || null,
-        transcript:         transcript || null,
-        summary:            analysis.summary,
-        intent:             analysis.intent,
-        customer_name:      analysis.customer_name || null,
-        started_at:         now,
-        ended_at:           now,
-        source:             'twilio',
+        tenant_id:           tenantId,
+        call_sid:            key,
+        conversation_id:     convId || null,
+        caller_phone:        callerPhone,
+        from_number:         callerPhone,
+        to_number:           agentPhone,
+        direction:           'inbound',
+        status:              'completada',
+        duration_seconds:    duration || null,
+        transcript:          transcript || null,
+        summary:             analysis.summary,
+        intent:              analysis.intent,
+        customer_name:       analysis.customer_name || null,
+        started_at:          now,
+        ended_at:            now,
+        source:              'twilio',
         counted_for_billing: false,
-        action_suggested:   analysis.intent === 'reserva' ? 'Reserva gestionada' : analysis.intent,
+        action_suggested:    analysis.intent === 'reserva' ? 'Reserva gestionada' : analysis.intent,
       })
     }
 
-    // Billing — llamadas >= 15s
+    // Billing — solo llamadas >= 15s y no ya contadas
     const shouldBill = (duration >= 15) && !(existing?.counted_for_billing)
     if (shouldBill) {
       try {
@@ -177,13 +188,13 @@ export async function POST(req: Request) {
           p_call_sid:         key,
           p_duration_seconds: duration
         })
-      } catch(e) { console.error('billing error:', e) }
+      } catch(e: any) { console.error('billing error:', e.message) }
     }
 
-    console.log('post-call done | intent:', analysis.intent, '| billed:', shouldBill)
+    console.log('post-call done | intent:', analysis.intent, '| billed:', shouldBill, '| tenant:', tenantId)
     return NextResponse.json({ ok: true, intent: analysis.intent, summary: analysis.summary, billed: shouldBill })
   } catch(e: any) {
     console.error('post-call error:', e.message)
-    return NextResponse.json({ ok: true, error: e.message }) // siempre 200
+    return NextResponse.json({ ok: true, error: e.message }) // siempre 200 para que Twilio no reintente
   }
 }

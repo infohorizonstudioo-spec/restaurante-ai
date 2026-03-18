@@ -6,10 +6,10 @@ const admin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 const D = {
-  tenant_id:'7be3fb2c-6da4-4129-a49d-3af1c2c45b77',
-  business_name:'Demo Restaurante',
+  tenant_id:'',
+  business_name:'Recepcionista',
   agent_name:'Sofia',
-  zones:'Interior, Terraza',
+  zones:'',
   caller_phone:'',
   today: new Date().toISOString().slice(0,10),
 }

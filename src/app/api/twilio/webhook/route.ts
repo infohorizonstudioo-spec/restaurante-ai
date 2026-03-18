@@ -27,13 +27,12 @@ export async function POST(req: Request) {
 
     const now = new Date().toISOString()
 
-    // FASE 7: Bloqueo trial ANTES de registrar la llamada
+    // Bloqueo trial ANTES de registrar la llamada
     const isTrial = ['trial','free'].includes(tenant.plan)
     if (isTrial && callStatus === 'ringing') {
       const used = tenant.free_calls_used || 0
       const limit = tenant.free_calls_limit || 10
       if (used >= limit) {
-        // Bloquear — responder con TwiML que rechaza
         return new Response(
           '<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-ES">Lo sentimos, el periodo de prueba ha finalizado. Por favor contacte con el administrador para activar un plan.</Say><Hangup/></Response>',
           { headers: { 'Content-Type': 'text/xml' } }
@@ -41,31 +40,37 @@ export async function POST(req: Request) {
       }
     }
 
+    // Mapear status de Twilio a status interno en español
+    const statusMap: Record<string, string> = {
+      completed:    'completada',
+      failed:       'fallida',
+      'no-answer':  'perdida',
+      busy:         'perdida',
+      canceled:     'perdida',
+      ringing:      'activa',
+      'in-progress':'activa',
+    }
+    const statusInterno = statusMap[callStatus] || 'activa'
+
     // Upsert la llamada (deduplicada por call_sid)
     await admin.from('calls').upsert({
-      tenant_id:    tenant.id,
-      call_sid:     callSid,
-      caller_phone: callerPhone,
-      from_number:  callerPhone,
-      to_number:    toPhone,
-      status:       callStatus === 'completed' ? 'completed' : callStatus === 'failed' ? 'failed' : 'in-progress',
-      direction:    'inbound',
-      duration_seconds: duration > 0 ? duration : null,
-      duration:     duration > 0 ? duration : null,
-      started_at:   now,
-      ended_at:     callStatus === 'completed' ? now : null,
+      tenant_id:           tenant.id,
+      call_sid:            callSid,
+      caller_phone:        callerPhone,
+      from_number:         callerPhone,
+      to_number:           toPhone,
+      status:              statusInterno,
+      direction:           'inbound',
+      duration_seconds:    duration > 0 ? duration : null,
+      started_at:          now,
+      ended_at:            callStatus === 'completed' ? now : null,
       counted_for_billing: false,
+      source:              'twilio',
     }, { onConflict: 'call_sid', ignoreDuplicates: false })
 
-    // FASE 2-3: Procesar billing SOLO cuando la llamada termina
-    if (callStatus === 'completed' && duration > 0) {
-      const billing = await admin.rpc('process_billable_call', {
-        p_tenant_id: tenant.id,
-        p_call_sid: callSid,
-        p_duration_seconds: duration
-      })
-      console.log('billing result', callSid, JSON.stringify(billing.data))
-    }
+    // NOTA: El billing lo gestiona el post-call webhook (/api/voice/post-call)
+    // que llama Twilio al finalizar con transcripción completa.
+    // NO hacer billing aquí para evitar doble conteo.
 
     return NextResponse.json({ ok: true })
   } catch (e: any) {

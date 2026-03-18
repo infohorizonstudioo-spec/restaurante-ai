@@ -3,9 +3,24 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 
-const SL:Record<string,string> = {completed:'Completada','in-progress':'En curso',failed:'Fallida',pending:'Pendiente'}
-const SC:Record<string,string> = {completed:'#059669','in-progress':'#1d4ed8',failed:'#dc2626',pending:'#d97706'}
-const SB:Record<string,string> = {completed:'#f0fdf4','in-progress':'#eff6ff',failed:'#fef2f2',pending:'#fffbeb'}
+const SL:Record<string,string> = {
+  completada:'Completada', completed:'Completada',
+  activa:'En curso', 'in-progress':'En curso',
+  fallida:'Fallida', failed:'Fallida', 'no-answer':'Perdida', perdida:'Perdida',
+  pendiente:'Pendiente', pending:'Pendiente'
+}
+const SC:Record<string,string> = {
+  completada:'#059669', completed:'#059669',
+  activa:'#1d4ed8', 'in-progress':'#1d4ed8',
+  fallida:'#dc2626', failed:'#dc2626', 'no-answer':'#dc2626', perdida:'#dc2626',
+  pendiente:'#d97706', pending:'#d97706'
+}
+const SB:Record<string,string> = {
+  completada:'#f0fdf4', completed:'#f0fdf4',
+  activa:'#eff6ff', 'in-progress':'#eff6ff',
+  fallida:'#fef2f2', failed:'#fef2f2', 'no-answer':'#fef2f2', perdida:'#fef2f2',
+  pendiente:'#fffbeb', pending:'#fffbeb'
+}
 
 function groupByDate(calls:any[]){
   const m=new Map<string,any[]>()
@@ -64,9 +79,9 @@ export default function LlamadasPage(){
           <p style={{fontSize:12,color:'#94a3b8',marginTop:2}}>{calls.length} total</p>
         </div>
         <div style={{display:'flex',gap:8}}>
-          {(['completed','in-progress','failed'] as const).map(s=>(
+          {(['completada','activa','fallida'] as const).map(s=>(
             <span key={s} style={{fontSize:11,padding:'3px 9px',borderRadius:10,background:SB[s],color:SC[s],fontWeight:600}}>
-              {calls.filter(c=>c.status===s).length} {SL[s]}
+              {calls.filter(c=>c.status===s||c.status===(s==='completada'?'completed':s==='activa'?'in-progress':'failed')).length} {SL[s]}
             </span>
           ))}
         </div>
