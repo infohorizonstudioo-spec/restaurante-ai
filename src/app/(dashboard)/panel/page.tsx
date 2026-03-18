@@ -28,6 +28,7 @@ export default function PanelPage(){
   const [calls,setCalls]=useState<any[]>([])
   const [reservas,setReservas]=useState<any[]>([])
   const [clientes,setClientes]=useState<any[]>([])
+  const [activeCalls,setActiveCalls]=useState<any[]>([])
 
   const load=useCallback(async()=>{
     const {data:{user}}=await supabase.auth.getUser()
@@ -41,13 +42,16 @@ export default function PanelPage(){
     }
     const tid=p.tenant_id
     const today=new Date().toISOString().split('T')[0]
-    const [{data:t},{data:c},{data:r},{data:cl}]=await Promise.all([
+    const [{data:t},{data:c},{data:r},{data:cl},{data:ac}]=await Promise.all([
       supabase.from('tenants').select('*').eq('id',tid).single(),
       supabase.from('calls').select('*').eq('tenant_id',tid).order('started_at',{ascending:false}).limit(10),
       supabase.from('reservations').select('*').eq('tenant_id',tid).eq('date',today).order('time'),
       supabase.from('customers').select('id').eq('tenant_id',tid),
+      // Llamadas activas simultáneas — para el widget de llamadas en curso
+      supabase.from('calls').select('id,call_sid,caller_phone,session_state,started_at')
+        .eq('tenant_id',tid).eq('status','activa').order('started_at',{ascending:false}).limit(10),
     ])
-    setTenant(t);setCalls(c||[]);setReservas(r||[]);setClientes(cl||[])
+    setTenant(t);setCalls(c||[]);setReservas(r||[]);setClientes(cl||[]);setActiveCalls(ac||[])
     setLoading(false)
   },[router])
 
@@ -102,6 +106,55 @@ export default function PanelPage(){
       </div>
 
       <div style={{maxWidth:1100,margin:'0 auto',padding:'24px 28px'}}>
+        {/* Widget llamadas activas simultáneas — solo visible cuando hay >=1 activa */}
+        {activeCalls.length > 0 && (
+          <div style={{background:'linear-gradient(135deg,#1e3a5f,#1e40af)',border:'1px solid #3b82f6',borderRadius:14,padding:'16px 20px',marginBottom:20}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:'#4ade80',animation:'pulse 1.2s infinite'}}/>
+                <span style={{fontSize:14,fontWeight:700,color:'white'}}>{activeCalls.length} llamada{activeCalls.length!==1?'s':''} en curso ahora mismo</span>
+              </div>
+              <span style={{fontSize:11,color:'#93c5fd'}}>Tiempo real</span>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {activeCalls.map((call,i)=>{
+                const STATE_LABEL:Record<string,string>={
+                  iniciando:'Iniciando…',escuchando:'Escuchando',procesando:'Procesando',
+                  respondiendo:'Respondiendo',esperando_datos:'Esperando datos',
+                  finalizando:'Finalizando…',completada:'Completada',error:'Error'
+                }
+                const STATE_COLOR:Record<string,string>={
+                  iniciando:'#fbbf24',escuchando:'#4ade80',procesando:'#60a5fa',
+                  respondiendo:'#a78bfa',esperando_datos:'#f97316',
+                  finalizando:'#94a3b8',completada:'#4ade80',error:'#f87171'
+                }
+                const state = call.session_state || 'escuchando'
+                const elapsed = call.started_at
+                  ? Math.floor((Date.now()-new Date(call.started_at).getTime())/1000)
+                  : 0
+                const dur = elapsed >= 60 ? Math.floor(elapsed/60)+'m '+Math.floor(elapsed%60)+'s' : elapsed+'s'
+                return (
+                  <div key={call.id} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(255,255,255,0.08)',borderRadius:10,padding:'10px 14px'}}>
+                    <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(59,130,246,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#93c5fd"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <p style={{fontSize:13,fontWeight:600,color:'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {call.caller_phone || 'Número oculto'}
+                      </p>
+                      <div style={{display:'flex',alignItems:'center',gap:6,marginTop:2}}>
+                        <div style={{width:6,height:6,borderRadius:'50%',background:STATE_COLOR[state]||'#4ade80',flexShrink:0}}/>
+                        <span style={{fontSize:11,color:STATE_COLOR[state]||'#4ade80',fontWeight:500}}>{STATE_LABEL[state]||state}</span>
+                      </div>
+                    </div>
+                    <span style={{fontSize:11,color:'#93c5fd',flexShrink:0,fontVariantNumeric:'tabular-nums'}}>{dur}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {isTrial&&callsLeft<=5&&(
           <div style={{background:'linear-gradient(135deg,#fffbeb,#fef3c7)',border:'1px solid #fbbf24',borderRadius:12,padding:'14px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <div style={{display:'flex',alignItems:'center',gap:10}}>
