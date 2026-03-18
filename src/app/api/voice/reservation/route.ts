@@ -8,13 +8,12 @@ const admin = createClient(
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RESERVAS: asignación atómica de mesas via RPC.
+// create_reservation_atomic hace TODO en una transacción:
+//   1. SELECT FOR UPDATE SKIP LOCKED → bloquea la mesa
+//   2. INSERT reservations → mientras el lock está activo
 //
-// assign_table_atomic usa SELECT FOR UPDATE SKIP LOCKED:
-// - Si 5 llamadas intentan reservar a las 21:00 simultáneamente,
-//   cada una obtiene una mesa diferente sin colisión.
-// - SKIP LOCKED permite que llamadas concurrentes no se bloqueen
-//   entre sí — cada una salta a la siguiente mesa disponible.
+// Esto garantiza que 5 llamadas simultáneas a las 21:00 obtengan
+// 5 mesas distintas. El lock se libera al hacer commit, no antes.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
@@ -31,7 +30,7 @@ export async function POST(req: Request) {
     }
     const ps = parseInt(String(party_size))
 
-    // Upsert cliente — idempotente por phone
+    // Upsert cliente — independiente de la transacción de mesa
     let customerId: string | null = null
     if (customer_phone) {
       const { data: existing } = await admin.from('customers')
@@ -40,7 +39,7 @@ export async function POST(req: Request) {
       if (existing) {
         await admin.from('customers').update({
           name: customer_name,
-          total_reservations: ((existing as any).total_reservations||0) + 1,
+          total_reservations: ((existing as any).total_reservations || 0) + 1,
           last_visit: reservation_date,
         }).eq('id', (existing as any).id)
         customerId = (existing as any).id
@@ -53,60 +52,39 @@ export async function POST(req: Request) {
       }
     }
 
-    // Asignación atómica de mesa via RPC (SELECT FOR UPDATE SKIP LOCKED)
-    // Garantiza que llamadas concurrentes no asignen la misma mesa
-    const { data: assignment, error: aErr } = await admin.rpc('assign_table_atomic', {
-      p_tenant_id:  tenant_id,
-      p_date:       reservation_date,
-      p_time:       reservation_time,
-      p_party_size: ps,
-      p_zone_pref:  zone_preference || null,
+    // Una sola RPC atómica: asigna mesa + inserta reserva en la misma TX
+    const { data: result, error } = await admin.rpc('create_reservation_atomic', {
+      p_tenant_id:      tenant_id,
+      p_date:           reservation_date,
+      p_time:           reservation_time,
+      p_party_size:     ps,
+      p_customer_name:  customer_name,
+      p_customer_phone: customer_phone || '',
+      p_customer_id:    customerId || null,
+      p_zone_pref:      zone_preference || null,
+      p_notes:          notes || null,
     })
-
-    if (aErr) console.error('assign_table_atomic error:', aErr.message)
-
-    const tableId   = (assignment as any)?.table_id   || null
-    const tableNum  = (assignment as any)?.table_number || null
-    const zoneId    = (assignment as any)?.zone_id     || null
-    const zoneName  = (assignment as any)?.zone_name   || zone_preference || null
-
-    const notaFull = [notes, zoneName ? 'Zona: '+zoneName : ''].filter(Boolean).join(' | ')
-
-    const { data: reservation, error } = await admin.from('reservations').insert({
-      tenant_id,
-      customer_id:   customerId,
-      customer_name,
-      customer_phone,
-      date:          reservation_date,
-      time:          reservation_time,
-      people:        ps,
-      table_id:      tableId,
-      zone_id:       zoneId,
-      zone:          zoneId || null,
-      notes:         notaFull || null,
-      status:        'confirmada',
-      source:        'voice_agent',
-    }).select().single()
 
     if (error) throw error
 
-    const tableInfo = tableNum
-      ? 'Mesa '+tableNum+(zoneName?' en '+zoneName:'')
-      : (zoneName ? 'zona '+zoneName : '')
+    const r = result as any
+    const tableInfo = r.table_number
+      ? 'Mesa ' + r.table_number + (r.zone_name ? ' en ' + r.zone_name : '')
+      : (zone_preference ? 'zona ' + zone_preference : '')
 
     return NextResponse.json({
       success: true,
-      reservation_id: (reservation as any).id,
-      message: 'Reserva confirmada para '+customer_name+' el '+reservation_date
-        +' a las '+reservation_time+', '+ps+' persona'+(ps!==1?'s':'')
-        +(tableInfo?'. '+tableInfo:'')+'. Hasta pronto!',
+      reservation_id: r.reservation_id,
+      message: 'Reserva confirmada para ' + customer_name + ' el ' + reservation_date
+        + ' a las ' + reservation_time + ', ' + ps + ' persona' + (ps !== 1 ? 's' : '')
+        + (tableInfo ? '. ' + tableInfo : '') + '. ¡Hasta pronto!',
       details: {
         customer_name,
         date:         reservation_date,
         time:         reservation_time,
         party_size:   ps,
-        table_number: tableNum,
-        zone_name:    zoneName,
+        table_number: r.table_number || null,
+        zone_name:    r.zone_name || zone_preference || null,
       }
     })
   } catch (e: any) {
