@@ -115,9 +115,9 @@ export default function EstadisticasPage(){
         {/* KPIs */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
           {[
-            {label:'Llamadas este mes',value:callsMonth,sub:'Completadas: '+callsMonthCompleted,color:'#1d4ed8'},
-            {label:'Reservas este mes', value:resMonth,  sub:'Via agente: '+resVoiceMonth,   color:'#059669'},
-            {label:'Tasa conversión',   value:convRate+'%',sub:'Reservas voz / llamadas completadas', color:convRate>=30?'#059669':convRate>=15?'#d97706':'#dc2626'},
+            {label:'Llamadas este mes',value:d.callsMonth,sub:'Completadas: '+d.callsMonthCompleted,color:'#1d4ed8'},
+            {label:'Reservas este mes', value:d.resMonth,  sub:'Via agente: '+d.resVoiceMonth,   color:'#059669'},
+            {label:'Tasa conversión',   value:d.convRate+'%',sub:'Reservas voz / llamadas completadas', color:d.convRate>=30?'#059669':d.convRate>=15?'#d97706':'#dc2626'},
             {label:'Clientes',          value:d.custs,    sub:'Personas/reserva: '+d.avgPeople, color:'#7c3aed'},
           ].map(k=>(
             <div key={k.label} style={{background:'white',border:'1px solid #e2e8f0',borderRadius:14,padding:'18px 20px'}}>
