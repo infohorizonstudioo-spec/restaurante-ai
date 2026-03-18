@@ -19,9 +19,6 @@ const admin = createClient(
 // 5. Resúmenes útiles para el negocio, no genéricos
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── Análisis con Claude ─────────────────────────────────────────────────────
-// Genera un resultado estructurado útil para el negocio.
-// Si no hay transcript, genera un resultado "sin información" pero NUNCA falla.
 interface CallAnalysis {
   intent:           string
   customer_name:    string | null
@@ -31,55 +28,111 @@ interface CallAnalysis {
   details:          Record<string, any>
 }
 
+// ── Analizador local por regex (fallback sin API externa) ──────────────────// Extrae intent, nombre y resumen directamente del texto de la transcripción.
+// Funciona sin ninguna API — garantiza que nunca perdemos análisis por fallos externos.
+function analyzeLocally(transcript: string, callerPhone: string): CallAnalysis {
+  const t = transcript.toLowerCase()
+  const lines = transcript.split('\n').map(l => l.trim()).filter(Boolean)
+
+  // ── Intent detection ───────────────────────────────────────────────────
+  let intent = 'consulta'
+  if (/reserv|mesa|noche|personas?|cena|comida|almuerzo|comer/i.test(t)) intent = 'reserva'
+  else if (/pedir|pedido|llevar|domicilio|recoger|pizza|pollo|plato|ración/i.test(t)) intent = 'pedido'
+  else if (/cancelar|cancela|anular|anulo|borro|borrar/i.test(t)) intent = 'cancelacion'
+  else if (/queja|reclamación|problema|incidente|mal|horrible/i.test(t)) intent = 'queja'
+  else if (/cita|asesor|consulta fiscal|médico|dentista|peluquería/i.test(t)) intent = 'reserva' // citas = reserva
+
+  // ── Extracción de nombre ────────────────────────────────────────────────
+  // Patrones comunes en conversaciones telefónicas
+  let customer_name: string | null = null
+  const namePatterns = [
+    /(?:a nombre de|soy|me llamo|mi nombre es|nombre:?)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)?)/i,
+    /(?:para|reserva para)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)(?:\s|,|\.)/i,
+    /Cliente:\s+(?:hola[,\s]+)?(?:soy\s+)?([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)?)/i,
+  ]
+  for (const pat of namePatterns) {
+    const m = transcript.match(pat)
+    if (m?.[1] && m[1].length > 2 && !['hola','bien','vale','buenas','claro','sí'].includes(m[1].toLowerCase())) {
+      customer_name = m[1].trim()
+      break
+    }
+  }
+
+  // ── Extracción de detalles ─────────────────────────────────────────────
+  const timeMatch   = transcript.match(/(?:a las?|para las?)\s+(\d{1,2}(?:[:h]\d{0,2})?(?:\s*(?:de la (?:tarde|noche|mañana)|h(?:oras?)?))?)/)
+  const peopleMatch = transcript.match(/(\d+)\s*(?:personas?|comensales?|adultos?)/)
+  const dateMatch   = transcript.match(/(?:el\s+)?(?:mañana|hoy|pasado mañana|lunes|martes|miércoles|jueves|viernes|sábado|domingo|próximo\s+\w+|\d{1,2}(?:\s+de\s+\w+)?)/)
+  const itemMatch   = transcript.match(/(\d+)\s+([a-záéíóúñ]+(?:\s+[a-záéíóúñ]+)?)(?:\s+(?:a domicilio|para llevar|para recoger))?/)
+
+  // ── Resumen estructurado ───────────────────────────────────────────────
+  let summaryParts: string[] = []
+  const phone = callerPhone || 'cliente'
+
+  if (intent === 'reserva') {
+    const who  = customer_name ? `a nombre de ${customer_name}` : `de ${phone}`
+    const when = dateMatch?.[0] ? dateMatch[0] : ''
+    const time = timeMatch?.[1] ? `a las ${timeMatch[1]}` : ''
+    const ppl  = peopleMatch?.[1] ? `para ${peopleMatch[1]} personas` : ''
+    summaryParts = [`Reserva ${who}`, [when, time, ppl].filter(Boolean).join(' ')].filter(Boolean)
+  } else if (intent === 'pedido') {
+    const who  = customer_name ? ` — ${customer_name}` : ''
+    const item = itemMatch ? `${itemMatch[1]} ${itemMatch[2]}` : 'pedido'
+    const time = timeMatch?.[1] ? ` para las ${timeMatch[1]}` : ''
+    summaryParts = [`Pedido${who}: ${item}${time}`]
+  } else if (intent === 'cancelacion') {
+    const who = customer_name ? ` de ${customer_name}` : ''
+    summaryParts = [`Cancelación de reserva${who}`]
+  } else {
+    // Consulta — extraer la pregunta principal del cliente
+    const clientLines = lines.filter(l => /^cliente:/i.test(l)).map(l => l.replace(/^cliente:\s*/i,''))
+    const mainQuestion = clientLines.find(l => l.length > 15 && l.length < 120)
+    summaryParts = mainQuestion
+      ? [`Consulta de ${phone}: "${mainQuestion.trim()}"`.slice(0, 120)]
+      : [`Llamada de ${phone} — consulta atendida`]
+  }
+
+  const summary = summaryParts.filter(Boolean).join('. ').trim() || `Llamada de ${phone}`
+
+  // ── Acción requerida ───────────────────────────────────────────────────
+  let action_required = 'Sin acción necesaria'
+  if (intent === 'reserva') {
+    const details = [customer_name, timeMatch?.[1], peopleMatch ? peopleMatch[1]+' personas' : ''].filter(Boolean).join(', ')
+    action_required = `Confirmar reserva: ${details || 'ver detalles'}`
+  } else if (intent === 'pedido') {
+    action_required = `Preparar pedido: ${itemMatch ? itemMatch[1]+' '+itemMatch[2] : 'ver detalles'}`
+  } else if (intent === 'cancelacion') {
+    action_required = `Procesar cancelación${customer_name ? ' de ' + customer_name : ''}`
+  }
+
+  return { intent, customer_name, summary, action_required, outcome: 'completado', details: {} }
+}
+
+// ── Análisis con Claude (cuando API key está disponible) ────────────────────
 async function analyzeWithClaude(
   transcript: string,
   businessName: string,
   callerPhone: string,
   templateType: string
 ): Promise<CallAnalysis> {
-  const fallback = (reason: string): CallAnalysis => ({
-    intent:          'consulta',
-    customer_name:   null,
-    summary:         reason,
-    action_required: 'Revisar llamada manualmente',
-    outcome:         'sin_informacion',
-    details:         {}
-  })
+  // Primero intentar análisis local (rápido, sin API)
+  const local = analyzeLocally(transcript, callerPhone)
 
-  if (!process.env.ANTHROPIC_API_KEY) return fallback('Sin clave API para análisis')
-
-  // Transcript muy corto → no hay conversación útil
-  if (!transcript || transcript.trim().length < 30) {
-    const sec = transcript?.length || 0
-    return {
-      intent:          'consulta',
-      customer_name:   null,
-      summary:         `Llamada de ${callerPhone || 'número oculto'} — duración muy breve, sin conversación grabada`,
-      action_required: 'Sin acción necesaria',
-      outcome:         'sin_informacion',
-      details:         {}
-    }
-  }
+  // Si no hay API key, usar resultado local directamente
+  if (!process.env.ANTHROPIC_API_KEY) return local
+  if (!transcript || transcript.trim().length < 30) return local
 
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const typeLabel = templateType === 'hosteleria' ? 'restaurante/bar/hostelería' : 'negocio de servicios/citas'
 
     const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5', max_tokens: 500,
-      system: `Eres un analizador de llamadas para un ${typeLabel} llamado "${businessName}". Extrae información útil para el negocio. Responde SOLO JSON válido sin markdown ni texto adicional.`,
-      messages: [{ role: 'user', content: `Analiza esta transcripción telefónica. Devuelve SOLO este JSON:
-{
-  "intent": "reserva|pedido|cancelacion|consulta|queja|otro",
-  "customer_name": "nombre real del cliente o null",
-  "summary": "1-2 frases en español describiendo qué quería el cliente y qué pasó. Incluye detalles concretos (fecha, hora, número personas, nombre, plato, etc.)",
-  "action_required": "qué debe hacer el negocio ahora (ej: 'Confirmar reserva para Carlos el sábado 21h 4p', 'Preparar pedido 2 pollos', 'Llamar de vuelta al cliente', 'Sin acción necesaria')",
-  "outcome": "completado|pendiente|fallido|sin_informacion",
-  "details": {}
-}
+      model: 'claude-haiku-4-5', max_tokens: 400,
+      system: `Eres un analizador de llamadas para un ${typeLabel} llamado "${businessName}". Responde SOLO JSON válido.`,
+      messages: [{ role: 'user', content: `Analiza esta transcripción. Devuelve SOLO este JSON (sin markdown):
+{"intent":"reserva|pedido|cancelacion|consulta|queja|otro","customer_name":"nombre real o null","summary":"1-2 frases con detalles concretos","action_required":"qué hacer ahora","outcome":"completado|pendiente|fallido","details":{}}
 
 Transcripción:
-${transcript.slice(0, 3000)}`
+${transcript.slice(0, 2500)}`
       }]
     })
 
@@ -87,18 +140,18 @@ ${transcript.slice(0, 3000)}`
     const clean = raw.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim()
     const parsed = JSON.parse(clean)
 
-    // Validar y sanitizar campos
     return {
-      intent:          ['reserva','pedido','cancelacion','consulta','queja','otro'].includes(parsed.intent) ? parsed.intent : 'consulta',
-      customer_name:   typeof parsed.customer_name === 'string' && parsed.customer_name.length > 1 ? parsed.customer_name : null,
-      summary:         typeof parsed.summary === 'string' && parsed.summary.length > 5 ? parsed.summary : `Llamada de ${callerPhone}`,
-      action_required: typeof parsed.action_required === 'string' ? parsed.action_required : 'Revisar llamada',
+      intent:          ['reserva','pedido','cancelacion','consulta','queja','otro'].includes(parsed.intent) ? parsed.intent : local.intent,
+      customer_name:   typeof parsed.customer_name === 'string' && parsed.customer_name.length > 1 && parsed.customer_name !== 'null' ? parsed.customer_name : local.customer_name,
+      summary:         typeof parsed.summary === 'string' && parsed.summary.length > 10 ? parsed.summary : local.summary,
+      action_required: typeof parsed.action_required === 'string' && parsed.action_required.length > 5 ? parsed.action_required : local.action_required,
       outcome:         ['completado','pendiente','fallido','sin_informacion'].includes(parsed.outcome) ? parsed.outcome : 'completado',
       details:         typeof parsed.details === 'object' ? parsed.details : {}
     }
   } catch(e: any) {
-    console.error('claude analysis error:', e.message)
-    return fallback(`Análisis fallido: ${e.message?.slice(0,50)}`)
+    // Claude falló (401, timeout, parse error) → usar análisis local
+    console.error('claude analysis fallback to local:', e.message?.slice(0,60))
+    return local
   }
 }
 
