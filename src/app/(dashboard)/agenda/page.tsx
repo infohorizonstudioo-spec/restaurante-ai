@@ -60,23 +60,23 @@ export default function AgendaPage(){
   }
 
   return (
-    <div style={{background:'#f8fafc',minHeight:'100vh',display:'flex',flexDirection:'column'}}>
-      <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+    <div style={{background:'#0C1018',minHeight:'100vh',display:'flex',flexDirection:'column'}}>
+      <div style={{background:'#131920',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}}>
         <div>
-          <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>Agenda semanal</h1>
-          <p style={{fontSize:12,color:'#94a3b8',marginTop:1}}>{res.length} reservas esta semana</p>
+          <h1 style={{fontSize:18,fontWeight:700,color:'#E8EEF6'}}>Agenda semanal</h1>
+          <p style={{fontSize:12,color:'#49566A',marginTop:1}}>{res.length} reservas esta semana</p>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()-7);return n})} style={{padding:'6px 12px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13}}>‹ Anterior</button>
-          <button onClick={()=>setBase(new Date())} style={{padding:'6px 12px',background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:8,cursor:'pointer',fontSize:13,color:'#1d4ed8',fontWeight:600}}>Hoy</button>
-          <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n})} style={{padding:'6px 12px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13}}>Siguiente ›</button>
+          <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()-7);return n})} style={{padding:'6px 12px',background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:8,cursor:'pointer',fontSize:13}}>‹ Anterior</button>
+          <button onClick={()=>setBase(new Date())} style={{padding:'6px 12px',background:'rgba(96,165,250,0.10)',border:'1px solid #bfdbfe',borderRadius:8,cursor:'pointer',fontSize:13,color:'#F0A84E',fontWeight:600}}>Hoy</button>
+          <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n})} style={{padding:'6px 12px',background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:8,cursor:'pointer',fontSize:13}}>Siguiente ›</button>
         </div>
       </div>
 
       <div style={{flex:1,overflow:'auto',padding:'0 0 20px'}}>
         <div style={{minWidth:800}}>
           {/* Header días */}
-          <div style={{display:'grid',gridTemplateColumns:'60px repeat(7,1fr)',background:'white',borderBottom:'2px solid #e2e8f0',position:'sticky',top:0,zIndex:10}}>
+          <div style={{display:'grid',gridTemplateColumns:'60px repeat(7,1fr)',background:'#131920',borderBottom:'2px solid rgba(255,255,255,0.09)',position:'sticky',top:0,zIndex:20}}>
             <div/>
             {week.map((d,i)=>{
               const iso = d.toISOString().slice(0,10)
@@ -94,8 +94,8 @@ export default function AgendaPage(){
 
           {/* Grid horas */}
           {HOURS.map(hour=>(
-            <div key={hour} style={{display:'grid',gridTemplateColumns:'60px repeat(7,1fr)',borderBottom:'1px solid #f1f5f9'}}>
-              <div style={{padding:'8px 6px',textAlign:'right',fontSize:11,color:'#94a3b8',fontWeight:600,paddingTop:10}}>{hour}</div>
+            <div key={hour} style={{display:'grid',gridTemplateColumns:'60px repeat(7,1fr)',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+              <div style={{padding:'8px 6px',textAlign:'right',fontSize:11,color:'#49566A',fontWeight:600,paddingTop:10}}>{hour}</div>
               {week.map((d,di)=>{
                 const iso = d.toISOString().slice(0,10)
                 const cellRes = getRes(iso, hour)
@@ -110,13 +110,13 @@ export default function AgendaPage(){
                           onMouseEnter={()=>setHover(r)} onMouseLeave={()=>setHover(null)}
                           style={{background:color+'18',border:'1px solid '+color+'44',borderLeft:'3px solid '+color,borderRadius:5,padding:'3px 5px',marginBottom:2,cursor:'pointer',position:'relative'}}>
                           <p style={{fontSize:11,fontWeight:700,color,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.customer_name||'—'}</p>
-                          <p style={{fontSize:10,color:'#64748b'}}>{(r.time||r.reservation_time||'').slice(0,5)} · {ppl}p</p>
+                          <p style={{fontSize:10,color:'#8895A7'}}>{(r.time||r.reservation_time||'').slice(0,5)} · {ppl}p</p>
                           {hoverRes?.id===r.id&&(
-                            <div style={{position:'absolute',left:'100%',top:0,zIndex:50,background:'white',border:'1px solid #e2e8f0',borderRadius:10,padding:'10px 14px',width:200,boxShadow:'0 4px 16px rgba(0,0,0,0.12)',pointerEvents:'none'}}>
-                              <p style={{fontSize:13,fontWeight:700,color:'#0f172a',marginBottom:4}}>{r.customer_name}</p>
-                              <p style={{fontSize:12,color:'#64748b'}}>{(r.date||r.reservation_date)?.slice(0,10)} {(r.time||r.reservation_time||'').slice(0,5)}</p>
-                              <p style={{fontSize:12,color:'#64748b'}}>{ppl} persona{ppl!==1?'s':''}{r.table_name?' · '+r.table_name:''}</p>
-                              {r.notes&&<p style={{fontSize:11,color:'#94a3b8',marginTop:4,fontStyle:'italic'}}>{r.notes}</p>}
+                            <div style={{position:'absolute',left:'100%',top:0,zIndex:50,background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:10,padding:'10px 14px',width:200,boxShadow:'0 4px 16px rgba(0,0,0,0.12)',pointerEvents:'none'}}>
+                              <p style={{fontSize:13,fontWeight:700,color:'#E8EEF6',marginBottom:4}}>{r.customer_name}</p>
+                              <p style={{fontSize:12,color:'#8895A7'}}>{(r.date||r.reservation_date)?.slice(0,10)} {(r.time||r.reservation_time||'').slice(0,5)}</p>
+                              <p style={{fontSize:12,color:'#8895A7'}}>{ppl} persona{ppl!==1?'s':''}{r.table_name?' · '+r.table_name:''}</p>
+                              {r.notes&&<p style={{fontSize:11,color:'#49566A',marginTop:4,fontStyle:'italic'}}>{r.notes}</p>}
                               <span style={{fontSize:10,fontWeight:700,color,background:color+'18',padding:'2px 7px',borderRadius:6,display:'inline-block',marginTop:4}}>{r.status}</span>
                             </div>
                           )}

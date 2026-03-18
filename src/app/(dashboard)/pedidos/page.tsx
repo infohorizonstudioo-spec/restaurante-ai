@@ -8,11 +8,11 @@ import Link from 'next/link'
 const TIPOS = ['todos','local','delivery','takeaway'] as const
 const ESTADOS = ['nuevo','preparacion','listo','reparto','entregado'] as const
 const ESTADO_COL:Record<string,{bg:string;color:string;label:string}> = {
-  nuevo:       {bg:'#eff6ff',color:'#1d4ed8',label:'Nuevo'},
-  preparacion: {bg:'#fffbeb',color:'#d97706',label:'Preparando'},
-  listo:       {bg:'#f0fdf4',color:'#059669',label:'Listo'},
-  reparto:     {bg:'#f5f3ff',color:'#7c3aed',label:'En reparto'},
-  entregado:   {bg:'#f1f5f9',color:'#475569',label:'Entregado'},
+  nuevo:       {bg:'#eff6ff',color:'#F0A84E',label:'Nuevo'},
+  preparacion: {bg:'#fffbeb',color:'#FBB53F',label:'Preparando'},
+  listo:       {bg:'#f0fdf4',color:'#34D399',label:'Listo'},
+  reparto:     {bg:'#f5f3ff',color:'#A78BFA',label:'En reparto'},
+  entregado:   {bg:'#f1f5f9',color:'#8895A7',label:'Entregado'},
 }
 
 export default function PedidosPage(){
@@ -55,15 +55,15 @@ export default function PedidosPage(){
   // GUARDIA: pedidos solo disponible para hostelería
   if(template && !template.hasOrders){
     return(
-      <div style={{background:'#f8fafc',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+      <div style={{background:'#0C1018',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
         <div style={{textAlign:'center',maxWidth:400}}>
           <div style={{fontSize:48,marginBottom:16}}>🚫</div>
-          <h2 style={{fontSize:20,fontWeight:700,color:'#0f172a',marginBottom:8}}>Módulo no disponible</h2>
-          <p style={{fontSize:14,color:'#64748b',lineHeight:1.6,marginBottom:24}}>
+          <h2 style={{fontSize:20,fontWeight:700,color:'#E8EEF6',marginBottom:8}}>Módulo no disponible</h2>
+          <p style={{fontSize:14,color:'#8895A7',lineHeight:1.6,marginBottom:24}}>
             El módulo de pedidos no aplica para <strong>{template.label}</strong>.<br/>
             Este módulo está diseñado para negocios de hostelería.
           </p>
-          <Link href="/panel" style={{padding:'10px 24px',fontSize:14,fontWeight:600,color:'white',background:'linear-gradient(135deg,#1e40af,#3b82f6)',borderRadius:9,textDecoration:'none'}}>
+          <Link href="/panel" style={{padding:'10px 24px',fontSize:14,fontWeight:600,color:'white',background:'linear-gradient(135deg,#F0A84E,#E8923A)',borderRadius:9,textDecoration:'none'}}>
             Volver al panel
           </Link>
         </div>
@@ -74,13 +74,13 @@ export default function PedidosPage(){
   const isPro = plan==='pro'||plan==='business'||plan==='enterprise'
 
   if(!isPro) return (
-    <div style={{background:'#f8fafc',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+    <div style={{background:'#0C1018',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
       <div style={{maxWidth:440,textAlign:'center'}}>
         <div style={{width:64,height:64,borderRadius:16,background:'linear-gradient(135deg,#7c3aed,#a78bfa)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',boxShadow:'0 8px 24px rgba(124,58,237,0.25)'}}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
         </div>
-        <h2 style={{fontSize:22,fontWeight:700,color:'#0f172a',marginBottom:10}}>Gestión de pedidos</h2>
-        <p style={{fontSize:14,color:'#64748b',lineHeight:1.6,marginBottom:24}}>Gestiona pedidos locales, para llevar y delivery desde tu panel. Disponible en el plan Pro y Business.</p>
+        <h2 style={{fontSize:22,fontWeight:700,color:'#E8EEF6',marginBottom:10}}>Gestión de pedidos</h2>
+        <p style={{fontSize:14,color:'#8895A7',lineHeight:1.6,marginBottom:24}}>Gestiona pedidos locales, para llevar y delivery desde tu panel. Disponible en el plan Pro y Business.</p>
         <Link href="/precios" style={{display:'inline-block',padding:'12px 28px',fontSize:14,fontWeight:600,color:'white',background:'linear-gradient(135deg,#7c3aed,#a78bfa)',borderRadius:10,textDecoration:'none',boxShadow:'0 4px 16px rgba(124,58,237,0.3)'}}>
           Ver planes →
         </Link>
@@ -112,19 +112,19 @@ export default function PedidosPage(){
   }
 
   return (
-    <div style={{background:'#f8fafc',minHeight:'100vh'}}>
-      <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+    <div style={{background:'#0C1018',minHeight:'100vh'}}>
+      <div style={{background:'#131920',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}}>
         <div>
-          <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>Pedidos</h1>
-          <p style={{fontSize:12,color:'#94a3b8',marginTop:1}}>{activos.length} activos · {orders.length} total</p>
+          <h1 style={{fontSize:18,fontWeight:700,color:'#E8EEF6'}}>Pedidos</h1>
+          <p style={{fontSize:12,color:'#49566A',marginTop:1}}>{activos.length} activos · {orders.length} total</p>
         </div>
-        <button onClick={nuevoOrder} style={{padding:'8px 18px',fontSize:13,fontWeight:600,color:'white',background:'linear-gradient(135deg,#1e40af,#3b82f6)',border:'none',borderRadius:9,cursor:'pointer'}}>
+        <button onClick={nuevoOrder} style={{padding:'8px 18px',fontSize:13,fontWeight:600,color:'white',background:'linear-gradient(135deg,#F0A84E,#E8923A)',border:'none',borderRadius:9,cursor:'pointer'}}>
           + Nuevo pedido
         </button>
       </div>
 
       {/* Filtros tipo */}
-      <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'0 24px',display:'flex',gap:0}}>
+      <div style={{background:'#131920',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'0 24px',display:'flex',gap:0}}>
         {TIPOS.map(t=>(
           <button key={t} onClick={()=>setTipo(t)} style={{padding:'10px 16px',fontSize:13,background:'none',border:'none',cursor:'pointer',borderBottom:tipo===t?'2px solid #1d4ed8':'2px solid transparent',color:tipo===t?'#1d4ed8':'#64748b',fontWeight:tipo===t?600:400,fontFamily:'inherit',textTransform:'capitalize'}}>
             {t==='todos'?'Todos ('+orders.length+')':t+' ('+orders.filter(o=>o.type===t).length+')'}
@@ -150,16 +150,16 @@ export default function PedidosPage(){
         )}
 
         {filtered.length===0 ? (
-          <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:14,padding:'60px 24px',textAlign:'center'}}>
+          <div style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'60px 24px',textAlign:'center'}}>
             <div style={{fontSize:40,marginBottom:10}}>🛍️</div>
-            <p style={{fontSize:15,fontWeight:600,color:'#374151',marginBottom:4}}>Sin pedidos</p>
-            <p style={{fontSize:13,color:'#94a3b8'}}>Los pedidos aparecerán aquí en tiempo real.</p>
+            <p style={{fontSize:15,fontWeight:600,color:'#C4CDD8',marginBottom:4}}>Sin pedidos</p>
+            <p style={{fontSize:13,color:'#49566A'}}>Los pedidos aparecerán aquí en tiempo real.</p>
           </div>
         ) : filtered.map((o,i)=>{
           const ss = ESTADO_COL[o.status]||ESTADO_COL.nuevo
           const items = Array.isArray(o.items)?o.items:[]
           return (
-            <div key={o.id} onClick={()=>setModal(o)} style={{background:'white',border:'1px solid #e2e8f0',borderRadius:12,padding:'14px 16px',marginBottom:10,cursor:'pointer',display:'flex',gap:12,alignItems:'flex-start',transition:'all 0.1s',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}
+            <div key={o.id} onClick={()=>setModal(o)} style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:12,padding:'14px 16px',marginBottom:10,cursor:'pointer',display:'flex',gap:12,alignItems:'flex-start',transition:'all 0.1s',boxShadow:'none'}}
               onMouseEnter={e=>(e.currentTarget as HTMLElement).style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'}
               onMouseLeave={e=>(e.currentTarget as HTMLElement).style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'}>
               <div style={{width:36,height:36,borderRadius:10,background:ss.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:14}}>
@@ -167,16 +167,16 @@ export default function PedidosPage(){
               </div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
-                  <p style={{fontSize:14,fontWeight:600,color:'#0f172a'}}>{o.customer_name}</p>
+                  <p style={{fontSize:14,fontWeight:600,color:'#E8EEF6'}}>{o.customer_name}</p>
                   <span style={{fontSize:10,padding:'2px 7px',borderRadius:6,background:ss.bg,color:ss.color,fontWeight:700,flexShrink:0}}>{ss.label}</span>
-                  <span style={{fontSize:10,color:'#94a3b8',textTransform:'capitalize'}}>{o.type}</span>
+                  <span style={{fontSize:10,color:'#49566A',textTransform:'capitalize'}}>{o.type}</span>
                 </div>
-                {items.length>0&&<p style={{fontSize:12,color:'#64748b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{items.map((it:any)=>(it.name||it.toString())).join(', ')}</p>}
-                {o.notes&&<p style={{fontSize:11,color:'#94a3b8',marginTop:2,fontStyle:'italic'}}>{o.notes.slice(0,60)}</p>}
+                {items.length>0&&<p style={{fontSize:12,color:'#8895A7',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{items.map((it:any)=>(it.name||it.toString())).join(', ')}</p>}
+                {o.notes&&<p style={{fontSize:11,color:'#49566A',marginTop:2,fontStyle:'italic'}}>{o.notes.slice(0,60)}</p>}
               </div>
               <div style={{textAlign:'right',flexShrink:0}}>
-                {o.total>0&&<p style={{fontSize:14,fontWeight:700,color:'#0f172a'}}>{o.total}€</p>}
-                <p style={{fontSize:11,color:'#94a3b8',marginTop:2}}>{new Date(o.created_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</p>
+                {o.total>0&&<p style={{fontSize:14,fontWeight:700,color:'#E8EEF6'}}>{o.total}€</p>}
+                <p style={{fontSize:11,color:'#49566A',marginTop:2}}>{new Date(o.created_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</p>
               </div>
             </div>
           )
@@ -185,17 +185,17 @@ export default function PedidosPage(){
 
       {/* Modal */}
       {modal&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16}} onClick={()=>setModal(null)}>
-          <div style={{background:'white',borderRadius:16,padding:24,width:'100%',maxWidth:440,boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}} onClick={e=>e.stopPropagation()}>
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16}} onClick={()=>setModal(null)}>
+          <div style={{background:'#131920',borderRadius:16,padding:24,width:'100%',maxWidth:440,boxShadow:'0 20px 60px rgba(0,0,0,0.7)'}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',marginBottom:16}}>
-              <p style={{fontSize:17,fontWeight:700,color:'#0f172a'}}>{modal.customer_name}</p>
-              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:'#94a3b8'}}>×</button>
+              <p style={{fontSize:17,fontWeight:700,color:'#E8EEF6'}}>{modal.customer_name}</p>
+              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:'#49566A'}}>×</button>
             </div>
-            {modal.customer_phone&&<p style={{fontSize:13,color:'#374151',marginBottom:6}}>📞 {modal.customer_phone}</p>}
-            {modal.customer_address&&<p style={{fontSize:13,color:'#374151',marginBottom:6}}>📍 {modal.customer_address}</p>}
-            {modal.notes&&<p style={{fontSize:13,color:'#374151',marginBottom:12}}>📝 {modal.notes}</p>}
+            {modal.customer_phone&&<p style={{fontSize:13,color:'#C4CDD8',marginBottom:6}}>📞 {modal.customer_phone}</p>}
+            {modal.customer_address&&<p style={{fontSize:13,color:'#C4CDD8',marginBottom:6}}>📍 {modal.customer_address}</p>}
+            {modal.notes&&<p style={{fontSize:13,color:'#C4CDD8',marginBottom:12}}>📝 {modal.notes}</p>}
             <div style={{marginBottom:16}}>
-              <p style={{fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:8}}>Cambiar estado</p>
+              <p style={{fontSize:11,fontWeight:700,color:'#49566A',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:8}}>Cambiar estado</p>
               <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                 {ESTADOS.map(s=>{
                   const ss=ESTADO_COL[s]; if(!ss) return null
