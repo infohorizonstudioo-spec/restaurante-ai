@@ -1,9 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-
-const STEPS_RESTAURANT = ['Configurar agente', 'Configurar local', 'Activar']
-const STEPS_DEFAULT = ['Configurar agente', 'Activar']
+import { resolveTemplate } from '@/lib/templates'
 
 const DAYS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
 const DEFAULT_HOURS = { open: '09:00', close: '21:00', closed: false }
@@ -38,9 +36,15 @@ export default function OnboardingPage() {
     load()
   }, [])
 
-  const isRestaurant = tenant?.type === 'restaurante' || tenant?.type === 'bar'
-  const totalSteps = isRestaurant ? 3 : 2
-  const stepLabels = isRestaurant ? STEPS_RESTAURANT : STEPS_DEFAULT
+  const tmpl = tenant ? resolveTemplate(tenant.type || 'otro') : null
+  // hasSpaces = tiene gestión de espacios físicos (mesas, consultas, sillones, despachos...)
+  const hasSpaces = tmpl?.hasSpaces ?? false
+  const unitLabel = tmpl?.labels?.unit?.plural || 'Mesas'
+  const zoneLabel = tmpl?.labels?.unit?.zoneLabel || 'Zona'
+  const totalSteps   = hasSpaces ? 3 : 2
+  const stepLabels   = hasSpaces
+    ? ['Configurar agente', 'Configurar '+unitLabel.toLowerCase(), 'Activar']
+    : ['Configurar agente', 'Activar']
 
   async function saveStep1() {
     setSaving(true)
@@ -49,7 +53,7 @@ export default function OnboardingPage() {
     setStep(2)
   }
 
-  async function saveStep2Restaurant() {
+  async function saveStep2Spaces() {
     setSaving(true)
     // Crear zonas y mesas automáticamente
     for (const zone of zones) {
@@ -172,11 +176,11 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* STEP 2: Local config (restaurant) */}
-          {step === 2 && isRestaurant && (
+          {/* STEP 2: Espacios (cualquier negocio con hasSpaces) */}
+          {step === 2 && hasSpaces && (
             <div>
-              <h2 className="text-xl font-bold text-white mb-1">Configura tu local</h2>
-              <p className="text-slate-400 text-sm mb-6">Define las zonas y mesas de tu negocio</p>
+              <h2 className="text-xl font-bold text-white mb-1">Configura {unitLabel.toLowerCase()}</h2>
+        <p className="text-slate-400 text-sm mb-6">Define las {unitLabel.toLowerCase()} de tu negocio</p>
               
               <div className="space-y-4 mb-6">
                 {zones.map((zone, i) => (
@@ -186,7 +190,7 @@ export default function OnboardingPage() {
                         placeholder="Nombre de la zona"
                         className="flex-1 bg-slate-600 border border-slate-500 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500"/>
                       <div className="flex items-center gap-2">
-                        <span className="text-slate-400 text-sm">Mesas:</span>
+                        <span className="text-slate-400 text-sm">{unitLabel}:</span>
                         <input type="number" value={zone.tables} min={1} max={50}
                           onChange={e => { const z = [...zones]; z[i].tables = parseInt(e.target.value)||1; setZones(z) }}
                           className="w-16 bg-slate-600 border border-slate-500 rounded-xl px-2 py-2 text-white text-sm text-center focus:outline-none"/>
@@ -204,20 +208,20 @@ export default function OnboardingPage() {
                 + Añadir zona
               </button>
 
-              <p className="text-slate-500 text-xs mb-6">Las mesas se crean automáticamente. Podrás personalizarlas desde el panel.</p>
+              <p className="text-slate-500 text-xs mb-6">Las {unitLabel.toLowerCase()} se crean automáticamente. Podrás personalizarlas desde el panel.</p>
 
               <div className="flex gap-3">
                 <button onClick={() => setStep(1)} className="px-5 py-3.5 rounded-2xl border border-slate-600 text-slate-300 hover:border-slate-400">← Atrás</button>
-                <button onClick={saveStep2Restaurant} disabled={saving}
+                <button onClick={saveStep2Spaces} disabled={saving}
                   className="flex-1 bg-indigo-600 text-white py-3.5 rounded-2xl font-bold hover:bg-indigo-500 disabled:opacity-50">
-                  {saving ? 'Creando mesas...' : 'Continuar →'}
+                  {saving ? 'Creando '+unitLabel.toLowerCase()+'...' : 'Continuar →'}
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 2 (non-restaurant) or STEP 3: Activation */}
-          {((step === 2 && !isRestaurant) || (step === 3 && isRestaurant)) && (
+          {/* STEP 2 (sin espacios) o STEP 3: Activación */}
+          {((step === 2 && !hasSpaces) || (step === 3 && hasSpaces)) && (
             <div className="text-center">
               <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span className="text-4xl">🎉</span>
@@ -234,10 +238,10 @@ export default function OnboardingPage() {
                   <span className="text-green-400">✓</span>
                   <span className="text-slate-300 text-sm">Horario guardado</span>
                 </div>
-                {isRestaurant && (
+                {hasSpaces && (
                   <div className="flex items-center gap-3">
                     <span className="text-green-400">✓</span>
-                    <span className="text-slate-300 text-sm">{zones.reduce((a,z) => a+z.tables,0)} mesas creadas en {zones.length} zonas</span>
+                    <span className="text-slate-300 text-sm">{zones.reduce((a,z) => a+z.tables,0)} {unitLabel.toLowerCase()} creadas en {zones.length} {zoneLabel.toLowerCase()+'s'}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-3">
