@@ -121,7 +121,7 @@ export default function OnboardingPage() {
   )
 
   return (
-    <div style={{ minHeight:'100vh', background:'linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0f172a 100%)', display:'flex', alignItems:'center', justifyContent:'center', padding:16, fontFamily:"'DM Sans',-apple-system,sans-serif" }}>
+    <div style={{ minHeight:'100vh', background:'linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0f172a 100%)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'20px 16px', fontFamily:"'DM Sans',-apple-system,sans-serif", overflowY:'auto' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
         *{box-sizing:border-box}
