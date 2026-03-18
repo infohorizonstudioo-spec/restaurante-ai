@@ -215,6 +215,21 @@ async function main() {
   });
 
 
+  await check('RPC get_plan_usage (billing v2)', async () => {
+    const r = await fetch(SB + '/rest/v1/rpc/get_plan_usage', {
+      method: 'POST', headers: h, body: JSON.stringify({ p_tenant_id: TID })
+    });
+    const d = await r.json();
+    return typeof d.used_calls === 'number' && typeof d.extra_calls === 'number' && typeof d.estimated_total_eur === 'number';
+  });
+
+  await check('/api/billing/usage (nuevo endpoint)', async () => {
+    const r = await fetch(BASE + '/api/billing/usage?tenant_id=' + TID);
+    const d = await r.json();
+    return d.plan && typeof d.used_calls === 'number' && Array.isArray(d.alerts);
+  });
+
+
   await check('billing_history tabla existe', async () => {
     const r = await fetch(SB + '/rest/v1/billing_history?tenant_id=eq.' + TID + '&select=id&limit=1', { headers: h });
     return r.status === 200;
