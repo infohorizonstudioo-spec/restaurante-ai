@@ -142,15 +142,75 @@ export default function ConfiguracionPage(){
         </Section>
 
         {/* Teléfono */}
-        <Section title='Número de teléfono' sub='Número asignado al agente de voz'>
-          <Input label='Número del agente' value={form.agent_phone}
-            placeholder='+1 213 875 3573'
-            onChange={e=>setForm({...form,agent_phone:e.target.value})}
-          />
-          {form.agent_phone.trim()
-            ? <p style={{marginTop:8,fontSize:12,color:'#059669',display:'flex',alignItems:'center',gap:4}}>✓ Agente activo en {form.agent_phone}</p>
-            : <Alert variant='warning' style={{marginTop:10}}>Sin número: el agente no puede recibir llamadas. Contacta con soporte para asignar un número.</Alert>
-          }
+        <Section title='Número de teléfono' sub='El asistente responde las llamadas que llegan a este número'>
+          {/* Cómo funciona */}
+          <div style={{background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:10,padding:'10px 14px',marginBottom:18,display:'flex',gap:8,alignItems:'flex-start'}}>
+            <span style={{fontSize:16,flexShrink:0}}>💡</span>
+            <p style={{fontSize:12,color:'#1d4ed8',lineHeight:1.6,margin:0}}>
+              Cuando alguien llame a este número, <strong>el asistente responderá automáticamente</strong> y gestionará reservas, citas o consultas. Tú lo verás todo en tiempo real en el panel.
+            </p>
+          </div>
+
+          {/* Estado actual */}
+          {form.agent_phone.trim() ? (
+            <div style={{marginBottom:16}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:10,padding:'10px 14px',marginBottom:12}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:'#22c55e',flexShrink:0}}/>
+                <div style={{flex:1}}>
+                  <p style={{fontSize:13,fontWeight:700,color:'#166534'}}>Asistente activo</p>
+                  <p style={{fontSize:12,color:'#166534',opacity:0.8}}>Respondiendo llamadas en {form.agent_phone}</p>
+                </div>
+                <span style={{fontSize:20}}>📞</span>
+              </div>
+              {/* Advertencia si parece número personal */}
+              {(form.agent_phone.startsWith('+346')||form.agent_phone.startsWith('+347')||form.agent_phone.startsWith('6')||form.agent_phone.startsWith('7')) && (
+                <div style={{background:'#fffbeb',border:'1px solid #fde68a',borderRadius:10,padding:'10px 14px',marginBottom:12}}>
+                  <p style={{fontSize:12,fontWeight:600,color:'#92400e',marginBottom:4}}>⚠ Posible número personal detectado</p>
+                  <p style={{fontSize:11,color:'#92400e',lineHeight:1.6}}>
+                    Este número parece ser un móvil personal. El asistente responderá <strong>todas</strong> las llamadas que recibas, incluyendo las personales. Considera usar un número exclusivo para el negocio.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:10,padding:'10px 14px',marginBottom:16}}>
+              <p style={{fontSize:13,fontWeight:600,color:'#991b1b',marginBottom:4}}>⚠ Sin número asignado</p>
+              <p style={{fontSize:12,color:'#dc2626',lineHeight:1.6}}>
+                El asistente no puede recibir llamadas. Configura un número a continuación o contacta con soporte para asignarte uno exclusivo.
+              </p>
+            </div>
+          )}
+
+          {/* Campo editable */}
+          <div style={{marginBottom:14}}>
+            <Input label='Número del asistente'
+              value={form.agent_phone}
+              placeholder='+1 213 875 3573'
+              onChange={e=>setForm({...form,agent_phone:e.target.value})}
+            />
+            <p style={{fontSize:11,color:'#94a3b8',marginTop:5}}>Introduce el número en formato internacional (ej: +34 600 000 000 o +1 213 000 0000)</p>
+          </div>
+
+          {/* Opciones */}
+          <div style={{background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:10,padding:'12px 14px'}}>
+            <p style={{fontSize:12,fontWeight:600,color:'#374151',marginBottom:10}}>¿Qué número usar?</p>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              <div style={{display:'flex',gap:10,alignItems:'flex-start'}}>
+                <span style={{fontSize:14,flexShrink:0,marginTop:1}}>✅</span>
+                <div>
+                  <p style={{fontSize:12,fontWeight:600,color:'#166534'}}>Recomendado: número exclusivo para el negocio</p>
+                  <p style={{fontSize:11,color:'#64748b',lineHeight:1.5}}>Separa vida personal y negocio. Más profesional y sin conflictos. Contacta con soporte para que te asignemos uno.</p>
+                </div>
+              </div>
+              <div style={{display:'flex',gap:10,alignItems:'flex-start'}}>
+                <span style={{fontSize:14,flexShrink:0,marginTop:1}}>⚠️</span>
+                <div>
+                  <p style={{fontSize:12,fontWeight:600,color:'#92400e'}}>Número personal: mezcla uso personal y negocio</p>
+                  <p style={{fontSize:11,color:'#64748b',lineHeight:1.5}}>El asistente responderá <strong>todas</strong> tus llamadas personales también. Solo recomendable si el número ya es exclusivo del negocio.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </Section>
 
         {/* Info negocio */}
