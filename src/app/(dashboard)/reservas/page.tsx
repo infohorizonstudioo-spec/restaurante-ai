@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
+import { useTenant } from '@/contexts/TenantContext'
 
 const DAYS = ['DO','LU','MA','MI','JU','VI','SA']
 const STATUS_STYLES:Record<string,{bg:string;color:string;label:string}> = {
@@ -28,13 +29,15 @@ function getWeek(base: Date) {
 }
 
 export default function ReservasPage() {
-  const [base,setBase]       = useState(new Date())
+  const [base,setBase]         = useState(new Date())
   const [selected,setSelected] = useState(new Date().toISOString().slice(0,10))
   const [reservas,setReservas] = useState<any[]>([])
-  const [loading,setLoading] = useState(true)
-  const [tid,setTid]         = useState<string|null>(null)
-  const [modal,setModal]     = useState<any|null>(null)
-  const [search,setSearch]   = useState('')
+  const [loading,setLoading]   = useState(true)
+  const [tid,setTid]           = useState<string|null>(null)
+  const [modal,setModal]       = useState<any|null>(null)
+  const [search,setSearch]     = useState('')
+  const { template } = useTenant()
+  const L = template?.labels   // etiquetas dinámicas
 
   const load = useCallback(async (tenantId:string) => {
     const week = getWeek(base)
@@ -86,11 +89,11 @@ export default function ReservasPage() {
     <div style={{background:'#f8fafc',minHeight:'100vh'}}>
       <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10}}>
         <div>
-          <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>Reservas</h1>
+          <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>{L?.pageTitle || 'Reservas'}</h1>
           <p style={{fontSize:12,color:'#94a3b8',marginTop:1}}>{dayRes.length} para el {new Date(selected+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar citas..." style={{padding:'7px 12px',fontSize:13,border:'1px solid #e2e8f0',borderRadius:8,outline:'none',width:180}}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={L?.buscarPlaceholder||'Buscar…'} style={{padding:'7px 12px',fontSize:13,border:'1px solid #e2e8f0',borderRadius:8,outline:'none',width:180}}/>
         </div>
       </div>
 
@@ -117,8 +120,8 @@ export default function ReservasPage() {
         {filtered.length===0 ? (
           <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:14,padding:'60px 24px',textAlign:'center'}}>
             <div style={{fontSize:36,marginBottom:10}}>📅</div>
-            <p style={{fontSize:15,fontWeight:600,color:'#374151',marginBottom:4}}>Sin citas este día</p>
-            <p style={{fontSize:13,color:'#94a3b8'}}>No hay reservas para el día seleccionado.</p>
+            <p style={{fontSize:15,fontWeight:600,color:'#374151',marginBottom:4}}>{L?.emptyReservas||'Sin reservas este día'}</p>
+            <p style={{fontSize:13,color:'#94a3b8'}}>No hay {L?.reservas?.toLowerCase()||'reservas'} para el día seleccionado.</p>
           </div>
         ) : filtered.map((r,i)=>{
           const ss = STATUS_STYLES[r.status]||STATUS_STYLES.pendiente

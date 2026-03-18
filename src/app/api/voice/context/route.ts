@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { resolveTemplate } from '@/lib/templates'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -89,6 +90,9 @@ export async function POST(req: Request) {
       })
     }
 
+    // Resolver plantilla del negocio para contexto del agente
+    const tmpl = resolveTemplate((tenant.type as string) || 'otro')
+
     // Verificar horario
     const isOpen = isBusinessOpen(tenant.business_hours)
 
@@ -124,7 +128,10 @@ export async function POST(req: Request) {
       ? biz + ', en este momento estamos cerrados. ' + (bhHuman ? 'Nuestro horario es: ' + bhHuman + '. ' : '') + 'Por favor llame en horario de atención.'
       : biz + ', dígame.'
 
-    console.log('context ok | tenant:', (tenant.id as string).slice(0, 8), '| caller:', callerPhone, '| open:', isOpen, '| ms:', Date.now() - t0)
+    // Contexto del agente desde la plantilla del negocio
+    const agentSystemContext = tmpl.agentContext
+
+    console.log('context ok | tenant:', (tenant.id as string).slice(0, 8), '| type:', tenant.type, '| tmpl:', tmpl.id, '| caller:', callerPhone, '| open:', isOpen, '| ms:', Date.now() - t0)
 
     return NextResponse.json({
       dynamic_variables: {
@@ -140,6 +147,9 @@ export async function POST(req: Request) {
         business_description: (tenant.business_description as string) || '',
         reservas_hoy:     resumenHoy,
         cliente_info:     clienteInfo,
+        template_type:    tmpl.id,             // hosteleria | servicios
+        reservation_unit: tmpl.labels.reserva, // Reserva | Cita
+        agent_context:    agentSystemContext,   // contexto personalizado por tipo de negocio
       },
       conversation_config_override: {
         agent: { first_message: greeting }

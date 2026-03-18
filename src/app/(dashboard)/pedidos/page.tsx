@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
+import { useTenant } from '@/contexts/TenantContext'
 import Link from 'next/link'
 
 const TIPOS = ['todos','local','delivery','takeaway'] as const
@@ -21,6 +22,7 @@ export default function PedidosPage(){
   const [tid,setTid]         = useState<string|null>(null)
   const [tipo,setTipo]       = useState<string>('todos')
   const [modal,setModal]     = useState<any|null>(null)
+  const { template } = useTenant()
 
   const load = useCallback(async(tenantId:string)=>{
     const r = await fetch('/api/orders?tenant_id='+tenantId+'&limit=100')
@@ -49,6 +51,25 @@ export default function PedidosPage(){
   },[tid,load])
 
   if(loading) return <PageLoader/>
+
+  // GUARDIA: pedidos solo disponible para hostelería
+  if(template && !template.hasOrders){
+    return(
+      <div style={{background:'#f8fafc',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+        <div style={{textAlign:'center',maxWidth:400}}>
+          <div style={{fontSize:48,marginBottom:16}}>🚫</div>
+          <h2 style={{fontSize:20,fontWeight:700,color:'#0f172a',marginBottom:8}}>Módulo no disponible</h2>
+          <p style={{fontSize:14,color:'#64748b',lineHeight:1.6,marginBottom:24}}>
+            El módulo de pedidos no aplica para <strong>{template.label}</strong>.<br/>
+            Este módulo está diseñado para negocios de hostelería.
+          </p>
+          <Link href="/panel" style={{padding:'10px 24px',fontSize:14,fontWeight:600,color:'white',background:'linear-gradient(135deg,#1e40af,#3b82f6)',borderRadius:9,textDecoration:'none'}}>
+            Volver al panel
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   const isPro = plan==='pro'||plan==='business'||plan==='enterprise'
 

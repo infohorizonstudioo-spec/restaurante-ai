@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import Link from 'next/link'
+import { resolveTemplate } from '@/lib/templates'
 
 const PLAN_LABELS:Record<string,string> = {free:'Trial',trial:'Trial',starter:'Starter',pro:'Pro',business:'Business'}
 const PLAN_COLS:Record<string,string>   = {free:'#d97706',trial:'#d97706',starter:'#1d4ed8',pro:'#7c3aed',business:'#059669'}
@@ -74,6 +75,10 @@ export default function PanelPage(){
   const callsLeft=Math.max(0,callsLimit-callsUsed)
   const agentActive=!!tenant.agent_phone
 
+  // Etiquetas dinámicas desde plantilla
+  const tmpl = resolveTemplate(tenant.type || 'otro')
+  const L = tmpl.labels
+
   const hour=new Date().getHours()
   const greeting=hour<13?'Buenos días':hour<20?'Buenas tardes':'Buenas noches'
   const dayStr=new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})
@@ -111,8 +116,8 @@ export default function PanelPage(){
         )}
 
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
-          <StatCard label='Llamadas hoy' value={calls.filter(c=>{const d=(c.started_at||c.created_at||'')?.slice(0,10);return d===new Date().toISOString().split('T')[0]}).length} color='#1d4ed8' href='/llamadas'/>          <StatCard label='Reservas hoy' value={reservas.length} color='#059669' sub={reservas.filter(r=>r.status==='confirmada').length+' confirmadas'} href='/reservas'/>
-          <StatCard label='Clientes' value={clientes.length} color='#7c3aed' href='/clientes'/>
+          <StatCard label='Llamadas hoy' value={calls.filter(c=>{const d=(c.started_at||c.created_at||'')?.slice(0,10);return d===new Date().toISOString().split('T')[0]}).length} color='#1d4ed8' href='/llamadas'/>          <StatCard label={L.reservas+' hoy'} value={reservas.length} color='#059669' sub={reservas.filter(r=>r.status==='confirmada').length+' confirmadas'} href='/reservas'/>
+          <StatCard label={L.clientes} value={clientes.length} color='#7c3aed' href='/clientes'/>
           <StatCard label={isTrial?'Llamadas restantes':'Llamadas del plan'} value={isTrial?callsLeft+'':callsUsed+'/'+callsLimit} color={callsLeft<=3?'#dc2626':planColor} sub={planLabel} href='/facturacion'/>
         </div>
 
@@ -170,11 +175,11 @@ export default function PanelPage(){
 
           <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:14,overflow:'hidden'}}>
             <div style={{padding:'14px 20px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-              <h2 style={{fontSize:14,fontWeight:600,color:'#0f172a'}}>Reservas hoy</h2>
+              <h2 style={{fontSize:14,fontWeight:600,color:'#0f172a'}}>{L.reservas} hoy</h2>
               <Link href='/reservas' style={{fontSize:12,color:'#1d4ed8',textDecoration:'none',fontWeight:500}}>Gestionar →</Link>
             </div>
             {reservas.length===0
-              ?<div style={{padding:'40px 16px',textAlign:'center'}}><div style={{fontSize:28,marginBottom:8}}>📅</div><p style={{fontSize:13,color:'#94a3b8',lineHeight:1.6}}>Sin citas hoy</p></div>
+              ?<div style={{padding:'40px 16px',textAlign:'center'}}><div style={{fontSize:28,marginBottom:8}}>📅</div><p style={{fontSize:13,color:'#94a3b8',lineHeight:1.6}}>Sin {L.reservas.toLowerCase()} hoy</p></div>
               :reservas.slice(0,8).map((r,i)=>(
                 <div key={r.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderTop:i>0?'1px solid #f8fafc':'none'}}>
                   <div style={{width:36,height:36,borderRadius:'50%',background:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:'#1d4ed8',flexShrink:0}}>{r.customer_name?.[0]?.toUpperCase()||'?'}</div>

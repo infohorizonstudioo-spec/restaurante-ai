@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
+import { useTenant } from '@/contexts/TenantContext'
 
 export default function ClientesPage() {
   const [clientes,setClientes] = useState<any[]>([])
@@ -11,6 +12,13 @@ export default function ClientesPage() {
   const [historial,setHistorial] = useState<any[]>([])
   const [loadingH,setLoadingH] = useState(false)
   const [tid,setTid]           = useState<string|null>(null)
+  const { template } = useTenant()
+
+  // Etiquetas dinámicas: "Clientes" para hostelería, "Pacientes" para clínicas, etc.
+  const L = template?.labels
+  const clienteLabel  = L?.cliente  || 'Cliente'
+  const clientesLabel = L?.clientes || 'Clientes'
+  const reservaLabel  = L?.reserva  || 'Reserva'
 
   const load = useCallback(async (tenantId:string) => {
     const {data} = await supabase.from('customers').select('*')
@@ -56,10 +64,10 @@ export default function ClientesPage() {
     <div style={{background:'#f8fafc',minHeight:'100vh',display:'flex',flexDirection:'column'}}>
       <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div>
-          <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>Clientes</h1>
+          <h1 style={{fontSize:18,fontWeight:700,color:'#0f172a'}}>{clientesLabel}</h1>
           <p style={{fontSize:12,color:'#94a3b8',marginTop:1}}>{clientes.length} registrados</p>
         </div>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nombre o teléfono..." style={{padding:'8px 14px',fontSize:13,border:'1px solid #e2e8f0',borderRadius:9,outline:'none',width:240}}/>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={'Buscar '+clientesLabel.toLowerCase()+'…'} style={{padding:'8px 14px',fontSize:13,border:'1px solid #e2e8f0',borderRadius:9,outline:'none',width:240}}/>
       </div>
 
       <div style={{display:'flex',flex:1,overflow:'hidden'}}>
@@ -69,7 +77,7 @@ export default function ClientesPage() {
             <div style={{padding:'60px 24px',textAlign:'center'}}>
               <div style={{fontSize:36,marginBottom:10}}>👥</div>
               <p style={{fontSize:14,fontWeight:600,color:'#374151',marginBottom:4}}>Sin clientes</p>
-              <p style={{fontSize:12,color:'#94a3b8'}}>Los clientes que llamen al agente aparecerán aquí.</p>
+              <p style={{fontSize:14,color:'#94a3b8'}}>Los {clientesLabel.toLowerCase()} que contacten al agente aparecerán aquí.</p>
             </div>
           ) : filtered.map(c => (
             <div key={c.id} onClick={()=>openClient(c)} style={{padding:'12px 16px',cursor:'pointer',borderBottom:'1px solid #f1f5f9',
@@ -88,7 +96,7 @@ export default function ClientesPage() {
                   <p style={{fontSize:11,color:'#94a3b8',marginTop:1}}>{c.phone||c.email||'Sin contacto'}</p>
                 </div>
                 <div style={{textAlign:'right',flexShrink:0}}>
-                  <p style={{fontSize:11,fontWeight:600,color:'#374151'}}>{c.total_reservations||c.total_visits||0} citas</p>
+                  <p style={{fontSize:11,fontWeight:600,color:'#374151'}}>{c.total_reservations||c.total_visits||0} {reservaLabel.toLowerCase()+'s'}</p>
                   {c.last_visit&&<p style={{fontSize:10,color:'#94a3b8',marginTop:1}}>{new Date(c.last_visit).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</p>}
                 </div>
               </div>

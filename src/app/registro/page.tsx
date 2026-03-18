@@ -1,8 +1,18 @@
 'use client'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { BUSINESS_TEMPLATES } from '@/types'
+import { resolveTemplate } from '@/lib/templates'
 import Link from 'next/link'
+
+// Tipos de negocio disponibles en el registro
+const TIPOS_REGISTRO = [
+  { key:'restaurante',   label:'🍽️ Restaurante' },
+  { key:'bar',          label:'🍺 Bar' },
+  { key:'clinica_dental',label:'🦷 Clínica Dental' },
+  { key:'clinica_medica',label:'🏥 Clínica Médica' },
+  { key:'asesoria',     label:'💼 Asesoría' },
+  { key:'peluqueria',   label:'✂️ Peluquería' },
+]
 
 const CONV_R = [
   { from: 'client',  text: 'Hola, quiero pedir cita para el dentista.' },
@@ -137,7 +147,7 @@ export default function RegistroPage() {
   const [error,setError]     = useState('')
   const [form,setForm]       = useState({ name:'',email:'',password:'',businessName:'',businessType:'restaurante' })
 
-  const tipos = Object.entries(BUSINESS_TEMPLATES).filter(([k])=>k!=='otro')
+  const tipos = TIPOS_REGISTRO
 
   const handleRegister = useCallback(async () => {
     if (!form.email||!form.password||!form.name||!form.businessName){setError('Rellena todos los campos');return}
@@ -218,9 +228,9 @@ export default function RegistroPage() {
                 <div>
                   <label style={{ display:'block',fontSize:11,fontWeight:600,color:'#374151',marginBottom:10,textTransform:'uppercase' as const,letterSpacing:'0.04em' }}>Tipo de negocio</label>
                   <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
-                    {tipos.slice(0,6).map(([key,tmpl])=>(
+                    {tipos.map(({key, label})=>(
                       <button key={key} onClick={()=>setForm({...form,businessType:key})} className={'rgtc'+(form.businessType===key?' sel':'')}>
-                        {(tmpl as any).label}
+                        {label}
                       </button>
                     ))}
                   </div>

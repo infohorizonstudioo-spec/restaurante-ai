@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { resolveTemplate } from '@/lib/templates'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,9 +40,15 @@ export async function POST(req: Request) {
     if (!customer_name) return NextResponse.json({ error: 'customer_name required' }, { status: 400 })
 
     // Verificar que el tenant tiene plan Pro o Business (pedidos es feature premium)
-    const { data: tenant } = await admin.from('tenants').select('plan').eq('id', tenant_id).maybeSingle()
+    const { data: tenant } = await admin.from('tenants').select('plan,type').eq('id', tenant_id).maybeSingle()
     const isPro = ['pro', 'business', 'enterprise'].includes((tenant as any)?.plan || '')
     if (!isPro) return NextResponse.json({ error: 'Pedidos disponible solo en plan Pro o Business' }, { status: 403 })
+
+    // Guardia de plantilla: pedidos solo para hostelería
+    const tmpl = resolveTemplate((tenant as any)?.type || 'otro')
+    if (!tmpl.hasOrders) {
+      return NextResponse.json({ error: 'Módulo de pedidos no disponible para este tipo de negocio' }, { status: 403 })
+    }
 
     const { data: order, error } = await admin.from('orders').insert({
       tenant_id, customer_name,
