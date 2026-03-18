@@ -22,7 +22,8 @@ const PLAN_COL: Record<string,string> = {
 }
 const PLAN_LBL: Record<string,string> = {
   trial:'Trial',free:'Trial',starter:'Starter',pro:'Pro',business:'Business',enterprise:'Business'
-}function SvgIcon({ d }: { d: string }) {
+}
+function SvgIcon({ d }: { d: string }) {
   return (
     <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
       <path d={d}/>
