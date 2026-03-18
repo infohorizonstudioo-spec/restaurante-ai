@@ -4,9 +4,9 @@ import Sidebar from '@/components/Sidebar'
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <TenantProvider>
-      <div style={{ display:'flex', minHeight:'100vh', background:'#f8fafc', fontFamily:"'DM Sans',-apple-system,sans-serif" }}>
+      <div style={{ display:'flex', minHeight:'100vh', background:'var(--rz-bg)', fontFamily:'var(--rz-font)' }}>
         <Sidebar/>
-        <main style={{ flex:1, minWidth:0, overflowX:'hidden' }}>
+        <main style={{ flex:1, minWidth:0, overflowX:'hidden', display:'flex', flexDirection:'column' }}>
           {children}
         </main>
       </div>
