@@ -403,7 +403,7 @@ export default function OnboardingPage() {
                   !phoneOption && { icon:'⚠', color:'#f59e0b', text: 'Número pendiente — configúralo desde Configuración' },
                   { icon:'🎁', color:'#818cf8', text: '10 llamadas gratuitas disponibles para probar' },
                 ].filter(Boolean).map((item: any, i) => (
-                  <div key={i} style={{ display:'flex',alignItems:'flex-start',gap:10,marginBottom:10,lastChild:{marginBottom:0} }}>
+                  <div key={i} style={{ display:'flex',alignItems:'flex-start',gap:10,marginBottom:i<2?10:0 }}>
                     <span style={{ color:item.color,fontWeight:700,flexShrink:0,fontSize:14 }}>{item.icon}</span>
                     <span style={{ fontSize:13,color:'#94a3b8',lineHeight:1.5 }}>{item.text}</span>
                   </div>

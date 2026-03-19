@@ -66,7 +66,7 @@ export default function EstadisticasPage(){
       const topIntents = Object.entries(intents).sort((a,b)=>b[1]-a[1]).slice(0,5)
 
       // Personas promedio
-      const avgPeople = res.length>0 ? (res.reduce((s,r)=>s+(r.people||r.party_size||2),0)/res.length).toFixed(1) : '—'
+      const avgPeople = res.length>0 ? (res.reduce((s:number,r:any)=>s+((r.people||r.party_size||2) as number),0)/res.length).toFixed(1) : '—'
 
       // Reservas por dia de la semana
       const dayNames = ['Dom','Lun','Mar','Mie','Jue','Vie','Sab']

@@ -2,8 +2,13 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-02-24.acacia' })
-const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } })
+// Lazy init — evita crash en build cuando no hay env vars
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-02-24.acacia' })
+}
+function getAdmin() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } })
+}
 
 // Price IDs con limites embebidos en metadata
 const PLANS: Record<string, { priceId: string; name: string; calls: number; rate: number; amount: number }> = {
@@ -13,6 +18,8 @@ const PLANS: Record<string, { priceId: string; name: string; calls: number; rate
 }
 
 export async function POST(req: Request) {
+  const stripe = getStripe()
+  const admin  = getAdmin()
   try {
     const { plan, tenant_id, user_id } = await req.json()
 

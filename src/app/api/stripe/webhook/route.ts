@@ -2,8 +2,12 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-02-24.acacia' })
-const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } })
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-02-24.acacia' })
+}
+function getAdmin() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } })
+}
 
 const PLAN_LIMITS: Record<string, { calls: number; rate: number }> = {
   starter:  { calls: 50,  rate: 0.90 },
@@ -33,6 +37,8 @@ function getPlanFromEvent(obj: any): string | null {
 }
 
 export async function POST(req: Request) {
+  const stripe = getStripe()
+  const admin  = getAdmin()
   const body = await req.text()
   const sig  = req.headers.get('stripe-signature')!
 
