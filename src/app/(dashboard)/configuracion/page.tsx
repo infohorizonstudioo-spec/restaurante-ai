@@ -49,8 +49,8 @@ export default function ConfiguracionPage(){
     let m=true
     async function load(){
       const {data:{user}}=await supabase.auth.getUser();if(!user)return
-      const {data:p}=await supabase.from('profiles').select('tenant_id').eq('id',user.id).single();if(!p?.tenant_id)return
-      const {data:t}=await supabase.from('tenants').select('*').eq('id',p.tenant_id).single()
+      const {data:p}=await supabase.from('profiles').select('tenant_id').eq('id',user.id).maybeSingle();if(!p?.tenant_id)return
+      const {data:t}=await supabase.from('tenants').select('*').eq('id',p.tenant_id).maybeSingle()
       if(!m)return
       setTenant(t)
       setForm({

@@ -104,7 +104,7 @@ export default function LlamadasPage() {
   useEffect(() => {
     (async () => {
       const {data:{user}} = await supabase.auth.getUser(); if (!user) return
-      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).single(); if (!p?.tenant_id) return
+      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).maybeSingle(); if (!p?.tenant_id) return
       setTid(p.tenant_id); await load(p.tenant_id, true)
     })()
   },[]) // eslint-disable-line

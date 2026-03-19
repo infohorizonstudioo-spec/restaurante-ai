@@ -33,7 +33,7 @@ export default function MesasPage(){
   useEffect(()=>{
     (async()=>{
       const {data:{user}}=await supabase.auth.getUser();if(!user)return
-      const {data:p}=await supabase.from('profiles').select('tenant_id').eq('id',user.id).single();if(!p?.tenant_id)return
+      const {data:p}=await supabase.from('profiles').select('tenant_id').eq('id',user.id).maybeSingle();if(!p?.tenant_id)return
       setTid(p.tenant_id);await load(p.tenant_id)
     })()
   },[load])
@@ -66,7 +66,7 @@ export default function MesasPage(){
     const {data}=await supabase.from('tables').insert({
       tenant_id:tid,zone:zoneId||null,zone_id:zoneId||null,number:num,
       capacity:2,min_capacity:1,status:'libre',shape:'rectangle'
-    }).select().single()
+    }).select().maybeSingle()
     if(data)setEditUnit(data)
     await load(tid)
   }

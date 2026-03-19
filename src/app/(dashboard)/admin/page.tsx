@@ -78,7 +78,7 @@ export default function AdminPage() {
       name: tenantForm.name, slug: tenantForm.slug.toLowerCase().replace(/\s+/g,'-'),
       type: tenantForm.type, email: tenantForm.email||null, phone: tenantForm.phone||null,
       plan:'trial', active:true,
-    }).select().single()
+    }).select().maybeSingle()
     setSaving(false)
     if (error) { setMsg('Error: '+error.message); return }
     setTenants(prev=>[data,...prev]); setShowModal(false); setTenantForm(emptyTenant); setMsg('✅ Negocio creado')

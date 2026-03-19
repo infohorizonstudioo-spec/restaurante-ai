@@ -34,7 +34,7 @@ export default function FacturacionPage() {
   useEffect(()=>{
     (async()=>{
       const {data:{user}} = await supabase.auth.getUser(); if(!user) return
-      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).single(); if(!p?.tenant_id) return
+      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).maybeSingle(); if(!p?.tenant_id) return
       setTid(p.tenant_id)
       const {data:b} = await supabase.rpc('get_billing_summary', {p_tenant_id:p.tenant_id})
       setBilling(b)

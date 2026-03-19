@@ -255,12 +255,12 @@ export default function PanelPage() {
   const load = useCallback(async () => {
     const { data:{ user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
-    const { data:p } = await supabase.from('profiles').select('tenant_id,role').eq('id',user.id).single()
+    const { data:p } = await supabase.from('profiles').select('tenant_id,role').eq('id',user.id).maybeSingle()
     if (!p?.tenant_id) { if(p?.role==='superadmin') router.push('/admin'); else router.push('/onboarding'); return }
     const tid = p.tenant_id
     const today = new Date().toISOString().split('T')[0]
     const [{ data:t },{ data:c },{ data:r },{ data:cl },{ data:ac }] = await Promise.all([
-      supabase.from('tenants').select('*').eq('id',tid).single(),
+      supabase.from('tenants').select('*').eq('id',tid).maybeSingle(),
       supabase.from('calls').select('*').eq('tenant_id',tid).order('started_at',{ascending:false}).limit(8),
       supabase.from('reservations').select('*').eq('tenant_id',tid).eq('date',today).order('time'),
       supabase.from('customers').select('id').eq('tenant_id',tid),
