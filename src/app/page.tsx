@@ -1,235 +1,484 @@
 'use client'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
-export default function HomePage() {
+/* ─── LIVE NOTIFICATION FEED ─── */
+const NOTIFICATIONS = [
+  { icon:'📞', color:'#2DD4BF', msg:'Llamada entrante — Mesa para 4 el viernes', sub:'hace 2s' },
+  { icon:'✅', color:'#4ADE80', msg:'Reserva confirmada — García · Sábado 21:00', sub:'hace 8s' },
+  { icon:'🍽️', color:'#F0A84E', msg:'Pedido registrado — Mesa 3 · 47€', sub:'hace 15s' },
+  { icon:'📞', color:'#2DD4BF', msg:'Llamada entrante — Cumpleaños 8 personas', sub:'hace 22s' },
+  { icon:'✅', color:'#4ADE80', msg:'Reserva confirmada — López · Domingo 14:00', sub:'hace 31s' },
+  { icon:'🍽️', color:'#F0A84E', msg:'Pedido registrado — Mesa 7 · 82€', sub:'hace 40s' },
+  { icon:'📞', color:'#2DD4BF', msg:'Llamada entrante — Reserva terraza 2 pax', sub:'hace 55s' },
+]
+
+function LiveFeed() {
+  const [items, setItems] = useState(NOTIFICATIONS.slice(0,3))
+  const [flash, setFlash] = useState<number|null>(null)
+  useEffect(() => {
+    let i = 3
+    const t = setInterval(() => {
+      const next = NOTIFICATIONS[i % NOTIFICATIONS.length]
+      setItems(prev => [next, ...prev.slice(0,4)])
+      setFlash(0)
+      setTimeout(() => setFlash(null), 600)
+      i++
+    }, 2800)
+    return () => clearInterval(t)
+  }, [])
   return (
-    <main style={{fontFamily:"'DM Sans',-apple-system,sans-serif",background:'#fff',color:'#0f172a',lineHeight:1.5}}>
+    <div style={{display:'flex',flexDirection:'column',gap:10}}>
+      {items.map((n,idx) => (
+        <div key={idx+n.msg} style={{
+          display:'flex',alignItems:'center',gap:12,
+          background: idx===0&&flash===0 ? 'rgba(240,168,78,0.08)' : 'rgba(255,255,255,0.03)',
+          border:`1px solid ${idx===0&&flash===0?'rgba(240,168,78,0.3)':'rgba(255,255,255,0.07)'}`,
+          borderRadius:12,padding:'10px 14px',
+          transition:'all 0.4s ease',
+          opacity: idx===0 ? 1 : 1 - idx*0.15,
+          transform: idx===0&&flash===0 ? 'scale(1.01)' : 'scale(1)'
+        }}>
+          <span style={{fontSize:18,flexShrink:0}}>{n.icon}</span>
+          <div style={{flex:1,minWidth:0}}>
+            <p style={{fontSize:12.5,color:'#E8EEF6',fontWeight:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n.msg}</p>
+            <p style={{fontSize:11,color:'rgba(255,255,255,0.3)',marginTop:1}}>{n.sub}</p>
+          </div>
+          <div style={{width:6,height:6,borderRadius:'50%',background:n.color,flexShrink:0}}/>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* ─── LIVE CALL SIMULATION ─── */
+const CALL_STEPS = [
+  { who:'client', text:'Buenas, quería reservar mesa para mañana.' },
+  { who:'agent',  text:'¡Buenas! ¿Para cuántas personas y a qué hora?' },
+  { who:'client', text:'Para 4, sobre las 21:00.' },
+  { who:'agent',  text:'¿Prefiere terraza o interior?' },
+  { who:'client', text:'Terraza si hay.' },
+  { who:'confirm',text:'✓ Reserva creada · Mañana 21:00 · 4 personas · Terraza' },
+]
+function CallSim() {
+  const [shown, setShown] = useState<number[]>([])
+  const [typing, setTyping] = useState<number|null>(null)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    let timers: ReturnType<typeof setTimeout>[] = []
+    function run() {
+      setShown([]); setTyping(null)
+      let d = 600
+      CALL_STEPS.forEach((s,i) => {
+        const ms = Math.min(s.text.length*20+200, 1400)
+        if (s.who==='agent') {
+          timers.push(setTimeout(()=>setTyping(i), d)); d+=600
+          timers.push(setTimeout(()=>{ setTyping(null); setShown(p=>[...p,i]) }, d)); d+=ms
+        } else {
+          timers.push(setTimeout(()=>setShown(p=>[...p,i]), d)); d+=ms
+        }
+      })
+      timers.push(setTimeout(run, d+3000))
+    }
+    run()
+    return () => timers.forEach(clearTimeout)
+  }, [])
+  useEffect(() => { ref.current?.scrollTo({top:9999,behavior:'smooth'}) }, [shown,typing])
+  return (
+    <div ref={ref} style={{flex:1,overflowY:'auto',scrollbarWidth:'none',display:'flex',flexDirection:'column',gap:8,padding:'12px 0'}}>
+      {CALL_STEPS.map((s,i) => {
+        const vis=shown.includes(i), typ=typing===i
+        if(!vis&&!typ) return null
+        if(s.who==='confirm'&&vis) return (
+          <div key={i} style={{background:'rgba(45,212,191,0.1)',border:'1px solid rgba(45,212,191,0.25)',borderRadius:10,padding:'10px 14px',animation:'fadeUp 0.4s ease'}}>
+            <p style={{fontSize:12,color:'#2DD4BF',fontWeight:600}}>{s.text}</p>
+          </div>
+        )
+        const isA=s.who==='agent'
+        return (
+          <div key={i} style={{display:'flex',justifyContent:isA?'flex-start':'flex-end',animation:'fadeUp 0.3s ease'}}>
+            <div style={{maxWidth:'78%',background:isA?'rgba(255,255,255,0.06)':'rgba(240,168,78,0.15)',border:isA?'1px solid rgba(255,255,255,0.08)':'1px solid rgba(240,168,78,0.3)',borderRadius:isA?'4px 12px 12px 12px':'12px 4px 12px 12px',padding:'8px 12px'}}>
+              {typ
+                ? <div style={{display:'flex',gap:3,alignItems:'center',height:14}}>{[0,1,2].map(j=><div key={j} style={{width:4,height:4,borderRadius:'50%',background:'rgba(255,255,255,0.4)',animation:`bounce 1.1s ease-in-out infinite`,animationDelay:j*0.18+'s'}}/>)}</div>
+                : <p style={{fontSize:12.5,color:isA?'rgba(255,255,255,0.75)':'rgba(255,255,255,0.9)',lineHeight:1.5}}>{s.text}</p>
+              }
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ─── STATS COUNTER ─── */
+function Counter({ to, suffix='' }: { to:number, suffix?:string }) {
+  const [v,setV] = useState(0)
+  useEffect(() => {
+    let start=0
+    const step = to/60
+    const t = setInterval(()=>{ start+=step; if(start>=to){setV(to);clearInterval(t)}else setV(Math.floor(start)) },16)
+    return ()=>clearInterval(t)
+  },[to])
+  return <>{v.toLocaleString('es-ES')}{suffix}</>
+}
+
+/* ─── MAIN PAGE ─── */
+export default function HomePage() {
+  const C = {
+    bg:'#090C13', card:'rgba(255,255,255,0.03)', border:'rgba(255,255,255,0.07)',
+    text:'#E8EEF6', muted:'rgba(255,255,255,0.45)', amber:'#F0A84E', teal:'#2DD4BF',
+    red:'#F87171', green:'#4ADE80'
+  }
+  return (
+    <main style={{fontFamily:"'Sora','DM Sans',-apple-system,sans-serif",background:C.bg,color:C.text,lineHeight:1.5,overflowX:'hidden'}}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'DM Sans',sans-serif}
-        .nav-link:hover{background:#f8fafc!important}
-        .cta-btn:hover{opacity:0.92!important;transform:translateY(-1px)}
-        .card-hover:hover{border-color:#bfdbfe!important;box-shadow:0 8px 24px rgba(0,0,0,0.08)!important}
-        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-        @keyframes slideIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-        .float{animation:float 4s ease-in-out infinite}
-        .slide{animation:slideIn 0.7s ease forwards}
-        .pulse-dot{animation:pulse 2s ease-in-out infinite}
+        ::selection{background:rgba(240,168,78,0.3)}
+        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        @keyframes glow{0%,100%{box-shadow:0 0 20px rgba(240,168,78,0.15)}50%{box-shadow:0 0 40px rgba(240,168,78,0.35)}}
+        @keyframes ring{0%{transform:scale(1);opacity:1}100%{transform:scale(2.2);opacity:0}}
+        @keyframes slideRight{from{width:0}to{width:100%}}
+        .btn-primary{background:linear-gradient(135deg,#F0A84E,#E8943A);color:#0A0D14;font-weight:700;border:none;cursor:pointer;transition:all 0.2s;letter-spacing:-0.01em}
+        .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(240,168,78,0.4)!important}
+        .btn-ghost{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all 0.2s;font-weight:500}
+        .btn-ghost:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2)}
+        .card-hover{transition:all 0.25s}
+        .card-hover:hover{transform:translateY(-4px);border-color:rgba(240,168,78,0.25)!important;box-shadow:0 12px 40px rgba(0,0,0,0.4)!important}
+        .plan-card:hover{transform:translateY(-6px)}
         a{text-decoration:none;color:inherit}
-        @media(max-width:768px){.hero-grid{grid-template-columns:1fr!important}.hero-mockup{display:none!important}.price-grid{grid-template-columns:1fr!important}.prob-grid{grid-template-columns:1fr!important}.sol-grid{grid-template-columns:1fr!important}}
+        @media(max-width:768px){
+          .hero-grid{grid-template-columns:1fr!important}
+          .hero-right{display:none!important}
+          .prob-grid{grid-template-columns:1fr!important}
+          .steps-grid{grid-template-columns:1fr!important}
+          .price-grid{grid-template-columns:1fr!important}
+          .feat-grid{grid-template-columns:1fr 1fr!important}
+        }
       `}</style>
 
       {/* ── NAV ── */}
-      <nav style={{position:'fixed',top:0,left:0,right:0,zIndex:100,background:'rgba(255,255,255,0.96)',backdropFilter:'blur(12px)',borderBottom:'1px solid #f1f5f9',padding:'0 clamp(16px,4vw,48px)',height:60,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-        <Link href="/" style={{display:'flex',alignItems:'center',gap:9}}>
-          <div style={{width:30,height:30,background:'linear-gradient(135deg,#1e40af,#3b82f6)',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 8px rgba(59,130,246,0.3)'}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+      <nav style={{position:'fixed',top:0,left:0,right:0,zIndex:100,background:'rgba(9,12,19,0.85)',backdropFilter:'blur(20px)',borderBottom:'1px solid rgba(255,255,255,0.06)',padding:'0 clamp(16px,5vw,64px)',height:62,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <div style={{width:32,height:32,background:'linear-gradient(135deg,#F0A84E,#E8943A)',borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 12px rgba(240,168,78,0.35)',animation:'glow 3s ease-in-out infinite'}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#0A0D14"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
           </div>
-          <span style={{fontWeight:700,fontSize:16,letterSpacing:'-0.01em',color:'#0f172a'}}>Reservo.AI</span>
-        </Link>
-        <div style={{display:'flex',alignItems:'center',gap:6}}>
-          <Link href="/login" className="nav-link" style={{padding:'7px 16px',fontSize:13,fontWeight:500,color:'#64748b',borderRadius:8,transition:'background 0.15s'}}>Iniciar sesión</Link>
-          <Link href="/registro" className="cta-btn" style={{padding:'7px 18px',fontSize:13,fontWeight:600,color:'white',background:'linear-gradient(135deg,#1e40af,#3b82f6)',borderRadius:8,boxShadow:'0 2px 8px rgba(59,130,246,0.25)',transition:'all 0.15s'}}>Empezar gratis</Link>
+          <span style={{fontWeight:700,fontSize:16,letterSpacing:'-0.02em',color:C.text}}>Reservo<span style={{color:C.amber}}>.AI</span></span>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <Link href="/login" className="btn-ghost" style={{padding:'7px 18px',fontSize:13,borderRadius:8,display:'inline-block'}}>Iniciar sesión</Link>
+          <Link href="/registro" className="btn-primary" style={{padding:'8px 20px',fontSize:13,borderRadius:8,display:'inline-block',boxShadow:'0 4px 16px rgba(240,168,78,0.3)'}}>Empezar gratis →</Link>
         </div>
       </nav>
 
       {/* ── HERO ── */}
-      <section style={{paddingTop:100,paddingBottom:80,padding:'100px clamp(16px,5vw,64px) 80px',maxWidth:1140,margin:'0 auto',display:'grid',gridTemplateColumns:'1fr 1fr',gap:60,alignItems:'center'}} className="hero-grid">
-        <div className="slide">
-          <div style={{display:'inline-flex',alignItems:'center',gap:7,background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:20,padding:'5px 14px',marginBottom:28}}>
-            <div style={{width:7,height:7,borderRadius:'50%',background:'#3b82f6'}} className="pulse-dot"/>
-            <span style={{fontSize:12,fontWeight:600,color:'#1d4ed8',letterSpacing:'0.02em'}}>RECEPCIONISTA CON INTELIGENCIA ARTIFICIAL</span>
+      <section style={{minHeight:'100vh',display:'grid',gridTemplateColumns:'1fr 1fr',gap:60,alignItems:'center',padding:'100px clamp(16px,5vw,64px) 60px',maxWidth:1200,margin:'0 auto'}} className="hero-grid">
+        {/* LEFT */}
+        <div style={{animation:'fadeUp 0.8s ease forwards'}}>
+          <div style={{display:'inline-flex',alignItems:'center',gap:8,background:'rgba(240,168,78,0.1)',border:'1px solid rgba(240,168,78,0.25)',borderRadius:20,padding:'5px 14px',marginBottom:30}}>
+            <div style={{width:7,height:7,borderRadius:'50%',background:C.amber,animation:'pulse 1.5s ease-in-out infinite'}}/>
+            <span style={{fontSize:11.5,fontWeight:600,color:C.amber,letterSpacing:'0.06em'}}>RECEPCIONISTA CON IA · 24/7</span>
           </div>
-          <h1 style={{fontSize:'clamp(34px,4.5vw,58px)',fontWeight:700,letterSpacing:'-0.03em',lineHeight:1.1,marginBottom:22,color:'#0f172a'}}>
-            Nunca vuelvas a{' '}
-            <span style={{background:'linear-gradient(135deg,#1e40af,#3b82f6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>perder una llamada</span>
+          <h1 style={{fontSize:'clamp(36px,4.5vw,60px)',fontWeight:800,letterSpacing:'-0.04em',lineHeight:1.08,marginBottom:24,color:C.text}}>
+            Cada llamada<br/>que no respondes<br/>
+            <span style={{background:'linear-gradient(135deg,#F0A84E,#FBBF24)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>es dinero perdido</span>
           </h1>
-          <p style={{fontSize:18,color:'#64748b',lineHeight:1.7,marginBottom:36,maxWidth:480}}>
-            Reservo.AI responde automáticamente, gestiona reservas y organiza tu negocio — sin que tú tengas que levantar el teléfono.
+          <p style={{fontSize:17,color:C.muted,lineHeight:1.75,marginBottom:16,maxWidth:500}}>
+            Tu restaurante recibe llamadas cuando estás ocupado, cuando cierras, o cuando no puedes contestar. <strong style={{color:C.text}}>Cada una es un cliente que se va.</strong>
           </p>
-          <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:24}}>
-            <Link href="/registro" className="cta-btn" style={{padding:'14px 30px',fontSize:15,fontWeight:600,color:'white',background:'linear-gradient(135deg,#1e40af,#3b82f6)',borderRadius:10,boxShadow:'0 4px 16px rgba(59,130,246,0.35)',display:'flex',alignItems:'center',gap:8,transition:'all 0.15s'}}>
-              Probar 10 llamadas gratis
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <p style={{fontSize:15,color:'rgba(255,255,255,0.35)',marginBottom:40}}>
+            Reservo.AI responde en menos de 2 segundos. Siempre.
+          </p>
+          <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:40}}>
+            <Link href="/registro" className="btn-primary" style={{padding:'14px 32px',fontSize:15,borderRadius:12,display:'inline-block',boxShadow:'0 6px 24px rgba(240,168,78,0.35)'}}>
+              Empieza hoy gratis →
             </Link>
-            <a href="#demo" style={{padding:'14px 24px',fontSize:15,fontWeight:500,color:'#374151',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:10,display:'flex',alignItems:'center',gap:7}}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 3l14 9-14 9V3z" fill="#374151"/></svg>
+            <Link href="/login" className="btn-ghost" style={{padding:'14px 24px',fontSize:14,borderRadius:12,display:'inline-block'}}>
               Ver demo
-            </a>
+            </Link>
           </div>
-          <p style={{fontSize:13,color:'#94a3b8'}}>✓ Sin tarjeta de crédito &nbsp;·&nbsp; ✓ Lista en 5 minutos &nbsp;·&nbsp; ✓ Cancela cuando quieras</p>
+          <div style={{display:'flex',gap:28,flexWrap:'wrap'}}>
+            {[['0€','sin tarjeta'],['< 2s','tiempo respuesta'],['24/7','sin descanso']].map(([n,l])=>(
+              <div key={l}>
+                <p style={{fontSize:22,fontWeight:700,color:C.amber,letterSpacing:'-0.03em'}}>{n}</p>
+                <p style={{fontSize:12,color:'rgba(255,255,255,0.35)',fontWeight:500,marginTop:1}}>{l}</p>
+              </div>
+            ))}
+          </div>
         </div>
-
-        {/* Dashboard mockup */}
-        <div className="float hero-mockup">
-          <div style={{background:'white',borderRadius:16,boxShadow:'0 24px 64px rgba(0,0,0,0.12)',border:'1px solid #e2e8f0',overflow:'hidden',position:'relative'}}>
-            <div style={{background:'#0f172a',padding:'12px 16px',display:'flex',alignItems:'center',gap:8}}>
-              <div style={{display:'flex',gap:5}}>{['#ef4444','#f59e0b','#22c55e'].map(c=><div key={c} style={{width:10,height:10,borderRadius:'50%',background:c}}/>)}</div>
-              <div style={{flex:1,background:'rgba(255,255,255,0.08)',borderRadius:4,height:16,marginLeft:4}}/>
-              <div style={{width:7,height:7,borderRadius:'50%',background:'#22c55e'}} className="pulse-dot"/>
+        {/* RIGHT — LIVE PANEL */}
+        <div className="hero-right" style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:20,overflow:'hidden',boxShadow:'0 32px 80px rgba(0,0,0,0.6)',animation:'fadeUp 0.8s ease 0.2s both'}}>
+          {/* Panel header */}
+          <div style={{background:'rgba(255,255,255,0.03)',borderBottom:'1px solid rgba(255,255,255,0.06)',padding:'12px 18px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div style={{display:'flex',gap:5}}>
+              {['#F87171','#FBBF24','#4ADE80'].map(c=><div key={c} style={{width:10,height:10,borderRadius:'50%',background:c,opacity:0.7}}/>)}
             </div>
-            <div style={{padding:14,background:'#f8fafc'}}>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
-                {[{n:'12',l:'Llamadas hoy',c:'#1d4ed8',bg:'#eff6ff'},{n:'8',l:'Reservas',c:'#166534',bg:'#f0fdf4'},{n:'24',l:'Clientes',c:'#6b21a8',bg:'#faf5ff'},{n:'0',l:'Perdidas',c:'#166534',bg:'#f0fdf4'}].map(s=>(
-                  <div key={s.l} style={{background:'white',borderRadius:8,padding:'10px 12px',border:'1px solid #e2e8f0'}}>
-                    <div style={{fontSize:22,fontWeight:700,color:s.c,letterSpacing:'-0.02em'}}>{s.n}</div>
-                    <div style={{fontSize:11,color:'#94a3b8',marginTop:1}}>{s.l}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{background:'white',borderRadius:8,border:'1px solid #e2e8f0',overflow:'hidden',marginBottom:8}}>
-                <div style={{padding:'8px 12px',borderBottom:'1px solid #f1f5f9',fontSize:11,fontWeight:600,color:'#374151'}}>Llamadas recientes</div>
-                {[{n:'María García',t:'13:45',s:'Reserva creada',c:'#059669'},{n:'Carlos López',t:'13:32',s:'Info horarios',c:'#1d4ed8'},{n:'Ana Martínez',t:'13:18',s:'Cita modificada',c:'#059669'}].map((c,i)=>(
-                  <div key={i} style={{display:'flex',alignItems:'center',gap:9,padding:'8px 12px',borderTop:i>0?'1px solid #f8fafc':'none'}}>
-                    <div style={{width:26,height:26,borderRadius:'50%',background:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#1d4ed8',flexShrink:0}}>{c.n[0]}</div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:11,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.n}</div>
-                      <div style={{fontSize:10,color:c.c,marginTop:1}}>{c.s}</div>
-                    </div>
-                    <div style={{fontSize:10,color:'#94a3b8'}}>{c.t}</div>
-                  </div>
-                ))}
-              </div>
+            <div style={{display:'flex',alignItems:'center',gap:6}}>
+              <div style={{width:6,height:6,borderRadius:'50%',background:C.teal,animation:'pulse 1.5s ease-in-out infinite'}}/>
+              <span style={{fontSize:11,color:'rgba(255,255,255,0.4)',letterSpacing:'0.05em',fontWeight:500}}>SOFIA EN LÍNEA</span>
             </div>
           </div>
-          <div style={{position:'absolute',top:'-12px',right:'-12px',background:'#059669',color:'white',borderRadius:20,padding:'6px 14px',fontSize:11,fontWeight:700,boxShadow:'0 4px 12px rgba(5,150,105,0.4)',whiteSpace:'nowrap'}}>✓ Llamada gestionada</div>
+          {/* Tabs */}
+          <div style={{display:'flex',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+            {['Llamada en curso','Actividad en vivo'].map((t,i)=>(
+              <div key={t} style={{flex:1,padding:'10px',textAlign:'center',fontSize:12,fontWeight:i===0?600:400,color:i===0?C.amber:'rgba(255,255,255,0.3)',borderBottom:i===0?`2px solid ${C.amber}`:'2px solid transparent',cursor:'pointer'}}>
+                {t}
+              </div>
+            ))}
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:0}}>
+            {/* Call sim */}
+            <div style={{borderRight:'1px solid rgba(255,255,255,0.06)',padding:'14px 16px',height:320,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10,flexShrink:0}}>
+                <div style={{position:'relative'}}>
+                  <div style={{width:28,height:28,borderRadius:'50%',background:'rgba(248,113,113,0.15)',border:'1px solid rgba(248,113,113,0.3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill={C.red}><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+                  </div>
+                  <div style={{position:'absolute',inset:-3,borderRadius:'50%',border:'1px solid rgba(248,113,113,0.4)',animation:'ring 1.5s ease-out infinite'}}/>
+                </div>
+                <div>
+                  <p style={{fontSize:11.5,color:C.text,fontWeight:600}}>Llamada activa</p>
+                  <p style={{fontSize:10,color:'rgba(255,255,255,0.3)'}}>Sofía respondiendo</p>
+                </div>
+              </div>
+              <CallSim />
+            </div>
+            {/* Live feed */}
+            <div style={{padding:'14px 16px',height:320,overflow:'hidden'}}>
+              <p style={{fontSize:11,color:'rgba(255,255,255,0.3)',letterSpacing:'0.05em',fontWeight:500,marginBottom:10}}>NOTIFICACIONES</p>
+              <LiveFeed />
+            </div>
+          </div>
         </div>
       </section>
 
+      {/* ── STATS BAR ── */}
+      <div style={{background:'rgba(240,168,78,0.05)',borderTop:'1px solid rgba(240,168,78,0.1)',borderBottom:'1px solid rgba(240,168,78,0.1)',padding:'28px clamp(16px,5vw,64px)'}}>
+        <div style={{maxWidth:1200,margin:'0 auto',display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:24,textAlign:'center'}}>
+          {[
+            {n:'8', s:'llamadas perdidas', t:'Un bar medio pierde al día'},
+            {n:'30%', s:'más reservas', t:'Media de nuestros clientes'},
+            {n:'2s', s:'respuesta', t:'Tiempo máximo de espera'},
+            {n:'100%', s:'llamadas atendidas', t:'Todas. Sin excepción.'},
+          ].map(({n,s,t})=>(
+            <div key={s}>
+              <p style={{fontSize:32,fontWeight:800,color:C.amber,letterSpacing:'-0.04em'}}>{n}</p>
+              <p style={{fontSize:13,color:C.text,fontWeight:600,marginTop:2}}>{s}</p>
+              <p style={{fontSize:11.5,color:'rgba(255,255,255,0.3)',marginTop:3}}>{t}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* ── PROBLEMA ── */}
-      <section style={{background:'#f8fafc',padding:'80px clamp(16px,5vw,64px)',borderTop:'1px solid #e2e8f0',borderBottom:'1px solid #e2e8f0'}}>
-        <div style={{maxWidth:920,margin:'0 auto',textAlign:'center'}}>
-          <p style={{fontSize:12,fontWeight:600,color:'#3b82f6',letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:12}}>EL PROBLEMA</p>
-          <h2 style={{fontSize:'clamp(26px,3.5vw,38px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:14}}>¿Cuántas llamadas pierdes al día?</h2>
-          <p style={{color:'#64748b',fontSize:16,marginBottom:52,maxWidth:520,margin:'0 auto 52px'}}>Cada llamada sin respuesta es un cliente que se va con la competencia.</p>
+      <section style={{padding:'90px clamp(16px,5vw,64px)',maxWidth:1200,margin:'0 auto'}}>
+        <div style={{textAlign:'center',marginBottom:56}}>
+          <p style={{fontSize:12,fontWeight:600,color:C.red,letterSpacing:'0.08em',marginBottom:12}}>EL PROBLEMA QUE NADIE TE DICE</p>
+          <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
+            Tu restaurante está<br/>
+            <span style={{color:C.red}}>perdiendo dinero ahora mismo</span>
+          </h2>
+          <p style={{fontSize:16,color:C.muted,maxWidth:520,margin:'0 auto'}}>Mientras lees esto, alguien está intentando reservar en tu local. Si no contestas, llama al siguiente.</p>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="prob-grid">
+          {[
+            {icon:'📵',title:'No puedes contestar siempre',body:'Estás en cocina. En sala. Con otro cliente. Las llamadas entran igual — y la gente no espera.',color:'rgba(248,113,113,0.1)',bc:'rgba(248,113,113,0.2)'},
+            {icon:'🌙',title:'Cierras. Las llamadas no',body:'A las 23:00 la gente reserva para el fin de semana. Tú duermes. Tu competencia tiene IA.',color:'rgba(251,191,36,0.1)',bc:'rgba(251,191,36,0.2)'},
+            {icon:'💸',title:'Cada llamada perdida = dinero',body:'Una mesa de 4 son 80-120€. Pierdes 8 llamadas al día. Haz las cuentas.',color:'rgba(240,168,78,0.1)',bc:'rgba(240,168,78,0.2)'},
+          ].map(({icon,title,body,color,bc})=>(
+            <div key={title} className="card-hover" style={{background:color,border:`1px solid ${bc}`,borderRadius:16,padding:'28px 24px'}}>
+              <span style={{fontSize:32,display:'block',marginBottom:16}}>{icon}</span>
+              <h3 style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:10,letterSpacing:'-0.02em'}}>{title}</h3>
+              <p style={{fontSize:14,color:C.muted,lineHeight:1.65}}>{body}</p>
+            </div>
+          ))}
+        </div>
+        {/* Pain quote */}
+        <div style={{marginTop:48,background:'rgba(248,113,113,0.05)',border:'1px solid rgba(248,113,113,0.15)',borderRadius:16,padding:'24px 32px',textAlign:'center'}}>
+          <p style={{fontSize:18,fontWeight:600,color:'rgba(255,255,255,0.85)',fontStyle:'italic',lineHeight:1.6}}>
+            "Un restaurante que pierde 8 llamadas al día pierde entre <span style={{color:C.amber,fontStyle:'normal',fontWeight:800}}>2.000€ y 3.500€ al mes</span> en reservas que nunca llegaron."
+          </p>
+        </div>
+      </section>
+
+      {/* ── SOLUCIÓN ── */}
+      <section style={{background:'rgba(255,255,255,0.015)',borderTop:'1px solid rgba(255,255,255,0.06)',borderBottom:'1px solid rgba(255,255,255,0.06)',padding:'90px clamp(16px,5vw,64px)'}}>
+        <div style={{maxWidth:1200,margin:'0 auto'}}>
+          <div style={{textAlign:'center',marginBottom:56}}>
+            <p style={{fontSize:12,fontWeight:600,color:C.teal,letterSpacing:'0.08em',marginBottom:12}}>LA SOLUCIÓN</p>
+            <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
+              Más reservas.<br/>Menos trabajo.<br/>
+              <span style={{color:C.amber}}>Cero llamadas perdidas.</span>
+            </h2>
+            <p style={{fontSize:16,color:C.muted,maxWidth:500,margin:'0 auto'}}>No es un contestador. Es tu mejor recepcionista — que nunca se cansa, nunca falla y trabaja las 24 horas.</p>
+          </div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="prob-grid">
             {[
-              {icon:'📞',title:'No puedes contestar siempre',desc:'Estás con un cliente, en la cocina o simplemente ocupado. La llamada se va.'},
-              {icon:'📅',title:'Se escapan reservas',desc:'Sin sistema centralizado, las citas se olvidan, se duplican o se pierden.'},
-              {icon:'😤',title:'El cliente no vuelve',desc:'Si no hay respuesta inmediata, se va. Y eso es dinero que nunca volverá.'},
-            ].map(p=>(
-              <div key={p.title} className="card-hover" style={{background:'white',borderRadius:14,padding:'28px 24px',border:'1px solid #e2e8f0',textAlign:'left',transition:'all 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.05)'}}>
-                <div style={{fontSize:32,marginBottom:16}}>{p.icon}</div>
-                <h3 style={{fontWeight:600,fontSize:15,marginBottom:10,color:'#0f172a',lineHeight:1.3}}>{p.title}</h3>
-                <p style={{color:'#64748b',fontSize:13,lineHeight:1.7}}>{p.desc}</p>
+              {icon:'📞',title:'Responde en 2 segundos',body:'Cada llamada, a cualquier hora. El cliente nunca escucha el buzón de voz.',color:C.teal},
+              {icon:'📅',title:'Crea la reserva sola',body:'Gestiona fecha, hora, personas y zona. Todo queda registrado en tu panel al instante.',color:C.amber},
+              {icon:'📊',title:'Tú lo ves todo en tiempo real',body:'Panel con llamadas, reservas y clientes actualizado en directo. Desde el móvil.',color:'#A78BFA'},
+            ].map(({icon,title,body,color})=>(
+              <div key={title} className="card-hover" style={{background:'rgba(255,255,255,0.02)',border:`1px solid rgba(255,255,255,0.07)`,borderRadius:16,padding:'28px 24px'}}>
+                <div style={{width:44,height:44,borderRadius:12,background:`rgba(${color==='#2DD4BF'?'45,212,191':color===C.amber?'240,168,78':'167,139,250'},0.1)`,border:`1px solid rgba(${color==='#2DD4BF'?'45,212,191':color===C.amber?'240,168,78':'167,139,250'},0.2)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,marginBottom:16}}>
+                  {icon}
+                </div>
+                <h3 style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:10,letterSpacing:'-0.02em'}}>{title}</h3>
+                <p style={{fontSize:14,color:C.muted,lineHeight:1.65}}>{body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── SOLUCIÓN ── */}
-      <section style={{padding:'80px clamp(16px,5vw,64px)',maxWidth:920,margin:'0 auto'}}>
-        <div style={{textAlign:'center',marginBottom:52}}>
-          <p style={{fontSize:12,fontWeight:600,color:'#3b82f6',letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:12}}>LA SOLUCIÓN</p>
-          <h2 style={{fontSize:'clamp(26px,3.5vw,38px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:14}}>Reservo.AI lo hace por ti</h2>
-          <p style={{color:'#64748b',fontSize:16}}>Tu recepcionista digital disponible 24 horas, 7 días a la semana.</p>
+      {/* ── CÓMO FUNCIONA ── */}
+      <section style={{padding:'90px clamp(16px,5vw,64px)',maxWidth:1200,margin:'0 auto'}}>
+        <div style={{textAlign:'center',marginBottom:56}}>
+          <p style={{fontSize:12,fontWeight:600,color:C.amber,letterSpacing:'0.08em',marginBottom:12}}>ASÍ DE SIMPLE</p>
+          <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15}}>
+            3 pasos.<br/>Sin complicaciones.
+          </h2>
         </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:16}} className="sol-grid">
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:24,position:'relative'}} className="steps-grid">
           {[
-            {icon:'🎙️',title:'Atiende llamadas automáticamente',desc:'Responde con voz natural, en tu idioma, como si fuera una persona real de tu equipo.'},
-            {icon:'📋',title:'Crea reservas al instante',desc:'Pregunta los datos y registra la cita directamente en tu panel, sin errores.'},
-            {icon:'🔔',title:'Te avisa de lo importante',desc:'Recibe notificaciones instantáneas cuando hay reservas nuevas o cambios urgentes.'},
-            {icon:'📊',title:'Todo en un panel claro',desc:'Llamadas, reservas y clientes ordenados. Nunca más perderás información.'},
-          ].map(s=>(
-            <div key={s.title} className="card-hover" style={{background:'#f8fafc',borderRadius:14,padding:'24px',border:'1px solid #e2e8f0',display:'flex',gap:18,alignItems:'flex-start',transition:'all 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.03)'}}>
-              <div style={{fontSize:26,flexShrink:0,marginTop:2}}>{s.icon}</div>
-              <div>
-                <h3 style={{fontWeight:600,fontSize:14,marginBottom:7,color:'#0f172a'}}>{s.title}</h3>
-                <p style={{color:'#64748b',fontSize:13,lineHeight:1.7}}>{s.desc}</p>
+            {n:'01',icon:'📲',title:'Alguien llama a tu restaurante',body:'A las 14:00, a las 23:00, o cuando estás cerrado. Da igual.',color:'rgba(240,168,78,0.15)',bc:'rgba(240,168,78,0.3)'},
+            {n:'02',icon:'🤖',title:'Sofía responde en 2 segundos',body:'Con tu nombre, tu menú, tus horarios. Suena como una persona de tu equipo.',color:'rgba(45,212,191,0.1)',bc:'rgba(45,212,191,0.2)'},
+            {n:'03',icon:'✅',title:'La reserva aparece en tu panel',body:'Tú ves todo en tiempo real desde el móvil. Sin hacer nada.',color:'rgba(74,222,128,0.1)',bc:'rgba(74,222,128,0.2)'},
+          ].map(({n,icon,title,body,color,bc},i)=>(
+            <div key={n} style={{position:'relative'}}>
+              <div className="card-hover" style={{background:color,border:`1px solid ${bc}`,borderRadius:20,padding:'32px 28px',height:'100%'}}>
+                <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}>
+                  <span style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)',letterSpacing:'0.1em'}}>{n}</span>
+                  <span style={{fontSize:28}}>{icon}</span>
+                </div>
+                <h3 style={{fontSize:18,fontWeight:700,color:C.text,marginBottom:12,letterSpacing:'-0.02em',lineHeight:1.3}}>{title}</h3>
+                <p style={{fontSize:14,color:C.muted,lineHeight:1.7}}>{body}</p>
               </div>
+              {i<2&&<div style={{position:'absolute',right:-13,top:'50%',transform:'translateY(-50%)',fontSize:22,color:'rgba(255,255,255,0.15)',zIndex:1,display:'none'}} className="arrow-connector">→</div>}
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* ── DEMO ── */}
-      <section id="demo" style={{background:'#0f172a',padding:'80px clamp(16px,5vw,64px)',color:'white'}}>
-        <div style={{maxWidth:720,margin:'0 auto',textAlign:'center'}}>
-          <p style={{fontSize:12,fontWeight:600,color:'#60a5fa',letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:12}}>ASÍ FUNCIONA</p>
-          <h2 style={{fontSize:'clamp(26px,3.5vw,38px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:14}}>Una llamada → Una reserva automática</h2>
-          <p style={{color:'rgba(255,255,255,0.6)',fontSize:15,marginBottom:52}}>En menos de 30 segundos, el agente gestiona la llamada y crea la reserva.</p>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'center',flexWrap:'wrap',gap:6}}>
-            {[
-              {icon:'📞',label:'Cliente llama',c:'#60a5fa'},
-              null,
-              {icon:'🤖',label:'IA responde',c:'#a78bfa'},
-              null,
-              {icon:'📅',label:'Reserva creada',c:'#34d399'},
-              null,
-              {icon:'🔔',label:'Recibes aviso',c:'#fbbf24'},
-            ].map((s,i)=>
-              s===null
-                ? <div key={i} style={{color:'rgba(255,255,255,0.2)',fontSize:22,padding:'0 4px'}}>→</div>
-                : <div key={i} style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,padding:'18px 22px',textAlign:'center',minWidth:130}}>
-                    <div style={{fontSize:30,marginBottom:10}}>{s.icon}</div>
-                    <div style={{fontSize:12,fontWeight:600,color:s.c}}>{s.label}</div>
-                  </div>
-            )}
-          </div>
         </div>
       </section>
 
       {/* ── PRECIOS ── */}
-      <section style={{padding:'80px clamp(16px,5vw,64px)',maxWidth:1000,margin:'0 auto',textAlign:'center'}}>
-        <p style={{fontSize:12,fontWeight:600,color:'#3b82f6',letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:12}}>PRECIOS</p>
-        <h2 style={{fontSize:'clamp(26px,3.5vw,38px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:14}}>Precio claro, sin sorpresas</h2>
-        <p style={{color:'#64748b',fontSize:16,marginBottom:52}}>Empieza gratis. Escala cuando tu negocio lo necesite.</p>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="price-grid">
+      <section style={{background:'rgba(255,255,255,0.015)',borderTop:'1px solid rgba(255,255,255,0.06)',borderBottom:'1px solid rgba(255,255,255,0.06)',padding:'90px clamp(16px,5vw,64px)'}}>
+        <div style={{maxWidth:1100,margin:'0 auto'}}>
+          <div style={{textAlign:'center',marginBottom:56}}>
+            <p style={{fontSize:12,fontWeight:600,color:C.amber,letterSpacing:'0.08em',marginBottom:12}}>PRECIOS</p>
+            <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:14}}>
+              Menos que un camarero a tiempo parcial.<br/>
+              <span style={{color:C.amber}}>Sin días libres ni bajas.</span>
+            </h2>
+            <p style={{fontSize:15,color:C.muted}}>Sin contratos. Sin permanencia. Cancela cuando quieras.</p>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20,alignItems:'start'}} className="price-grid">
+            {[
+              {plan:'Starter',price:'149',calls:'150 llamadas',sub:'Incluidas al mes',features:['Recepcionista IA 24/7','Reservas automáticas','Panel de control','Soporte por email'],cta:'Empezar gratis',highlight:false},
+              {plan:'Business',price:'299',calls:'600 llamadas',sub:'Incluidas al mes',features:['Todo lo de Starter','Gestión de pedidos','Mesas y zonas','Estadísticas avanzadas','Soporte prioritario'],cta:'Más popular',highlight:true},
+              {plan:'Pro',price:'499',calls:'Llamadas ilimitadas',sub:'Sin límite mensual',features:['Todo lo de Business','Múltiples locales','API acceso','Manager dedicado','SLA garantizado'],cta:'Contactar',highlight:false},
+            ].map(({plan,price,calls,sub,features,cta,highlight})=>(
+              <div key={plan} className="plan-card" style={{
+                background: highlight ? 'linear-gradient(135deg,rgba(240,168,78,0.08),rgba(240,168,78,0.03))' : 'rgba(255,255,255,0.02)',
+                border: highlight ? `2px solid ${C.amber}` : '1px solid rgba(255,255,255,0.07)',
+                borderRadius:20, padding:'32px 28px',
+                boxShadow: highlight ? '0 0 60px rgba(240,168,78,0.12)' : 'none',
+                transition:'all 0.3s', position:'relative', overflow:'hidden'
+              }}>
+                {highlight&&<div style={{position:'absolute',top:16,right:16,background:C.amber,color:'#0A0D14',fontSize:10,fontWeight:700,padding:'3px 10px',borderRadius:20,letterSpacing:'0.05em'}}>RECOMENDADO</div>}
+                <p style={{fontSize:13,fontWeight:600,color:highlight?C.amber:'rgba(255,255,255,0.4)',letterSpacing:'0.04em',marginBottom:8}}>{plan.toUpperCase()}</p>
+                <div style={{display:'flex',alignItems:'flex-end',gap:4,marginBottom:6}}>
+                  <span style={{fontSize:48,fontWeight:800,color:C.text,letterSpacing:'-0.04em',lineHeight:1}}>{price}€</span>
+                  <span style={{fontSize:14,color:C.muted,marginBottom:8}}>/mes</span>
+                </div>
+                <p style={{fontSize:13,fontWeight:600,color:highlight?C.amber:C.text,marginBottom:2}}>{calls}</p>
+                <p style={{fontSize:12,color:'rgba(255,255,255,0.3)',marginBottom:24}}>{sub}</p>
+                <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:28}}>
+                  {features.map(f=>(
+                    <div key={f} style={{display:'flex',alignItems:'center',gap:8}}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill={highlight?C.amber:'#4ADE80'}><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                      <span style={{fontSize:13,color:'rgba(255,255,255,0.7)'}}>{f}</span>
+                    </div>
+                  ))}
+                </div>
+                <Link href="/registro" className={highlight?'btn-primary':'btn-ghost'} style={{display:'block',textAlign:'center',padding:'12px',borderRadius:10,fontSize:14,fontWeight:600}}>
+                  {highlight ? 'Empezar ahora →' : cta}
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section style={{padding:'80px clamp(16px,5vw,64px)',maxWidth:800,margin:'0 auto'}}>
+        <div style={{textAlign:'center',marginBottom:48}}>
+          <h2 style={{fontSize:'clamp(24px,3vw,38px)',fontWeight:800,letterSpacing:'-0.03em'}}>Preguntas frecuentes</h2>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
           {[
-            {name:'Starter',price:'99',calls:'50 llamadas/mes',features:['Panel de control completo','Gestión de reservas','Notificaciones','Soporte email'],highlight:false},
-            {name:'Pro',price:'299',calls:'200 llamadas/mes',features:['Todo de Starter','Gestión de pedidos','Analíticas avanzadas','Soporte prioritario','Multi-idioma'],highlight:true},
-            {name:'Business',price:'499',calls:'600 llamadas/mes',features:['Todo de Pro','Multi-ubicación','Acceso API','Gestor de cuenta','SLA garantizado'],highlight:false},
-          ].map(p=>(
-            <div key={p.name} style={{background:p.highlight?'linear-gradient(145deg,#1e3a8a,#1e40af)':'white',borderRadius:16,padding:'32px 28px',border:p.highlight?'none':'1px solid #e2e8f0',boxShadow:p.highlight?'0 24px 48px rgba(30,64,175,0.25)':'0 1px 3px rgba(0,0,0,0.05)',color:p.highlight?'white':'#0f172a',position:'relative',overflow:'hidden',textAlign:'left'}}>
-              {p.highlight&&<div style={{position:'absolute',top:16,right:16,background:'rgba(255,255,255,0.15)',backdropFilter:'blur(4px)',borderRadius:20,padding:'3px 12px',fontSize:11,fontWeight:700,letterSpacing:'0.04em'}}>MÁS POPULAR</div>}
-              <div style={{fontSize:12,fontWeight:600,marginBottom:10,opacity:p.highlight?0.8:1,color:p.highlight?'white':'#64748b',letterSpacing:'0.03em',textTransform:'uppercase'}}>{p.name}</div>
-              <div style={{fontSize:44,fontWeight:700,letterSpacing:'-0.04em',marginBottom:4,lineHeight:1}}>{p.price}<span style={{fontSize:16,fontWeight:400,opacity:0.65}}>€/mes</span></div>
-              <div style={{fontSize:13,opacity:0.65,marginBottom:24}}>{p.calls}</div>
-              <ul style={{listStyle:'none',marginBottom:28,display:'flex',flexDirection:'column',gap:8}}>
-                {p.features.map(f=>(
-                  <li key={f} style={{fontSize:13,display:'flex',alignItems:'center',gap:9,opacity:p.highlight?0.9:0.8}}>
-                    <span style={{color:p.highlight?'#86efac':'#059669',fontWeight:700,flexShrink:0}}>✓</span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/registro" className="cta-btn" style={{display:'block',padding:'12px',background:p.highlight?'rgba(255,255,255,0.15)':'linear-gradient(135deg,#1e40af,#3b82f6)',color:'white',borderRadius:9,fontSize:14,fontWeight:600,textAlign:'center',border:p.highlight?'1px solid rgba(255,255,255,0.25)':'none',transition:'all 0.15s'}}>
-                {p.highlight?'Empezar ahora →':'Seleccionar'}
-              </Link>
+            {q:'¿Suena como un robot?',a:'No. Usa voces naturales y conversación fluida. Tus clientes no sabrán que es IA a menos que se lo digas.'},
+            {q:'¿Qué pasa si la IA no sabe responder algo?',a:'Te notifica inmediatamente para que puedas llamar tú. Nunca se queda sin respuesta.'},
+            {q:'¿Cuánto tarda en configurarse?',a:'Menos de 15 minutos. Rellenas el formulario con los datos de tu negocio y arranca.'},
+            {q:'¿Necesito cambiar mi número de teléfono?',a:'No. Desviamos las llamadas al sistema cuando tú no puedes contestar.'},
+            {q:'¿Puedo cancelar cuando quiera?',a:'Sí, sin permanencia ni penalizaciones. Es mes a mes.'},
+          ].map(({q,a})=>(
+            <div key={q} style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'20px 24px'}}>
+              <p style={{fontSize:15,fontWeight:600,color:C.text,marginBottom:8}}>{q}</p>
+              <p style={{fontSize:14,color:C.muted,lineHeight:1.65}}>{a}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── CTA FINAL ── */}
-      <section style={{background:'linear-gradient(145deg,#0f172a,#1e3a5f)',padding:'100px clamp(16px,5vw,64px)',textAlign:'center',color:'white'}}>
-        <div style={{maxWidth:600,margin:'0 auto'}}>
-          <div style={{fontSize:48,marginBottom:20}}>🚀</div>
-          <h2 style={{fontSize:'clamp(28px,4vw,44px)',fontWeight:700,letterSpacing:'-0.025em',marginBottom:16,lineHeight:1.2}}>Empieza con 10 llamadas gratis</h2>
-          <p style={{color:'rgba(255,255,255,0.65)',fontSize:17,marginBottom:40,lineHeight:1.6}}>Sin tarjeta de crédito. Configura tu recepcionista AI en menos de 5 minutos.</p>
-          <Link href="/registro" className="cta-btn" style={{display:'inline-flex',alignItems:'center',gap:9,padding:'15px 36px',background:'linear-gradient(135deg,#3b82f6,#1d4ed8)',color:'white',borderRadius:12,fontSize:16,fontWeight:600,boxShadow:'0 6px 24px rgba(59,130,246,0.4)',transition:'all 0.15s'}}>
-            Crear cuenta gratis
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </Link>
+      {/* ── FINAL CTA ── */}
+      <section style={{padding:'0 clamp(16px,5vw,64px) 80px'}}>
+        <div style={{maxWidth:900,margin:'0 auto',background:'linear-gradient(135deg,rgba(240,168,78,0.12),rgba(240,168,78,0.03))',border:'1px solid rgba(240,168,78,0.25)',borderRadius:28,padding:'64px 48px',textAlign:'center',position:'relative',overflow:'hidden',boxShadow:'0 0 80px rgba(240,168,78,0.08)'}}>
+          {/* Glow blob */}
+          <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:400,height:200,background:'radial-gradient(ellipse,rgba(240,168,78,0.08),transparent 70%)',pointerEvents:'none'}}/>
+          <div style={{position:'relative'}}>
+            <div style={{display:'inline-flex',alignItems:'center',gap:7,background:'rgba(240,168,78,0.1)',border:'1px solid rgba(240,168,78,0.2)',borderRadius:20,padding:'5px 14px',marginBottom:24}}>
+              <div style={{width:7,height:7,borderRadius:'50%',background:C.amber,animation:'pulse 1.5s ease-in-out infinite'}}/>
+              <span style={{fontSize:11.5,fontWeight:600,color:C.amber,letterSpacing:'0.06em'}}>EMPIEZA HOY · GRATIS</span>
+            </div>
+            <h2 style={{fontSize:'clamp(30px,4vw,52px)',fontWeight:800,letterSpacing:'-0.04em',lineHeight:1.1,marginBottom:20,color:C.text}}>
+              No pierdas ni una<br/>llamada más.
+            </h2>
+            <p style={{fontSize:17,color:C.muted,marginBottom:12,lineHeight:1.7}}>
+              Mientras tardas en decidirte, tu restaurante está perdiendo llamadas.
+            </p>
+            <p style={{fontSize:15,color:'rgba(255,255,255,0.35)',marginBottom:40}}>
+              Configúralo en 15 minutos. Sin tarjeta de crédito. Sin compromiso.
+            </p>
+            <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
+              <Link href="/registro" className="btn-primary" style={{padding:'16px 40px',fontSize:16,borderRadius:14,display:'inline-block',boxShadow:'0 8px 32px rgba(240,168,78,0.4)'}}>
+                Empezar gratis ahora →
+              </Link>
+            </div>
+            <p style={{fontSize:12,color:'rgba(255,255,255,0.2)',marginTop:20}}>
+              Sin permanencia · Cancela cuando quieras · Soporte en español
+            </p>
+          </div>
         </div>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={{borderTop:'1px solid #e2e8f0',padding:'28px clamp(16px,4vw,48px)',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12,background:'white'}}>
+      <footer style={{borderTop:'1px solid rgba(255,255,255,0.06)',padding:'32px clamp(16px,5vw,64px)',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:16}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <div style={{width:22,height:22,background:'linear-gradient(135deg,#1e40af,#3b82f6)',borderRadius:5,display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+          <div style={{width:26,height:26,background:'linear-gradient(135deg,#F0A84E,#E8943A)',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="#0A0D14"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
           </div>
-          <span style={{fontSize:13,fontWeight:600,color:'#374151'}}>Reservo.AI</span>
+          <span style={{fontSize:14,fontWeight:700,color:C.text,letterSpacing:'-0.01em'}}>Reservo<span style={{color:C.amber}}>.AI</span></span>
         </div>
-        <p style={{fontSize:12,color:'#94a3b8'}}>© 2025 Reservo.AI · Todos los derechos reservados</p>
-        <div style={{display:'flex',gap:16}}>
-          {['Privacidad','Términos','Contacto'].map(l=><a key={l} href="#" style={{fontSize:12,color:'#94a3b8'}}>{l}</a>)}
+        <p style={{fontSize:12,color:'rgba(255,255,255,0.2)'}}>© 2025 Reservo.AI — Todos los derechos reservados</p>
+        <div style={{display:'flex',gap:20}}>
+          {['Privacidad','Términos','Contacto'].map(l=>(
+            <span key={l} style={{fontSize:12,color:'rgba(255,255,255,0.3)',cursor:'pointer'}}>{l}</span>
+          ))}
         </div>
       </footer>
+
     </main>
   )
 }
