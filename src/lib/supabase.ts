@@ -1,9 +1,20 @@
+import { createBrowserClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey)
+// Cliente browser: guarda sesión en COOKIES (compatible con middleware SSR)
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)
+
+// Cliente admin (solo server-side, con service role)
+export function createAdminClient() {
+  return createSupabaseClient(
+    supabaseUrl,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
 
 export async function getDemoTenant() {
   const { data: { user } } = await supabase.auth.getUser()
