@@ -67,14 +67,14 @@ function analyzeLocally(transcript: string, callerPhone: string): CallAnalysis {
   // 1. "a nombre de X" en líneas del cliente — el más fiable
   const nameMatch1 = clientText.match(/\ba\s+nombre\s+de\s+([A-Za-záéíóúñÁÉÍÓÚÑ]{3,}(?:\s+[A-Za-záéíóúñÁÉÍÓÚÑ]{2,})?)/i)
   if (nameMatch1?.[1] && !STOP.has(nameMatch1[1].toLowerCase().trim())) {
-    customer_name = nameMatch1[1].trim()
+    customer_name = nameMatch1[1].trim().split(/\s*\n\s*/)[0].trim()
   }
 
   // 2. "me llamo X" / "soy X" en líneas del cliente
   if (!customer_name) {
     const nameMatch2 = clientText.match(/\b(?:me\s+llamo|soy)\s+([A-Za-záéíóúñÁÉÍÓÚÑ]{3,})/i)
     if (nameMatch2?.[1] && !STOP.has(nameMatch2[1].toLowerCase().trim())) {
-      customer_name = nameMatch2[1].trim()
+      customer_name = nameMatch2[1].trim().split(/\s*\n\s*/)[0].trim()
     }
   }
 
