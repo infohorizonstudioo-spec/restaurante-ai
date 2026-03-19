@@ -27,7 +27,7 @@ export async function POST(req: Request) {
         email, phone: phone || null,
         plan: 'trial', active: true,
         free_calls_limit: 10, free_calls_used: 0,
-        onboarding_complete: true, onboarding_step: 4,
+        onboarding_complete: false, onboarding_step: 1,
       })
       .select().single()
     if (tenantError) return NextResponse.json({ error: tenantError.message }, { status: 400 })
