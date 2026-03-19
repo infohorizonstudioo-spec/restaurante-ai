@@ -69,7 +69,7 @@ const HOSTELERIA: TemplateConfig = {
   hasZones: true,
   hasDelivery: true,
   modules: [
-    { id:'panel',        href:'/panel',        icon:'grid',  label:'Centro de control' },
+    { id:'panel',        href:'/panel',        icon:'grid',  label:'Resumen del día' },
     { id:'reservas',     href:'/reservas',     icon:'cal',   label:'Reservas' },
     { id:'agenda',       href:'/agenda',       icon:'clock', label:'Agenda' },
     { id:'llamadas',     href:'/llamadas',     icon:'phone', label:'Llamadas' },
@@ -78,6 +78,7 @@ const HOSTELERIA: TemplateConfig = {
     { id:'pedidos',      href:'/pedidos',      icon:'bag',   label:'Pedidos', pro:true },
     { id:'estadisticas', href:'/estadisticas', icon:'bar',   label:'Estadísticas', pro:true },
     { id:'facturacion',  href:'/facturacion',  icon:'card',  label:'Facturación' },
+    { id:'agente',       href:'/agente',       icon:'cpu',   label:'Tu recepcionista' },
     { id:'configuracion',href:'/configuracion',icon:'gear',  label:'Configuración' },
   ],
   labels: {
@@ -103,13 +104,14 @@ const SERVICIOS: TemplateConfig = {
   hasZones: false,
   hasDelivery: false,
   modules: [
-    { id:'panel',        href:'/panel',        icon:'grid',  label:'Centro de control' },
+    { id:'panel',        href:'/panel',        icon:'grid',  label:'Resumen del día' },
     { id:'reservas',     href:'/reservas',     icon:'cal',   label:'Citas' },
     { id:'agenda',       href:'/agenda',       icon:'clock', label:'Agenda' },
     { id:'llamadas',     href:'/llamadas',     icon:'phone', label:'Llamadas' },
     { id:'clientes',     href:'/clientes',     icon:'users', label:'Clientes' },
     { id:'estadisticas', href:'/estadisticas', icon:'bar',   label:'Estadísticas', pro:true },
     { id:'facturacion',  href:'/facturacion',  icon:'card',  label:'Facturación' },
+    { id:'agente',       href:'/agente',       icon:'cpu',   label:'Tu recepcionista' },
     { id:'configuracion',href:'/configuracion',icon:'gear',  label:'Configuración' },
   ],
   labels: {

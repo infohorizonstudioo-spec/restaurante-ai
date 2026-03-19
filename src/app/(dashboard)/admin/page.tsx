@@ -142,10 +142,10 @@ export default function AdminPage() {
         {/* KPIs */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:24}}>
           {[
-            {label:'MRR',        value:`${mrr.toLocaleString('es-ES')}€`, sub:'ingresos recurrentes',    color:C.green,  bg:C.greenDim},
-            {label:'Negocios',   value:tenants.length,                    sub:'total registrados',        color:C.violet, bg:C.violetDim},
-            {label:'De pago',    value:paying,                            sub:'con plan activo',          color:C.amber,  bg:C.amberDim},
-            {label:'Llamadas',   value:totalCalls.toLocaleString('es-ES'),sub:'gestionadas en total',    color:C.teal,   bg:C.tealDim},
+            {label:'Facturado este mes', value:`${mrr.toLocaleString('es-ES')}€`, sub:'ingresos mensuales',       color:C.green,  bg:C.greenDim},
+            {label:'Negocios',           value:tenants.length,                    sub:'total en la plataforma',  color:C.violet, bg:C.violetDim},
+            {label:'Pagando',            value:paying,                            sub:'con plan mensual activo',  color:C.amber,  bg:C.amberDim},
+            {label:'Llamadas',           value:totalCalls.toLocaleString('es-ES'),sub:'gestionadas en total',    color:C.teal,   bg:C.tealDim},
           ].map(k=>(
             <div key={k.label} style={{background:k.bg,border:`1px solid ${k.color}30`,borderRadius:14,padding:'16px 18px'}}>
               <p style={{fontSize:26,fontWeight:800,color:k.color,letterSpacing:'-0.04em'}}>{k.value}</p>
@@ -161,7 +161,7 @@ export default function AdminPage() {
 
         {/* TABS */}
         <div style={{display:'flex',gap:4,borderBottom:`1px solid ${C.border}`,marginBottom:20}}>
-          {([['tenants','Negocios'],['users','Crear cliente'],['planes','Planes']] as const).map(([k,l])=>(
+          {([['tenants','Mis negocios'],['users','Dar acceso'],['planes','Cambiar plan']] as const).map(([k,l])=>(
             <button key={k} onClick={()=>setTab(k)}
               style={{padding:'9px 18px',fontSize:13,fontWeight:600,border:'none',borderBottom:`2px solid ${tab===k?C.amber:'transparent'}`,
                 background:'none',color:tab===k?C.amber:C.text3,cursor:'pointer',fontFamily:'inherit',marginBottom:-1,transition:'color 0.15s'}}>
@@ -208,7 +208,7 @@ export default function AdminPage() {
                     <div style={{display:'flex',gap:6}}>
                       <button onClick={()=>{setUserForm(f=>({...f,tenantId:t.id}));setTab('users')}}
                         style={{fontSize:11,padding:'4px 10px',borderRadius:7,border:`1px solid ${C.border}`,background:C.surface2,color:C.text2,cursor:'pointer',fontFamily:'inherit',fontWeight:500}}>
-                        + Acceso
+                        Dar acceso
                       </button>
                       <button onClick={()=>toggleActive(t.id,!t.active)}
                         style={{fontSize:11,padding:'4px 10px',borderRadius:7,border:`1px solid ${t.active?C.border:C.amberBorder}`,background:t.active?C.surface2:C.amberDim,color:t.active?C.text3:C.amber,cursor:'pointer',fontFamily:'inherit',fontWeight:500}}>
@@ -226,7 +226,7 @@ export default function AdminPage() {
         {/* TAB: CREAR CLIENTE */}
         {tab==='users'&&(
           <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'24px',maxWidth:480}}>
-            <p style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:20}}>Crear acceso para cliente</p>
+            <p style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:20}}>Dar acceso a un cliente</p>
             <div style={{display:'flex',flexDirection:'column',gap:14}}>
               <div>
                 <p style={{fontSize:11,color:C.text3,marginBottom:6,fontWeight:600}}>NEGOCIO *</p>
@@ -253,8 +253,8 @@ export default function AdminPage() {
         {tab==='planes'&&(
           <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden'}}>
             <div style={{padding:'14px 20px',borderBottom:`1px solid ${C.border}`}}>
-              <p style={{fontSize:13,fontWeight:700,color:C.text}}>Gestión de planes</p>
-              <p style={{fontSize:11,color:C.text3,marginTop:2}}>Starter 149€ · Pro 299€ · Business 499€</p>
+              <p style={{fontSize:13,fontWeight:700,color:C.text}}>Cambiar plan de cada negocio</p>
+              <p style={{fontSize:11,color:C.text3,marginTop:2}}>Básico 149€ · Profesional 299€ · Completo 499€ al mes</p>
             </div>
             {tenants.map((t,i)=>{
               const pl=PLANS[t.plan]||PLANS.trial
@@ -267,10 +267,10 @@ export default function AdminPage() {
                   </div>
                   <select value={t.plan} onChange={e=>changePlan(t.id,e.target.value)}
                     style={{...sel,width:'auto',minWidth:180,padding:'6px 10px',fontSize:12}}>
-                    <option value="trial">Trial (gratis · 10 llamadas)</option>
-                    <option value="starter">Starter — 149€/mes · 150 llamadas</option>
-                    <option value="pro">Pro — 299€/mes · 600 llamadas</option>
-                    <option value="business">Business — 499€/mes · 600 llamadas</option>
+                    <option value="trial">Prueba gratuita (10 llamadas)</option>
+                    <option value="starter">Básico — 149€/mes · 150 llamadas</option>
+                    <option value="pro">Profesional — 299€/mes · 600 llamadas</option>
+                    <option value="business">Completo — 499€/mes · 600 llamadas</option>
                   </select>
                   <span style={{fontSize:12,fontWeight:700,color:pl.color,minWidth:60,textAlign:'right'}}>{pl.price>0?pl.price+'€':'Gratis'}</span>
                 </div>

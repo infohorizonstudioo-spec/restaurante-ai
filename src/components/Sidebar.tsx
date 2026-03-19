@@ -9,7 +9,7 @@ const PLAN_COL: Record<string,string> = {
   trial:'#F0A84E',free:'#F0A84E',starter:'#60A5FA',pro:'#A78BFA',business:'#34D399',enterprise:'#34D399'
 }
 const PLAN_LBL: Record<string,string> = {
-  trial:'Trial',free:'Trial',starter:'Starter',pro:'Pro',business:'Business',enterprise:'Business'
+  trial:'Prueba', free:'Prueba', starter:'Básico', pro:'Profesional', business:'Completo', enterprise:'Completo'
 }
 
 // Iconos SVG como paths compactos
@@ -181,7 +181,7 @@ export default function Sidebar() {
             <div style={{ height:'100%', width:pct+'%', background: pct>=100 ? 'var(--rz-red)' : pct>=80 ? 'var(--rz-yellow)' : planColor, borderRadius:2, transition:'width 0.6s ease', transformOrigin:'left' }}/>
           </div>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <span style={{ fontSize:10, color:'var(--rz-text-3)', textTransform:'uppercase', letterSpacing:'0.05em' }}>Llamadas del ciclo</span>
+            <span style={{ fontSize:10, color:'var(--rz-text-3)', textTransform:'uppercase', letterSpacing:'0.05em' }}>Llamadas este mes</span>
             {isTrial && <Link href="/precios" style={{ fontSize:10, color:'var(--rz-amber)', fontWeight:700, textDecoration:'none', letterSpacing:'-0.01em' }}>Activar →</Link>}
           </div>
         </div>
