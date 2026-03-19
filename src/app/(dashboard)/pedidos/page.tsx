@@ -1,5 +1,4 @@
 'use client'
-import NotifBell from '@/components/NotifBell'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
