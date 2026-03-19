@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
+import { makeDecision, DEFAULT_RULES } from '@/lib/agent-decision'
+import { getBusinessRules } from '@/lib/business-memory'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -319,24 +321,55 @@ export async function POST(req: Request) {
     // ── Análisis con Claude ─────────────────────────────────────────────────
     const analysis = await analyzeWithClaude(transcript, businessName, callerPhone, templateType)
 
+    // ── Motor de decisión inteligente ───────────────────────────────────────
+    // Carga reglas del negocio (o usa defaults si no hay configuradas)
+    const businessRules = await getBusinessRules(tenantId).catch(() => DEFAULT_RULES)
+    const decision = makeDecision(
+      { ...analysis, transcript, caller_phone: callerPhone },
+      businessRules
+    )
+
+    console.log(
+      'decision |', decision.status,
+      '| confidence:', (decision.confidence * 100).toFixed(0) + '%',
+      '| flags:', decision.special_flags.join(',') || 'none',
+      '| reasoning:', decision.reasoning_label
+    )
+
     // ── Guardar en DB (atómico, idempotente) ────────────────────────────────
     const { data: sessionResult, error: sessionError } = await admin.rpc('complete_call_session', {
       p_call_sid:        key,
       p_tenant_id:       tenantId,
       p_duration:        duration || 0,
-      p_status:          'completada',
+      p_status:          decision.status === 'confirmed' ? 'completada' : 'pendiente',
       p_transcript:      transcript || null,
-      p_summary:         analysis.summary,
-      p_intent:          analysis.intent,
-      p_customer_name:   analysis.customer_name || null,
-      p_action:          analysis.action_required,
+      p_summary:         decision.summary,
+      p_intent:          decision.intent,
+      p_customer_name:   decision.customer_name || null,
+      p_action:          decision.action_required,
       p_source:          'twilio',
-      p_action_required: analysis.action_required,
+      p_action_required: decision.action_required,
     })
 
     if (sessionError) {
       console.error('complete_call_session error:', sessionError.message)
     }
+
+    // ── Guardar decisión estructurada (flags, estado, confianza) ────────────
+    // Fire-and-forget — no bloquear el response
+    ;(async () => {
+      try {
+        await admin.from('calls')
+          .update({
+            decision_status:    decision.status,
+            decision_flags:     decision.special_flags,
+            decision_confidence: decision.confidence,
+            reasoning_label:    decision.reasoning_label,
+          })
+          .eq('call_sid', key)
+          .eq('tenant_id', tenantId)
+      } catch(e: any) { /* columnas pueden no existir aún — no crítico */ }
+    })()
 
     const alreadyCounted = (sessionResult as any)?.already_counted === true
 
@@ -352,21 +385,32 @@ export async function POST(req: Request) {
       } catch(e: any) { console.error('billing error:', e.message) }
     }
 
-    console.log('post-call done | sid:', key.slice(0,20), '| intent:', analysis.intent, '| summary:', analysis.summary.slice(0,60), '| billed:', shouldBill, '| ms:', Date.now()-t0)
+    console.log('post-call done | sid:', key.slice(0,20), '| intent:', decision.intent, '| status:', decision.status, '| confidence:', (decision.confidence*100).toFixed(0)+'%', '| billed:', shouldBill, '| ms:', Date.now()-t0)
 
+    // Objeto estructurado según spec del agente
     return NextResponse.json({
-      ok:              true,
-      call_sid:        key,
-      business_id:     tenantId,
-      phone_number:    callerPhone,
-      customer_name:   analysis.customer_name,
-      intent:          analysis.intent,
-      summary:         analysis.summary,
-      action_required: analysis.action_required,
-      outcome:         analysis.outcome,
+      ok:               true,
+      // Identificadores
+      call_sid:         key,
+      business_id:      tenantId,
+      // Datos del cliente
+      customer_name:    decision.customer_name,
+      phone_number:     decision.phone_number,
+      // Análisis
+      intent:           decision.intent,
+      summary:          decision.summary,
+      details:          decision.details,
+      // Decisión del agente
+      status:           decision.status,
+      confidence:       decision.confidence,
+      action_required:  decision.action_required,
+      special_flags:    decision.special_flags,
+      reasoning_label:  decision.reasoning_label,
+      response_hint:    decision.response_hint,
+      // Meta
       duration,
-      billed:          shouldBill,
-      ms:              Date.now() - t0,
+      billed:           shouldBill,
+      ms:               Date.now() - t0,
     })
   } catch(e: any) {
     // NUNCA perder la llamada — guardar lo mínimo aunque todo falle
