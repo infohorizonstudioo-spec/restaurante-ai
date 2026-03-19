@@ -108,8 +108,8 @@ export default function ConfiguracionPage(){
   return(
     <div style={{background:C.bg,minHeight:'100vh'}}>
 
-      <PageHeader actions={<NotifBell/>} title='Configuración'
-        actions={<Button onClick={save} loading={saving} style={{background:saved?C.green:C.amber,color:'#0C1018',transition:'background 0.3s'}}>{saved?'✓ Guardado':'Guardar cambios'}</Button>}/>
+      <PageHeader title='Configuración'
+        actions={<div style={{display:'flex',gap:8,alignItems:'center'}}><NotifBell/><Button onClick={save} loading={saving} style={{background:saved?C.green:C.amber,color:'#0C1018',transition:'background 0.3s'}}>{saved?'✓ Guardado':'Guardar cambios'}</Button></div>}/>
       <div style={{maxWidth:680,margin:'0 auto',padding:24,display:'flex',flexDirection:'column',gap:14}}>
 
         <Section title='Plan activo'>

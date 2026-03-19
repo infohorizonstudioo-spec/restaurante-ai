@@ -272,30 +272,41 @@ export default function PanelPage() {
     setLoading(false)
   }, [router])
 
-  // Real-time events from DB
+  // Real-time events from DB — canal separado que espera a tener tenant_id
+  useEffect(() => { load() }, [load])
+
   useEffect(() => {
-    load()
-    const ch = supabase.channel('panel-rt-v2')
-      .on('postgres_changes',{ event:'INSERT',schema:'public',table:'calls' }, payload => {
+    const tid = tenant?.id
+    if (!tid) return
+    const ch = supabase.channel('panel-rt-v3-' + tid)
+      .on('postgres_changes',{ event:'INSERT', schema:'public', table:'calls', filter:`tenant_id=eq.${tid}` }, payload => {
         const c = payload.new as any
-        pushEvent({ type:'call_incoming',icon:'📞',color:C.teal,title:`Nueva llamada entrante`,sub:c.caller_phone||'Número oculto',priority:'high' })
+        pushEvent({ type:'call_incoming', icon:'📞', color:C.teal, title:'Nueva llamada entrante', sub:c.caller_phone||'Número oculto', priority:'high' })
         load()
       })
-      .on('postgres_changes',{ event:'UPDATE',schema:'public',table:'calls' }, payload => {
+      .on('postgres_changes',{ event:'UPDATE', schema:'public', table:'calls', filter:`tenant_id=eq.${tid}` }, payload => {
         const c = payload.new as any
         if (c.status==='completada'||c.status==='completed') {
-          pushEvent({ type:'call_ended',icon:'✅',color:C.green,title:`Llamada finalizada${c.customer_name?' — '+c.customer_name:''}`,sub:c.summary?.slice(0,80)||'Resumen generado' })
+          pushEvent({ type:'call_ended', icon:'✅', color:C.green, title:`Llamada finalizada${c.customer_name?' — '+c.customer_name:''}`, sub:c.summary?.slice(0,80)||'Resumen generado' })
         }
         load()
       })
-      .on('postgres_changes',{ event:'INSERT',schema:'public',table:'reservations' }, payload => {
+      .on('postgres_changes',{ event:'INSERT', schema:'public', table:'reservations', filter:`tenant_id=eq.${tid}` }, payload => {
         const r = payload.new as any
-        pushEvent({ type:'reservation',icon:'📅',color:C.teal,title:`Nueva reserva — ${r.customer_name||'Cliente'}`,sub:`${r.people||r.party_size}p · ${(r.time||'').slice(0,5)}`,priority:'high' })
+        pushEvent({ type:'reservation', icon:'📅', color:C.teal, title:`Nueva reserva — ${r.customer_name||'Cliente'}`, sub:`${r.people||r.party_size||'?'}p · ${(r.time||'').slice(0,5)}`, priority:'high' })
         load()
       })
-      .subscribe()
+      .on('postgres_changes',{ event:'INSERT', schema:'public', table:'notifications', filter:`tenant_id=eq.${tid}` }, payload => {
+        const n = payload.new as any
+        const icon = n.priority==='critical' ? '🔴' : n.priority==='warning' ? '⚠️' : '💬'
+        pushEvent({ type:'system', icon, color: n.priority==='critical'?C.red:n.priority==='warning'?C.yellow:C.text2, title:n.title, sub:n.body||'' })
+      })
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') console.log('panel RT subscribed for tenant', tid.slice(0,8))
+        if (status === 'CHANNEL_ERROR') console.error('panel RT channel error')
+      })
     return () => { supabase.removeChannel(ch) }
-  }, [load, pushEvent])
+  }, [tenant, load, pushEvent])
 
   // Demo mode loop
   const toggleDemo = useCallback(() => {
@@ -424,7 +435,7 @@ export default function PanelPage() {
                 </p>
                 {!agentOn && <Link href="/configuracion" style={{ display:'inline-block',marginTop:16,padding:'9px 20px',fontSize:13,fontWeight:600,color:'#0C1018',background:C.amber,borderRadius:9,textDecoration:'none' }}>Configurar número →</Link>}
                 {agentOn && (
-                  <div style={{ marginTop:20,display:'flex',alignItems:'center',justify:'center',gap:16,justifyContent:'center' }}>
+                  <div style={{ marginTop:20,display:'flex',alignItems:'center',justifyContent:'center',gap:16 }}>
                     {['📞 Responde 24/7','📅 Detecta reservas','🛍️ Toma pedidos'].map(s=>(
                       <div key={s} style={{ fontSize:12,color:C.text3,display:'flex',alignItems:'center',gap:5 }}>{s}</div>
                     ))}
