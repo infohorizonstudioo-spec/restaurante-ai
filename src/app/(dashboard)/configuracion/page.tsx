@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader, PageHeader, Button, Input, Select, Textarea, Alert } from '@/components/ui'
 import Link from 'next/link'
+import NotifSettings from './NotifSettings'
 
 const C = {
   amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',amberGlow:'rgba(240,168,78,0.20)',
