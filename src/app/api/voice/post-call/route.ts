@@ -59,8 +59,10 @@ function analyzeLocally(transcript: string, callerPhone: string): CallAnalysis {
   // ── Nombre — solo en texto del cliente ─────────────────────────────────
   const STOP = new Set([
     'hola','buenas','bien','vale','claro','gracias','favor','perfecto','estupendo',
-    'para','con','que','una','uno','dos','tres','hay','hay','esto','eso',
+    'para','con','que','una','uno','dos','tres','hay','esto','eso','mañana','hoy',
     'sofía','sofia','lucía','lucia','carmen','maria','laura','agente','recepcionista',
+    'alérgico','alérgica','intolerante','vegetariano','vegetariana','vegano','vegana',
+    'celíaco','celíaca','interesado','interesada','disponible','correcto','exacto',
   ])
 
   let customer_name: string | null = null
@@ -71,9 +73,10 @@ function analyzeLocally(transcript: string, callerPhone: string): CallAnalysis {
     customer_name = nameMatch1[1].trim().split(/\s*\n\s*/)[0].trim()
   }
 
-  // 2. "me llamo X" / "soy X" en líneas del cliente
+  // 2. "me llamo X" / "soy X" en líneas del cliente (solo nombres propios)
   if (!customer_name) {
-    const nameMatch2 = clientText.match(/\b(?:me\s+llamo|soy)\s+([A-Za-záéíóúñÁÉÍÓÚÑ]{3,})/i)
+    const nameMatch2 = clientText.match(/\b(?:me\s+llamo)\s+([A-Za-záéíóúñÁÉÍÓÚÑ]{3,})/i)
+      || clientText.match(/\bsoy\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})/i) // solo si empieza mayúscula
     if (nameMatch2?.[1] && !STOP.has(nameMatch2[1].toLowerCase().trim())) {
       customer_name = nameMatch2[1].trim().split(/\s*\n\s*/)[0].trim()
     }
@@ -489,24 +492,22 @@ export async function POST(req: Request) {
     // Objeto estructurado según spec del agente
     return NextResponse.json({
       ok:               true,
-      // Identificadores
       call_sid:         key,
       business_id:      tenantId,
-      // Datos del cliente
       customer_name:    decision.customer_name,
       phone_number:     decision.phone_number,
-      // Análisis
       intent:           decision.intent,
       summary:          decision.summary,
       details:          decision.details,
-      // Decisión del agente
       status:           decision.status,
       confidence:       decision.confidence,
       action_required:  decision.action_required,
       special_flags:    decision.special_flags,
       reasoning_label:  decision.reasoning_label,
       response_hint:    decision.response_hint,
-      // Meta
+      applied_rule:     decision.applied_rule,
+      knowledge_source: decision.knowledge_source,
+      decision_trace:   decision.decision_trace,
       duration,
       billed:           shouldBill,
       ms:               Date.now() - t0,
