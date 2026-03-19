@@ -158,7 +158,7 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
-  },[email,pw])
+  },[])
 
   return (
     <div style={{ minHeight:'100vh', display:'grid', gridTemplateColumns:'1fr 1fr', fontFamily:"'Sora',-apple-system,sans-serif" }}>

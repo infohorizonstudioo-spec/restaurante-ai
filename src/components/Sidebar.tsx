@@ -144,7 +144,7 @@ export default function Sidebar() {
           </div>
         )}
         {modules.map(item => {
-          if (item.hidden) return null
+          if ((item as any).hidden) return null
           const active  = path === item.href || (item.href !== '/panel' && path.startsWith(item.href))
           const locked  = !!(item.pro && isTrial)
           const href    = locked ? '/precios' : item.href
