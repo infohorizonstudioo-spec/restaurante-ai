@@ -67,7 +67,14 @@ export default function Sidebar() {
   const planLabel = PLAN_LBL[plan] || 'Trial'
   const agentOn   = !!(tenant?.agent_phone)
   const agentName = tenant?.agent_name || 'Sofía'
-  const modules   = template?.modules || DEFAULT_MODULES
+  // Usar template si existe, pero asegurar que /agente siempre aparece
+  const baseModules = template?.modules || DEFAULT_MODULES
+  const hasAgente = baseModules.some((m: any) => m.id === 'agente')
+  const modules = hasAgente ? baseModules : [
+    ...baseModules.filter((m: any) => m.id !== 'configuracion'),
+    { id:'agente', href:'/agente', icon:'cpu', label:'Agente IA' },
+    { id:'configuracion', href:'/configuracion', icon:'gear', label:'Configuración' },
+  ]
   const W = collapsed ? 60 : 224
 
   return (
