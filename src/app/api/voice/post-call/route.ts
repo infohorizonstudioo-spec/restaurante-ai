@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { makeDecision, DEFAULT_RULES } from '@/lib/agent-decision'
 import { getBusinessRules } from '@/lib/business-memory'
+import { createNotification } from '@/lib/notifications'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -369,6 +370,56 @@ export async function POST(req: Request) {
           .eq('call_sid', key)
           .eq('tenant_id', tenantId)
       } catch(e: any) { /* columnas pueden no existir aún — no crítico */ }
+    })()
+
+    // ── Notificación en el panel ─────────────────────────────────────────────
+    ;(async () => {
+      try {
+        const phone = callerPhone || 'Número oculto'
+        const name  = decision.customer_name ? decision.customer_name : phone
+
+        if (decision.status === 'needs_human_attention') {
+          await createNotification({
+            tenant_id: tenantId,
+            type:      'call_attention',
+            title:     '⚠ Llamada requiere tu atención',
+            body:      `${name} — ${decision.summary || 'Revisa esta llamada'}`,
+            call_sid:  key,
+          })
+        } else if (decision.status === 'pending_review') {
+          await createNotification({
+            tenant_id: tenantId,
+            type:      'call_pending',
+            title:     `Llamada pendiente de revisar`,
+            body:      `${name} — ${decision.reasoning_label || decision.summary}`,
+            call_sid:  key,
+          })
+        } else if (decision.status === 'confirmed' && decision.intent === 'reserva') {
+          await createNotification({
+            tenant_id: tenantId,
+            type:      'reservation_created',
+            title:     `Nueva reserva confirmada`,
+            body:      decision.summary || `${name}`,
+            call_sid:  key,
+          })
+        } else if (duration < 10 && callerPhone) {
+          await createNotification({
+            tenant_id: tenantId,
+            type:      'call_missed',
+            title:     `Llamada muy corta`,
+            body:      `${phone} — ${duration}s. Puede que necesite rellamar.`,
+            call_sid:  key,
+          })
+        } else if (decision.status === 'confirmed') {
+          await createNotification({
+            tenant_id: tenantId,
+            type:      'call_completed',
+            title:     `Llamada atendida`,
+            body:      `${name} — ${decision.summary}`,
+            call_sid:  key,
+          })
+        }
+      } catch(e: any) { console.error('notification error:', e.message) }
     })()
 
     const alreadyCounted = (sessionResult as any)?.already_counted === true
