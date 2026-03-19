@@ -1,6 +1,5 @@
 'use client'
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useState, useCallback, useEffect, useRef } from 'react'import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 const ERR: Record<string,string> = {
@@ -138,14 +137,19 @@ export default function LoginPage() {
   const [pw,setPw]           = useState('')
   const [loading,setLoading] = useState(false)
   const [error,setError]     = useState('')
+  const emailRef             = useRef<HTMLInputElement>(null)
+  const pwRef                = useRef<HTMLInputElement>(null)
 
   const login = useCallback(async () => {
-    if (!email.trim()||!pw) { setError('Rellena todos los campos'); return }
+    // Leer del DOM directamente por si autofill no disparó onChange
+    const emailVal = emailRef.current?.value || email
+    const pwVal    = pwRef.current?.value    || pw
+    if (!emailVal.trim() || !pwVal) { setError('Rellena todos los campos'); return }
     setLoading(true); setError('')
     try {
       const { data, error:e } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: pw,
+        email: emailVal.trim().toLowerCase(),
+        password: pwVal,
       })
       if (e) throw e
       if (!data.user) throw new Error('No se pudo iniciar sesión')
@@ -246,14 +250,14 @@ export default function LoginPage() {
           <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:18 }}>
             <div>
               <label style={{ display:'block', fontSize:11, fontWeight:600, color:'#8895A7', marginBottom:6, letterSpacing:'0.05em', textTransform:'uppercase' }}>Email</label>
-              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()} placeholder="tu@negocio.com" autoComplete="email" className="rzinp"/>
+              <input type="email" ref={emailRef} value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()} placeholder="tu@negocio.com" autoComplete="email" className="rzinp"/>
             </div>
             <div>
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
                 <label style={{ fontSize:11, fontWeight:600, color:'#8895A7', letterSpacing:'0.05em', textTransform:'uppercase' }}>Contraseña</label>
                 <Link href="/reset" style={{ fontSize:12, color:'#F0A84E', textDecoration:'none', fontWeight:500 }}>¿Olvidaste?</Link>
               </div>
-              <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()} placeholder="••••••••" autoComplete="current-password" className="rzinp"/>
+              <input type="password" ref={pwRef} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()} placeholder="••••••••" autoComplete="current-password" className="rzinp"/>
             </div>
           </div>
 

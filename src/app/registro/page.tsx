@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
@@ -18,6 +18,9 @@ export default function RegistroPage() {
   const [error,setError]     = useState('')
   const [form,setForm]       = useState({ name:'',email:'',password:'',businessName:'',businessType:'restaurante' })
   const up = (k:string,v:string) => setForm(f=>({...f,[k]:v}))
+  const nameRef     = useRef<HTMLInputElement>(null)
+  const emailRef    = useRef<HTMLInputElement>(null)
+  const passwordRef = useRef<HTMLInputElement>(null)
 
   const handleRegister = useCallback(async () => {
     if (!form.email||!form.password||!form.name||!form.businessName){setError('Rellena todos los campos');return}
@@ -116,19 +119,28 @@ export default function RegistroPage() {
               <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:18 }}>
                 <div>
                   <label style={{ display:'block', fontSize:11, fontWeight:600, color:'#8895A7', marginBottom:6, letterSpacing:'0.05em', textTransform:'uppercase' }}>Nombre completo</label>
-                  <input className="rzinp" type="text" value={form.name} onChange={e=>up('name',e.target.value)} placeholder="Juan García" autoComplete="name"/>
+                  <input className="rzinp" ref={nameRef} type="text" value={form.name} onChange={e=>up('name',e.target.value)} placeholder="Juan García" autoComplete="name"/>
                 </div>
                 <div>
                   <label style={{ display:'block', fontSize:11, fontWeight:600, color:'#8895A7', marginBottom:6, letterSpacing:'0.05em', textTransform:'uppercase' }}>Email</label>
-                  <input className="rzinp" type="email" value={form.email} onChange={e=>up('email',e.target.value)} placeholder="tu@negocio.com" autoComplete="email"/>
+                  <input className="rzinp" ref={emailRef} type="email" value={form.email} onChange={e=>up('email',e.target.value)} placeholder="tu@negocio.com" autoComplete="email"/>
                 </div>
                 <div>
                   <label style={{ display:'block', fontSize:11, fontWeight:600, color:'#8895A7', marginBottom:6, letterSpacing:'0.05em', textTransform:'uppercase' }}>Contraseña</label>
-                  <input className="rzinp" type="password" value={form.password} onChange={e=>up('password',e.target.value)} placeholder="Mínimo 6 caracteres" autoComplete="new-password"/>
+                  <input className="rzinp" ref={passwordRef} type="password" value={form.password} onChange={e=>up('password',e.target.value)} placeholder="Mínimo 6 caracteres" autoComplete="new-password"/>
                 </div>
               </div>
               {error && <div style={{ background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.2)', borderRadius:9, padding:'10px 14px', marginBottom:14, fontSize:13, color:'#F87171' }}>{error}</div>}
-              <button className="rzbtn" onClick={()=>{ if(!form.name||!form.email||!form.password){setError('Rellena todos los campos');return} if(form.password.length<6){setError('Contraseña mínimo 6 caracteres');return} setError('');setStep(2) }}>
+              <button className="rzbtn" onClick={()=>{
+                const nameVal  = nameRef.current?.value  || form.name
+                const emailVal = emailRef.current?.value || form.email
+                const pwVal    = passwordRef.current?.value || form.password
+                if(!nameVal||!emailVal||!pwVal){setError('Rellena todos los campos');return}
+                if(pwVal.length<6){setError('Contraseña mínimo 6 caracteres');return}
+                setError('')
+                setForm(f=>({...f, name:nameVal, email:emailVal, password:pwVal}))
+                setStep(2)
+              }}>
                 Continuar →
               </button>
               <p style={{ marginTop:22, fontSize:13, color:'#8895A7', textAlign:'center' }}>
