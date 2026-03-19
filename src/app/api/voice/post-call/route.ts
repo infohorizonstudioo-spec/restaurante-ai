@@ -39,11 +39,12 @@ function analyzeLocally(transcript: string, callerPhone: string): CallAnalysis {
 
   // ── Intent detection ───────────────────────────────────────────────────
   let intent = 'consulta'
-  if (/reserv|mesa|noche|personas?|cena|comida|almuerzo|comer/i.test(t)) intent = 'reserva'
-  else if (/pedir|pedido|llevar|domicilio|recoger|pizza|pollo|plato|ración/i.test(t)) intent = 'pedido'
-  else if (/cancelar|cancela|anular|anulo|borro|borrar|anulad/i.test(t)) intent = 'cancelacion'
-  else if (/queja|reclamación|problema|incidente|mal|horrible/i.test(t)) intent = 'queja'
-  else if (/cita|asesor|consulta fiscal|médico|dentista|peluquería/i.test(t)) intent = 'reserva' // citas = reserva
+  // Cancelación primero — tiene prioridad sobre reserva
+  if (/cancelar|cancela|anular|anulo|borro|borrar|no\s+puedo\s+ir|no\s+vamos/i.test(t)) intent = 'cancelacion'
+  else if (/reserv|mesa|noche|personas?|cena|comida|almuerzo|comer|terraza|interior/i.test(t)) intent = 'reserva'
+  else if (/pedir|pedido|llevar|domicilio|recoger|pizza|pollo|plato|ración|hamburguesa/i.test(t)) intent = 'pedido'
+  else if (/queja|reclamación|problema|incidente|mal|horrible|terrible/i.test(t)) intent = 'queja'
+  else if (/cita|asesor|consulta fiscal|médico|dentista|peluquería/i.test(t)) intent = 'reserva'
 
   // ── Extracción de nombre ────────────────────────────────────────────────
   // Patrones comunes en conversaciones telefónicas
@@ -51,10 +52,23 @@ function analyzeLocally(transcript: string, callerPhone: string): CallAnalysis {
   // Solo buscar nombres en líneas del cliente, no del agente
   const clientLines = lines.filter(l => /^cliente:/i.test(l)).map(l => l.replace(/^cliente:\s*/i,''))
   const clientText = clientLines.join('\n')
+
+  // Patrones ordenados por precisión — solo en texto del cliente
   const namePatterns = [
-    /(?:a nombre de|para)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})?)/i,
-    /(?:soy|me llamo|mi nombre es)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})?)/i,
+    // "a nombre de Rodríguez" — el más fiable
+    /\ba\s+nombre\s+de\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})?)/i,
+    // "me llamo García" / "soy Martínez"
+    /\b(?:me\s+llamo|soy)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})(?:\s|,|\.)/i,
+    // "nombre para el pedido? → López" — solo si es una sola palabra capitalized al inicio de línea
+    /^([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})(?:\s|,|\.|$)/m,
   ]
+
+  const STOP_WORDS = new Set([
+    'hola','bien','vale','buenas','claro','sí','no','quién','reservar','pedir',
+    'cancelar','pregunta','llamar','gracias','favor','perfecto','genial','estupendo',
+    'sofía','sofia','lucía','lucia','carmen','agente','recepcionista',
+    'para','con','que','una','uno','dos','tres',
+  ])
   const STOP_WORDS = new Set(['hola','bien','vale','buenas','claro','sí','no','quién','reservar','pedir','cancelar','pregunta','llamar','gracias','favor','sofía','sofia','lucía','lucia','carmen','agente','recepcionista'])
   for (const pat of namePatterns) {
     const m = clientText.match(pat)
@@ -82,9 +96,10 @@ function analyzeLocally(transcript: string, callerPhone: string): CallAnalysis {
     summaryParts = [`Reserva ${who}`, [when, time, ppl].filter(Boolean).join(' ')].filter(Boolean)
   } else if (intent === 'pedido') {
     const who  = customer_name ? ` — ${customer_name}` : ''
-    const item = itemMatch ? `${itemMatch[1]} ${itemMatch[2]}` : 'pedido'
+    const items = clientText.match(/(?:una?|dos|tres|cuatro|cinco|\d+)\s+([a-záéíóúñ]+(?:\s+[a-záéíóúñ]+)?)/gi)
+    const itemStr = items?.slice(0,3).join(', ') || 'pedido'
     const time = timeMatch?.[1] ? ` para las ${timeMatch[1]}` : ''
-    summaryParts = [`Pedido${who}: ${item}${time}`]
+    summaryParts = [`Pedido${who}: ${itemStr}${time}`]
   } else if (intent === 'cancelacion') {
     const who = customer_name ? ` de ${customer_name}` : ''
     summaryParts = [`Cancelación de reserva${who}`]
