@@ -134,57 +134,30 @@ const BENEFITS = [
 ]
 
 export default function LoginPage() {
-  const [email,setEmail]     = useState('')
-  const [pw,setPw]           = useState('')
-  const [loading,setLoading] = useState(false)
-  const [error,setError]     = useState('')
-  const emailRef             = useRef<HTMLInputElement>(null)
-  const pwRef                = useRef<HTMLInputElement>(null)
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState('')
+  const emailRef = useRef<HTMLInputElement>(null)
+  const pwRef    = useRef<HTMLInputElement>(null)
 
   const login = useCallback(async () => {
-    // Chrome autofill no siempre dispara onChange de React.
-    // Leemos del DOM directamente como fuente de verdad.
-    const emailVal = (emailRef.current?.value || email).trim().toLowerCase()
-    const pwVal    =  pwRef.current?.value    || pw
-
+    const emailVal = (emailRef.current?.value || '').trim().toLowerCase()
+    const pwVal    =  pwRef.current?.value    || ''
     if (!emailVal || !pwVal) { setError('Rellena todos los campos'); return }
     setLoading(true); setError('')
     try {
-      const { data, error:e } = await supabase.auth.signInWithPassword({
-        email: emailVal,
-        password: pwVal,
-      })
+      const { data, error:e } = await supabase.auth.signInWithPassword({ email: emailVal, password: pwVal })
       if (e) throw e
       if (!data.user) throw new Error('No se pudo iniciar sesión')
-
       await new Promise(r => setTimeout(r, 400))
-
-      const { data:p } = await supabase
-        .from('profiles')
-        .select('role,tenant_id')
-        .eq('id', data.user.id)
-        .maybeSingle()
-
-      if (p?.role === 'superadmin') {
-        window.location.href = p.tenant_id ? '/panel' : '/admin'
-        return
-      }
+      const { data:p } = await supabase.from('profiles').select('role,tenant_id').eq('id', data.user.id).maybeSingle()
+      if (p?.role === 'superadmin') { window.location.href = p.tenant_id ? '/panel' : '/admin'; return }
       if (p?.tenant_id) {
-        const { data:t } = await supabase
-          .from('tenants')
-          .select('onboarding_complete,name')
-          .eq('id', p.tenant_id)
-          .maybeSingle()
+        const { data:t } = await supabase.from('tenants').select('onboarding_complete,name').eq('id', p.tenant_id).maybeSingle()
         window.location.href = (t?.onboarding_complete || t?.name) ? '/panel' : '/onboarding'
-      } else {
-        window.location.href = '/onboarding'
-      }
-    } catch (e:any) {
-      setError(mapErr(e.message || ''))
-    } finally {
-      setLoading(false)
-    }
-  }, [email, pw])
+      } else { window.location.href = '/onboarding' }
+    } catch (e:any) { setError(mapErr(e.message || '')) }
+    finally { setLoading(false) }
+  }, [])
 
   return (
     <div style={{ minHeight:'100vh', display:'grid', gridTemplateColumns:'1fr 1fr', fontFamily:"'Sora',-apple-system,sans-serif" }}>
@@ -249,10 +222,7 @@ export default function LoginPage() {
           <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:18 }}>
             <div>
               <label style={{ display:'block', fontSize:11, fontWeight:600, color:'#8895A7', marginBottom:6, letterSpacing:'0.05em', textTransform:'uppercase' }}>Email</label>
-              <input type="email" ref={emailRef} value={email}
-                onChange={e=>setEmail(e.target.value)}
-                onFocus={e=>{ if(e.target.value && !email) setEmail(e.target.value) }}
-                onBlur={e=>{ if(e.target.value) setEmail(e.target.value) }}
+              <input type="email" ref={emailRef}
                 onKeyDown={e=>e.key==='Enter'&&login()}
                 placeholder="tu@negocio.com" autoComplete="email" className="rzinp"/>
             </div>
@@ -261,10 +231,7 @@ export default function LoginPage() {
                 <label style={{ fontSize:11, fontWeight:600, color:'#8895A7', letterSpacing:'0.05em', textTransform:'uppercase' }}>Contraseña</label>
                 <Link href="/reset" style={{ fontSize:12, color:'#F0A84E', textDecoration:'none', fontWeight:500 }}>¿Olvidaste?</Link>
               </div>
-              <input type="password" ref={pwRef} value={pw}
-                onChange={e=>setPw(e.target.value)}
-                onFocus={e=>{ if(e.target.value && !pw) setPw(e.target.value) }}
-                onBlur={e=>{ if(e.target.value) setPw(e.target.value) }}
+              <input type="password" ref={pwRef}
                 onKeyDown={e=>e.key==='Enter'&&login()}
                 placeholder="••••••••" autoComplete="current-password" className="rzinp"/>
             </div>
