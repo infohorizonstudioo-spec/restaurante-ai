@@ -60,11 +60,11 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    // Autenticado en login/registro → panel
-    if (isAuthOnly && isAuthed) {
-      const url = new URL('/panel', request.url)
-      return NextResponse.redirect(url)
-    }
+    // Autenticado en login/registro → panel (desactivado - React maneja la redirección)
+    // if (isAuthOnly && isAuthed) {
+    //   const url = new URL('/panel', request.url)
+    //   return NextResponse.redirect(url)
+    // }
   } catch {
     // Error de auth → dejar pasar (evitar loops)
   }
