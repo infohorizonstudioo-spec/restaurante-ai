@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { resolveTemplate } from '@/lib/templates'
+import { getBusinessKnowledge, buildKnowledgeContext } from '@/lib/business-knowledge'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -124,6 +125,11 @@ export async function POST(req: Request) {
       : ''
 
     const lang = (tenant.language as string) || 'es'
+
+    // ── Cargar conocimiento del negocio ────────────────────────────────────
+    const knowledge = await getBusinessKnowledge(tenant.id as string)
+    const knowledgeCtx = buildKnowledgeContext(knowledge)
+
     const greeting = !isOpen
       ? biz + ', en este momento estamos cerrados. ' + (bhHuman ? 'Nuestro horario es: ' + bhHuman + '. ' : '') + 'Por favor llame en horario de atención.'
       : biz + ', dígame.'
@@ -166,9 +172,10 @@ export async function POST(req: Request) {
         business_description: (tenant.business_description as string) || '',
         reservas_hoy:     resumenHoy,
         cliente_info:     clienteInfo,
-        template_type:    tmpl.id,             // hosteleria | servicios
-        reservation_unit: tmpl.labels.reserva, // Reserva | Cita
-        agent_context:    agentSystemContext,   // contexto personalizado por tipo de negocio
+        template_type:    tmpl.id,
+        reservation_unit: tmpl.labels.reserva,
+        agent_context:    agentSystemContext,
+        business_knowledge: knowledgeCtx || '',  // menú, FAQs, servicios, políticas
       },
       conversation_config_override: {
         agent: { first_message: greeting }

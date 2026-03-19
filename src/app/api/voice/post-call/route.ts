@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { makeDecision, DEFAULT_RULES } from '@/lib/agent-decision'
 import { getBusinessRules } from '@/lib/business-memory'
+import { getBusinessKnowledge, buildKnowledgeContext, queryKnowledge } from '@/lib/business-knowledge'
 import { createNotification } from '@/lib/notifications'
 
 const admin = createClient(
@@ -141,28 +142,28 @@ async function analyzeWithClaude(
   transcript: string,
   businessName: string,
   callerPhone: string,
-  templateType: string
+  templateType: string,
+  knowledgeContext: string
 ): Promise<CallAnalysis> {
-  // Primero intentar análisis local (rápido, sin API)
   const local = analyzeLocally(transcript, callerPhone)
-
-  // Si no hay API key, usar resultado local directamente
   if (!process.env.ANTHROPIC_API_KEY) return local
   if (!transcript || transcript.trim().length < 30) return local
 
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const typeLabel = templateType === 'hosteleria' ? 'restaurante/bar/hostelería' : 'negocio de servicios/citas'
+    const knowledgeBlock = knowledgeContext
+      ? `\n\nCONOCIMIENTO DEL NEGOCIO (usa esto para responder — no inventes):\n${knowledgeContext}`
+      : ''
 
     const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5', max_tokens: 400,
-      system: `Eres un analizador de llamadas para un ${typeLabel} llamado "${businessName}". Responde SOLO JSON válido.`,
+      model: 'claude-haiku-4-5', max_tokens: 500,
+      system: `Eres un analizador de llamadas para un ${typeLabel} llamado "${businessName}".${knowledgeBlock}\nResponde SOLO JSON válido. Nunca inventes información no presente en el conocimiento del negocio.`,
       messages: [{ role: 'user', content: `Analiza esta transcripción. Devuelve SOLO este JSON (sin markdown):
 {"intent":"reserva|pedido|cancelacion|consulta|queja|otro","customer_name":"nombre real o null","summary":"1-2 frases con detalles concretos","action_required":"qué hacer ahora","outcome":"completado|pendiente|fallido","details":{}}
 
 Transcripción:
-${transcript.slice(0, 2500)}`
-      }]
+${transcript.slice(0, 2500)}` }]
     })
 
     const raw = msg.content[0].type === 'text' ? msg.content[0].text : '{}'
@@ -178,7 +179,6 @@ ${transcript.slice(0, 2500)}`
       details:         typeof parsed.details === 'object' ? parsed.details : {}
     }
   } catch(e: any) {
-    // Claude falló (401, timeout, parse error) → usar análisis local
     console.error('claude analysis fallback to local:', e.message?.slice(0,60))
     return local
   }
@@ -331,6 +331,13 @@ export async function POST(req: Request) {
     const businessName  = tenantInfo?.name || 'El negocio'
     const templateType  = tenantInfo?.type?.includes('clinica') || ['asesoria','peluqueria','seguros','inmobiliaria','otro'].includes(tenantInfo?.type||'') ? 'servicios' : 'hosteleria'
 
+    // Cargar knowledge y rules en paralelo
+    const [businessKnowledge, businessRules] = await Promise.all([
+      getBusinessKnowledge(tenantId).catch(() => null),
+      getBusinessRules(tenantId).catch(() => DEFAULT_RULES),
+    ])
+    const knowledgeContext = businessKnowledge ? buildKnowledgeContext(businessKnowledge) : ''
+
     const key = callSid || convId || ('call_' + Date.now() + '_' + Math.random().toString(36).slice(2,7))
 
     // ── Marcar sesión como finalizando ──────────────────────────────────────
@@ -347,11 +354,23 @@ export async function POST(req: Request) {
     const transcript = bodyTranscript || await getTranscript(key, tenantId)
 
     // ── Análisis con Claude ─────────────────────────────────────────────────
-    const analysis = await analyzeWithClaude(transcript, businessName, callerPhone, templateType)
+    const analysis = await analyzeWithClaude(transcript, businessName, callerPhone, templateType, knowledgeContext)
+
+    // ── Consultar knowledge para enriquecer el trace ────────────────────────
+    let knowledgeSource = 'none'
+    let knowledgeRule   = ''
+    if (businessKnowledge && transcript) {
+      const clientText = transcript.split('\n')
+        .filter(l => /^cliente:/i.test(l))
+        .map(l => l.replace(/^cliente:\s*/i, ''))
+        .join(' ')
+      if (clientText.length > 5) {
+        const kResult = queryKnowledge(clientText, businessKnowledge)
+        if (kResult) { knowledgeSource = kResult.source; knowledgeRule = kResult.rule }
+      }
+    }
 
     // ── Motor de decisión inteligente ───────────────────────────────────────
-    // Carga reglas del negocio (o usa defaults si no hay configuradas)
-    const businessRules = await getBusinessRules(tenantId).catch(() => DEFAULT_RULES)
     const decision = makeDecision(
       { ...analysis, transcript, caller_phone: callerPhone },
       businessRules
@@ -383,16 +402,18 @@ export async function POST(req: Request) {
       console.error('complete_call_session error:', sessionError.message)
     }
 
-    // ── Guardar decisión estructurada (flags, estado, confianza) ────────────
-    // Fire-and-forget — no bloquear el response
+    // ── Guardar decisión estructurada (flags, estado, confianza, trace) ────
     ;(async () => {
       try {
         await admin.from('calls')
           .update({
-            decision_status:    decision.status,
-            decision_flags:     decision.special_flags,
+            decision_status:     decision.status,
+            decision_flags:      decision.special_flags,
             decision_confidence: decision.confidence,
-            reasoning_label:    decision.reasoning_label,
+            reasoning_label:     decision.reasoning_label,
+            applied_rule:        decision.applied_rule,
+            knowledge_source:    decision.knowledge_source,
+            decision_trace:      decision.decision_trace,
           })
           .eq('call_sid', key)
           .eq('tenant_id', tenantId)

@@ -67,6 +67,16 @@ export interface DecisionResult {
   special_flags:    SpecialFlag[]
   reasoning_label:  string
   response_hint:    string  // frase sugerida para responder al cliente
+  applied_rule:     string  // regla específica que desencadenó la decisión
+  knowledge_source: string  // origen del conocimiento usado: "menu.carnes", "faqs", "rules"…
+  decision_trace:   DecisionTraceStep[]  // pasos de la decisión (trazabilidad completa)
+}
+
+export interface DecisionTraceStep {
+  step:    string   // "flag_detection" | "confidence_calc" | "rule_match" | "knowledge_query"
+  label:   string   // descripción legible
+  result:  string   // lo que se encontró / decidió
+  source?: string   // origen si aplica
 }
 
 // ── DETECCIÓN DE FLAGS ──────────────────────────────────────────────────────
@@ -232,8 +242,11 @@ export function decideStatus(
 
 export function makeDecision(
   analysis: CallAnalysisInput,
-  rules:    BusinessRules
+  rules:    BusinessRules,
+  knowledgeSource = 'none'
 ): DecisionResult {
+
+  const trace: DecisionTraceStep[] = []
 
   // Extraer tamaño del grupo del transcript
   const partySizeMatch = analysis.transcript.match(/(\d+)\s*(?:personas?|comensales?|adultos?|de grupo)/i)
@@ -241,25 +254,71 @@ export function makeDecision(
 
   // Detectar flags
   const flags = detectFlags(analysis.transcript, partySize, rules)
+  trace.push({
+    step: 'flag_detection',
+    label: 'Flags detectados',
+    result: flags.length > 0 ? flags.join(', ') : 'ninguno',
+  })
 
   // Calcular confianza
   const confidence = calcConfidence(analysis, partySize, flags)
+  trace.push({
+    step: 'confidence_calc',
+    label: 'Confianza calculada',
+    result: (confidence * 100).toFixed(0) + '%',
+  })
 
   // Decidir estado
   const { status, reasoning, response_hint } = decideStatus(analysis, rules, flags, confidence)
 
+  // Determinar applied_rule
+  let appliedRule = 'default'
+  if (flags.includes('cancellation_request') || analysis.intent === 'cancelacion')
+    appliedRule = 'allow_auto_cancellations'
+  else if (flags.includes('modification_request'))
+    appliedRule = 'modification_requires_review'
+  else if (confidence < rules.min_confidence_to_confirm)
+    appliedRule = `min_confidence_to_confirm (${rules.min_confidence_to_confirm})`
+  else if (flags.includes('confused_customer'))
+    appliedRule = 'confused_customer_escalate'
+  else if (flags.includes('out_of_policy'))
+    appliedRule = 'out_of_policy_reject'
+  else if (flags.includes('large_group'))
+    appliedRule = `max_auto_party_size (${rules.max_auto_party_size})`
+  else if (flags.includes('allergy_note') || flags.includes('special_occasion') || flags.includes('specific_table_request'))
+    appliedRule = 'special_requests_require_review'
+  else if (['reserva','pedido','consulta'].includes(analysis.intent))
+    appliedRule = 'auto_confirm_normal_case'
+
+  trace.push({
+    step: 'rule_match',
+    label: 'Regla aplicada',
+    result: appliedRule,
+    source: 'business_rules',
+  })
+
+  trace.push({
+    step: 'decision',
+    label: 'Decisión final',
+    result: status,
+    source: reasoning,
+  })
+
   return {
-    intent:          analysis.intent,
-    customer_name:   analysis.customer_name,
-    phone_number:    analysis.caller_phone,
-    summary:         analysis.summary,
-    details:         { ...analysis.details, party_size: partySize },
+    intent:           analysis.intent,
+    customer_name:    analysis.customer_name,
+    phone_number:     analysis.caller_phone,
+    summary:          analysis.summary,
+    details:          { ...analysis.details, party_size: partySize },
     status,
     confidence,
-    action_required: analysis.action_required,
-    special_flags:   flags,
-    reasoning_label: reasoning,
+    action_required:  analysis.action_required,
+    special_flags:    flags,
+    reasoning_label:  reasoning,
     response_hint,
+    applied_rule:     appliedRule,
+    knowledge_source: knowledgeSource,
+    decision_trace:   trace,
   }
 }
 

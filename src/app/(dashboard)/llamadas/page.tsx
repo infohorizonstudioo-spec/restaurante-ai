@@ -277,6 +277,37 @@ export default function LlamadasPage() {
                                 💭 {call.reasoning_label}
                               </p>
                             )}
+                            {/* Trazabilidad — regla aplicada + fuente de conocimiento */}
+                            {(call.applied_rule||call.knowledge_source) && (
+                              <div style={{display:'flex', gap:8, marginTop:8, flexWrap:'wrap'}}>
+                                {call.applied_rule && call.applied_rule!=='default' && (
+                                  <span style={{fontSize:10, padding:'2px 9px', borderRadius:6, background:'rgba(45,212,191,0.10)', color:C.teal, fontWeight:600}}>
+                                    📐 {call.applied_rule}
+                                  </span>
+                                )}
+                                {call.knowledge_source && call.knowledge_source!=='none' && (
+                                  <span style={{fontSize:10, padding:'2px 9px', borderRadius:6, background:'rgba(96,165,250,0.10)', color:'#60A5FA', fontWeight:600}}>
+                                    🧠 {call.knowledge_source}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {/* Decision trace expandible */}
+                            {call.decision_trace?.length > 0 && (
+                              <details style={{marginTop:8}}>
+                                <summary style={{fontSize:10, color:C.text3, cursor:'pointer', userSelect:'none' as const}}>Ver traza de decisión ({call.decision_trace.length} pasos)</summary>
+                                <div style={{marginTop:6, display:'flex', flexDirection:'column', gap:4}}>
+                                  {call.decision_trace.map((step:any,i:number)=>(
+                                    <div key={i} style={{display:'flex', gap:8, alignItems:'baseline', fontSize:11}}>
+                                      <span style={{color:C.text3, flexShrink:0}}>→</span>
+                                      <span style={{color:C.text2, fontWeight:600}}>{step.label}:</span>
+                                      <span style={{color:C.text}}>{step.result}</span>
+                                      {step.source && <span style={{color:C.text3, fontSize:10}}>({step.source})</span>}
+                                    </div>
+                                  ))}
+                                </div>
+                              </details>
+                            )}
                           </div>
                         )}
 
