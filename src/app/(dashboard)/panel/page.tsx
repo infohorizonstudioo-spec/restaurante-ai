@@ -226,7 +226,6 @@ export default function PanelPage() {
           {!agentOn && (
             <Link href="/configuracion" style={{ padding:'6px 14px', fontSize:12, fontWeight:600, color:'#0C1018', background:C.amber, borderRadius:8, textDecoration:'none' }}>Configurar →</Link>
           )}
-          <NotificationBell tenantId={tenant.id}/>
         </div>
       </div>
 

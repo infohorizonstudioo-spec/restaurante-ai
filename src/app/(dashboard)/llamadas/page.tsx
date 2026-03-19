@@ -180,7 +180,6 @@ export default function LlamadasPage() {
             </button>
           ))}
         </div>
-        {tid && <NotificationBell tenantId={tid}/>}
       </div>
 
       <div style={{maxWidth:800, margin:'0 auto', padding:'20px 24px'}}>

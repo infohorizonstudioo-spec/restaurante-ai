@@ -1,6 +1,7 @@
 import { TenantProvider } from '@/contexts/TenantContext'
 import Sidebar from '@/components/Sidebar'
 import { ToastProvider } from '@/components/NotificationToast'
+import DashboardShell from '@/components/DashboardShell'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -8,9 +9,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <ToastProvider>
         <div style={{ display:'flex', minHeight:'100vh', background:'var(--rz-bg)', fontFamily:'var(--rz-font)' }}>
           <Sidebar/>
-          <main style={{ flex:1, minWidth:0, overflowX:'hidden', display:'flex', flexDirection:'column' }}>
+          <DashboardShell>
             {children}
-          </main>
+          </DashboardShell>
         </div>
       </ToastProvider>
     </TenantProvider>
