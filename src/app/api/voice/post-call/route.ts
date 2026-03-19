@@ -361,22 +361,22 @@ export async function POST(req: Request) {
 
     // ── Consultar knowledge para enriquecer el trace ────────────────────────
     let knowledgeSource = 'none'
-    let knowledgeRule   = ''
     if (businessKnowledge && transcript) {
       const clientText = transcript.split('\n')
-        .filter(l => /^cliente:/i.test(l))
-        .map(l => l.replace(/^cliente:\s*/i, ''))
+        .filter(l => /^(cliente|client):/i.test(l))
+        .map(l => l.replace(/^(cliente|client):\s*/i, ''))
         .join(' ')
       if (clientText.length > 5) {
-        const kResult = queryKnowledge(clientText, businessKnowledge)
-        if (kResult) { knowledgeSource = kResult.source; knowledgeRule = kResult.rule }
+        const kResult = queryKnowledge(businessKnowledge, clientText)
+        if (kResult.found) knowledgeSource = kResult.source
       }
     }
 
     // ── Motor de decisión inteligente ───────────────────────────────────────
     const decision = makeDecision(
       { ...analysis, transcript, caller_phone: callerPhone },
-      businessRules
+      businessRules,
+      knowledgeSource
     )
 
     console.log(
