@@ -4,13 +4,13 @@ import Link from 'next/link'
 
 /* ─── LIVE NOTIFICATION FEED ─── */
 const NOTIFICATIONS = [
-  { icon:'📞', color:'#2DD4BF', msg:'Llamada entrante — Mesa para 4 el viernes', sub:'hace 2s' },
-  { icon:'✅', color:'#4ADE80', msg:'Reserva confirmada — García · Sábado 21:00', sub:'hace 8s' },
-  { icon:'🍽️', color:'#F0A84E', msg:'Pedido registrado — Mesa 3 · 47€', sub:'hace 15s' },
-  { icon:'📞', color:'#2DD4BF', msg:'Llamada entrante — Cumpleaños 8 personas', sub:'hace 22s' },
-  { icon:'✅', color:'#4ADE80', msg:'Reserva confirmada — López · Domingo 14:00', sub:'hace 31s' },
-  { icon:'🍽️', color:'#F0A84E', msg:'Pedido registrado — Mesa 7 · 82€', sub:'hace 40s' },
-  { icon:'📞', color:'#2DD4BF', msg:'Llamada entrante — Reserva terraza 2 pax', sub:'hace 55s' },
+  { icon:'📞', color:'#2DD4BF', msg:'Llamada entrante — Cita corte y color mañana', sub:'hace 2s' },
+  { icon:'✅', color:'#4ADE80', msg:'Cita confirmada — García · Viernes 11:00', sub:'hace 8s' },
+  { icon:'📋', color:'#F0A84E', msg:'Consulta registrada — Clínica · Revisión anual', sub:'hace 15s' },
+  { icon:'📞', color:'#2DD4BF', msg:'Llamada entrante — Presupuesto instalación AC', sub:'hace 22s' },
+  { icon:'✅', color:'#4ADE80', msg:'Reserva confirmada — López · Lunes 10:00', sub:'hace 31s' },
+  { icon:'🔧', color:'#A78BFA', msg:'Servicio agendado — Taller · Revisión ITV', sub:'hace 40s' },
+  { icon:'📞', color:'#2DD4BF', msg:'Llamada entrante — Asesoría fiscal autónomo', sub:'hace 55s' },
 ]
 
 function LiveFeed() {
@@ -53,12 +53,12 @@ function LiveFeed() {
 
 /* ─── LIVE CALL SIMULATION ─── */
 const CALL_STEPS = [
-  { who:'client', text:'Buenas, quería reservar mesa para mañana.' },
-  { who:'agent',  text:'¡Buenas! ¿Para cuántas personas y a qué hora?' },
-  { who:'client', text:'Para 4, sobre las 21:00.' },
-  { who:'agent',  text:'¿Prefiere terraza o interior?' },
-  { who:'client', text:'Terraza si hay.' },
-  { who:'confirm',text:'✓ Reserva creada · Mañana 21:00 · 4 personas · Terraza' },
+  { who:'client', text:'Buenas, quería pedir cita para esta semana.' },
+  { who:'agent',  text:'¡Hola! ¿Para qué servicio y qué día le viene mejor?' },
+  { who:'client', text:'Para el jueves, cualquier hora de mañana.' },
+  { who:'agent',  text:'Tengo disponible el jueves a las 10:30. ¿Le va bien?' },
+  { who:'client', text:'Perfecto, sí.' },
+  { who:'confirm',text:'✓ Cita confirmada · Jueves 10:30 · Registrada en el panel' },
 ]
 function CallSim() {
   const [shown, setShown] = useState<number[]>([])
@@ -187,7 +187,7 @@ export default function HomePage() {
             <span style={{background:'linear-gradient(135deg,#F0A84E,#FBBF24)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>es dinero perdido</span>
           </h1>
           <p style={{fontSize:17,color:C.muted,lineHeight:1.75,marginBottom:16,maxWidth:500}}>
-            Tu restaurante recibe llamadas cuando estás ocupado, cuando cierras, o cuando no puedes contestar. <strong style={{color:C.text}}>Cada una es un cliente que se va.</strong>
+            Tu negocio recibe llamadas cuando estás ocupado, cuando cierras, o cuando no puedes contestar. <strong style={{color:C.text}}>Cada una es un cliente que se va.</strong>
           </p>
           <p style={{fontSize:15,color:'rgba(255,255,255,0.35)',marginBottom:40}}>
             Reservo.AI responde en menos de 2 segundos. Siempre.
@@ -255,12 +255,28 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── SECTORES ── */}
+      <div style={{padding:'20px clamp(16px,5vw,64px) 48px',maxWidth:1200,margin:'0 auto'}}>
+        <p style={{textAlign:'center',fontSize:12,color:'rgba(255,255,255,0.25)',letterSpacing:'0.08em',fontWeight:500,marginBottom:20}}>PARA TODO TIPO DE NEGOCIOS</p>
+        <div style={{display:'flex',flexWrap:'wrap',gap:10,justifyContent:'center'}}>
+          {[
+            '💇 Peluquerías','🏥 Clínicas','🦷 Dentistas','🔧 Talleres',
+            '⚖️ Asesorías','🍽️ Restaurantes','🏋️ Gimnasios','💆 Spas',
+            '🏠 Inmobiliarias','🐾 Veterinarias','📦 Transportistas','🎓 Academias',
+          ].map(s=>(
+            <div key={s} style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:20,padding:'7px 16px',fontSize:13,color:'rgba(255,255,255,0.5)',fontWeight:500,whiteSpace:'nowrap'}}>
+              {s}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* ── STATS BAR ── */}
       <div style={{background:'rgba(240,168,78,0.05)',borderTop:'1px solid rgba(240,168,78,0.1)',borderBottom:'1px solid rgba(240,168,78,0.1)',padding:'28px clamp(16px,5vw,64px)'}}>
         <div style={{maxWidth:1200,margin:'0 auto',display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:24,textAlign:'center'}}>
           {[
-            {n:'8', s:'llamadas perdidas', t:'Un bar medio pierde al día'},
-            {n:'30%', s:'más reservas', t:'Media de nuestros clientes'},
+            {n:'8', s:'llamadas perdidas', t:'Un negocio pierde de media al día'},
+            {n:'+30%', s:'más clientes', t:'Media de nuestros clientes'},
             {n:'2s', s:'respuesta', t:'Tiempo máximo de espera'},
             {n:'100%', s:'llamadas atendidas', t:'Todas. Sin excepción.'},
           ].map(({n,s,t})=>(
@@ -278,16 +294,16 @@ export default function HomePage() {
         <div style={{textAlign:'center',marginBottom:56}}>
           <p style={{fontSize:12,fontWeight:600,color:C.red,letterSpacing:'0.08em',marginBottom:12}}>EL PROBLEMA QUE NADIE TE DICE</p>
           <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
-            Tu restaurante está<br/>
-            <span style={{color:C.red}}>perdiendo dinero ahora mismo</span>
+            Tu negocio está<br/>
+            <span style={{color:C.red}}>perdiendo clientes ahora mismo</span>
           </h2>
-          <p style={{fontSize:16,color:C.muted,maxWidth:520,margin:'0 auto'}}>Mientras lees esto, alguien está intentando reservar en tu local. Si no contestas, llama al siguiente.</p>
+          <p style={{fontSize:16,color:C.muted,maxWidth:520,margin:'0 auto'}}>Mientras lees esto, alguien está intentando contactar con tu negocio. Si no contestas, llama al siguiente.</p>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="prob-grid">
           {[
-            {icon:'📵',title:'No puedes contestar siempre',body:'Estás en cocina. En sala. Con otro cliente. Las llamadas entran igual — y la gente no espera.',color:'rgba(248,113,113,0.1)',bc:'rgba(248,113,113,0.2)'},
-            {icon:'🌙',title:'Cierras. Las llamadas no',body:'A las 23:00 la gente reserva para el fin de semana. Tú duermes. Tu competencia tiene IA.',color:'rgba(251,191,36,0.1)',bc:'rgba(251,191,36,0.2)'},
-            {icon:'💸',title:'Cada llamada perdida = dinero',body:'Una mesa de 4 son 80-120€. Pierdes 8 llamadas al día. Haz las cuentas.',color:'rgba(240,168,78,0.1)',bc:'rgba(240,168,78,0.2)'},
+            {icon:'📵',title:'No puedes contestar siempre',body:'Estás atendiendo a un cliente, en una reunión, o simplemente ocupado. Las llamadas entran igual — y la gente no espera.',color:'rgba(248,113,113,0.1)',bc:'rgba(248,113,113,0.2)'},
+            {icon:'🌙',title:'Cierras. Las llamadas no',body:'A las 22:00 alguien busca cita para mañana. Tú has cerrado. Tu competencia tiene IA que responde al instante.',color:'rgba(251,191,36,0.1)',bc:'rgba(251,191,36,0.2)'},
+            {icon:'💸',title:'Cada llamada perdida = cliente perdido',body:'Un cliente que no te localiza no te llama dos veces. Se va al competidor. Para siempre.',color:'rgba(240,168,78,0.1)',bc:'rgba(240,168,78,0.2)'},
           ].map(({icon,title,body,color,bc})=>(
             <div key={title} className="card-hover" style={{background:color,border:`1px solid ${bc}`,borderRadius:16,padding:'28px 24px'}}>
               <span style={{fontSize:32,display:'block',marginBottom:16}}>{icon}</span>
@@ -299,7 +315,7 @@ export default function HomePage() {
         {/* Pain quote */}
         <div style={{marginTop:48,background:'rgba(248,113,113,0.05)',border:'1px solid rgba(248,113,113,0.15)',borderRadius:16,padding:'24px 32px',textAlign:'center'}}>
           <p style={{fontSize:18,fontWeight:600,color:'rgba(255,255,255,0.85)',fontStyle:'italic',lineHeight:1.6}}>
-            "Un restaurante que pierde 8 llamadas al día pierde entre <span style={{color:C.amber,fontStyle:'normal',fontWeight:800}}>2.000€ y 3.500€ al mes</span> en reservas que nunca llegaron."
+            "Un negocio que pierde 8 llamadas al día pierde entre <span style={{color:C.amber,fontStyle:'normal',fontWeight:800}}>2.000€ y 4.000€ al mes</span> en clientes que nunca volvieron."
           </p>
         </div>
       </section>
@@ -310,16 +326,16 @@ export default function HomePage() {
           <div style={{textAlign:'center',marginBottom:56}}>
             <p style={{fontSize:12,fontWeight:600,color:C.teal,letterSpacing:'0.08em',marginBottom:12}}>LA SOLUCIÓN</p>
             <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
-              Más reservas.<br/>Menos trabajo.<br/>
+              Más citas. Más clientes.<br/>
               <span style={{color:C.amber}}>Cero llamadas perdidas.</span>
             </h2>
-            <p style={{fontSize:16,color:C.muted,maxWidth:500,margin:'0 auto'}}>No es un contestador. Es tu mejor recepcionista — que nunca se cansa, nunca falla y trabaja las 24 horas.</p>
+            <p style={{fontSize:16,color:C.muted,maxWidth:500,margin:'0 auto'}}>No es un contestador. Es tu mejor recepcionista — que nunca se cansa, nunca falla y trabaja las 24 horas. Para cualquier tipo de negocio.</p>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="prob-grid">
             {[
-              {icon:'📞',title:'Responde en 2 segundos',body:'Cada llamada, a cualquier hora. El cliente nunca escucha el buzón de voz.',color:C.teal},
-              {icon:'📅',title:'Crea la reserva sola',body:'Gestiona fecha, hora, personas y zona. Todo queda registrado en tu panel al instante.',color:C.amber},
-              {icon:'📊',title:'Tú lo ves todo en tiempo real',body:'Panel con llamadas, reservas y clientes actualizado en directo. Desde el móvil.',color:'#A78BFA'},
+              {icon:'📞',title:'Responde en 2 segundos',body:'Cada llamada, a cualquier hora. Tu cliente nunca escucha el buzón de voz ni cuelga esperando.',color:C.teal},
+              {icon:'📅',title:'Gestiona citas y solicitudes',body:'Agenda, informa, recoge datos. Todo queda registrado en tu panel al instante y en tiempo real.',color:C.amber},
+              {icon:'📊',title:'Tú lo ves todo en tiempo real',body:'Panel con llamadas, citas y clientes actualizado al momento. Desde el móvil, desde cualquier sitio.',color:'#A78BFA'},
             ].map(({icon,title,body,color})=>(
               <div key={title} className="card-hover" style={{background:'rgba(255,255,255,0.02)',border:`1px solid rgba(255,255,255,0.07)`,borderRadius:16,padding:'28px 24px'}}>
                 <div style={{width:44,height:44,borderRadius:12,background:`rgba(${color==='#2DD4BF'?'45,212,191':color===C.amber?'240,168,78':'167,139,250'},0.1)`,border:`1px solid rgba(${color==='#2DD4BF'?'45,212,191':color===C.amber?'240,168,78':'167,139,250'},0.2)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,marginBottom:16}}>
@@ -343,9 +359,9 @@ export default function HomePage() {
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:24,position:'relative'}} className="steps-grid">
           {[
-            {n:'01',icon:'📲',title:'Alguien llama a tu restaurante',body:'A las 14:00, a las 23:00, o cuando estás cerrado. Da igual.',color:'rgba(240,168,78,0.15)',bc:'rgba(240,168,78,0.3)'},
-            {n:'02',icon:'🤖',title:'Sofía responde en 2 segundos',body:'Con tu nombre, tu menú, tus horarios. Suena como una persona de tu equipo.',color:'rgba(45,212,191,0.1)',bc:'rgba(45,212,191,0.2)'},
-            {n:'03',icon:'✅',title:'La reserva aparece en tu panel',body:'Tú ves todo en tiempo real desde el móvil. Sin hacer nada.',color:'rgba(74,222,128,0.1)',bc:'rgba(74,222,128,0.2)'},
+            {n:'01',icon:'📲',title:'Alguien llama a tu negocio',body:'A las 14:00, a las 22:00, o cuando estás con otro cliente. Da igual. Siempre se atiende.',color:'rgba(240,168,78,0.15)',bc:'rgba(240,168,78,0.3)'},
+            {n:'02',icon:'🤖',title:'Tu IA responde en 2 segundos',body:'Con el nombre de tu negocio, tus servicios y tus horarios. Suena como alguien de tu equipo.',color:'rgba(45,212,191,0.1)',bc:'rgba(45,212,191,0.2)'},
+            {n:'03',icon:'✅',title:'La cita aparece en tu panel',body:'Tú lo ves todo en tiempo real desde el móvil o el ordenador. Sin hacer absolutamente nada.',color:'rgba(74,222,128,0.1)',bc:'rgba(74,222,128,0.2)'},
           ].map(({n,icon,title,body,color,bc},i)=>(
             <div key={n} style={{position:'relative'}}>
               <div className="card-hover" style={{background:color,border:`1px solid ${bc}`,borderRadius:20,padding:'32px 28px',height:'100%'}}>
