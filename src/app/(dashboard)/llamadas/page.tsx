@@ -3,6 +3,32 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 
+// ── Configuración de estados de decisión ──────────────────────────────────
+const DECISION_CFG: Record<string,{label:string;color:string;bg:string;icon:string}> = {
+  confirmed:             {label:'Confirmada',         color:'#4ADE80', bg:'rgba(74,222,128,0.10)',  icon:'✓'},
+  pending_review:        {label:'Pendiente revisión', color:'#FBB53F', bg:'rgba(251,181,63,0.10)',  icon:'⏳'},
+  modified:              {label:'Modificada',         color:'#60A5FA', bg:'rgba(96,165,250,0.10)',  icon:'✏️'},
+  cancelled:             {label:'Cancelada',          color:'#F87171', bg:'rgba(248,113,113,0.10)', icon:'✕'},
+  rejected:              {label:'Rechazada',          color:'#F87171', bg:'rgba(248,113,113,0.10)', icon:'✕'},
+  needs_human_attention: {label:'Requiere atención',  color:'#F0A84E', bg:'rgba(240,168,78,0.12)',  icon:'⚠'},
+  incomplete:            {label:'Incompleta',         color:'#8895A7', bg:'rgba(136,149,167,0.10)', icon:'?'},
+}
+const FLAG_LABELS: Record<string,string> = {
+  large_group:'Grupo grande', allergy_note:'Alergia', specific_table_request:'Mesa concreta',
+  low_confidence:'Baja confianza', no_availability:'Sin disponibilidad',
+  modification_request:'Modificación', cancellation_request:'Cancelación',
+  special_occasion:'Ocasión especial', accessibility_need:'Accesibilidad',
+  late_arrival_notice:'Llegada tardía', out_of_policy:'Fuera de política',
+  confused_customer:'Cliente confuso', repeat_pattern:'Patrón repetido',
+}
+const CORRECTION_OPTIONS = [
+  {value:'confirmed',             label:'✓ Confirmar'},
+  {value:'pending_review',        label:'⏳ Dejar pendiente'},
+  {value:'modified',              label:'✏️ Marcar modificada'},
+  {value:'cancelled',             label:'✕ Cancelar'},
+  {value:'needs_human_attention', label:'⚠ Requiere atención'},
+]
+
 const C = {
   amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)',
   teal:'#2DD4BF', tealDim:'rgba(45,212,191,0.10)',
@@ -56,6 +82,11 @@ export default function LlamadasPage() {
   const [open,setOpen]         = useState<Set<string>>(new Set())
   const [tid,setTid]           = useState<string|null>(null)
   const [filter,setFilter]     = useState<'all'|'completada'|'activa'|'fallida'|'perdida'>('all')
+  const [correcting,setCorrecting] = useState<string|null>(null)   // call_sid en modo corrección
+  const [feedbackNote,setFeedbackNote] = useState('')
+  const [feedbackLoading,setFeedbackLoading] = useState(false)
+  const [feedbackDone,setFeedbackDone] = useState<Set<string>>(new Set())
+  const [suggestions,setSuggestions] = useState<any[]>([])
 
   const load = useCallback(async (tenantId:string, reset=true) => {
     if (reset) setLoading(true)
@@ -100,6 +131,29 @@ export default function LlamadasPage() {
   const today = new Date().toISOString().slice(0,10)
   const toggle = (id:string) => setOpen(prev => { const n=new Set(prev); n.has(id)?n.delete(id):n.add(id); return n })
 
+  const sendFeedback = async (callSid: string, correctedStatus: string) => {
+    setFeedbackLoading(true)
+    try {
+      const res = await fetch('/api/voice/feedback', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ call_sid: callSid, corrected_status: correctedStatus, note: feedbackNote || undefined })
+      })
+      const data = await res.json()
+      if (data.ok) {
+        // Actualizar localmente sin recargar
+        setCalls(prev => prev.map(c => c.call_sid===callSid || c.id===callSid
+          ? {...c, decision_status: correctedStatus} : c
+        ))
+        setFeedbackDone(prev => new Set(prev).add(callSid))
+        setCorrecting(null)
+        setFeedbackNote('')
+        if (data.suggestions?.length > 0) setSuggestions(data.suggestions)
+      }
+    } catch(e) { console.error(e) }
+    finally { setFeedbackLoading(false) }
+  }
+
   return (
     <div style={{background:C.bg, minHeight:'100vh'}}>
       {/* Header */}
@@ -128,6 +182,22 @@ export default function LlamadasPage() {
       </div>
 
       <div style={{maxWidth:800, margin:'0 auto', padding:'20px 24px'}}>
+
+        {/* Banner de sugerencias de aprendizaje */}
+        {suggestions.length>0&&(
+          <div style={{background:'rgba(240,168,78,0.08)',border:'1px solid rgba(240,168,78,0.25)',borderRadius:12,padding:'12px 16px',marginBottom:16,display:'flex',alignItems:'flex-start',gap:10}}>
+            <span style={{fontSize:18,flexShrink:0}}>🧠</span>
+            <div style={{flex:1}}>
+              <p style={{fontSize:12,fontWeight:700,color:C.amber,marginBottom:4}}>El agente ha aprendido un patrón nuevo</p>
+              {suggestions.map((s,i)=>(
+                <p key={i} style={{fontSize:12,color:C.text2}}>
+                  El patrón <strong style={{color:C.text}}>{s.pattern}</strong> se ha corregido {s.count} veces → sugerido: <strong style={{color:C.amber}}>{DECISION_CFG[s.suggested_status]?.label||s.suggested_status}</strong>
+                </p>
+              ))}
+            </div>
+            <button onClick={()=>setSuggestions([])} style={{background:'none',border:'none',color:C.text3,cursor:'pointer',fontSize:16,flexShrink:0}}>✕</button>
+          </div>
+        )}
         {groups.length===0 ? (
           <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'60px 24px', textAlign:'center'}}>
             <div style={{width:56, height:56, borderRadius:'50%', background:C.amberDim, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 14px', fontSize:24}}>📞</div>
@@ -170,8 +240,78 @@ export default function LlamadasPage() {
                     </div>
                     {expanded && (
                       <div style={{padding:'12px 16px 16px', borderTop:`1px solid ${C.border}`, background:C.surface2}}>
+                        {/* Resumen */}
                         {call.summary&&<div style={{background:C.surface3, borderRadius:9, padding:'10px 14px', marginBottom:10}}><p style={{fontSize:10, fontWeight:700, color:C.text3, marginBottom:4, textTransform:'uppercase', letterSpacing:'0.06em'}}>Resumen</p><p style={{fontSize:13, color:C.text, lineHeight:1.6}}>{call.summary}</p></div>}
+                        {/* Acción requerida */}
                         {(call.action_suggested||call.action_required)&&<div style={{background:`${C.amber}10`, borderRadius:9, padding:'8px 14px', marginBottom:10, border:`1px solid ${C.amber}20`}}><p style={{fontSize:10, fontWeight:700, color:C.amber, marginBottom:2, textTransform:'uppercase', letterSpacing:'0.05em'}}>Acción</p><p style={{fontSize:13, color:C.amber}}>{call.action_suggested||call.action_required}</p></div>}
+
+                        {/* Estado de decisión + flags */}
+                        {(call.decision_status||call.decision_flags?.length>0) && (
+                          <div style={{background:C.surface3, borderRadius:9, padding:'10px 14px', marginBottom:10}}>
+                            <p style={{fontSize:10, fontWeight:700, color:C.text3, marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em'}}>Decisión del agente</p>
+                            <div style={{display:'flex', flexWrap:'wrap', gap:6, alignItems:'center'}}>
+                              {call.decision_status&&(()=>{
+                                const dcfg = DECISION_CFG[call.decision_status]
+                                return dcfg ? (
+                                  <span style={{fontSize:11, padding:'3px 10px', borderRadius:8, background:dcfg.bg, color:dcfg.color, fontWeight:700}}>
+                                    {dcfg.icon} {dcfg.label}
+                                  </span>
+                                ) : null
+                              })()}
+                              {call.decision_confidence!=null&&(
+                                <span style={{fontSize:11, color:C.text3}}>
+                                  Confianza: <strong style={{color:call.decision_confidence>=0.8?C.green:call.decision_confidence>=0.6?C.amber:C.red}}>
+                                    {Math.round(call.decision_confidence*100)}%
+                                  </strong>
+                                </span>
+                              )}
+                              {(call.decision_flags||[]).map((f:string)=>(
+                                <span key={f} style={{fontSize:10, padding:'2px 8px', borderRadius:6, background:'rgba(167,139,250,0.12)', color:'#A78BFA', fontWeight:600}}>
+                                  {FLAG_LABELS[f]||f}
+                                </span>
+                              ))}
+                            </div>
+                            {call.reasoning_label&&(
+                              <p style={{fontSize:11, color:C.text3, marginTop:6, fontStyle:'italic'}}>
+                                💭 {call.reasoning_label}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Panel de corrección manual */}
+                        <div style={{marginBottom:10}}>
+                          {correcting===call.call_sid ? (
+                            <div style={{background:'rgba(240,168,78,0.05)', border:'1px solid rgba(240,168,78,0.2)', borderRadius:10, padding:'12px 14px'}}>
+                              <p style={{fontSize:11, fontWeight:700, color:C.amber, marginBottom:10}}>✏️ Corregir decisión del agente</p>
+                              <div style={{display:'flex', flexWrap:'wrap', gap:6, marginBottom:10}}>
+                                {CORRECTION_OPTIONS.map(opt=>(
+                                  <button key={opt.value} onClick={()=>sendFeedback(call.call_sid, opt.value)}
+                                    disabled={feedbackLoading}
+                                    style={{fontSize:11, padding:'5px 12px', borderRadius:8, border:'1px solid rgba(240,168,78,0.3)', background:'rgba(240,168,78,0.07)', color:C.amber, fontWeight:600, cursor:'pointer', fontFamily:'inherit', opacity:feedbackLoading?0.5:1}}>
+                                    {opt.label}
+                                  </button>
+                                ))}
+                              </div>
+                              <input value={feedbackNote} onChange={e=>setFeedbackNote(e.target.value)}
+                                placeholder="Nota opcional (ej: el cliente confirmó por teléfono)"
+                                style={{width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'7px 10px', fontSize:12, color:C.text, fontFamily:'inherit', boxSizing:'border-box' as const, marginBottom:8}}/>
+                              <button onClick={()=>{setCorrecting(null);setFeedbackNote('')}}
+                                style={{fontSize:11, color:C.text3, background:'none', border:'none', cursor:'pointer', fontFamily:'inherit'}}>
+                                Cancelar
+                              </button>
+                            </div>
+                          ) : feedbackDone.has(call.call_sid) ? (
+                            <p style={{fontSize:11, color:C.green}}>✓ Corrección registrada — el agente aprenderá de esto</p>
+                          ) : (
+                            <button onClick={()=>{setCorrecting(call.call_sid);setFeedbackNote('')}}
+                              style={{fontSize:11, padding:'5px 12px', borderRadius:7, border:`1px solid ${C.border}`, background:'transparent', color:C.text3, cursor:'pointer', fontFamily:'inherit', fontWeight:500}}>
+                              ✏️ Corregir decisión del agente
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Meta */}
                         {call.intent&&<p style={{fontSize:12, color:C.text3, marginTop:4}}>Intención: <strong style={{color:C.text2}}>{call.intent}</strong></p>}
                         {call.transcript&&<details style={{marginTop:8}}><summary style={{fontSize:12, color:C.text3, cursor:'pointer'}}>Ver transcripción</summary><p style={{fontSize:12, color:C.text2, lineHeight:1.6, marginTop:8, whiteSpace:'pre-wrap', background:C.surface3, padding:'10px', borderRadius:8}}>{call.transcript}</p></details>}
                       </div>
