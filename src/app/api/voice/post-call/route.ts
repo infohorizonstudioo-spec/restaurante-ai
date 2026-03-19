@@ -48,14 +48,16 @@ function analyzeLocally(transcript: string, callerPhone: string): CallAnalysis {
   // ── Extracción de nombre ────────────────────────────────────────────────
   // Patrones comunes en conversaciones telefónicas
   let customer_name: string | null = null
+  // Solo buscar nombres en líneas del cliente, no del agente
+  const clientLines = lines.filter(l => /^cliente:/i.test(l)).map(l => l.replace(/^cliente:\s*/i,''))
+  const clientText = clientLines.join('\n')
   const namePatterns = [
-    /(?:a nombre de|soy|me llamo|mi nombre es|nombre:?)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})?)/i,
-    /(?:para|reserva para)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})(?:\s|,|\.)/i,
-    /Cliente:\s+(?:hola[,\s]+)?(?:soy\s+)?([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})?)/i,
+    /(?:a nombre de|para)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})?)/i,
+    /(?:soy|me llamo|mi nombre es)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})?)/i,
   ]
-  const STOP_WORDS = new Set(['hola','bien','vale','buenas','claro','sí','no','quién','reservar','pedir','cancelar','pregunta','llamar','gracias','favor'])
+  const STOP_WORDS = new Set(['hola','bien','vale','buenas','claro','sí','no','quién','reservar','pedir','cancelar','pregunta','llamar','gracias','favor','sofía','sofia','lucía','lucia','carmen','agente','recepcionista'])
   for (const pat of namePatterns) {
-    const m = transcript.match(pat)
+    const m = clientText.match(pat)
     if (m?.[1] && m[1].length > 2 && !STOP_WORDS.has(m[1].toLowerCase().trim())) {
       customer_name = m[1].trim()
       break
