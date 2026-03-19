@@ -265,6 +265,7 @@ export async function POST(req: Request) {
     callerPhone = body.From        || body.caller_phone || body.phone_call?.external_number || ''
     const agentPhone  = body.To          || body.agent_phone  || body.phone_call?.agent_number    || ''
     const convId      = body.conversation_id || ''
+    const bodyTranscript = body.transcript || '' // transcripción directa en el body (tests/webhooks EL)
 
     console.log('post-call recv:', callSid.slice(0,20), '|', callStatus, '| dur:', duration+'s', '| caller:', callerPhone)
 
@@ -317,7 +318,8 @@ export async function POST(req: Request) {
     })()
 
     // ── Transcripción ───────────────────────────────────────────────────────
-    const transcript = await getTranscript(key, tenantId)
+    // Prioridad: body directo > DB > ElevenLabs
+    const transcript = bodyTranscript || await getTranscript(key, tenantId)
 
     // ── Análisis con Claude ─────────────────────────────────────────────────
     const analysis = await analyzeWithClaude(transcript, businessName, callerPhone, templateType)
