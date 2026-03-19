@@ -34,95 +34,103 @@ interface CallAnalysis {
 // ── Analizador local por regex (fallback sin API externa) ──────────────────// Extrae intent, nombre y resumen directamente del texto de la transcripción.
 // Funciona sin ninguna API — garantiza que nunca perdemos análisis por fallos externos.
 function analyzeLocally(transcript: string, callerPhone: string): CallAnalysis {
-  const t = transcript.toLowerCase()
+  const t     = transcript.toLowerCase()
   const lines = transcript.split('\n').map(l => l.trim()).filter(Boolean)
+  const phone = callerPhone || 'cliente'
 
-  // ── Intent detection ───────────────────────────────────────────────────
-  let intent = 'consulta'
-  // Cancelación primero — tiene prioridad sobre reserva
-  if (/cancelar|cancela|anular|anulo|borro|borrar|no\s+puedo\s+ir|no\s+vamos/i.test(t)) intent = 'cancelacion'
-  else if (/reserv|mesa|noche|personas?|cena|comida|almuerzo|comer|terraza|interior/i.test(t)) intent = 'reserva'
-  else if (/pedir|pedido|llevar|domicilio|recoger|pizza|pollo|plato|ración|hamburguesa/i.test(t)) intent = 'pedido'
-  else if (/queja|reclamación|problema|incidente|mal|horrible|terrible/i.test(t)) intent = 'queja'
-  else if (/cita|asesor|consulta fiscal|médico|dentista|peluquería/i.test(t)) intent = 'reserva'
-
-  // ── Extracción de nombre ────────────────────────────────────────────────
-  // Patrones comunes en conversaciones telefónicas
-  let customer_name: string | null = null
-  // Solo buscar nombres en líneas del cliente, no del agente
-  const clientLines = lines.filter(l => /^cliente:/i.test(l)).map(l => l.replace(/^cliente:\s*/i,''))
+  // Líneas del cliente únicamente
+  const clientLines = lines
+    .filter(l => /^cliente:/i.test(l))
+    .map(l => l.replace(/^cliente:\s*/i, '').trim())
   const clientText = clientLines.join('\n')
 
-  // Patrones ordenados por precisión — solo en texto del cliente
-  const namePatterns = [
-    // "a nombre de Rodríguez" — el más fiable
-    /\ba\s+nombre\s+de\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})?)/i,
-    // "me llamo García" / "soy Martínez"
-    /\b(?:me\s+llamo|soy)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})(?:\s|,|\.)/i,
-    // "nombre para el pedido? → López" — solo si es una sola palabra capitalized al inicio de línea
-    /^([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})(?:\s|,|\.|$)/m,
-  ]
+  // ── Intent — cancelación tiene prioridad sobre reserva ─────────────────
+  let intent = 'consulta'
+  if (/cancelar|cancela|anular|anulo|no\s+puedo\s+ir|no\s+vamos|no\s+podemos/i.test(t))
+    intent = 'cancelacion'
+  else if (/pedir|pedido|llevar|domicilio|recoger|pizza|pollo|hamburguesa|bocadillo/i.test(t))
+    intent = 'pedido'
+  else if (/reserv|mesa|terraza|interior|personas?|cena|comida|almuerzo|comer|cita/i.test(t))
+    intent = 'reserva'
+  else if (/queja|reclamaci|problema|incidente|horrible|terrible/i.test(t))
+    intent = 'queja'
 
-  const STOP_WORDS = new Set([
-    'hola','bien','vale','buenas','claro','sí','no','quién','reservar','pedir',
-    'cancelar','pregunta','llamar','gracias','favor','perfecto','genial','estupendo',
-    'sofía','sofia','lucía','lucia','carmen','agente','recepcionista',
-    'para','con','que','una','uno','dos','tres',
+  // ── Nombre — solo en texto del cliente ─────────────────────────────────
+  const STOP = new Set([
+    'hola','buenas','bien','vale','claro','gracias','favor','perfecto','estupendo',
+    'para','con','que','una','uno','dos','tres','hay','hay','esto','eso',
+    'sofía','sofia','lucía','lucia','carmen','maria','laura','agente','recepcionista',
   ])
-  const STOP_WORDS = new Set(['hola','bien','vale','buenas','claro','sí','no','quién','reservar','pedir','cancelar','pregunta','llamar','gracias','favor','sofía','sofia','lucía','lucia','carmen','agente','recepcionista'])
-  for (const pat of namePatterns) {
-    const m = clientText.match(pat)
-    if (m?.[1] && m[1].length > 2 && !STOP_WORDS.has(m[1].toLowerCase().trim())) {
-      customer_name = m[1].trim()
-      break
+
+  let customer_name: string | null = null
+
+  // 1. "a nombre de X" en líneas del cliente — el más fiable
+  const nameMatch1 = clientText.match(/\ba\s+nombre\s+de\s+([A-Za-záéíóúñÁÉÍÓÚÑ]{3,}(?:\s+[A-Za-záéíóúñÁÉÍÓÚÑ]{2,})?)/i)
+  if (nameMatch1?.[1] && !STOP.has(nameMatch1[1].toLowerCase().trim())) {
+    customer_name = nameMatch1[1].trim()
+  }
+
+  // 2. "me llamo X" / "soy X" en líneas del cliente
+  if (!customer_name) {
+    const nameMatch2 = clientText.match(/\b(?:me\s+llamo|soy)\s+([A-Za-záéíóúñÁÉÍÓÚÑ]{3,})/i)
+    if (nameMatch2?.[1] && !STOP.has(nameMatch2[1].toLowerCase().trim())) {
+      customer_name = nameMatch2[1].trim()
     }
   }
 
-  // ── Extracción de detalles ─────────────────────────────────────────────
-  const timeMatch   = transcript.match(/(?:a las?|para las?)\s+(\d{1,2}(?:[:h]\d{0,2})?(?:\s*(?:de la (?:tarde|noche|mañana)|h(?:oras?)?))?)/)
-  const peopleMatch = transcript.match(/(\d+)\s*(?:personas?|comensales?|adultos?)/)
-  const dateMatch   = transcript.match(/(?:el\s+)?(?:mañana|hoy|pasado mañana|lunes|martes|miércoles|jueves|viernes|sábado|domingo|próximo\s+\w+|\d{1,2}(?:\s+de\s+\w+)?)/)
-  const itemMatch   = transcript.match(/(\d+)\s+([a-záéíóúñ]+(?:\s+[a-záéíóúñ]+)?)(?:\s+(?:a domicilio|para llevar|para recoger))?/)
+  // 3. Respuesta de una sola palabra a "¿a nombre de quién?" — la línea siguiente del cliente
+  if (!customer_name) {
+    for (let i = 0; i < lines.length - 1; i++) {
+      if (/nombre|quién/i.test(lines[i]) && /^agente:/i.test(lines[i])) {
+        const nextClient = lines[i + 1]
+        if (/^cliente:/i.test(nextClient)) {
+          const answer = nextClient.replace(/^cliente:\s*/i, '').trim()
+          const words = answer.split(/\s+/)
+          if (words.length <= 2 && words[0].length >= 3 && !STOP.has(words[0].toLowerCase())) {
+            customer_name = answer
+          }
+        }
+      }
+    }
+  }
 
-  // ── Resumen estructurado ───────────────────────────────────────────────
-  let summaryParts: string[] = []
-  const phone = callerPhone || 'cliente'
+  // ── Detalles ────────────────────────────────────────────────────────────
+  const timeMatch   = transcript.match(/(?:a las?|para las?)\s+(\d{1,2}(?:[:h]\d{0,2})?(?:\s*(?:de la (?:tarde|noche|mañana))?))/i)
+  const peopleMatch = transcript.match(/(\d+)\s*(?:personas?|comensales?|adultos?)/i)
+  const dateMatch   = transcript.match(/\b(mañana|hoy|pasado mañana|lunes|martes|miércoles|jueves|viernes|sábado|domingo)\b/i)
+
+  // ── Resumen ─────────────────────────────────────────────────────────────
+  let summary = ''
+  let action_required = 'Sin acción necesaria'
 
   if (intent === 'reserva') {
     const who  = customer_name ? `a nombre de ${customer_name}` : `de ${phone}`
-    const when = dateMatch?.[0] ? dateMatch[0] : ''
-    const time = timeMatch?.[1] ? `a las ${timeMatch[1]}` : ''
-    const ppl  = peopleMatch?.[1] ? `para ${peopleMatch[1]} personas` : ''
-    summaryParts = [`Reserva ${who}`, [when, time, ppl].filter(Boolean).join(' ')].filter(Boolean)
+    const when = [
+      dateMatch?.[1] || '',
+      timeMatch?.[1] ? `a las ${timeMatch[1]}` : '',
+      peopleMatch?.[1] ? `${peopleMatch[1]} personas` : '',
+    ].filter(Boolean).join(', ')
+    summary = `Reserva ${who}${when ? ' — ' + when : ''}`
+    action_required = `Confirmar reserva: ${[customer_name, timeMatch?.[1], peopleMatch?.[1]&&peopleMatch[1]+' personas'].filter(Boolean).join(', ') || 'ver detalles'}`
   } else if (intent === 'pedido') {
-    const who  = customer_name ? ` — ${customer_name}` : ''
-    const items = clientText.match(/(?:una?|dos|tres|cuatro|cinco|\d+)\s+([a-záéíóúñ]+(?:\s+[a-záéíóúñ]+)?)/gi)
-    const itemStr = items?.slice(0,3).join(', ') || 'pedido'
-    const time = timeMatch?.[1] ? ` para las ${timeMatch[1]}` : ''
-    summaryParts = [`Pedido${who}: ${itemStr}${time}`]
+    const who   = customer_name ? ` — ${customer_name}` : ''
+    const when  = timeMatch?.[1] ? ` en ${timeMatch[1]}` : ''
+    // Buscar items en líneas del cliente
+    const items = clientLines.join(' ').match(/(?:una?|dos|tres|cuatro|\d+)\s+[a-záéíóúñ]{4,}/gi)
+    const itemStr = items?.slice(0, 3).join(', ') || 'pedido'
+    summary = `Pedido${who}: ${itemStr}${when}`
+    action_required = `Preparar pedido: ${itemStr}`
   } else if (intent === 'cancelacion') {
     const who = customer_name ? ` de ${customer_name}` : ''
-    summaryParts = [`Cancelación de reserva${who}`]
+    summary = `Cancelación${who}`
+    action_required = `Procesar cancelación${who}`
+  } else if (intent === 'queja') {
+    const q = clientLines.find(l => l.length > 10)
+    summary = q ? `Queja de ${phone}: "${q.slice(0, 80)}"` : `Queja de ${phone}`
+    action_required = 'Atender queja del cliente'
   } else {
-    // Consulta — extraer la pregunta principal del cliente
-    const clientLines = lines.filter(l => /^cliente:/i.test(l)).map(l => l.replace(/^cliente:\s*/i,''))
-    const mainQuestion = clientLines.find(l => l.length > 15 && l.length < 120)
-    summaryParts = mainQuestion
-      ? [`Consulta de ${phone}: "${mainQuestion.trim()}"`.slice(0, 120)]
-      : [`Llamada de ${phone} — consulta atendida`]
-  }
-
-  const summary = summaryParts.filter(Boolean).join('. ').trim() || `Llamada de ${phone}`
-
-  // ── Acción requerida ───────────────────────────────────────────────────
-  let action_required = 'Sin acción necesaria'
-  if (intent === 'reserva') {
-    const details = [customer_name, timeMatch?.[1], peopleMatch ? peopleMatch[1]+' personas' : ''].filter(Boolean).join(', ')
-    action_required = `Confirmar reserva: ${details || 'ver detalles'}`
-  } else if (intent === 'pedido') {
-    action_required = `Preparar pedido: ${itemMatch ? itemMatch[1]+' '+itemMatch[2] : 'ver detalles'}`
-  } else if (intent === 'cancelacion') {
-    action_required = `Procesar cancelación${customer_name ? ' de ' + customer_name : ''}`
+    const q = clientLines.find(l => l.length > 15 && l.length < 120)
+    summary = q ? `Consulta de ${phone}: "${q.slice(0, 80)}"` : `Llamada de ${phone} — consulta atendida`
   }
 
   return { intent, customer_name, summary, action_required, outcome: 'completado', details: {} }
