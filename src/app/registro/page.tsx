@@ -24,17 +24,40 @@ export default function RegistroPage() {
     if (form.password.length<6){setError('La contraseña debe tener al menos 6 caracteres');return}
     setLoading(true);setError('')
     try {
-      const {data:auth,error:authErr} = await supabase.auth.signUp({email:form.email.trim().toLowerCase(),password:form.password})
-      if (authErr) throw authErr
-      if (!auth.user) throw new Error('No se pudo crear la cuenta')
-      const slug = form.businessName.toLowerCase().replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-')
-      const {data:tenant,error:tErr} = await supabase.from('tenants').insert({name:form.businessName,type:form.businessType,slug,plan:'free',free_calls_limit:10,free_calls_used:0}).select().single()
-      if (tErr) throw tErr
-      await supabase.from('profiles').upsert({id:auth.user.id,name:form.name,full_name:form.name,email:form.email.trim().toLowerCase(),tenant_id:(tenant as any).id,role:'admin'})
-      window.location.href='/onboarding'
+      // 1. Crear tenant + usuario via API (usa service role, evita RLS)
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: form.businessName,
+          businessType: form.businessType,
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          name: form.name,
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (data.error?.includes('already')) setError('Este email ya tiene cuenta. Inicia sesión.')
+        else setError(data.error || 'Error al registrarse. Inténtalo de nuevo.')
+        return
+      }
+
+      // 2. Hacer login automático para obtener sesión activa
+      const { error: loginErr } = await supabase.auth.signInWithPassword({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      })
+      if (loginErr) {
+        // Cuenta creada pero login falló — mandar a login
+        window.location.href = '/login'
+        return
+      }
+
+      // 3. Redirigir al onboarding
+      window.location.href = '/onboarding'
     } catch(e:any) {
-      if (e.message?.includes('already registered')||e.message?.includes('already been registered')) setError('Este email ya tiene cuenta. Inicia sesión.')
-      else setError('Error al registrarse. Inténtalo de nuevo.')
+      setError('Error al registrarse. Inténtalo de nuevo.')
     } finally { setLoading(false) }
   },[form])
 

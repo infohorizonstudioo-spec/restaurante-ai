@@ -3,11 +3,11 @@ import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
   try {
-    const { businessName, businessType, email, password, phone } = await req.json()
+    const { businessName, businessType, email, password, phone, name } = await req.json()
     if (!businessName || !email || !password)
       return NextResponse.json({ error: 'Nombre, email y contraseña son obligatorios' }, { status: 400 })
-    if (password.length < 8)
-      return NextResponse.json({ error: 'La contraseña debe tener al menos 8 caracteres' }, { status: 400 })
+    if (password.length < 6)
+      return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 })
 
     const admin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,7 +35,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: userError.message }, { status: 400 })
     }
 
-    await admin.from('profiles').update({ tenant_id: tenant.id, role: 'client', name: businessName }).eq('id', userData.user.id)
+    await admin.from('profiles').update({
+      tenant_id: tenant.id,
+      role: 'client',
+      name: name || businessName,
+      full_name: name || businessName,
+      email: email.trim().toLowerCase(),
+    }).eq('id', userData.user.id)
     return NextResponse.json({ success: true, tenantId: tenant.id, slug })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })

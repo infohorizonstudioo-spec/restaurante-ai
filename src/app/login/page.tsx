@@ -143,16 +143,41 @@ export default function LoginPage() {
     if (!email.trim()||!pw) { setError('Rellena todos los campos'); return }
     setLoading(true); setError('')
     try {
-      const { data,error:e } = await supabase.auth.signInWithPassword({ email:email.trim().toLowerCase(), password:pw })
+      const { data, error:e } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password: pw,
+      })
       if (e) throw e
-      const { data:p } = await supabase.from('profiles').select('role,tenant_id').eq('id',data.user.id).single()
-      if ((p as any)?.role==='superadmin') { window.location.href='/admin'; return }
-      if ((p as any)?.tenant_id) {
-        const { data:t } = await supabase.from('tenants').select('onboarding_complete').eq('id',(p as any).tenant_id).single()
+      if (!data.user) throw new Error('No se pudo iniciar sesión')
+
+      // Pequeña espera para que la sesión se propague
+      await new Promise(r => setTimeout(r, 300))
+
+      const { data:p } = await supabase
+        .from('profiles')
+        .select('role,tenant_id')
+        .eq('id', data.user.id)
+        .maybeSingle()
+
+      if (p?.role === 'superadmin') {
+        window.location.href = '/admin'
+        return
+      }
+      if (p?.tenant_id) {
+        const { data:t } = await supabase
+          .from('tenants')
+          .select('onboarding_complete')
+          .eq('id', p.tenant_id)
+          .maybeSingle()
         window.location.href = t?.onboarding_complete ? '/panel' : '/onboarding'
-      } else window.location.href='/onboarding'
-    } catch (e:any) { setError(mapErr(e.message||'')) }
-    finally { setLoading(false) }
+      } else {
+        window.location.href = '/onboarding'
+      }
+    } catch (e:any) {
+      setError(mapErr(e.message || ''))
+    } finally {
+      setLoading(false)
+    }
   },[email,pw])
 
   return (
