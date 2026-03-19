@@ -287,15 +287,52 @@ export async function POST(req: Request) {
       new URLSearchParams(text).forEach((v, k) => { body[k] = v })
     }
 
-    callSid     = body.CallSid     || body.call_sid     || body.conversation_id || ''
-    const callStatus  = body.CallStatus  || body.status       || 'completed'
-    const duration    = parseInt(body.CallDuration || body.duration_seconds || body.Duration || '0') || 0
-    callerPhone = body.From        || body.caller_phone || body.phone_call?.external_number || ''
-    const agentPhone  = body.To          || body.agent_phone  || body.phone_call?.agent_number    || ''
-    const convId      = body.conversation_id || ''
-    const bodyTranscript = body.transcript || '' // transcripción directa en el body (tests/webhooks EL)
+    callSid     = body.CallSid     || body.call_sid     || body.conversation_id
+                  || body.data?.conversation_id || body.data?.call_sid || ''
 
-    console.log('post-call recv:', callSid.slice(0,20), '|', callStatus, '| dur:', duration+'s', '| caller:', callerPhone)
+    const callStatus  = body.CallStatus  || body.status || body.data?.status || 'completed'
+    const duration    = parseInt(
+      body.CallDuration || body.duration_seconds || body.Duration
+      || body.data?.metadata?.call_duration_secs || '0'
+    ) || 0
+
+    // ElevenLabs envía el caller en data.metadata o en phone_call
+    callerPhone = body.From
+      || body.caller_phone
+      || body.phone_call?.external_number
+      || body.data?.metadata?.caller_id
+      || body.data?.metadata?.phone_number_used
+      || body.data?.phone_call?.external_number
+      || ''
+
+    const agentPhone = body.To
+      || body.agent_phone
+      || body.phone_call?.agent_number
+      || body.data?.phone_call?.agent_number
+      || ''
+
+    const convId = body.conversation_id || body.data?.conversation_id || ''
+
+    // Transcripción: directa en body, o en data.transcript (formato EL webhook)
+    let bodyTranscript = body.transcript || ''
+    if (!bodyTranscript && body.data?.transcript) {
+      // EL envía array de mensajes [{role, message}]
+      const msgs = body.data.transcript
+      if (Array.isArray(msgs)) {
+        bodyTranscript = msgs.map((m: any) => {
+          const role = m.role === 'agent' ? 'Agente' : 'Cliente'
+          return `${role}: ${m.message || m.content || ''}`
+        }).join('\n')
+      } else if (typeof msgs === 'string') {
+        bodyTranscript = msgs
+      }
+    }
+
+    console.log('post-call recv:', callSid.slice(0,20), '|', callStatus, '| dur:', duration+'s', '| caller:', callerPhone || 'oculto')
+    // Log estructura EL para depuración (solo primeras llamadas reales)
+    if (body.data || body.type) {
+      console.log('EL webhook body keys:', Object.keys(body).join(','), '| data keys:', Object.keys(body.data||{}).join(','))
+    }
 
     // Siempre devolver 200 para que Twilio no reintente
     if (!['completed','done','ended'].includes(callStatus.toLowerCase())) {
@@ -399,6 +436,7 @@ export async function POST(req: Request) {
       p_action:          decision.action_required,
       p_source:          'twilio',
       p_action_required: decision.action_required,
+      p_caller_phone:    callerPhone || null,
     })
 
     if (sessionError) {
