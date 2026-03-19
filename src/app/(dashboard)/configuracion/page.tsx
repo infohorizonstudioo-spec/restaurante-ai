@@ -1,3 +1,4 @@
+import NotifBell from '@/components/NotifBell'
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -107,7 +108,7 @@ export default function ConfiguracionPage(){
   return(
     <div style={{background:C.bg,minHeight:'100vh'}}>
 
-      <PageHeader title='Configuración'
+      <PageHeader actions={<NotifBell/>} title='Configuración'
         actions={<Button onClick={save} loading={saving} style={{background:saved?C.green:C.amber,color:'#0C1018',transition:'background 0.3s'}}>{saved?'✓ Guardado':'Guardar cambios'}</Button>}/>
       <div style={{maxWidth:680,margin:'0 auto',padding:24,display:'flex',flexDirection:'column',gap:14}}>
 

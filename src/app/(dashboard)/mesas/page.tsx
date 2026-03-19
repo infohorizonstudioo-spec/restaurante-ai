@@ -1,4 +1,5 @@
 'use client'
+import NotifBell from '@/components/NotifBell'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
@@ -112,12 +113,13 @@ export default function MesasPage(){
           <h1 style={{fontSize:18,fontWeight:700,color:'#E8EEF6'}}>{ut.plural}</h1>
           <p style={{fontSize:12,color:'#49566A',marginTop:1}}>{units.length} {ut.plural.toLowerCase()} · {zones.length} {ut.zonesLabel.toLowerCase()}</p>
         </div>
-        <div style={{display:'flex',gap:8}}>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
           {(['units','zones'] as const).map(t=>(
             <button key={t} onClick={()=>setTab(t)} style={{padding:'7px 16px',fontSize:13,fontWeight:600,border:'1px solid',borderColor:tab===t?'#1d4ed8':'#e2e8f0',background:tab===t?'#eff6ff':'white',color:tab===t?'#1d4ed8':'#64748b',borderRadius:8,cursor:'pointer',fontFamily:'inherit'}}>
               {t==='units'?ut.plural:ut.zonesLabel}
             </button>
           ))}
+          <NotifBell/>
         </div>
       </div>
 

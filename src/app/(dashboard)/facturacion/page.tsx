@@ -1,4 +1,5 @@
 'use client'
+import NotifBell from '@/components/NotifBell'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
@@ -71,9 +72,12 @@ export default function FacturacionPage() {
   return (
     <div style={{background:C.bg, minHeight:'100vh', fontFamily:'var(--rz-font)'}}>
       {/* Header */}
-      <div style={{background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 28px', position:'sticky', top:0, zIndex:20}}>
-        <h1 style={{fontSize:16, fontWeight:700, color:C.text, letterSpacing:'-0.02em'}}>Facturación y uso</h1>
-        <p style={{fontSize:11, color:C.text3, marginTop:2}}>Control en tiempo real de tu plan y consumo</p>
+      <div style={{background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 28px', position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+        <div>
+          <h1 style={{fontSize:16, fontWeight:700, color:C.text, letterSpacing:'-0.02em'}}>Facturación y uso</h1>
+          <p style={{fontSize:11, color:C.text3, marginTop:2}}>Control en tiempo real de tu plan y consumo</p>
+        </div>
+        <NotifBell/>
       </div>
 
       <div style={{maxWidth:860, margin:'0 auto', padding:'24px 28px'}}>

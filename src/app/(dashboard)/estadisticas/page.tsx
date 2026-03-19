@@ -1,4 +1,5 @@
 'use client'
+import NotifBell from '@/components/NotifBell'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
@@ -106,9 +107,12 @@ export default function EstadisticasPage(){
 
   return (
     <div style={{background:'#0C1018',minHeight:'100vh'}}>
-      <div style={{background:'#131920',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'14px 24px'}}>
-        <h1 style={{fontSize:18,fontWeight:700,color:'#E8EEF6'}}>Estadísticas</h1>
-        <p style={{fontSize:12,color:'#49566A',marginTop:1}}>Rendimiento de tu recepcionista y reservas</p>
+      <div style={{background:'#131920',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}}>
+        <div>
+          <h1 style={{fontSize:18,fontWeight:700,color:'#E8EEF6'}}>Estadísticas</h1>
+          <p style={{fontSize:12,color:'#49566A',marginTop:1}}>Rendimiento de tu recepcionista y reservas</p>
+        </div>
+        <NotifBell/>
       </div>
       <div style={{maxWidth:1000,margin:'0 auto',padding:'24px'}}>
 

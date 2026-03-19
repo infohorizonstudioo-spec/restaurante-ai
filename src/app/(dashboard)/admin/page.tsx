@@ -1,4 +1,5 @@
 'use client'
+import NotifBell from '@/components/NotifBell'
 export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -134,6 +135,7 @@ export default function AdminPage() {
         <div style={{display:'flex',alignItems:'center',gap:16}}>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar negocio..." style={{...inp,width:200,padding:'6px 12px',fontSize:12}}/>
           <button onClick={()=>supabase.auth.signOut().then(()=>router.push('/login'))} style={{fontSize:12,color:C.text3,background:'none',border:'none',cursor:'pointer',fontFamily:'inherit'}}>Salir →</button>
+          <NotifBell/>
         </div>
       </div>
 

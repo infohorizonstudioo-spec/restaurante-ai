@@ -1,4 +1,5 @@
 'use client'
+import NotifBell from '@/components/NotifBell'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
@@ -77,8 +78,11 @@ export default function ClientesPage() {
           <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{clientesLabel}</h1>
           <p style={{fontSize:11,color:C.text3,marginTop:2}}>{clientes.length} registrados</p>
         </div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={'Buscar '+clientesLabel.toLowerCase()+'…'}
           style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:220,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
+          <NotifBell/>
+        </div>
       </div>
 
       <div style={{display:'flex',flex:1,overflow:'hidden'}}>

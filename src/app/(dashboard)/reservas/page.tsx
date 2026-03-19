@@ -1,4 +1,5 @@
 'use client'
+import NotifBell from '@/components/NotifBell'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
@@ -102,8 +103,11 @@ export default function ReservasPage() {
           <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{L?.pageTitle || 'Reservas'}</h1>
           <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} para el {new Date(selected+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
         </div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={L?.buscarPlaceholder||'Buscar…'}
           style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:200,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
+          <NotifBell/>
+        </div>
       </div>
 
       {/* Week nav */}

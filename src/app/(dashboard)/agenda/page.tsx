@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
+import NotifBell from '@/components/NotifBell'
 
 const HOURS = Array.from({length:14},(_,i)=>(i+9).toString().padStart(2,'0')+':00')
 const DAYS = ['LU','MA','MI','JU','VI','SA','DO']
@@ -70,6 +71,7 @@ export default function AgendaPage(){
           <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()-7);return n})} style={{padding:'6px 12px',background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:8,cursor:'pointer',fontSize:13}}>‹ Anterior</button>
           <button onClick={()=>setBase(new Date())} style={{padding:'6px 12px',background:'rgba(96,165,250,0.10)',border:'1px solid #bfdbfe',borderRadius:8,cursor:'pointer',fontSize:13,color:'#F0A84E',fontWeight:600}}>Hoy</button>
           <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n})} style={{padding:'6px 12px',background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:8,cursor:'pointer',fontSize:13}}>Siguiente ›</button>
+          <NotifBell/>
         </div>
       </div>
 

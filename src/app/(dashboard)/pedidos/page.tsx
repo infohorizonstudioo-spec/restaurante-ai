@@ -1,4 +1,5 @@
 'use client'
+import NotifBell from '@/components/NotifBell'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
@@ -118,9 +119,12 @@ export default function PedidosPage(){
           <h1 style={{fontSize:18,fontWeight:700,color:'#E8EEF6'}}>Pedidos</h1>
           <p style={{fontSize:12,color:'#49566A',marginTop:1}}>{activos.length} activos · {orders.length} total</p>
         </div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
         <button onClick={nuevoOrder} style={{padding:'8px 18px',fontSize:13,fontWeight:600,color:'white',background:'linear-gradient(135deg,#F0A84E,#E8923A)',border:'none',borderRadius:9,cursor:'pointer'}}>
           + Nuevo pedido
         </button>
+          <NotifBell/>
+        </div>
       </div>
 
       {/* Filtros tipo */}
