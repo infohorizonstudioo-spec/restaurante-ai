@@ -92,15 +92,16 @@ export async function saveBusinessKnowledge(
 // Nunca inventa — si no encuentra respuesta, dice found: false.
 
 export function queryKnowledge(k: BusinessKnowledge, question: string): KnowledgeQueryResult {
-  const q = question.toLowerCase()
+  const q = String(question||'').toLowerCase()
 
   // 1. FAQs explícitas — máxima prioridad
   if (k.faqs && k.faqs.length > 0) {
     for (const faq of k.faqs) {
-      const words = faq.q.toLowerCase().split(/\s+/).filter(w => w.length > 3)
+      if (!faq?.q) continue
+      const words = String(faq.q).toLowerCase().split(/\s+/).filter(w => w.length > 3)
       const matchCount = words.filter(w => q.includes(w)).length
       if (matchCount >= Math.max(1, Math.floor(words.length * 0.5))) {
-        return { found: true, answer: faq.a, source: 'faqs', raw: faq }
+        return { found: true, answer: String(faq.a||''), source: 'faqs', raw: faq }
       }
     }
   }
@@ -108,9 +109,12 @@ export function queryKnowledge(k: BusinessKnowledge, question: string): Knowledg
   // 2. Menú — buscar producto por nombre
   if (k.menu && Object.keys(k.menu).length > 0) {
     for (const [category, items] of Object.entries(k.menu)) {
-      const allItems = items as string[]
+      if (!Array.isArray(items)) continue
+      const allItems = items.filter(i => typeof i === 'string') as string[]
+      const catLower = String(category).toLowerCase()
       for (const item of allItems) {
-        if (q.includes(item.toLowerCase())) {
+        const itemLower = String(item).toLowerCase()
+        if (q.includes(itemLower)) {
           const list = allItems.join(', ')
           return {
             found: true,
@@ -121,7 +125,7 @@ export function queryKnowledge(k: BusinessKnowledge, question: string): Knowledg
         }
       }
       // Buscar por categoría
-      if (q.includes(category.toLowerCase()) || (category === 'carnes' && /carne|carnes/i.test(q))) {
+      if (q.includes(catLower) || (category === 'carnes' && /carne|carnes/i.test(q))) {
         const list = allItems.join(', ')
         return {
           found: true,
@@ -164,8 +168,8 @@ export function queryKnowledge(k: BusinessKnowledge, question: string): Knowledg
   // 5. Políticas
   if (k.policies && Object.keys(k.policies).length > 0) {
     for (const [policy, description] of Object.entries(k.policies)) {
-      if (q.includes(policy.toLowerCase())) {
-        return { found: true, answer: description, source: `policies.${policy}`, raw: description }
+      if (q.includes(String(policy).toLowerCase())) {
+        return { found: true, answer: String(description||''), source: `policies.${policy}`, raw: description }
       }
     }
   }
@@ -178,22 +182,30 @@ export function queryKnowledge(k: BusinessKnowledge, question: string): Knowledg
 
 export function buildKnowledgeContext(k: BusinessKnowledge): string {
   const parts: string[] = []
-  if (k.business_name) parts.push(`Negocio: ${k.business_name}`)
-  if (k.services?.length)  parts.push(`Servicios: ${k.services.join(', ')}`)
-  if (k.hours && Object.keys(k.hours).length > 0)
-    parts.push(`Horarios: ${Object.entries(k.hours).map(([t,h]) => `${t} ${h}`).join(', ')}`)
-  if (k.menu && Object.keys(k.menu).length > 0) {
-    const menuStr = Object.entries(k.menu)
-      .map(([cat, items]) => `${cat}: ${(items as string[]).join(', ')}`)
-      .join(' | ')
-    parts.push(`Menú — ${menuStr}`)
-  }
-  if (k.faqs?.length) {
-    const faqStr = k.faqs.slice(0, 5).map(f => `P: ${f.q} R: ${f.a}`).join(' | ')
-    parts.push(`FAQs — ${faqStr}`)
-  }
-  if (k.policies && Object.keys(k.policies).length > 0)
-    parts.push(`Políticas — ${Object.entries(k.policies).map(([k2,v]) => `${k2}: ${v}`).join(' | ')}`)
-  if (k.special_notes) parts.push(`Notas: ${k.special_notes}`)
+  try {
+    if (k.business_name) parts.push(`Negocio: ${k.business_name}`)
+    if (k.services?.length) parts.push(`Servicios: ${k.services.filter(s=>typeof s==='string').join(', ')}`)
+    if (k.hours && Object.keys(k.hours).length > 0)
+      parts.push(`Horarios: ${Object.entries(k.hours).map(([t,h]) => `${t} ${h}`).join(', ')}`)
+    if (k.menu && Object.keys(k.menu).length > 0) {
+      const menuStr = Object.entries(k.menu)
+        .map(([cat, items]) => {
+          const arr = Array.isArray(items) ? items.filter(i=>typeof i==='string') : []
+          return `${cat}: ${arr.join(', ')}`
+        })
+        .join(' | ')
+      parts.push(`Menú — ${menuStr}`)
+    }
+    if (k.faqs?.length) {
+      const faqStr = k.faqs.slice(0, 5)
+        .filter(f => f?.q && f?.a)
+        .map(f => `P: ${f.q} R: ${f.a}`)
+        .join(' | ')
+      if (faqStr) parts.push(`FAQs — ${faqStr}`)
+    }
+    if (k.policies && Object.keys(k.policies).length > 0)
+      parts.push(`Políticas — ${Object.entries(k.policies).map(([k2,v]) => `${k2}: ${v}`).join(' | ')}`)
+    if (k.special_notes) parts.push(`Notas: ${k.special_notes}`)
+  } catch(e) { /* best effort */ }
   return parts.join('\n')
 }
