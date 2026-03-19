@@ -141,21 +141,22 @@ export default function LoginPage() {
   const pwRef                = useRef<HTMLInputElement>(null)
 
   const login = useCallback(async () => {
-    // Leer del DOM directamente por si autofill no disparó onChange
-    const emailVal = emailRef.current?.value || email
-    const pwVal    = pwRef.current?.value    || pw
-    if (!emailVal.trim() || !pwVal) { setError('Rellena todos los campos'); return }
+    // Chrome autofill no siempre dispara onChange de React.
+    // Leemos del DOM directamente como fuente de verdad.
+    const emailVal = (emailRef.current?.value || email).trim().toLowerCase()
+    const pwVal    =  pwRef.current?.value    || pw
+
+    if (!emailVal || !pwVal) { setError('Rellena todos los campos'); return }
     setLoading(true); setError('')
     try {
       const { data, error:e } = await supabase.auth.signInWithPassword({
-        email: emailVal.trim().toLowerCase(),
+        email: emailVal,
         password: pwVal,
       })
       if (e) throw e
       if (!data.user) throw new Error('No se pudo iniciar sesión')
 
-      // Pequeña espera para que la sesión se propague
-      await new Promise(r => setTimeout(r, 300))
+      await new Promise(r => setTimeout(r, 400))
 
       const { data:p } = await supabase
         .from('profiles')
@@ -164,20 +165,16 @@ export default function LoginPage() {
         .maybeSingle()
 
       if (p?.role === 'superadmin') {
-        // superadmin: ir al admin si no tiene tenant, o al panel si tiene
         window.location.href = p.tenant_id ? '/panel' : '/admin'
         return
       }
       if (p?.tenant_id) {
         const { data:t } = await supabase
           .from('tenants')
-          .select('onboarding_complete, name')
+          .select('onboarding_complete,name')
           .eq('id', p.tenant_id)
           .maybeSingle()
-        // Si el tenant tiene nombre, siempre ir al panel
-        // onboarding solo si es cuenta nueva sin configurar
-        const goToPanel = t?.onboarding_complete || (t?.name && t.name.length > 0)
-        window.location.href = goToPanel ? '/panel' : '/onboarding'
+        window.location.href = (t?.onboarding_complete || t?.name) ? '/panel' : '/onboarding'
       } else {
         window.location.href = '/onboarding'
       }
@@ -186,7 +183,7 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
-  },[email,pw])
+  }, [email, pw])
 
   return (
     <div style={{ minHeight:'100vh', display:'grid', gridTemplateColumns:'1fr 1fr', fontFamily:"'Sora',-apple-system,sans-serif" }}>
@@ -251,14 +248,24 @@ export default function LoginPage() {
           <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:18 }}>
             <div>
               <label style={{ display:'block', fontSize:11, fontWeight:600, color:'#8895A7', marginBottom:6, letterSpacing:'0.05em', textTransform:'uppercase' }}>Email</label>
-              <input type="email" ref={emailRef} value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()} placeholder="tu@negocio.com" autoComplete="email" className="rzinp"/>
+              <input type="email" ref={emailRef} value={email}
+                onChange={e=>setEmail(e.target.value)}
+                onFocus={e=>{ if(e.target.value && !email) setEmail(e.target.value) }}
+                onBlur={e=>{ if(e.target.value) setEmail(e.target.value) }}
+                onKeyDown={e=>e.key==='Enter'&&login()}
+                placeholder="tu@negocio.com" autoComplete="email" className="rzinp"/>
             </div>
             <div>
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
                 <label style={{ fontSize:11, fontWeight:600, color:'#8895A7', letterSpacing:'0.05em', textTransform:'uppercase' }}>Contraseña</label>
                 <Link href="/reset" style={{ fontSize:12, color:'#F0A84E', textDecoration:'none', fontWeight:500 }}>¿Olvidaste?</Link>
               </div>
-              <input type="password" ref={pwRef} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()} placeholder="••••••••" autoComplete="current-password" className="rzinp"/>
+              <input type="password" ref={pwRef} value={pw}
+                onChange={e=>setPw(e.target.value)}
+                onFocus={e=>{ if(e.target.value && !pw) setPw(e.target.value) }}
+                onBlur={e=>{ if(e.target.value) setPw(e.target.value) }}
+                onKeyDown={e=>e.key==='Enter'&&login()}
+                placeholder="••••••••" autoComplete="current-password" className="rzinp"/>
             </div>
           </div>
 
