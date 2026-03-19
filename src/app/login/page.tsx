@@ -30,7 +30,6 @@ function CallDemo() {
   const [typing,setTyping] = useState<number|null>(null)
   const timers             = useRef<ReturnType<typeof setTimeout>[]>([])
   const scroll             = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     function clear() { timers.current.forEach(clearTimeout); timers.current = [] }
     function run() {
@@ -41,17 +40,13 @@ function CallDemo() {
         if (msg.from==='agent') {
           timers.current.push(setTimeout(()=>setTyping(i),d)); d+=650
           timers.current.push(setTimeout(()=>{ setTyping(null); setShown(p=>[...p,i]) },d)); d+=ms
-        } else {
-          timers.current.push(setTimeout(()=>setShown(p=>[...p,i]),d)); d+=ms
-        }
+        } else { timers.current.push(setTimeout(()=>setShown(p=>[...p,i]),d)); d+=ms }
       })
       timers.current.push(setTimeout(run, d+2500))
     }
     run(); return clear
   },[])
-
   useEffect(()=>{ scroll.current?.scrollTo({ top:scroll.current.scrollHeight, behavior:'smooth' }) },[shown,typing])
-
   return (
     <div style={{ flex:1, display:'flex', flexDirection:'column', gap:16 }}>
       <div>
@@ -81,11 +76,7 @@ function CallDemo() {
         <div ref={scroll} style={{ flex:1, padding:12, display:'flex', flexDirection:'column', gap:8, overflowY:'auto', scrollbarWidth:'none' }}>
           {CONV.map((msg,i) => {
             if(!shown.includes(i)&&typing!==i) return null
-            if(msg.from==='confirm'&&shown.includes(i)) return (
-              <div key={i} style={{ background:'rgba(45,212,191,0.1)', border:'1px solid rgba(45,212,191,0.2)', borderRadius:9, padding:'9px 12px' }}>
-                <p style={{ fontSize:12, color:'#2DD4BF', fontWeight:600 }}>{msg.text}</p>
-              </div>
-            )
+            if(msg.from==='confirm'&&shown.includes(i)) return (<div key={i} style={{ background:'rgba(45,212,191,0.1)', border:'1px solid rgba(45,212,191,0.2)', borderRadius:9, padding:'9px 12px' }}><p style={{ fontSize:12, color:'#2DD4BF', fontWeight:600 }}>{msg.text}</p></div>)
             const isA=msg.from==='agent'
             return (
               <div key={i} style={{ display:'flex', gap:7, justifyContent:isA?'flex-start':'flex-end' }}>
@@ -111,23 +102,17 @@ function CallDemo() {
   )
 }
 
-const BENEFITS = [
-  { icon:'📞', text:'Responde llamadas automáticamente, 24/7' },
-  { icon:'📅', text:'Gestiona reservas y pedidos en tiempo real' },
-  { icon:'📊', text:'Todo aparece en el panel instantáneamente' },
-]
-
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
+  // IDs únicos para leer del DOM directamente — sin estado React, sin ref
+  const emailId = 'rz-login-email'
+  const pwId    = 'rz-login-pw'
 
-  // onSubmit del form nativo — funciona SIEMPRE con autofill
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const fd = new FormData(e.currentTarget)
-    const emailVal = (fd.get('email') as string || '').trim().toLowerCase()
-    const pwVal    =  fd.get('password') as string || ''
-
+  async function doLogin() {
+    // Leer directamente del DOM — funciona con autofill, escritura manual, gestores de contraseñas
+    const emailVal = (document.getElementById(emailId) as HTMLInputElement)?.value?.trim().toLowerCase() || ''
+    const pwVal    = (document.getElementById(pwId)    as HTMLInputElement)?.value || ''
     if (!emailVal || !pwVal) { setError('Rellena todos los campos'); return }
     setLoading(true); setError('')
     try {
@@ -183,44 +168,41 @@ export default function LoginPage() {
             <span style={{ fontWeight:700, fontSize:16, color:'#E8EEF6', letterSpacing:'-0.02em' }}>Reservo<span style={{ color:'#F0A84E' }}>.AI</span></span>
           </Link>
           <h1 style={{ fontSize:26, fontWeight:700, color:'#E8EEF6', letterSpacing:'-0.03em', marginBottom:6 }}>Bienvenido de nuevo</h1>
-          <p style={{ fontSize:13, color:'#8895A7', marginBottom:28 }}>¿Sin cuenta?{' '}<Link href="/registro" style={{ color:'#F0A84E', fontWeight:600, textDecoration:'none' }}>Empieza gratis →</Link></p>
-          <div style={{ marginBottom:28, display:'flex', flexDirection:'column', gap:8 }}>
-            {BENEFITS.map(b=>(
-              <div key={b.text} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:9 }}>
-                <span style={{ fontSize:14 }}>{b.icon}</span>
-                <span style={{ fontSize:12.5, color:'#8895A7', lineHeight:1.4 }}>{b.text}</span>
-              </div>
-            ))}
-          </div>
+          <p style={{ fontSize:13, color:'#8895A7', marginBottom:32 }}>¿Sin cuenta?{' '}<Link href="/registro" style={{ color:'#F0A84E', fontWeight:600, textDecoration:'none' }}>Empieza gratis →</Link></p>
 
-          {/* FORM NATIVO — captura autofill correctamente */}
-          <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:18 }}>
+          {/* Inputs sin form — sin riesgo de submit nativo */}
+          <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:18 }}>
             <div>
               <label style={{ display:'block', fontSize:11, fontWeight:600, color:'#8895A7', marginBottom:6, letterSpacing:'0.05em', textTransform:'uppercase' }}>Email</label>
-              <input name="email" type="email" placeholder="tu@negocio.com" autoComplete="email" className="rzinp"/>
+              <input id={emailId} type="email" placeholder="tu@negocio.com" autoComplete="email" className="rzinp"
+                onKeyDown={e=>{ if(e.key==='Enter') doLogin() }}/>
             </div>
             <div>
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
                 <label style={{ fontSize:11, fontWeight:600, color:'#8895A7', letterSpacing:'0.05em', textTransform:'uppercase' }}>Contraseña</label>
                 <Link href="/reset" style={{ fontSize:12, color:'#F0A84E', textDecoration:'none', fontWeight:500 }}>¿Olvidaste?</Link>
               </div>
-              <input name="password" type="password" placeholder="••••••••" autoComplete="current-password" className="rzinp"/>
+              <input id={pwId} type="password" placeholder="••••••••" autoComplete="current-password" className="rzinp"
+                onKeyDown={e=>{ if(e.key==='Enter') doLogin() }}/>
             </div>
-            {error && (
-              <div style={{ background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.2)', borderRadius:9, padding:'10px 14px', fontSize:13, color:'#F87171', display:'flex', alignItems:'center', gap:7 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#F87171" strokeWidth="2"/><path d="M12 8v4M12 16h.01" stroke="#F87171" strokeWidth="2" strokeLinecap="round"/></svg>
-                {error}
-              </div>
-            )}
-            <button type="submit" disabled={loading} className="rzbtn">
-              {loading
-                ? <><div style={{ width:16,height:16,border:'2px solid rgba(12,16,24,0.3)',borderTop:'2px solid #0C1018',borderRadius:'50%',animation:'rz-spin 0.7s linear infinite' }}/> Entrando…</>
-                : <>Entrar en el panel <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0C1018" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></>
-              }
-            </button>
-          </form>
+          </div>
 
-          <p style={{ fontSize:11, color:'#49566A', textAlign:'center', lineHeight:1.6 }}>
+          {error && (
+            <div style={{ background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.2)', borderRadius:9, padding:'10px 14px', marginBottom:14, fontSize:13, color:'#F87171', display:'flex', alignItems:'center', gap:7 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#F87171" strokeWidth="2"/><path d="M12 8v4M12 16h.01" stroke="#F87171" strokeWidth="2" strokeLinecap="round"/></svg>
+              {error}
+            </div>
+          )}
+
+          {/* Botón tipo button — nunca hace submit nativo */}
+          <button type="button" onClick={doLogin} disabled={loading} className="rzbtn">
+            {loading
+              ? <><div style={{ width:16,height:16,border:'2px solid rgba(12,16,24,0.3)',borderTop:'2px solid #0C1018',borderRadius:'50%',animation:'rz-spin 0.7s linear infinite' }}/> Entrando…</>
+              : <>Entrar en el panel <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0C1018" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></>
+            }
+          </button>
+
+          <p style={{ marginTop:24, fontSize:11, color:'#49566A', textAlign:'center', lineHeight:1.6 }}>
             Al entrar aceptas los{' '}<a href="#" style={{ color:'#8895A7' }}>Términos de servicio</a> y la{' '}<a href="#" style={{ color:'#8895A7' }}>Política de privacidad</a>
           </p>
         </div>
