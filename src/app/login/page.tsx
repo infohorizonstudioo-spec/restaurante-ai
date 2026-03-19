@@ -164,7 +164,8 @@ export default function LoginPage() {
         .maybeSingle()
 
       if (p?.role === 'superadmin') {
-        window.location.href = '/admin'
+        // superadmin: ir al admin si no tiene tenant, o al panel si tiene
+        window.location.href = p.tenant_id ? '/panel' : '/admin'
         return
       }
       if (p?.tenant_id) {
