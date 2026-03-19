@@ -57,6 +57,7 @@ export default function ConfiguracionPage(){
         agent_phone: t?.agent_phone||'',
         language: t?.language||'es',
         business_description: t?.business_description||'',
+        business_name: t?.name||'',
       })
       setLoading(false)
     }
@@ -68,17 +69,19 @@ export default function ConfiguracionPage(){
     const e:Record<string,string>={}
     if(!form.agent_name.trim())e.agent_name='El nombre del agente es obligatorio'
     if(form.agent_name.trim().length<2)e.agent_name='Mínimo 2 caracteres'
+    if(!form.business_name.trim())e.business_name='El nombre del negocio es obligatorio'
     if(Object.keys(e).length){setErrors(e);return}
     setErrors({});setSaving(true)
     const phone=form.agent_phone.trim()||null
     await supabase.from('tenants').update({
+      name:        form.business_name.trim(),
       agent_name:  form.agent_name.trim(),
       agent_phone: phone,
       language:    form.language,
       business_description: form.business_description.trim()||null,
     }).eq('id',tenant.id)
     setSaving(false);setSaved(true)
-    setTenant({...tenant, agent_name:form.agent_name.trim(), agent_phone:phone, business_description:form.business_description.trim()||null})
+    setTenant({...tenant, name:form.business_name.trim(), agent_name:form.agent_name.trim(), agent_phone:phone, business_description:form.business_description.trim()||null})
     setTimeout(()=>setSaved(false),2500)
   },[tenant,form])
 
@@ -119,6 +122,12 @@ export default function ConfiguracionPage(){
           {isTrial&&left<=3&&<div style={{marginTop:10,padding:'10px 14px',background:C.amberDim,border:`1px solid ${C.amber}30`,borderRadius:9,fontSize:12,color:C.amber}}>
             ⚡ Pocas llamadas. <Link href='/precios' style={{fontWeight:700,color:C.amber}}>Activar plan →</Link>
           </div>}
+        </Section>
+
+        <Section title='Tu negocio' sub='Nombre que aparece en el panel y en los avisos'>
+          <Input label='Nombre del negocio *' value={form.business_name} error={errors.business_name}
+            placeholder='Ej: Restaurante La Bahía'
+            onChange={e=>setForm({...form,business_name:e.target.value})}/>
         </Section>
 
         <Section title='Recepcionista virtual' sub='Así se presenta al contestar las llamadas'>
