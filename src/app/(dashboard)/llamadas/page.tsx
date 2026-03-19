@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
+import NotificationBell from '@/components/NotificationBell'
 
 // ── Configuración de estados de decisión ──────────────────────────────────
 const DECISION_CFG: Record<string,{label:string;color:string;bg:string;icon:string}> = {
@@ -179,6 +180,7 @@ export default function LlamadasPage() {
             </button>
           ))}
         </div>
+        {tid && <NotificationBell tenantId={tid}/>}
       </div>
 
       <div style={{maxWidth:800, margin:'0 auto', padding:'20px 24px'}}>

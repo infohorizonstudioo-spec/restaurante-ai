@@ -41,7 +41,7 @@ export default function ConfiguracionPage(){
   const [loading,setLoading]= useState(true)
   const [saving,setSaving]  = useState(false)
   const [saved,setSaved]    = useState(false)
-  const [form,setForm]      = useState({agent_name:'',agent_phone:'',language:'es',business_description:''})
+  const [form,setForm] = useState({agent_name:'',agent_phone:'',language:'es',business_description:'',business_name:''})
   const [errors,setErrors]  = useState<Record<string,string>>({})
 
   useEffect(()=>{

@@ -1,5 +1,7 @@
 'use client'
 import{ReactNode,ButtonHTMLAttributes,InputHTMLAttributes,SelectHTMLAttributes,TextareaHTMLAttributes,forwardRef}from'react'
+import{useTenant}from'@/contexts/TenantContext'
+import NotificationBell from'@/components/NotificationBell'
 
 const RZ = {
   amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)',
@@ -107,7 +109,19 @@ export function Modal({open,onClose,title,children,footer,size='md'}:{open:boole
 }
 
 export function PageHeader({title,subtitle,actions}:{title:string;subtitle?:string;actions?:ReactNode}){
-  return(<header style={{height:56,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 28px',background:RZ.surface,borderBottom:`1px solid ${RZ.border}`,position:'sticky',top:0,zIndex:40,gap:12}}><div style={{minWidth:0}}><h1 style={{fontSize:16,fontWeight:700,color:RZ.text,letterSpacing:'-0.02em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{title}</h1>{subtitle&&<p style={{fontSize:12,color:RZ.text3}}>{subtitle}</p>}</div>{actions&&<div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>{actions}</div>}</header>)
+  const{tenant}=useTenant()
+  return(
+    <header style={{height:56,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 16px 0 28px',background:RZ.surface,borderBottom:`1px solid ${RZ.border}`,position:'sticky',top:0,zIndex:40,gap:12}}>
+      <div style={{minWidth:0}}>
+        <h1 style={{fontSize:16,fontWeight:700,color:RZ.text,letterSpacing:'-0.02em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{title}</h1>
+        {subtitle&&<p style={{fontSize:12,color:RZ.text3}}>{subtitle}</p>}
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
+        {actions&&<div style={{display:'flex',alignItems:'center',gap:8}}>{actions}</div>}
+        {tenant?.id&&<NotificationBell tenantId={tenant.id}/>}
+      </div>
+    </header>
+  )
 }
 
 export function StatCard({label,value,icon,href,bg=RZ.amberDim,color=RZ.amber}:{label:string;value:ReactNode;icon?:ReactNode;href?:string;bg?:string;color?:string}){
