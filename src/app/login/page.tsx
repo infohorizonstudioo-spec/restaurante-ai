@@ -166,10 +166,13 @@ export default function LoginPage() {
       if (p?.tenant_id) {
         const { data:t } = await supabase
           .from('tenants')
-          .select('onboarding_complete')
+          .select('onboarding_complete, name')
           .eq('id', p.tenant_id)
           .maybeSingle()
-        window.location.href = t?.onboarding_complete ? '/panel' : '/onboarding'
+        // Si el tenant tiene nombre, siempre ir al panel
+        // onboarding solo si es cuenta nueva sin configurar
+        const goToPanel = t?.onboarding_complete || (t?.name && t.name.length > 0)
+        window.location.href = goToPanel ? '/panel' : '/onboarding'
       } else {
         window.location.href = '/onboarding'
       }
