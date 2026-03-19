@@ -78,7 +78,7 @@ const HOSTELERIA: TemplateConfig = {
     { id:'pedidos',      href:'/pedidos',      icon:'bag',   label:'Pedidos', pro:true },
     { id:'estadisticas', href:'/estadisticas', icon:'bar',   label:'Estadísticas', pro:true },
     { id:'facturacion',  href:'/facturacion',  icon:'card',  label:'Facturación' },
-    { id:'agente',       href:'/agente',       icon:'cpu',   label:'Tu recepcionista' },
+    { id:'agente',       href:'/agente',       icon:'cpu',   label:'Agente IA' },
     { id:'configuracion',href:'/configuracion',icon:'gear',  label:'Configuración' },
   ],
   labels: {
@@ -111,7 +111,7 @@ const SERVICIOS: TemplateConfig = {
     { id:'clientes',     href:'/clientes',     icon:'users', label:'Clientes' },
     { id:'estadisticas', href:'/estadisticas', icon:'bar',   label:'Estadísticas', pro:true },
     { id:'facturacion',  href:'/facturacion',  icon:'card',  label:'Facturación' },
-    { id:'agente',       href:'/agente',       icon:'cpu',   label:'Tu recepcionista' },
+    { id:'agente',       href:'/agente',       icon:'cpu',   label:'Agente IA' },
     { id:'configuracion',href:'/configuracion',icon:'gear',  label:'Configuración' },
   ],
   labels: {

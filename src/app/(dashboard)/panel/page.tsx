@@ -57,12 +57,14 @@ function timeAgo(d: Date) {
 
 // ── DEMO events para cuando no hay actividad
 const DEMO_EVENTS: Omit<LiveEvent,'id'|'ts'>[] = [
-  { type:'call_active', icon:'🔴', color:C.red, title:'Llamada activa con +34 612 345 678', sub:'Escuchando al cliente…', priority:'high', demo:true },
-  { type:'reservation', icon:'📅', color:C.teal, title:'Reserva detectada — Martínez, 21:30', sub:'4 personas · terraza · mañana', demo:true },
-  { type:'order', icon:'🛍️', color:C.violet, title:'Pedido en curso — 2 pizzas + bebidas', sub:'Para recoger · López', priority:'high', demo:true },
-  { type:'call_ended', icon:'✅', color:C.green, title:'Llamada finalizada — resumen generado', sub:'Reserva confirmada a nombre de García', demo:true },
-  { type:'pending', icon:'⏳', color:C.yellow, title:'Solicitud pendiente de revisión', sub:'Llamada con datos incompletos', priority:'high', demo:true },
-  { type:'call_incoming', icon:'📞', color:C.teal, title:'Nueva llamada entrante', sub:'+34 699 887 766', demo:true },
+  { type:'call_active',   icon:'🔴', color:C.red,    title:'Llamada activa — +34 612 345 678',    sub:'Tomando reserva para esta noche…',    priority:'high', demo:true },
+  { type:'reservation',   icon:'📅', color:C.teal,   title:'Reserva confirmada — Martínez, 21:30', sub:'4 personas · terraza · mañana',       priority:'high', demo:true },
+  { type:'order',         icon:'🛍️', color:C.violet, title:'Pedido en curso — 2 chuletones + bebidas', sub:'Para recoger · López',           priority:'high', demo:true },
+  { type:'call_ended',    icon:'✅', color:C.green,  title:'Llamada finalizada — resumen generado', sub:'Reserva confirmada a nombre de García', demo:true },
+  { type:'pending',       icon:'⏳', color:C.yellow,  title:'Grupo de 9 personas — revisión manual', sub:'Supera el máximo automático (6)',    priority:'high', demo:true },
+  { type:'call_incoming', icon:'📞', color:C.teal,   title:'Nueva llamada entrante',               sub:'+34 699 887 766',                     priority:'high', demo:true },
+  { type:'reservation',   icon:'📅', color:C.teal,   title:'Pregunta sobre el menú respondida',   sub:'Chuletón — menú.carnes · base de conocimiento', demo:true },
+  { type:'system',        icon:'⚡', color:C.amber,  title:'Motor de decisión activado',           sub:'Confianza 100% · auto_confirm_normal_case', demo:true },
 ]
 
 // ── Live Feed Component
