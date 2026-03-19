@@ -80,6 +80,14 @@ export default function ConfiguracionPage(){
       language:    form.language,
       business_description: form.business_description.trim()||null,
     }).eq('id',tenant.id)
+
+    // Sincronizar nombre con el agente de ElevenLabs en background
+    fetch('/api/update-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenant_id: tenant.id, business_name: form.business_name.trim(), agent_name: form.agent_name.trim() })
+    }).catch(() => {})
+
     setSaving(false);setSaved(true)
     setTenant({...tenant, name:form.business_name.trim(), agent_name:form.agent_name.trim(), agent_phone:phone, business_description:form.business_description.trim()||null})
     setTimeout(()=>setSaved(false),2500)
