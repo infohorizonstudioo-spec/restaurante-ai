@@ -146,7 +146,7 @@ const TYPE_PATTERNS: Array<{ type: ConsultationType; patterns: RegExp[]; weight:
   { type:'limpieza', weight:8, patterns:[/limpieza/i,/higiene\s+dental/i,/limpiar\s+(los\s+)?dientes/i,/sarro/i,/placa/i] },
   { type:'revision', weight:7, patterns:[/revisión/i,/revision/i,/chequeo/i,/ver\s+cómo\s+está/i,/control/i,/revisarme/i] },
   { type:'primera_visita', weight:9, patterns:[/primera\s+vez/i,/primera\s+visita/i,/nunca\s+he\s+venido/i,/nuevo\s+paciente/i,/nunca\s+he\s+ido/i] },
-  { type:'seguimiento', weight:6, patterns:[/seguimiento/i,/próxima\s+cita/i,/continuar\s+el\s+tratamiento/i,/continuar\s+con/i,/siguiente\s+sesión/i] },
+  { type:'seguimiento', weight:9, patterns:[/seguimiento/i,/próxima\s+cita/i,/siguiente\s+sesión/i,/continuar\s+el\s+tratamiento/i,/continuar\s+con/i,/volver\s+para/i,/me\s+toca\s+volver/i] },
   { type:'tratamiento', weight:7, patterns:[
     /ortodoncia/i,/brackets/i,/implante/i,/endodoncia/i,/empaste/i,/obturación/i,
     /extracción/i,/blanqueamiento/i,/carilla/i,/corona/i,/puente/i,/prótesis/i,
@@ -242,9 +242,9 @@ export function makeClinicDecision(params: {
 
   // REGLA 4: Sin nombre → no confirmar automáticamente
   if (!patient_name) {
-    trace.push({ step:'decision', result:'INCOMPLETE — falta nombre del paciente' })
+    trace.push({ step:'decision', result:'PENDING_REVIEW — falta nombre del paciente' })
     return {
-      status: 'incomplete',
+      status: 'pending_review',
       action_required: 'Pedir nombre del paciente antes de confirmar',
       response_hint: '¿Me dices tu nombre completo para apuntarlo?',
       reasoning: 'Falta dato obligatorio: nombre del paciente',
@@ -253,13 +253,15 @@ export function makeClinicDecision(params: {
   }
 
   // REGLA 5: Confianza baja → pending_review
-  if (confidence < autoThreshold) {
+  // Para citas estándar con nombre y fecha la confianza baja es normal (paciente nuevo)
+  const effectiveThreshold = (patient_name && params.has_availability) ? 0.35 : autoThreshold
+  if (confidence < effectiveThreshold) {
     trace.push({ step:'decision', result:`PENDING_REVIEW — confianza baja (${(confidence*100).toFixed(0)}%)` })
     return {
       status: 'pending_review',
       action_required: 'Verificar datos de la cita antes de confirmar',
       response_hint: 'Te dejo anotado y te confirmamos en breve.',
-      reasoning: `Confianza ${(confidence*100).toFixed(0)}% — por debajo del umbral (${(autoThreshold*100).toFixed(0)}%)`,
+      reasoning: `Confianza ${(confidence*100).toFixed(0)}% — por debajo del umbral (${(effectiveThreshold*100).toFixed(0)}%)`,
       trace,
     }
   }
