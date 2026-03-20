@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
+import { useTenant } from '@/contexts/TenantContext'
 
 import { isHosteleria } from '@/lib/templates'
 import { DEFAULT_CONFIG as DEFAULT_SCHED, parseReservationConfig } from '@/lib/scheduling-engine'
@@ -145,6 +146,7 @@ function CaseBadge({value,onChange}:{value:string,onChange:(v:string)=>void}) {
 const FLOW_OPTIONS = ['nombre','teléfono','personas','fecha','hora','zona','servicio','notas','confirmar']
 
 export default function ConfiguracionPage() {
+  const { reload: reloadTenant } = useTenant()
   const [tenant, setTenant]   = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
@@ -177,16 +179,31 @@ export default function ConfiguracionPage() {
   const save = useCallback(async()=>{
     if(!tenant) return
     setSaving(true); setSaved(false)
+    const newName = basicForm.business_name.trim()
+    const newAgent = basicForm.agent_name.trim()
     await supabase.from('tenants').update({
-      agent_name:  basicForm.agent_name.trim(),
-      name:        basicForm.business_name.trim(),
+      agent_name:  newAgent,
+      name:        newName,
       agent_phone: basicForm.agent_phone.trim()||null,
       agent_config: cfg,
       ...(isHosb ? { reservation_config: schedCfg } : {}),
     }).eq('id',tenant.id)
+
+    // Actualizar el first_message de ElevenLabs con el nuevo nombre del negocio
+    if(tenant.elevenlabs_agent_id || process.env.NEXT_PUBLIC_EL_AGENT_ID) {
+      try {
+        await fetch('/api/voice/update-agent-name', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ business_name: newName, agent_name: newAgent })
+        })
+      } catch(e) { /* no crítico */ }
+    }
+
     setSaving(false); setSaved(true)
+    reloadTenant() // ← actualiza sidebar y header inmediatamente
     setTimeout(()=>setSaved(false),3000)
-  },[tenant,basicForm,cfg])
+  },[tenant,basicForm,cfg,isHosb,schedCfg,reloadTenant])
 
   const toggleSection = (id:string) => setOpen(o=>o===id?null:id)
 
