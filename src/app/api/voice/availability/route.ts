@@ -23,12 +23,24 @@ export async function POST(req: Request) {
         .in('status', ['confirmada','confirmed','pendiente','pending']),
     ])
 
+    // Sin mesas configuradas → disponible siempre (negocio sin gestión de mesas)
     if (!tables?.length) {
-      return NextResponse.json({ available: true, message: 'Disponible el ' + date + ' a las ' + time + '.', tables_available: 0, zones: [] })
+      return NextResponse.json({ available: true, message: 'Disponible el ' + date + ' a las ' + time + '.', tables_available: 99 })
     }
 
     const reservedIds = new Set((existing||[]).map(r => r.table_id).filter(Boolean))
-    let free = tables.filter(t => !reservedIds.has(t.id) && (t.capacity||0) >= ps)
+    // capacity null/0 = sin límite configurado → acepta cualquier tamaño
+    let free = tables.filter(t => !reservedIds.has(t.id) && (t.capacity == null || t.capacity === 0 || t.capacity >= ps))
+
+    // Si no hay mesas con suficiente capacidad individual, ver si la suma libre cubre al grupo
+    if (!free.length) {
+      const freeAny = tables.filter(t => !reservedIds.has(t.id))
+      const totalCap = freeAny.reduce((s,t) => s + (t.capacity||4), 0)
+      if (totalCap >= ps) {
+        // Hay capacidad total aunque no en una sola mesa
+        free = freeAny
+      }
+    }
 
     if (!free.length) {
       const ocu = existing?.length || 0
