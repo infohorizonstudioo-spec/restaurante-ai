@@ -134,31 +134,26 @@ const BENEFITS = [
 ]
 
 export default function LoginPage() {
+  const [email,setEmail]     = useState('')
+  const [pw,setPw]           = useState('')
   const [loading,setLoading] = useState(false)
   const [error,setError]     = useState('')
 
   const login = useCallback(async () => {
-    const emailVal = (document.getElementById('rz-email') as HTMLInputElement)?.value?.trim().toLowerCase() || ''
-    const pwVal    = (document.getElementById('rz-pw')    as HTMLInputElement)?.value || ''
-    if (!emailVal || !pwVal) { setError('Rellena todos los campos'); return }
+    if (!email.trim()||!pw) { setError('Rellena todos los campos'); return }
     setLoading(true); setError('')
     try {
-      const { data, error:e } = await supabase.auth.signInWithPassword({ email: emailVal, password: pwVal })
+      const { data,error:e } = await supabase.auth.signInWithPassword({ email:email.trim().toLowerCase(), password:pw })
       if (e) throw e
-      if (!data.user) throw new Error('sin usuario')
-      await new Promise(r => setTimeout(r, 500))
-      const { data:p } = await supabase.from('profiles').select('role,tenant_id').eq('id', data.user.id).maybeSingle()
-      if (p?.role === 'superadmin') { window.location.href = p.tenant_id ? '/panel' : '/admin'; return }
-      if (p?.tenant_id) {
-        const { data:t } = await supabase.from('tenants').select('name').eq('id', p.tenant_id).maybeSingle()
-        window.location.href = t?.name ? '/panel' : '/onboarding'
-      } else { window.location.href = '/onboarding' }
-    } catch (e:any) {
-      setError(mapErr(e.message || ''))
-    } finally {
-      setLoading(false)
-    }
-  },[])
+      const { data:p } = await supabase.from('profiles').select('role,tenant_id').eq('id',data.user.id).single()
+      if ((p as any)?.role==='superadmin') { window.location.href='/admin'; return }
+      if ((p as any)?.tenant_id) {
+        const { data:t } = await supabase.from('tenants').select('onboarding_complete').eq('id',(p as any).tenant_id).single()
+        window.location.href = t?.onboarding_complete ? '/panel' : '/onboarding'
+      } else window.location.href='/onboarding'
+    } catch (e:any) { setError(mapErr(e.message||'')) }
+    finally { setLoading(false) }
+  },[email,pw])
 
   return (
     <div style={{ minHeight:'100vh', display:'grid', gridTemplateColumns:'1fr 1fr', fontFamily:"'Sora',-apple-system,sans-serif" }}>
@@ -223,14 +218,14 @@ export default function LoginPage() {
           <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:18 }}>
             <div>
               <label style={{ display:'block', fontSize:11, fontWeight:600, color:'#8895A7', marginBottom:6, letterSpacing:'0.05em', textTransform:'uppercase' }}>Email</label>
-              <input id="rz-email" type="email" onKeyDown={e=>e.key==='Enter'&&login()} placeholder="tu@negocio.com" autoComplete="email" className="rzinp"/>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()} placeholder="tu@negocio.com" autoComplete="email" className="rzinp"/>
             </div>
             <div>
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
                 <label style={{ fontSize:11, fontWeight:600, color:'#8895A7', letterSpacing:'0.05em', textTransform:'uppercase' }}>Contraseña</label>
                 <Link href="/reset" style={{ fontSize:12, color:'#F0A84E', textDecoration:'none', fontWeight:500 }}>¿Olvidaste?</Link>
               </div>
-              <input id="rz-pw" type="password" onKeyDown={e=>e.key==='Enter'&&login()} placeholder="••••••••" autoComplete="current-password" className="rzinp"/>
+              <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()} placeholder="••••••••" autoComplete="current-password" className="rzinp"/>
             </div>
           </div>
 
@@ -241,7 +236,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <button type="button" onClick={login} disabled={loading} className="rzbtn">
+          <button onClick={login} disabled={loading} className="rzbtn">
             {loading
               ?<><div style={{ width:16,height:16,border:'2px solid rgba(12,16,24,0.3)',borderTop:'2px solid #0C1018',borderRadius:'50%',animation:'rz-spin 0.7s linear infinite' }}/> Entrando…</>
               :<>Entrar en el panel <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0C1018" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></>

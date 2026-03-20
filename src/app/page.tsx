@@ -391,9 +391,9 @@ export default function HomePage() {
           </div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20,alignItems:'start'}} className="price-grid">
             {[
-              {plan:'Starter',price:'149',calls:'150 llamadas',sub:'Incluidas al mes',features:['Recepcionista IA 24/7','Reservas automáticas','Panel de control','Soporte por email'],cta:'Empezar gratis',highlight:false},
-              {plan:'Business',price:'299',calls:'600 llamadas',sub:'Incluidas al mes',features:['Todo lo de Starter','Gestión de pedidos','Mesas y zonas','Estadísticas avanzadas','Soporte prioritario'],cta:'Más popular',highlight:true},
-              {plan:'Enterprise',price:'499',calls:'1.200 llamadas',sub:'Incluidas al mes',features:['Todo lo de Business','Hasta 3 locales','Manager dedicado','SLA garantizado','Soporte 24/7'],cta:'Contactar',highlight:false},
+              {plan:'Starter',price:'99',calls:'50 llamadas',sub:'Incluidas al mes',features:['Recepcionista IA 24/7','Reservas automáticas','Panel de control','Soporte por email'],cta:'Empezar gratis',highlight:false},
+              {plan:'Business',price:'299',calls:'200 llamadas',sub:'Incluidas al mes',features:['Todo lo de Starter','Gestión de pedidos','Mesas y zonas','Estadísticas avanzadas','Soporte prioritario'],cta:'Más popular',highlight:true},
+              {plan:'Enterprise',price:'499',calls:'600 llamadas',sub:'Incluidas al mes',features:['Todo lo de Business','Hasta 3 locales','Manager dedicado','SLA garantizado','Soporte 24/7'],cta:'Contactar',highlight:false},
             ].map(({plan,price,calls,sub,features,cta,highlight})=>(
               <div key={plan} className="plan-card" style={{
                 background: highlight ? 'linear-gradient(135deg,rgba(240,168,78,0.08),rgba(240,168,78,0.03))' : 'rgba(255,255,255,0.02)',
