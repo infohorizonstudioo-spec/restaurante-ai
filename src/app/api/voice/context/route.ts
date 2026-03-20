@@ -158,6 +158,30 @@ export async function POST(req: Request) {
     const knowledge = await getBusinessKnowledge(tenant.id as string)
     const knowledgeCtx = buildKnowledgeContext(knowledge)
 
+    // ── Disponibilidad operativa del menú (limited_daily, by_request, etc.) ──
+    const today2 = new Date().toISOString().slice(0, 10)
+    const [menuItemsRes, menuCountsRes] = await Promise.all([
+      admin.from('menu_items').select('id,name,availability_type,daily_limit,requires_confirmation,alternatives').eq('tenant_id', tenant.id).eq('active', true),
+      admin.from('menu_daily_counts').select('item_id,count').eq('tenant_id', tenant.id).eq('date', today2),
+    ])
+    const menuItems = menuItemsRes.data || []
+    const countMap: Record<string,number> = {}
+    ;(menuCountsRes.data || []).forEach((r:any) => { countMap[r.item_id] = r.count })
+    const opLines: string[] = []
+    for (const item of menuItems) {
+      const used = countMap[item.id] || 0
+      if (item.availability_type === 'unavailable') {
+        opLines.push(`- ${item.name}: NO DISPONIBLE HOY`)
+      } else if (item.availability_type === 'limited_daily') {
+        const remaining = (item.daily_limit || 0) - used
+        if (remaining <= 0) opLines.push(`- ${item.name}: AGOTADO hoy${item.alternatives?.length ? '. Di al cliente: "Se nos acabó, pero tenemos '+item.alternatives.join(' o ')+'"' : ''}`)
+        else opLines.push(`- ${item.name}: quedan ${remaining} raciones hoy`)
+      } else if (item.availability_type === 'by_request') {
+        opLines.push(`- ${item.name}: requiere confirmación — di "lo consulto y te confirmo"`)
+      }
+    }
+    const menuAvailability = opLines.length > 0 ? ('DISPONIBILIDAD REAL HOY (usa esto siempre):\n' + opLines.join('\n')) : ''
+
     const greeting = !isOpen
       ? biz + ', en este momento estamos cerrados. ' + (bhHuman ? 'Nuestro horario es: ' + bhHuman + '. ' : '') + 'Por favor llame en horario de atención.'
       : biz + ', dígame.'
@@ -204,6 +228,7 @@ export async function POST(req: Request) {
         reservation_unit: tmpl.labels.reserva,
         agent_context:    agentSystemContext,
         business_knowledge: buildAgentKnowledge(knowledge) || extraKnowledge || '',
+        menu_availability:  menuAvailability,
         behavior_rules:     behaviorRules,
       },
       conversation_config_override: {
