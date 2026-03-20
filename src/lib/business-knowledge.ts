@@ -177,9 +177,61 @@ export function queryKnowledge(k: BusinessKnowledge, question: string): Knowledg
   return { found: false, answer: null, source: 'none' }
 }
 
-// ── CONSTRUIR CONTEXTO PARA CLAUDE ───────────────────────────────────────────
-// Genera un string de contexto compacto para incluir en el prompt de análisis.
+// ── CONTEXTO PARA EL AGENTE DE VOZ ───────────────────────────────────────────
+// Genera texto natural que el agente puede usar para responder preguntas.
+// Formato conversacional, no robótico.
 
+export function buildAgentKnowledge(k: BusinessKnowledge): string {
+  const parts: string[] = []
+  try {
+    // Menú / servicios
+    if (k.menu && Object.keys(k.menu).length > 0) {
+      const menuLines = Object.entries(k.menu)
+        .map(([cat, items]) => {
+          const arr = Array.isArray(items) ? items.filter(i=>typeof i==='string') : []
+          return arr.length > 0 ? `${cat}: ${arr.join(', ')}` : null
+        }).filter(Boolean)
+      if (menuLines.length > 0) parts.push(`CARTA:\n${menuLines.join('\n')}`)
+    }
+    if (k.services?.length) {
+      parts.push(`SERVICIOS: ${k.services.filter(s=>typeof s==='string').join(', ')}`)
+    }
+
+    // Horarios
+    if (k.hours && Object.keys(k.hours).length > 0) {
+      const hourLines = Object.entries(k.hours).map(([t,h]) => `${t}: ${h}`).join(', ')
+      parts.push(`HORARIOS: ${hourLines}`)
+    }
+
+    // FAQs — formato directo pregunta/respuesta
+    if (k.faqs?.length) {
+      const faqLines = k.faqs
+        .filter(f => f?.q && f?.a)
+        .map(f => `- "${f.q}" → ${f.a}`)
+        .join('\n')
+      if (faqLines) parts.push(`PREGUNTAS FRECUENTES:\n${faqLines}`)
+    }
+
+    // Políticas
+    if (k.policies && Object.keys(k.policies).length > 0) {
+      const policyLines = Object.entries(k.policies)
+        .map(([k2,v]) => `- ${k2}: ${v}`).join('\n')
+      parts.push(`NORMAS Y POLÍTICA:\n${policyLines}`)
+    }
+
+    // Zonas
+    if (k.zones?.length) {
+      parts.push(`ZONAS DISPONIBLES: ${k.zones.filter(z=>typeof z==='string').join(', ')}`)
+    }
+
+    // Notas especiales
+    if (k.special_notes) parts.push(`NOTAS: ${k.special_notes}`)
+
+  } catch(e) { /* best effort */ }
+  return parts.join('\n\n')
+}
+
+// ── CONSTRUIR CONTEXTO PARA CLAUDE (análisis post-call) ──────────────────────
 export function buildKnowledgeContext(k: BusinessKnowledge): string {
   const parts: string[] = []
   try {
@@ -192,15 +244,12 @@ export function buildKnowledgeContext(k: BusinessKnowledge): string {
         .map(([cat, items]) => {
           const arr = Array.isArray(items) ? items.filter(i=>typeof i==='string') : []
           return `${cat}: ${arr.join(', ')}`
-        })
-        .join(' | ')
+        }).join(' | ')
       parts.push(`Menú — ${menuStr}`)
     }
     if (k.faqs?.length) {
-      const faqStr = k.faqs.slice(0, 5)
-        .filter(f => f?.q && f?.a)
-        .map(f => `P: ${f.q} R: ${f.a}`)
-        .join(' | ')
+      const faqStr = k.faqs.slice(0, 5).filter(f => f?.q && f?.a)
+        .map(f => `P: ${f.q} R: ${f.a}`).join(' | ')
       if (faqStr) parts.push(`FAQs — ${faqStr}`)
     }
     if (k.policies && Object.keys(k.policies).length > 0)

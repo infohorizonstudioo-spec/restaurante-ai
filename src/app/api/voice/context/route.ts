@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { resolveTemplate } from '@/lib/templates'
-import { getBusinessKnowledge, buildKnowledgeContext } from '@/lib/business-knowledge'
+import { getBusinessKnowledge, buildKnowledgeContext, buildAgentKnowledge } from '@/lib/business-knowledge'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -203,7 +203,7 @@ export async function POST(req: Request) {
         template_type:    tmpl.id,
         reservation_unit: tmpl.labels.reserva,
         agent_context:    agentSystemContext,
-        business_knowledge: knowledgeCtx || extraKnowledge || '',
+        business_knowledge: buildAgentKnowledge(knowledge) || extraKnowledge || '',
         behavior_rules:     behaviorRules,
       },
       conversation_config_override: {
