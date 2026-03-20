@@ -462,7 +462,7 @@ export default function HomePage() {
               No pierdas ni una<br/>llamada más.
             </h2>
             <p style={{fontSize:17,color:C.muted,marginBottom:12,lineHeight:1.7}}>
-              Mientras tardas en decidirte, tu restaurante está perdiendo llamadas.
+              Mientras tardas en decidirte, tu negocio está perdiendo llamadas.
             </p>
             <p style={{fontSize:15,color:'rgba(255,255,255,0.35)',marginBottom:40}}>
               Configúralo en 15 minutos. Sin tarjeta de crédito. Sin compromiso.
