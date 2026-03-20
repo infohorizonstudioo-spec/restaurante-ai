@@ -23,14 +23,13 @@ export async function POST(req: Request) {
 
     const greeting = `${business_name}, dígame.`
 
+    // Solo actualiza el first_message — el nombre del agente va por variable dinámica {{agent_name}}
     const res = await fetch(`https://api.elevenlabs.io/v1/convai/agents/${AGENT_ID}`, {
       method: 'PATCH',
       headers: { 'xi-api-key': EL_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         conversation_config: {
-          agent: {
-            first_message: greeting
-          }
+          agent: { first_message: greeting }
         }
       })
     })
