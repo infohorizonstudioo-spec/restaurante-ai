@@ -281,12 +281,13 @@ export default function PanelPage() {
 
   useEffect(() => { load() }, [load])
 
-  // Real-time: una sola suscripción por tenant, nunca duplicada
-  const tenantId = tenant?.id
-  const tenantType = tenant?.type
+  // Real-time: una sola suscripción, dep única combinada evita doble disparo
+  const rtKey = tenant ? `${tenant.id}::${tenant.type||'otro'}` : null
   useEffect(() => {
-    if (!tenantId) return
-    // Limpiar canal anterior si existe
+    if (!rtKey || !tenant) return
+    const tenantId   = tenant.id
+    const tenantType = tenant.type || 'otro'
+    // Guard: si ya hay canal activo con este mismo key, no re-suscribir
     if (rtChannelRef.current) {
       supabase.removeChannel(rtChannelRef.current)
       rtChannelRef.current = null
@@ -374,7 +375,7 @@ export default function PanelPage() {
         rtChannelRef.current = null
       }
     }
-  }, [tenantId, tenantType]) // pushEvent es estable (useCallback con deps vacíos)
+  }, [rtKey]) // una sola dep: cambia solo cuando tenant.id o tenant.type cambian juntos
 
   // Demo mode loop
   const toggleDemo = useCallback(() => {
