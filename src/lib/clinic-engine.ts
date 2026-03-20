@@ -142,12 +142,13 @@ export function detectUrgency(text: string): UrgencyDetection {
 // ── Clasificación del tipo de consulta ───────────────────────────────────────
 
 const TYPE_PATTERNS: Array<{ type: ConsultationType; patterns: RegExp[]; weight: number }> = [
-  { type:'urgencia', weight:10, patterns:[/urgencia/i,/urgente/i,/emergencia/i,/dolor\s+fuerte/i] },
-  { type:'limpieza', weight:8, patterns:[/limpieza/i,/higiene\s+dental/i,/limpiar\s+(los\s+)?dientes/i,/sarro/i,/placa/i] },
-  { type:'revision', weight:7, patterns:[/revisión/i,/revision/i,/chequeo/i,/ver\s+cómo\s+está/i,/control/i,/revisarme/i] },
-  { type:'primera_visita', weight:9, patterns:[/primera\s+vez/i,/primera\s+visita/i,/nunca\s+he\s+venido/i,/nuevo\s+paciente/i,/nunca\s+he\s+ido/i] },
-  { type:'seguimiento', weight:9, patterns:[/seguimiento/i,/próxima\s+cita/i,/siguiente\s+sesión/i,/continuar\s+el\s+tratamiento/i,/continuar\s+con/i,/volver\s+para/i,/me\s+toca\s+volver/i] },
-  { type:'tratamiento', weight:7, patterns:[
+  { type:'urgencia',       weight:10, patterns:[/urgencia/i,/urgente/i,/emergencia/i,/dolor\s+fuerte/i] },
+  // seguimiento ANTES que tratamiento — "continuar el tratamiento" → seguimiento
+  { type:'seguimiento',    weight:9,  patterns:[/seguimiento/i,/próxima\s+cita/i,/siguiente\s+sesión/i,/continuar\s+(el\s+)?tratamiento/i,/continuar\s+con/i,/volver\s+para/i,/me\s+toca\s+volver/i,/vengo\s+a\s+continuar/i] },
+  { type:'primera_visita', weight:9,  patterns:[/primera\s+vez/i,/primera\s+visita/i,/nunca\s+he\s+venido/i,/nuevo\s+paciente/i,/nunca\s+he\s+ido/i] },
+  { type:'limpieza',       weight:8,  patterns:[/limpieza/i,/higiene\s+dental/i,/limpiar\s+(los\s+)?dientes/i,/sarro/i,/placa/i] },
+  { type:'revision',       weight:7,  patterns:[/revisión/i,/revision/i,/chequeo/i,/ver\s+cómo\s+está/i,/control/i,/revisarme/i] },
+  { type:'tratamiento',    weight:7,  patterns:[
     /ortodoncia/i,/brackets/i,/implante/i,/endodoncia/i,/empaste/i,/obturación/i,
     /extracción/i,/blanqueamiento/i,/carilla/i,/corona/i,/puente/i,/prótesis/i,
     /tratamiento/i,/operación/i,/intervención/i,
@@ -157,6 +158,11 @@ const TYPE_PATTERNS: Array<{ type: ConsultationType; patterns: RegExp[]; weight:
 export function classifyConsultation(text: string, urgency: UrgencyDetection): ConsultationClassification {
   if (urgency.is_urgency && urgency.urgency_level === 'alta') {
     return { type:'urgencia', duration_minutes:30, confidence:0.95, reason:'Urgencia alta detectada' }
+  }
+
+  // Override semántico: "continuar" + cualquier cosa → siempre seguimiento
+  if (/\b(vengo\s+a\s+continuar|continuar\s+(el\s+|con\s+el\s+)?tratamiento|seguir\s+(con\s+)?el\s+tratamiento|próxima\s+sesión|siguiente\s+cita|me\s+toca\s+volver)\b/i.test(text)) {
+    return { type:'seguimiento', duration_minutes:DEFAULT_DURATIONS.seguimiento, confidence:0.88, reason:'Override: texto de continuación detectado' }
   }
 
   const scores: Record<string, number> = {}
