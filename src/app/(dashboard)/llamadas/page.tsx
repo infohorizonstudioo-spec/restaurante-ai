@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import NotificationBell from '@/components/NotificationBell'
 
@@ -108,9 +109,8 @@ export default function LlamadasPage() {
 
   useEffect(() => {
     (async () => {
-      const {data:{user}} = await supabase.auth.getUser(); if (!user) return
-      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).maybeSingle(); if (!p?.tenant_id) return
-      setTid(p.tenant_id); await load(p.tenant_id, true)
+      const sess = await getSessionTenant(); if(!sess) return
+      setTid(sess.tenantId)
     })()
   },[]) // eslint-disable-line
 
@@ -156,7 +156,10 @@ export default function LlamadasPage() {
         setFeedbackNote('')
         if (data.suggestions?.length > 0) setSuggestions(data.suggestions)
       }
-    } catch(e) { console.error(e) }
+    } catch(e) {
+        console.error('feedback error:', e)
+        setFeedbackLoading(false)
+      }
     finally { setFeedbackLoading(false) }
   }
 

@@ -2,6 +2,7 @@
 import NotifBell from '@/components/NotifBell'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import Link from 'next/link'
 

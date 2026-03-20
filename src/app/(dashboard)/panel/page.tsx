@@ -61,10 +61,10 @@ const DEMO_EVENTS: Omit<LiveEvent,'id'|'ts'>[] = [
   { type:'reservation',   icon:'📅', color:C.teal,   title:'Reserva confirmada — Martínez, 21:30', sub:'4 personas · terraza · mañana',       priority:'high', demo:true },
   { type:'order',         icon:'🛍️', color:C.violet, title:'Pedido en curso — 2 chuletones + bebidas', sub:'Para recoger · López',           priority:'high', demo:true },
   { type:'call_ended',    icon:'✅', color:C.green,  title:'Llamada finalizada — resumen generado', sub:'Reserva confirmada a nombre de García', demo:true },
-  { type:'pending',       icon:'⏳', color:C.yellow,  title:'Grupo de 9 personas — revisión manual', sub:'Supera el máximo automático (6)',    priority:'high', demo:true },
+  { type:'pending',       icon:'⏳', color:C.yellow,  title:'Grupo de 9 personas — revisión manual', sub:'Supera el máximo configurado (6)',   priority:'high', demo:true },
   { type:'call_incoming', icon:'📞', color:C.teal,   title:'Nueva llamada entrante',               sub:'+34 699 887 766',                     priority:'high', demo:true },
-  { type:'reservation',   icon:'📅', color:C.teal,   title:'Pregunta sobre el menú respondida',   sub:'Chuletón — menú.carnes · base de conocimiento', demo:true },
-  { type:'system',        icon:'⚡', color:C.amber,  title:'Motor de decisión activado',           sub:'Confianza 100% · auto_confirm_normal_case', demo:true },
+  { type:'reservation',   icon:'📅', color:C.teal,   title:'Pregunta sobre el menú respondida',   sub:'Cliente preguntó por el menú del día', demo:true },
+  { type:'system',        icon:'⚡', color:C.amber,  title:'Reserva confirmada automáticamente',  sub:'2 personas · 21:00 · todo correcto',   demo:true },
 ]
 
 // ── Live Feed Component
@@ -272,56 +272,50 @@ export default function PanelPage() {
     setLoading(false)
   }, [router])
 
-  // Real-time events from DB — canal separado que espera a tener tenant_id
   useEffect(() => { load() }, [load])
 
+  // Real-time: solo re-suscribe cuando cambia el tenant ID, no el objeto completo
+  const tenantId = tenant?.id
   useEffect(() => {
-    const tid = tenant?.id
-    if (!tid) return
-    const ch = supabase.channel('panel-rt-v3-' + tid)
-      .on('postgres_changes',{ event:'INSERT', schema:'public', table:'calls', filter:`tenant_id=eq.${tid}` }, payload => {
+    if (!tenantId) return
+    const ch = supabase.channel('panel-rt-v4-' + tenantId)
+      .on('postgres_changes',{ event:'INSERT', schema:'public', table:'calls', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const c = payload.new as any
         pushEvent({ type:'call_incoming', icon:'📞', color:C.teal, title:'Nueva llamada entrante', sub:c.caller_phone||'Número oculto', priority:'high' })
-        // Añadir a llamadas activas inmediatamente si está activa
-        if (c.status === 'activa') {
-          setActiveCalls(prev => [c, ...prev.filter(x => x.id !== c.id)])
-        }
-        load()
+        if (c.status === 'activa') setActiveCalls(prev => [c, ...prev.filter(x => x.id !== c.id)])
+        setCalls(prev => [c, ...prev].slice(0, 8))
       })
-      .on('postgres_changes',{ event:'UPDATE', schema:'public', table:'calls', filter:`tenant_id=eq.${tid}` }, payload => {
+      .on('postgres_changes',{ event:'UPDATE', schema:'public', table:'calls', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const c = payload.new as any
-        // Actualizar llamadas activas en RT
         if (c.status === 'activa') {
           setActiveCalls(prev => {
             const exists = prev.find(x => x.id === c.id)
-            if (exists) return prev.map(x => x.id === c.id ? c : x)
-            return [c, ...prev]
+            return exists ? prev.map(x => x.id === c.id ? c : x) : [c, ...prev]
           })
         } else {
-          // Ya no está activa — quitarla
           setActiveCalls(prev => prev.filter(x => x.id !== c.id))
         }
         if (c.status==='completada'||c.status==='completed') {
           pushEvent({ type:'call_ended', icon:'✅', color:C.green, title:`Llamada finalizada${c.customer_name?' — '+c.customer_name:''}`, sub:c.summary?.slice(0,80)||'Resumen generado' })
         }
-        load()
+        setCalls(prev => prev.map(x => x.id === c.id ? c : x))
       })
-      .on('postgres_changes',{ event:'INSERT', schema:'public', table:'reservations', filter:`tenant_id=eq.${tid}` }, payload => {
+      .on('postgres_changes',{ event:'INSERT', schema:'public', table:'reservations', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const r = payload.new as any
         pushEvent({ type:'reservation', icon:'📅', color:C.teal, title:`Nueva reserva — ${r.customer_name||'Cliente'}`, sub:`${r.people||r.party_size||'?'}p · ${(r.time||'').slice(0,5)}`, priority:'high' })
-        load()
+        setReservas(prev => [...prev, r])
       })
-      .on('postgres_changes',{ event:'INSERT', schema:'public', table:'notifications', filter:`tenant_id=eq.${tid}` }, payload => {
+      .on('postgres_changes',{ event:'INSERT', schema:'public', table:'notifications', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const n = payload.new as any
         const icon = n.priority==='critical' ? '🔴' : n.priority==='warning' ? '⚠️' : '💬'
         pushEvent({ type:'system', icon, color: n.priority==='critical'?C.red:n.priority==='warning'?C.yellow:C.text2, title:n.title, sub:n.body||'' })
       })
       .subscribe(status => {
-        if (status === 'SUBSCRIBED') console.log('panel RT subscribed for tenant', tid.slice(0,8))
+        if (status === 'SUBSCRIBED') console.log('panel RT subscribed for tenant', tenantId.slice(0,8))
         if (status === 'CHANNEL_ERROR') console.error('panel RT channel error')
       })
     return () => { supabase.removeChannel(ch) }
-  }, [tenant, load, pushEvent])
+  }, [tenantId, pushEvent])
 
   // Demo mode loop
   const toggleDemo = useCallback(() => {

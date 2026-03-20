@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
 
@@ -47,9 +48,8 @@ export default function ProductosPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser(); if (!user) return
-      const { data: p } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle(); if (!p?.tenant_id) return
-      setTid(p.tenant_id); await load(p.tenant_id)
+      const sess = await getSessionTenant(); if(!sess) return
+      setTid(sess.tenantId)
     })()
   }, [load])
 
