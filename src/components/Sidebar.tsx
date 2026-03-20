@@ -40,17 +40,10 @@ function Icon({ id, size=16 }: { id: string; size?: number }) {
   )
 }
 
-const DEFAULT_MODULES = [
-  { id:'panel',         href:'/panel',         icon:'grid',   label:'Centro de control' },
-  { id:'reservas',      href:'/reservas',       icon:'cal',    label:'Reservas' },
-  { id:'agenda',        href:'/agenda',         icon:'clock',  label:'Agenda' },
+// DEFAULT minimal — solo si la plantilla no carga aún (loading state)
+const DEFAULT_MODULES: Array<{id:string;href:string;icon:string;label:string;pro?:boolean}> = [
+  { id:'panel',         href:'/panel',         icon:'grid',   label:'Resumen del día' },
   { id:'llamadas',      href:'/llamadas',       icon:'phone',  label:'Llamadas' },
-  { id:'clientes',      href:'/clientes',       icon:'users',  label:'Clientes' },
-  { id:'mesas',         href:'/mesas',          icon:'layout', label:'Mesas y zonas' },
-  { id:'turnos',        href:'/turnos',          icon:'clock2', label:'Turnos y franjas' },
-  { id:'productos',     href:'/productos',       icon:'menu',   label:'Carta y productos' },
-  { id:'pedidos',       href:'/pedidos',        icon:'bag',    label:'Pedidos', pro:true },
-  { id:'estadisticas',  href:'/estadisticas',   icon:'bar',    label:'Estadísticas', pro:true },
   { id:'facturacion',   href:'/facturacion',    icon:'card',   label:'Facturación' },
   { id:'agente',        href:'/agente',         icon:'cpu',    label:'Mi recepcionista' },
   { id:'configuracion', href:'/configuracion',  icon:'gear',   label:'Configuración' },

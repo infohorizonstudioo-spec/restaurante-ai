@@ -76,10 +76,11 @@ const HOSTELERIA: TemplateConfig = {
     { id:'clientes',     href:'/clientes',     icon:'users', label:'Clientes' },
     { id:'mesas',        href:'/mesas',        icon:'layout',label:'Mesas y zonas' },
     { id:'turnos',       href:'/turnos',       icon:'clock2', label:'Turnos y franjas' },
+    { id:'productos',    href:'/productos',    icon:'menu',   label:'Carta y productos' },
     { id:'pedidos',      href:'/pedidos',      icon:'bag',   label:'Pedidos', pro:true },
     { id:'estadisticas', href:'/estadisticas', icon:'bar',   label:'Estadísticas', pro:true },
     { id:'facturacion',  href:'/facturacion',  icon:'card',  label:'Facturación' },
-    { id:'agente',       href:'/agente',       icon:'cpu',   label:'Agente IA' },
+    { id:'agente',       href:'/agente',       icon:'cpu',   label:'Mi recepcionista' },
     { id:'configuracion',href:'/configuracion',icon:'gear',  label:'Configuración' },
   ],
   labels: {
@@ -112,7 +113,7 @@ const SERVICIOS: TemplateConfig = {
     { id:'clientes',     href:'/clientes',     icon:'users', label:'Clientes' },
     { id:'estadisticas', href:'/estadisticas', icon:'bar',   label:'Estadísticas', pro:true },
     { id:'facturacion',  href:'/facturacion',  icon:'card',  label:'Facturación' },
-    { id:'agente',       href:'/agente',       icon:'cpu',   label:'Agente IA' },
+    { id:'agente',       href:'/agente',       icon:'cpu',   label:'Mi recepcionista' },
     { id:'configuracion',href:'/configuracion',icon:'gear',  label:'Configuración' },
   ],
   labels: {
@@ -133,49 +134,80 @@ const SERVICIOS: TemplateConfig = {
 export type BusinessType =
   | 'restaurante' | 'bar' | 'cafeteria'
   | 'clinica_dental' | 'clinica_medica' | 'asesoria'
-  | 'peluqueria' | 'seguros' | 'inmobiliaria' | 'otro'
+  | 'peluqueria' | 'barberia' | 'seguros' | 'inmobiliaria'
+  | 'veterinaria' | 'fisioterapia' | 'psicologia' | 'otro'
 
 interface TypeOverride {
   template: MasterTemplate
   unitLabels?: Partial<UnitLabels>
-  hasSpaces?: boolean    // peluquería tiene sillones, clínica tiene consultas
-  agentContext?: string  // override del contexto del agente
-  clienteLabel?: string  // "Paciente" para clínicas
+  hasSpaces?: boolean
+  agentContext?: string
+  clienteLabel?: string
   clientesLabel?: string
+  reservaLabel?: string
+  reservasLabel?: string
+  extraModules?: NavModule[]   // módulos extra por tipo (ej: carta para hostelería)
 }
 
 const TYPE_MAP: Record<string, TypeOverride> = {
-  restaurante:   { template: 'hosteleria' },
-  bar:           { template: 'hosteleria',
+  restaurante: { template: 'hosteleria' },
+  bar:         { template: 'hosteleria',
     unitLabels: { singular:'Barra/Mesa', plural:'Mesas', icon:'B' } },
-  cafeteria:     { template: 'hosteleria',
+  cafeteria:   { template: 'hosteleria',
     unitLabels: { singular:'Mesa', plural:'Mesas', icon:'C' } },
 
   clinica_dental: { template: 'servicios', hasSpaces: true,
     clienteLabel: 'Paciente', clientesLabel: 'Pacientes',
+    reservaLabel: 'Cita', reservasLabel: 'Citas',
     unitLabels: { singular:'Silla', plural:'Sillas dental', icon:'🦷', zoneLabel:'Sala', zonesLabel:'Salas' },
     agentContext: 'Eres la recepcionista de una clínica dental. Gestiona citas. Pregunta: nombre del paciente, tipo de tratamiento (revisión, limpieza, ortodoncia…), fecha preferida y si es urgente.' },
 
   clinica_medica: { template: 'servicios', hasSpaces: true,
     clienteLabel: 'Paciente', clientesLabel: 'Pacientes',
+    reservaLabel: 'Cita', reservasLabel: 'Citas',
     unitLabels: { singular:'Consulta', plural:'Consultas', icon:'+', zoneLabel:'Planta', zonesLabel:'Plantas' },
     agentContext: 'Eres la recepcionista de una clínica médica. Gestiona citas. Pregunta: nombre del paciente, especialidad o motivo de consulta, fecha preferida y si es urgente.' },
 
-  asesoria:      { template: 'servicios', hasSpaces: true,
+  veterinaria:   { template: 'servicios', hasSpaces: true,
+    clienteLabel: 'Cliente', clientesLabel: 'Clientes',
+    reservaLabel: 'Cita', reservasLabel: 'Citas',
+    unitLabels: { singular:'Consulta', plural:'Consultas', icon:'🐾', zoneLabel:'Sala', zonesLabel:'Salas' },
+    agentContext: 'Eres la recepcionista de una clínica veterinaria. Gestiona citas para mascotas. Pregunta: nombre del dueño, nombre y especie de la mascota, motivo de la visita (consulta, vacuna, urgencia…) y fecha preferida.' },
+
+  peluqueria:   { template: 'servicios', hasSpaces: true,
+    reservaLabel: 'Cita', reservasLabel: 'Citas',
+    unitLabels: { singular:'Sillón', plural:'Sillones', icon:'✂️', zoneLabel:'Zona', zonesLabel:'Zonas' },
+    agentContext: 'Eres la recepcionista de una peluquería. Gestiona citas. Pregunta: nombre, servicio deseado (corte, tinte, mechas…), profesional preferido si lo tiene y fecha.' },
+
+  barberia:     { template: 'servicios', hasSpaces: true,
+    reservaLabel: 'Cita', reservasLabel: 'Citas',
+    unitLabels: { singular:'Sillón', plural:'Sillones', icon:'🪒', zoneLabel:'Zona', zonesLabel:'Zonas' },
+    agentContext: 'Eres la recepcionista de una barbería. Gestiona citas. Pregunta: nombre del cliente, servicio deseado (corte, barba, afeitado, tinte…), barbero preferido si lo tiene y fecha.' },
+
+  fisioterapia:  { template: 'servicios', hasSpaces: false,
+    clienteLabel: 'Paciente', clientesLabel: 'Pacientes',
+    reservaLabel: 'Cita', reservasLabel: 'Citas',
+    agentContext: 'Eres la recepcionista de una clínica de fisioterapia. Gestiona citas. Pregunta: nombre del paciente, tipo de problema o lesión, fisioterapeuta preferido si lo tiene y fecha.' },
+
+  psicologia:    { template: 'servicios', hasSpaces: false,
+    clienteLabel: 'Paciente', clientesLabel: 'Pacientes',
+    reservaLabel: 'Sesión', reservasLabel: 'Sesiones',
+    agentContext: 'Eres la recepcionista de un centro de psicología. Gestiona citas. Con total discreción y sin preguntar el motivo, recoge: nombre del paciente, si es primera vez o seguimiento, terapeuta preferido y fecha.' },
+
+  asesoria:     { template: 'servicios', hasSpaces: true,
+    reservaLabel: 'Cita', reservasLabel: 'Citas',
     unitLabels: { singular:'Despacho', plural:'Despachos', icon:'💼', zoneLabel:'Planta', zonesLabel:'Plantas' },
     agentContext: 'Eres la recepcionista de una asesoría. Gestiona citas. Pregunta: nombre del cliente, tipo de consulta (laboral, fiscal, jurídica…) y fecha preferida.' },
 
-  peluqueria:    { template: 'servicios', hasSpaces: true,
-    unitLabels: { singular:'Sillón', plural:'Sillones', icon:'✂️', zoneLabel:'Zona', zonesLabel:'Zonas' },
-    agentContext: 'Eres la recepcionista de una peluquería. Gestiona citas. Pregunta: nombre, servicio deseado (corte, tinte, tratamiento…), profesional preferido si lo tiene y fecha.' },
-
-  seguros:       { template: 'servicios',
+  seguros:      { template: 'servicios',
+    reservaLabel: 'Cita', reservasLabel: 'Citas',
     agentContext: 'Eres la recepcionista de una correduría de seguros. Gestiona llamadas y citas. Pregunta: nombre del cliente, tipo de seguro (auto, hogar, salud, vida…) y motivo de la consulta.' },
 
-  inmobiliaria:  { template: 'servicios',
-    agentContext: 'Eres la recepcionista de una inmobiliaria. Gestiona llamadas y citas. Pregunta: si el cliente busca comprar, vender o alquilar, zona de interés y datos de contacto.' },
+  inmobiliaria: { template: 'servicios',
+    reservaLabel: 'Visita', reservasLabel: 'Visitas',
+    agentContext: 'Eres la recepcionista de una inmobiliaria. Gestiona llamadas y visitas. Pregunta: si el cliente busca comprar, vender o alquilar, zona de interés y datos de contacto.' },
 
-  otro:          { template: 'servicios' },
+  otro:         { template: 'servicios' },
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -190,14 +222,20 @@ export function resolveTemplate(businessType: string): TemplateConfig {
     ...base.labels,
     cliente:   override.clienteLabel  || base.labels.cliente,
     clientes:  override.clientesLabel || base.labels.clientes,
+    reserva:   override.reservaLabel  || base.labels.reserva,
+    reservas:  override.reservasLabel || base.labels.reservas,
+    reservar:  override.reservaLabel  ? ('Pedir ' + (override.reservaLabel || 'cita').toLowerCase()) : base.labels.reservar,
+    buscarPlaceholder: override.reservasLabel ? `Buscar ${(override.reservasLabel||'citas').toLowerCase()}…` : base.labels.buscarPlaceholder,
+    emptyReservas: override.reservasLabel ? `Sin ${(override.reservasLabel||'citas').toLowerCase()} este día` : base.labels.emptyReservas,
+    pageTitle: override.reservasLabel || base.labels.pageTitle,
     unit: { ...base.labels.unit, ...(override.unitLabels || {}) },
   }
 
   // Construir módulos: si hasSpaces se activa, añadir /mesas al nav de servicios
   let modules = [...base.modules]
   const hasSpaces = override.hasSpaces ?? base.hasSpaces
+
   if (override.template === 'servicios' && hasSpaces) {
-    // Insertar módulo de espacios después de clientes
     const clientesIdx = modules.findIndex(m => m.id === 'clientes')
     const espacioMod: NavModule = {
       id: 'mesas', href: '/mesas', icon: 'layout',
@@ -207,6 +245,21 @@ export function resolveTemplate(businessType: string): TemplateConfig {
       ...modules.slice(0, clientesIdx + 1),
       espacioMod,
       ...modules.slice(clientesIdx + 1),
+    ]
+  }
+
+  // Peluquería y barbería tienen "Servicios y tarifas" (productos)
+  const tipoConProductos = ['peluqueria','barberia']
+  if (tipoConProductos.includes(businessType)) {
+    const agenteIdx = modules.findIndex(m => m.id === 'agente')
+    const productosMod: NavModule = {
+      id: 'productos', href: '/productos', icon: 'menu',
+      label: 'Servicios y tarifas',
+    }
+    modules = [
+      ...modules.slice(0, agenteIdx),
+      productosMod,
+      ...modules.slice(agenteIdx),
     ]
   }
 
