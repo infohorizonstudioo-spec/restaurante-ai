@@ -29,7 +29,7 @@ export default function FacturacionPage() {
   const [billing, setBilling] = useState<any>(null)
   const [history, setHistory] = useState<any[]>([])
   const [tid,     setTid]     = useState<string|null>(null)
-  const [upgrading, setUpgrading] = useState(false)
+  const [upgradeError, setUpgradeError] = useState('')
 
   useEffect(()=>{
     (async()=>{
@@ -44,16 +44,18 @@ export default function FacturacionPage() {
     })()
   },[])
 
+  const [upgrading, setUpgrading] = useState(false)
+
   async function handleUpgrade(plan:string){
     if(!tid||upgrading) return
-    setUpgrading(true)
+    setUpgrading(true); setUpgradeError('')
     try {
       const {data:{user}} = await supabase.auth.getUser(); if(!user) return
       const res = await fetch('/api/stripe/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan,tenant_id:tid,user_id:user.id})})
       const d = await res.json()
       if(d.url) window.location.href=d.url
-      else alert('Error: '+d.error)
-    } catch(e:any){alert('Error: '+e.message)}
+      else setUpgradeError(d.error||'Error al procesar el pago')
+    } catch(e:any){ setUpgradeError(e.message||'Error de conexión') }
     finally{setUpgrading(false)}
   }
 
@@ -185,6 +187,7 @@ export default function FacturacionPage() {
                 )
               })}
             </div>
+            {upgradeError&&<p style={{fontSize:12,color:C.red,marginTop:12,padding:'8px 12px',background:C.redDim,borderRadius:8}}>⚠ {upgradeError}</p>}
           </div>
         )}
 

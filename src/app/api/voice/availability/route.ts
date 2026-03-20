@@ -15,6 +15,12 @@ export async function POST(req: Request) {
     }
     const ps = parseInt(String(party_size))
 
+    // Verificar que el tenant existe
+    const { data: tenant } = await admin.from('tenants').select('id').eq('id', tenant_id).maybeSingle()
+    if (!tenant) {
+      return NextResponse.json({ available: false, message: 'Negocio no encontrado.' }, { status: 404 })
+    }
+
     const [{ data: zones }, { data: tables }, { data: existing }] = await Promise.all([
       admin.from('zones').select('*').eq('tenant_id', tenant_id).eq('active', true),
       admin.from('tables').select('*').eq('tenant_id', tenant_id),

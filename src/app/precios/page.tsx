@@ -15,10 +15,11 @@ type PlanId = 'starter'|'pro'|'business'
 
 export default function PreciosPage(){
   const [loading,setLoading] = useState<PlanId|null>(null)
+  const [checkoutError, setCheckoutError] = useState('')
 
   async function handlePlan(planId:PlanId){
     if(loading) return
-    setLoading(planId)
+    setLoading(planId); setCheckoutError('')
     try {
       const {data:{user}} = await supabase.auth.getUser()
       if (!user) { window.location.href = '/registro'; return }
@@ -29,8 +30,8 @@ export default function PreciosPage(){
       })
       const d = await res.json()
       if (d.url) window.location.href = d.url
-      else alert('Error: ' + (d.error||'Intente de nuevo'))
-    } catch(e:any){ alert('Error: '+e.message) }
+      else setCheckoutError(d.error||'Error al procesar. Inténtalo de nuevo.')
+    } catch(e:any){ setCheckoutError(e.message||'Error de conexión') }
     finally { setLoading(null) }
   }
 
@@ -46,6 +47,7 @@ export default function PreciosPage(){
           <p style={{fontSize:16,color:'#94a3b8'}}>Empieza gratis. Sin tarjeta. Cancela cuando quieras.</p>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16}}>
+          {checkoutError&&<div style={{gridColumn:'1/-1',padding:'10px 14px',background:'rgba(248,113,113,0.1)',border:'1px solid rgba(248,113,113,0.3)',borderRadius:10}}><p style={{fontSize:13,color:'#F87171'}}>⚠ {checkoutError}</p></div>}
           {PLANS.map(plan=>(
             <div key={plan.id} style={{background:plan.popular?'white':'rgba(255,255,255,0.06)',border:'1px solid',borderColor:plan.popular?'transparent':plan.color+'33',borderRadius:16,padding:24,position:'relative'}}>
               {plan.popular&&(

@@ -28,8 +28,9 @@ export default function ProductosPage() {
   const [items, setItems]     = useState<any[]>([])
   const [counts, setCounts]   = useState<Record<string,number>>({})
   const [loading, setLoading] = useState(true)
-  const [modal, setModal]     = useState<any|null>(null) // null | 'new' | item
-  const [filter, setFilter]   = useState<string>('all')
+  const [deleteConfirm, setDeleteConfirm] = useState<string|null>(null)
+  const [modal, setModal]     = useState<any|null>(null)
+  const [filter, setFilter]   = useState('all')
   const today = new Date().toISOString().slice(0,10)
 
   const load = useCallback(async (tenantId: string) => {
@@ -63,8 +64,9 @@ export default function ProductosPage() {
   }
 
   async function deleteItem(id: string) {
-    if (!tid || !confirm('¿Eliminar producto?')) return
+    if (!tid) return
     await supabase.from('menu_items').update({ active: false }).eq('id', id)
+    setDeleteConfirm(null)
     await load(tid)
   }
 
@@ -191,9 +193,18 @@ export default function ProductosPage() {
                         )}
                       </div>
                       {/* Acciones */}
-                      <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                      <div style={{ display:'flex', gap:6, flexShrink:0, position:'relative' }}>
                         <button onClick={() => setModal(item)} style={{ padding:'6px 12px', fontSize:12, fontWeight:600, background:'rgba(255,255,255,0.04)', border:`1px solid ${C.border}`, borderRadius:8, cursor:'pointer', color:C.sub, fontFamily:'inherit' }}>Editar</button>
-                        <button onClick={() => deleteItem(item.id)} style={{ padding:'6px 10px', fontSize:12, background:C.redDim, border:`1px solid ${C.red}33`, borderRadius:8, cursor:'pointer', color:C.red, fontFamily:'inherit' }}>✕</button>
+                        <button onClick={() => setDeleteConfirm(item.id)} style={{ padding:'6px 10px', fontSize:12, background:C.redDim, border:`1px solid ${C.red}33`, borderRadius:8, cursor:'pointer', color:C.red, fontFamily:'inherit' }}>✕</button>
+                        {deleteConfirm===item.id&&(
+                          <div style={{position:'absolute',right:0,top:'100%',marginTop:6,background:C.card,border:`1px solid ${C.red}44`,borderRadius:10,padding:'10px 14px',zIndex:20,width:220,boxShadow:'0 8px 24px rgba(0,0,0,0.4)'}}>
+                            <p style={{fontSize:12,color:C.red,marginBottom:8}}>¿Eliminar "{item.name}"?</p>
+                            <div style={{display:'flex',gap:6}}>
+                              <button onClick={()=>setDeleteConfirm(null)} style={{flex:1,padding:'5px',fontSize:11,background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>Cancelar</button>
+                              <button onClick={()=>deleteItem(item.id)} style={{flex:1,padding:'5px',fontSize:11,background:C.red,border:'none',borderRadius:7,cursor:'pointer',color:'white',fontFamily:'inherit',fontWeight:700}}>Eliminar</button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
