@@ -211,12 +211,25 @@ const FLOWS: Record<string, FlowConfig> = {
   },
 
   peluqueria: {
-    emoji:'✂️', label:'Peluquería / Estética', agentDefaultName:'Marta',
+    emoji:'✂️', label:'Peluquería / Barbería', agentDefaultName:'Marta',
     steps: [
+      {
+        id:'salon_tipo', title:'¿Qué tipo de salón tenéis?',
+        subtitle:'Los servicios que verás a continuación dependen de esto',
+        fields: [
+          {key:'salon_tipo', type:'select', label:'Tipo de salón', defaultValue:'peluqueria',
+            options:[
+              {value:'peluqueria', label:'✂️ Peluquería'},
+              {value:'barberia',   label:'🪒 Barbería'},
+              {value:'ambos',      label:'✂️🪒 Peluquería y Barbería'},
+            ]
+          }
+        ]
+      },
       {
         id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que escucharán tus clientes',
         fields: [
-          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Marta, Paula…', defaultValue:'Marta'},
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Marta, Carlos, Paula…', defaultValue:'Marta'},
           {key:'language', type:'select', label:'Idioma', defaultValue:'es',
             options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
         ]
@@ -226,21 +239,12 @@ const FLOWS: Record<string, FlowConfig> = {
         fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
       },
       {
+        // Opciones dinámicas — se calculan en runtime según answers.salon_tipo
         id:'services', title:'¿Qué servicios ofrecéis?',
-        subtitle:'Marca los servicios que hacéis — la recepcionista los conocerá todos',
+        subtitle:'Marca los que hacéis — la recepcionista los conocerá todos',
         fields: [
-          {key:'services', type:'multiselect', label:'Servicios', defaultValue:['corte','tinte'],
-            options:[
-              {value:'corte',label:'Corte de pelo',emoji:'✂️'},
-              {value:'tinte',label:'Tinte y coloración',emoji:'🎨'},
-              {value:'mechas',label:'Mechas / Balayage',emoji:'✨'},
-              {value:'alisado',label:'Alisado / Keratina',emoji:'💆'},
-              {value:'peinado',label:'Recogidos y peinados',emoji:'👰'},
-              {value:'barba',label:'Barba y afeitado',emoji:'🪒'},
-              {value:'manicura',label:'Manicura / Pedicura',emoji:'💅'},
-              {value:'depilacion',label:'Depilación',emoji:'🌸'},
-              {value:'facial',label:'Tratamientos faciales',emoji:'🧴'},
-            ]
+          {key:'services', type:'multiselect', label:'Servicios', defaultValue:['corte'],
+            options:[] // placeholder — se sobrescribe dinámicamente en el render
           }
         ]
       },
@@ -392,6 +396,47 @@ const FALLBACK_FLOW: FlowConfig = {
       ]
     }
   ]
+}
+
+// ── Servicios dinámicos según tipo de salón ──────────────────────────────────
+const SERVICIOS_PELUQUERIA = [
+  {value:'corte_mujer',  label:'Corte de pelo (mujer)',    emoji:'✂️'},
+  {value:'corte_hombre', label:'Corte de pelo (hombre)',   emoji:'💇'},
+  {value:'tinte',        label:'Tinte y coloración',       emoji:'🎨'},
+  {value:'mechas',       label:'Mechas / Balayage',        emoji:'✨'},
+  {value:'alisado',      label:'Alisado / Keratina',       emoji:'💆'},
+  {value:'peinado',      label:'Recogidos y peinados',     emoji:'👰'},
+  {value:'manicura',     label:'Manicura / Pedicura',      emoji:'💅'},
+  {value:'depilacion',   label:'Depilación',               emoji:'🌸'},
+  {value:'facial',       label:'Tratamientos faciales',    emoji:'🧴'},
+]
+const SERVICIOS_BARBERIA = [
+  {value:'corte_hombre', label:'Corte de pelo (hombre)',   emoji:'💇'},
+  {value:'barba_perfilado', label:'Barba y perfilado',     emoji:'🪒'},
+  {value:'afeitado',     label:'Afeitado clásico',         emoji:'🪞'},
+  {value:'barba_color',  label:'Tinte de barba',           emoji:'🎨'},
+  {value:'diseño_barba', label:'Diseño y arreglo de barba',emoji:'✏️'},
+  {value:'tratamiento',  label:'Tratamiento capilar',      emoji:'💆'},
+  {value:'cejas',        label:'Depilación de cejas',      emoji:'✨'},
+]
+const SERVICIOS_AMBOS = [
+  {value:'corte_mujer',     label:'Corte de pelo (mujer)',      emoji:'✂️'},
+  {value:'corte_hombre',    label:'Corte de pelo (hombre)',     emoji:'💇'},
+  {value:'tinte',           label:'Tinte y coloración',         emoji:'🎨'},
+  {value:'mechas',          label:'Mechas / Balayage',          emoji:'✨'},
+  {value:'alisado',         label:'Alisado / Keratina',         emoji:'💆'},
+  {value:'peinado',         label:'Recogidos y peinados',       emoji:'👰'},
+  {value:'barba_perfilado', label:'Barba y perfilado',          emoji:'🪒'},
+  {value:'afeitado',        label:'Afeitado clásico',           emoji:'🪞'},
+  {value:'barba_color',     label:'Tinte de barba',             emoji:'🎨'},
+  {value:'manicura',        label:'Manicura / Pedicura',        emoji:'💅'},
+  {value:'depilacion',      label:'Depilación',                 emoji:'🌸'},
+  {value:'facial',          label:'Tratamientos faciales',      emoji:'🧴'},
+]
+function getSalonServices(salonTipo: string) {
+  if (salonTipo === 'barberia') return SERVICIOS_BARBERIA
+  if (salonTipo === 'ambos')    return SERVICIOS_AMBOS
+  return SERVICIOS_PELUQUERIA // default
 }
 
 // ── Defaults de horario ───────────────────────────────────────────────────────
@@ -555,10 +600,33 @@ function SimulationStep({ tenant, answers, flow }: { tenant:any; answers:Record<
       ]
     }
     if (type === 'peluqueria') {
+      const salonTipo = answers.salon_tipo || 'peluqueria'
+      const isBarberia = salonTipo === 'barberia'
+      const isAmbos = salonTipo === 'ambos'
+      if (isBarberia) return [
+        {from:'cliente', text:'Hola, quería pedir cita para un corte y arreglo de barba.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. Claro, ¿tienes alguna preferencia de día o barbero?`},
+        {from:'cliente', text:'El sábado por la mañana si puede ser.'},
+        {from:'agent', text:`El sábado tengo disponibilidad a las 10:00 y a las 11:30. ¿Cuál te va mejor?`},
+        {from:'cliente', text:'A las 10 perfecto.'},
+        {from:'agent', text:`Apuntado. Cita el sábado a las 10:00 para corte y barba. ¿A nombre de quién?`},
+        {from:'cliente', text:'A nombre de Javier.'},
+        {from:'agent', text:`Perfecto Javier, hasta el sábado. ¡Nos vemos!`},
+      ]
+      if (isAmbos) return [
+        {from:'cliente', text:'Buenas, quería reservar para un corte de pelo y también arreglar la barba.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Es para mujer o para hombre?`},
+        {from:'cliente', text:'Para hombre, corte y barba.'},
+        {from:'agent', text:`Perfecto. ¿Tienes preferencia de día? Tengo disponible el jueves a las 17:00 o el viernes a las 10:00.`},
+        {from:'cliente', text:'El viernes a las 10.'},
+        {from:'agent', text:`Anotado. Viernes a las 10:00, corte y barba. ¿A nombre de quién?`},
+        {from:'cliente', text:'Miguel Sánchez.'},
+        {from:'agent', text:`Perfecto Miguel. Hasta el viernes. ¡Nos vemos!`},
+      ]
       return [
         {from:'cliente', text:'Buenas, quería reservar cita para un corte.'},
-        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Corte de pelo para hombre o mujer?`},
-        {from:'cliente', text:'Para mujer, con lavado también.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Corte de pelo para mujer?`},
+        {from:'cliente', text:'Sí, con lavado también.'},
         {from:'agent', text:`Claro. ¿Tienes algún día preferido? Puedo darte el miércoles a las 16:00 o el viernes por la mañana.`},
         {from:'cliente', text:'El viernes perfecto.'},
         {from:'agent', text:`Apuntado. Cita el viernes a primera hora. ¿A nombre de quién?`},
@@ -809,11 +877,17 @@ export default function OnboardingPage() {
             <p style={{fontSize:13,color:C.muted,marginBottom:24,lineHeight:1.5}}>{currentStep.subtitle}</p>
 
             <div style={{display:'flex',flexDirection:'column' as const,gap:20}}>
-              {currentStep.fields.map(f=>(
-                <Field key={f.key} config={f}
-                  value={getFieldValue(f.key, f.defaultValue)}
-                  onChange={v=>setFieldValue(f.key,v)}/>
-              ))}
+              {currentStep.fields.map(f=>{
+                // Inyectar opciones dinámicas para servicios de peluquería
+                const fieldConfig = (tenant?.type === 'peluqueria' && f.key === 'services')
+                  ? { ...f, options: getSalonServices(answers.salon_tipo || 'peluqueria') }
+                  : f
+                return (
+                  <Field key={f.key} config={fieldConfig}
+                    value={getFieldValue(f.key, f.defaultValue)}
+                    onChange={v=>setFieldValue(f.key,v)}/>
+                )
+              })}
             </div>
 
             <div style={{display:'flex',gap:10,marginTop:28}}>
