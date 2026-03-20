@@ -17,6 +17,7 @@ const IC: Record<string,string> = {
   grid:    'M3 3h7v7H3zM13 3h7v7h-7zM3 13h7v7H3zM13 13h7v7h-7z',
   cal:     'M8 2v3M16 2v3M3 8h18M5 4h14a2 2 0 012 2v13a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
   clock:   'M12 2a10 10 0 100 20A10 10 0 0012 2zM12 6v6l4 2',
+  clock2:  'M12 2a10 10 0 100 20A10 10 0 0012 2zM12 6v6l3 3M8 2l-2 2M16 2l2 2',
   phone:   'M22 17a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A2 2 0 014 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 17z',
   users:   'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
   layout:  'M3 3h7v11H3zM13 3h7v7h-7zM13 13h7v7h-7z',
@@ -46,11 +47,12 @@ const DEFAULT_MODULES = [
   { id:'llamadas',      href:'/llamadas',       icon:'phone',  label:'Llamadas' },
   { id:'clientes',      href:'/clientes',       icon:'users',  label:'Clientes' },
   { id:'mesas',         href:'/mesas',          icon:'layout', label:'Mesas y zonas' },
+  { id:'turnos',        href:'/turnos',          icon:'clock2', label:'Turnos y franjas' },
   { id:'productos',     href:'/productos',       icon:'menu',   label:'Carta y productos' },
   { id:'pedidos',       href:'/pedidos',        icon:'bag',    label:'Pedidos', pro:true },
   { id:'estadisticas',  href:'/estadisticas',   icon:'bar',    label:'Estadísticas', pro:true },
   { id:'facturacion',   href:'/facturacion',    icon:'card',   label:'Facturación' },
-  { id:'agente',        href:'/agente',         icon:'cpu',    label:'Agente IA' },
+  { id:'agente',        href:'/agente',         icon:'cpu',    label:'Mi recepcionista' },
   { id:'configuracion', href:'/configuracion',  icon:'gear',   label:'Configuración' },
 ]
 
@@ -74,7 +76,7 @@ export default function Sidebar() {
   const hasAgente = baseModules.some((m: any) => m.id === 'agente')
   const modules = hasAgente ? baseModules : [
     ...baseModules.filter((m: any) => m.id !== 'configuracion'),
-    { id:'agente', href:'/agente', icon:'cpu', label:'Agente IA' },
+    { id:'agente', href:'/agente', icon:'cpu', label:'Mi recepcionista' },
     { id:'configuracion', href:'/configuracion', icon:'gear', label:'Configuración' },
   ]
   const W = collapsed ? 60 : 224

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { checkSlotAvailability, parseReservationConfig, generateSlots } from '@/lib/scheduling-engine'
+import { isHosteleria } from '@/lib/templates'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,68 +17,87 @@ export async function POST(req: Request) {
     }
     const ps = parseInt(String(party_size))
 
-    // Verificar que el tenant existe
-    const { data: tenant } = await admin.from('tenants').select('id').eq('id', tenant_id).maybeSingle()
+    // Cargar tenant + config
+    const { data: tenant } = await admin.from('tenants')
+      .select('id,type,reservation_config').eq('id', tenant_id).maybeSingle()
     if (!tenant) {
       return NextResponse.json({ available: false, message: 'Negocio no encontrado.' }, { status: 404 })
     }
 
-    const [{ data: zones }, { data: tables }, { data: existing }] = await Promise.all([
-      admin.from('zones').select('*').eq('tenant_id', tenant_id).eq('active', true),
+    // ── HOSTELERÍA: usar motor de franjas ──────────────────────────────────
+    if (isHosteleria(tenant.type || 'otro')) {
+      const cfg = parseReservationConfig(tenant.reservation_config)
+
+      const [{ data: zonesData }, { data: tablesData }, { data: resData }] = await Promise.all([
+        admin.from('zones').select('id,name').eq('tenant_id', tenant_id).eq('active', true),
+        admin.from('tables').select('id,capacity,zone_id,status').eq('tenant_id', tenant_id),
+        admin.from('reservations')
+          .select('id,time,people,table_id')
+          .eq('tenant_id', tenant_id).eq('date', date)
+          .in('status', ['confirmada','confirmed','pendiente','pending']),
+      ])
+
+      const result = checkSlotAvailability({
+        time: time.slice(0,5),
+        date,
+        party_size: ps,
+        zone_name: zone_name || undefined,
+        cfg,
+        existing_reservations: (resData || []).map((r: any) => ({
+          time: r.time?.slice(0,5) || '',
+          people: r.people || 1,
+          table_id: r.table_id,
+        })),
+        tables: tablesData || [],
+        zones: zonesData || [],
+      })
+
+      return NextResponse.json({
+        available: result.available,
+        message: result.message,
+        reason: result.reason,
+        alternatives: result.alternatives,
+        slot_reservations: result.slot_reservations,
+        slot_people: result.slot_people,
+        slots_remaining: result.slots_remaining,
+        people_remaining: result.people_remaining,
+        zone_remaining: result.zone_remaining,
+        valid_slots: generateSlots(cfg).slice(0, 16),
+        trace: result.trace,
+        tables_available: result.available ? (tablesData?.length || 99) : 0,
+        zones: (zonesData || []).map((z: any) => z.name),
+      })
+    }
+
+    // ── OTROS NEGOCIOS: lógica estándar (sin franjas) ──────────────────────
+    const [{ data: tables }, { data: existing }] = await Promise.all([
       admin.from('tables').select('*').eq('tenant_id', tenant_id),
       admin.from('reservations').select('table_id,people')
         .eq('tenant_id', tenant_id).eq('date', date).eq('time', time)
         .in('status', ['confirmada','confirmed','pendiente','pending']),
     ])
 
-    // Sin mesas configuradas → disponible siempre (negocio sin gestión de mesas)
     if (!tables?.length) {
-      return NextResponse.json({ available: true, message: 'Disponible el ' + date + ' a las ' + time + '.', tables_available: 99 })
+      return NextResponse.json({ available: true, message: `Disponible el ${date} a las ${time}.`, tables_available: 99 })
     }
 
-    const reservedIds = new Set((existing||[]).map(r => r.table_id).filter(Boolean))
-    // capacity null/0 = sin límite configurado → acepta cualquier tamaño
-    let free = tables.filter(t => !reservedIds.has(t.id) && (t.capacity == null || t.capacity === 0 || t.capacity >= ps))
+    const reservedIds = new Set((existing||[]).map((r: any) => r.table_id).filter(Boolean))
+    let free = tables.filter((t: any) => !reservedIds.has(t.id) && (t.capacity == null || t.capacity === 0 || t.capacity >= ps))
 
-    // Si no hay mesas con suficiente capacidad individual, ver si la suma libre cubre al grupo
     if (!free.length) {
-      const freeAny = tables.filter(t => !reservedIds.has(t.id))
-      const totalCap = freeAny.reduce((s,t) => s + (t.capacity||4), 0)
-      if (totalCap >= ps) {
-        // Hay capacidad total aunque no en una sola mesa
-        free = freeAny
-      }
+      const freeAny = tables.filter((t: any) => !reservedIds.has(t.id))
+      const totalCap = freeAny.reduce((s: number, t: any) => s + (t.capacity||4), 0)
+      if (totalCap >= ps) free = freeAny
     }
 
     if (!free.length) {
-      const ocu = existing?.length || 0
-      return NextResponse.json({ available: false, message: 'No hay disponibilidad el ' + date + ' a las ' + time + ' para ' + ps + ' persona' + (ps!==1?'s':'') + '. Hay ' + ocu + ' reserva' + (ocu!==1?'s':'') + ' en ese horario.', tables_available: 0 })
+      return NextResponse.json({ available: false, message: `Sin disponibilidad el ${date} a las ${time}.`, tables_available: 0 })
     }
 
-    let zoneInfo = ''
-    if (zone_name && zones?.length) {
-      const zn = zone_name.toLowerCase()
-      const zona = zones.find(z => z.name?.toLowerCase().includes(zn) || zn.includes(z.name?.toLowerCase()))
-      if (zona) {
-        const inZone = free.filter(t => t.zone === zona.id)
-        if (inZone.length) { zoneInfo = ' en ' + zona.name; free = inZone }
-        else zoneInfo = ' (' + zona.name + ' sin disponibilidad, asignando otra zona)'
-      }
-    }
+    return NextResponse.json({ available: true, message: `Disponible el ${date} a las ${time} para ${ps} personas.`, tables_available: free.length })
 
-    const zonasList = zones?.length ? zones.map(z => {
-      const f = free.filter(t => t.zone === z.id).length
-      return z.name + (f > 0 ? ' (' + f + ' mesas)' : ' (lleno)')
-    }).join(', ') : ''
-
-    return NextResponse.json({
-      available: true,
-      message: 'Disponible el ' + date + ' a las ' + time + ' para ' + ps + ' persona' + (ps!==1?'s':'') + zoneInfo + '. ' + free.length + ' mesa' + (free.length!==1?'s':'') + ' libre' + (free.length!==1?'s':'') + (zonasList ? ' — ' + zonasList : '') + '.',
-      tables_available: free.length,
-      zones: zones?.map(z => z.name) || [],
-    })
   } catch(e: any) {
-    console.error('availability error:', e)
+    console.error('availability error:', e.message)
     return NextResponse.json({ available: false, message: 'Error al verificar disponibilidad.' }, { status: 500 })
   }
 }

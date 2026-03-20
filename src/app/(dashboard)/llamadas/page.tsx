@@ -4,31 +4,36 @@ import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import NotificationBell from '@/components/NotificationBell'
 
-// ── Configuración de estados de decisión ──────────────────────────────────
+// ── Traducciones humanas de estados ──────────────────────────────────────
 const DECISION_CFG: Record<string,{label:string;color:string;bg:string;icon:string}> = {
-  confirmed:             {label:'Confirmada',         color:'#4ADE80', bg:'rgba(74,222,128,0.10)',  icon:'✓'},
-  pending_review:        {label:'Pendiente revisión', color:'#FBB53F', bg:'rgba(251,181,63,0.10)',  icon:'⏳'},
-  modified:              {label:'Modificada',         color:'#60A5FA', bg:'rgba(96,165,250,0.10)',  icon:'✏️'},
-  cancelled:             {label:'Cancelada',          color:'#F87171', bg:'rgba(248,113,113,0.10)', icon:'✕'},
-  rejected:              {label:'Rechazada',          color:'#F87171', bg:'rgba(248,113,113,0.10)', icon:'✕'},
-  needs_human_attention: {label:'Requiere atención',  color:'#F0A84E', bg:'rgba(240,168,78,0.12)',  icon:'⚠'},
-  incomplete:            {label:'Incompleta',         color:'#8895A7', bg:'rgba(136,149,167,0.10)', icon:'?'},
+  confirmed:             {label:'Sofía lo confirmó',         color:'#4ADE80', bg:'rgba(74,222,128,0.10)',  icon:'✅'},
+  pending_review:        {label:'Revísalo tú',               color:'#FBB53F', bg:'rgba(251,181,63,0.10)',  icon:'👁'},
+  modified:              {label:'Modificada',                color:'#60A5FA', bg:'rgba(96,165,250,0.10)',  icon:'✏️'},
+  cancelled:             {label:'Cancelada',                 color:'#F87171', bg:'rgba(248,113,113,0.10)', icon:'✕'},
+  rejected:              {label:'No podía atenderse',        color:'#F87171', bg:'rgba(248,113,113,0.10)', icon:'✕'},
+  needs_human_attention: {label:'Necesita tu atención',      color:'#F0A84E', bg:'rgba(240,168,78,0.12)',  icon:'⚠️'},
+  incomplete:            {label:'Sin información suficiente', color:'#8895A7', bg:'rgba(136,149,167,0.10)', icon:'❓'},
 }
 const FLAG_LABELS: Record<string,string> = {
-  large_group:'Grupo grande', allergy_note:'Alergia', specific_table_request:'Mesa concreta',
-  low_confidence:'Baja confianza', no_availability:'Sin disponibilidad',
-  modification_request:'Modificación', cancellation_request:'Cancelación',
-  special_occasion:'Ocasión especial', accessibility_need:'Accesibilidad',
-  late_arrival_notice:'Llegada tardía', out_of_policy:'Fuera de política',
-  confused_customer:'Cliente confuso', repeat_pattern:'Patrón repetido',
+  large_group:'Grupo grande', allergy_note:'Mencionó alergias', specific_table_request:'Pidió mesa concreta',
+  low_confidence:'Sofía tuvo dudas', no_availability:'No había hueco',
+  modification_request:'Quería cambiar algo', cancellation_request:'Quería cancelar',
+  special_occasion:'Ocasión especial', accessibility_need:'Necesidades especiales',
+  late_arrival_notice:'Avisó que llega tarde', out_of_policy:'Pedía algo que no ofrecemos',
+  confused_customer:'Cliente con dudas', repeat_pattern:'Patrón repetido',
 }
+// Opciones en lenguaje humano para corregir lo que hizo Sofía
 const CORRECTION_OPTIONS = [
-  {value:'confirmed',             label:'✓ Confirmar'},
-  {value:'pending_review',        label:'⏳ Dejar pendiente'},
-  {value:'modified',              label:'✏️ Marcar modificada'},
-  {value:'cancelled',             label:'✕ Cancelar'},
-  {value:'needs_human_attention', label:'⚠ Requiere atención'},
+  {value:'confirmed',             label:'✅ Sí, quedó bien confirmado'},
+  {value:'pending_review',        label:'👁 Quiero revisarlo yo'},
+  {value:'cancelled',             label:'✕ El cliente canceló'},
+  {value:'needs_human_attention', label:'⚠️ Necesita mi atención urgente'},
 ]
+// Traducción de intenciones detectadas
+const INTENT_LABELS: Record<string,string> = {
+  reserva: 'hacer una reserva', pedido: 'hacer un pedido',
+  cancelacion: 'cancelar', consulta: 'preguntar algo', otro: 'otro asunto',
+}
 
 const C = {
   amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)',
@@ -160,8 +165,8 @@ export default function LlamadasPage() {
       {/* Header */}
       <div style={{background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10, position:'sticky', top:0, zIndex:20}}>
         <div>
-          <h1 style={{fontSize:16, fontWeight:700, color:C.text, letterSpacing:'-0.02em'}}>Llamadas</h1>
-          <p style={{fontSize:11, color:C.text3, marginTop:2}}>{calls.length} cargadas</p>
+          <h1 style={{fontSize:16, fontWeight:700, color:C.text, letterSpacing:'-0.02em'}}>Llamadas recibidas</h1>
+          <p style={{fontSize:11, color:C.text3, marginTop:2}}>{calls.length} llamadas en total</p>
         </div>
         <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
           {([
@@ -189,10 +194,10 @@ export default function LlamadasPage() {
           <div style={{background:'rgba(240,168,78,0.08)',border:'1px solid rgba(240,168,78,0.25)',borderRadius:12,padding:'12px 16px',marginBottom:16,display:'flex',alignItems:'flex-start',gap:10}}>
             <span style={{fontSize:18,flexShrink:0}}>🧠</span>
             <div style={{flex:1}}>
-              <p style={{fontSize:12,fontWeight:700,color:C.amber,marginBottom:4}}>El agente ha aprendido un patrón nuevo</p>
+              <p style={{fontSize:11, fontWeight:700, color:C.amber, marginBottom:4}}>Sofía ha aprendido algo nuevo</p>
               {suggestions.map((s,i)=>(
                 <p key={i} style={{fontSize:12,color:C.text2}}>
-                  El patrón <strong style={{color:C.text}}>{s.pattern}</strong> se ha corregido {s.count} veces → sugerido: <strong style={{color:C.amber}}>{DECISION_CFG[s.suggested_status]?.label||s.suggested_status}</strong>
+                  Ha corregido {s.count} veces llamadas similares → ahora sabrá manejarlas mejor
                 </p>
               ))}
             </div>
@@ -246,63 +251,52 @@ export default function LlamadasPage() {
                         {/* Acción requerida */}
                         {(call.action_suggested||call.action_required)&&<div style={{background:`${C.amber}10`, borderRadius:9, padding:'8px 14px', marginBottom:10, border:`1px solid ${C.amber}20`}}><p style={{fontSize:10, fontWeight:700, color:C.amber, marginBottom:2, textTransform:'uppercase', letterSpacing:'0.05em'}}>Acción</p><p style={{fontSize:13, color:C.amber}}>{call.action_suggested||call.action_required}</p></div>}
 
-                        {/* Estado de decisión + flags */}
+                        {/* Estado de decisión + flags — en lenguaje humano */}
                         {(call.decision_status||call.decision_flags?.length>0) && (
                           <div style={{background:C.surface3, borderRadius:9, padding:'10px 14px', marginBottom:10}}>
-                            <p style={{fontSize:10, fontWeight:700, color:C.text3, marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em'}}>Decisión del agente</p>
+                            <p style={{fontSize:10, fontWeight:700, color:C.text3, marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em'}}>Lo que hizo Sofía</p>
                             <div style={{display:'flex', flexWrap:'wrap', gap:6, alignItems:'center'}}>
                               {call.decision_status&&(()=>{
                                 const dcfg = DECISION_CFG[call.decision_status]
                                 return dcfg ? (
-                                  <span style={{fontSize:11, padding:'3px 10px', borderRadius:8, background:dcfg.bg, color:dcfg.color, fontWeight:700}}>
+                                  <span style={{fontSize:12, padding:'4px 12px', borderRadius:8, background:dcfg.bg, color:dcfg.color, fontWeight:700}}>
                                     {dcfg.icon} {dcfg.label}
                                   </span>
                                 ) : null
                               })()}
+                              {/* Confianza traducida a lenguaje humano */}
                               {call.decision_confidence!=null&&(
                                 <span style={{fontSize:11, color:C.text3}}>
-                                  Confianza: <strong style={{color:call.decision_confidence>=0.8?C.green:call.decision_confidence>=0.6?C.amber:C.red}}>
-                                    {Math.round(call.decision_confidence*100)}%
-                                  </strong>
+                                  {call.decision_confidence>=0.8
+                                    ? '✓ Entendió bien la llamada'
+                                    : call.decision_confidence>=0.55
+                                    ? '~ Tuvo algunas dudas'
+                                    : '? Tuvo dificultades para entender'}
                                 </span>
                               )}
+                              {/* Flags en lenguaje humano */}
                               {(call.decision_flags||[]).map((f:string)=>(
                                 <span key={f} style={{fontSize:10, padding:'2px 8px', borderRadius:6, background:'rgba(167,139,250,0.12)', color:'#A78BFA', fontWeight:600}}>
                                   {FLAG_LABELS[f]||f}
                                 </span>
                               ))}
                             </div>
-                            {call.reasoning_label&&(
+                            {/* Razón en lenguaje humano — ocultar jerga técnica */}
+                            {call.reasoning_label && !call.reasoning_label.includes('_') && (
                               <p style={{fontSize:11, color:C.text3, marginTop:6, fontStyle:'italic'}}>
                                 💭 {call.reasoning_label}
                               </p>
                             )}
-                            {/* Trazabilidad — regla aplicada + fuente de conocimiento */}
-                            {(call.applied_rule||call.knowledge_source) && (
-                              <div style={{display:'flex', gap:8, marginTop:8, flexWrap:'wrap'}}>
-                                {call.applied_rule && call.applied_rule!=='default' && (
-                                  <span style={{fontSize:10, padding:'2px 9px', borderRadius:6, background:'rgba(45,212,191,0.10)', color:C.teal, fontWeight:600}}>
-                                    📐 {call.applied_rule}
-                                  </span>
-                                )}
-                                {call.knowledge_source && call.knowledge_source!=='none' && (
-                                  <span style={{fontSize:10, padding:'2px 9px', borderRadius:6, background:'rgba(96,165,250,0.10)', color:'#60A5FA', fontWeight:600}}>
-                                    🧠 {call.knowledge_source}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            {/* Decision trace expandible */}
-                            {call.decision_trace?.length > 0 && (
+                            {/* Detalles técnicos — ocultos por defecto, solo para curiosos */}
+                            {(call.decision_trace?.length > 0) && (
                               <details style={{marginTop:8}}>
-                                <summary style={{fontSize:10, color:C.text3, cursor:'pointer', userSelect:'none' as const}}>Ver traza de decisión ({call.decision_trace.length} pasos)</summary>
+                                <summary style={{fontSize:10, color:C.text3, cursor:'pointer', userSelect:'none' as const}}>Ver detalles técnicos</summary>
                                 <div style={{marginTop:6, display:'flex', flexDirection:'column', gap:4}}>
                                   {call.decision_trace.map((step:any,i:number)=>(
                                     <div key={i} style={{display:'flex', gap:8, alignItems:'baseline', fontSize:11}}>
                                       <span style={{color:C.text3, flexShrink:0}}>→</span>
                                       <span style={{color:C.text2, fontWeight:600}}>{step.label}:</span>
                                       <span style={{color:C.text}}>{step.result}</span>
-                                      {step.source && <span style={{color:C.text3, fontSize:10}}>({step.source})</span>}
                                     </div>
                                   ))}
                                 </div>
@@ -311,22 +305,23 @@ export default function LlamadasPage() {
                           </div>
                         )}
 
-                        {/* Panel de corrección manual */}
+                        {/* Corrección — en lenguaje humano */}
                         <div style={{marginBottom:10}}>
                           {correcting===call.call_sid ? (
                             <div style={{background:'rgba(240,168,78,0.05)', border:'1px solid rgba(240,168,78,0.2)', borderRadius:10, padding:'12px 14px'}}>
-                              <p style={{fontSize:11, fontWeight:700, color:C.amber, marginBottom:10}}>✏️ Corregir decisión del agente</p>
+                              <p style={{fontSize:12, fontWeight:700, color:C.amber, marginBottom:6}}>¿Qué pasó realmente con esta llamada?</p>
+                              <p style={{fontSize:11, color:C.text3, marginBottom:10}}>Elige la opción correcta y Sofía aprenderá para la próxima vez.</p>
                               <div style={{display:'flex', flexWrap:'wrap', gap:6, marginBottom:10}}>
                                 {CORRECTION_OPTIONS.map(opt=>(
                                   <button key={opt.value} onClick={()=>sendFeedback(call.call_sid, opt.value)}
                                     disabled={feedbackLoading}
-                                    style={{fontSize:11, padding:'5px 12px', borderRadius:8, border:'1px solid rgba(240,168,78,0.3)', background:'rgba(240,168,78,0.07)', color:C.amber, fontWeight:600, cursor:'pointer', fontFamily:'inherit', opacity:feedbackLoading?0.5:1}}>
+                                    style={{fontSize:12, padding:'7px 14px', borderRadius:9, border:'1px solid rgba(240,168,78,0.3)', background:'rgba(240,168,78,0.07)', color:C.amber, fontWeight:600, cursor:'pointer', fontFamily:'inherit', opacity:feedbackLoading?0.5:1}}>
                                     {opt.label}
                                   </button>
                                 ))}
                               </div>
                               <input value={feedbackNote} onChange={e=>setFeedbackNote(e.target.value)}
-                                placeholder="Nota opcional (ej: el cliente confirmó por teléfono)"
+                                placeholder="Comentario opcional (ej: el cliente confirmó por teléfono)"
                                 style={{width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'7px 10px', fontSize:12, color:C.text, fontFamily:'inherit', boxSizing:'border-box' as const, marginBottom:8}}/>
                               <button onClick={()=>{setCorrecting(null);setFeedbackNote('')}}
                                 style={{fontSize:11, color:C.text3, background:'none', border:'none', cursor:'pointer', fontFamily:'inherit'}}>
@@ -334,18 +329,22 @@ export default function LlamadasPage() {
                               </button>
                             </div>
                           ) : feedbackDone.has(call.call_sid) ? (
-                            <p style={{fontSize:11, color:C.green}}>✓ Corrección registrada — el agente aprenderá de esto</p>
+                            <p style={{fontSize:11, color:C.green}}>✓ Listo — Sofía tendrá esto en cuenta la próxima vez</p>
                           ) : (
                             <button onClick={()=>{setCorrecting(call.call_sid);setFeedbackNote('')}}
                               style={{fontSize:11, padding:'5px 12px', borderRadius:7, border:`1px solid ${C.border}`, background:'transparent', color:C.text3, cursor:'pointer', fontFamily:'inherit', fontWeight:500}}>
-                              ✏️ Corregir decisión del agente
+                              Esto no es correcto, quiero cambiarlo
                             </button>
                           )}
                         </div>
 
-                        {/* Meta */}
-                        {call.intent&&<p style={{fontSize:12, color:C.text3, marginTop:4}}>Intención: <strong style={{color:C.text2}}>{call.intent}</strong></p>}
-                        {call.transcript&&<details style={{marginTop:8}}><summary style={{fontSize:12, color:C.text3, cursor:'pointer'}}>Ver transcripción</summary><p style={{fontSize:12, color:C.text2, lineHeight:1.6, marginTop:8, whiteSpace:'pre-wrap', background:C.surface3, padding:'10px', borderRadius:8}}>{call.transcript}</p></details>}
+                        {/* Intención del cliente — en lenguaje humano */}
+                        {call.intent && call.intent !== 'consulta' &&
+                          <p style={{fontSize:12, color:C.text3, marginTop:4}}>
+                            El cliente quería: <strong style={{color:C.text2}}>{INTENT_LABELS[call.intent]||call.intent}</strong>
+                          </p>
+                        }
+                        {call.transcript&&<details style={{marginTop:8}}><summary style={{fontSize:12, color:C.text3, cursor:'pointer'}}>Ver la conversación completa</summary><p style={{fontSize:12, color:C.text2, lineHeight:1.6, marginTop:8, whiteSpace:'pre-wrap', background:C.surface3, padding:'10px', borderRadius:8}}>{call.transcript}</p></details>}
                       </div>
                     )}
                   </div>

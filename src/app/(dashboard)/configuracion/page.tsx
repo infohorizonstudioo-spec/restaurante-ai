@@ -4,7 +4,9 @@ import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
 
-// ── Colores ───────────────────────────────────────────────────────────────
+import { isHosteleria } from '@/lib/templates'
+import { DEFAULT_CONFIG as DEFAULT_SCHED, parseReservationConfig } from '@/lib/scheduling-engine'
+import type { ReservationConfig } from '@/lib/scheduling-engine'
 const C = {
   bg:'#0C1018', card:'#131920', card2:'#161D2A', border:'rgba(255,255,255,0.07)',
   borderMd:'rgba(255,255,255,0.12)', text:'#E8EEF6', sub:'#8895A7', muted:'#49566A',
@@ -150,6 +152,8 @@ export default function ConfiguracionPage() {
   const [openSection, setOpen]= useState<string|null>('automation')
   const [cfg, setCfg]         = useState<AgentConfig>(DEFAULT)
   const [basicForm, setBasic] = useState({agent_name:'',business_name:'',agent_phone:''})
+  const [schedCfg, setSchedCfg] = useState<ReservationConfig>({...DEFAULT_SCHED})
+  const [isHosb, setIsHosb]   = useState(false)
 
   useEffect(()=>{
     (async()=>{
@@ -159,6 +163,8 @@ export default function ConfiguracionPage() {
       if(!t) return
       setTenant(t)
       setBasic({agent_name:t.agent_name||'Sofía', business_name:t.name||'', agent_phone:t.agent_phone||''})
+      setIsHosb(isHosteleria(t.type||'otro'))
+      setSchedCfg(parseReservationConfig(t.reservation_config))
       const saved = t.agent_config && Object.keys(t.agent_config).length > 0 ? t.agent_config : DEFAULT
       setCfg({...DEFAULT,...saved, automation:{...DEFAULT.automation,...(saved.automation||{})}, review:{...DEFAULT.review,...(saved.review||{})}, rejection:{...DEFAULT.rejection,...(saved.rejection||{})}, alternatives:{...DEFAULT.alternatives,...(saved.alternatives||{})}, knowledge:{...DEFAULT.knowledge,...(saved.knowledge||{})}, special_cases:{...DEFAULT.special_cases,...(saved.special_cases||{})}})
       setLoading(false)
@@ -176,6 +182,7 @@ export default function ConfiguracionPage() {
       name:        basicForm.business_name.trim(),
       agent_phone: basicForm.agent_phone.trim()||null,
       agent_config: cfg,
+      ...(isHosb ? { reservation_config: schedCfg } : {}),
     }).eq('id',tenant.id)
     setSaving(false); setSaved(true)
     setTimeout(()=>setSaved(false),3000)
@@ -205,8 +212,8 @@ export default function ConfiguracionPage() {
       {/* Header */}
       <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div>
-          <h1 style={{fontSize:17,fontWeight:700,color:C.text}}>Comportamiento del agente</h1>
-          <p style={{fontSize:12,color:C.muted,marginTop:2}}>Define cómo actúa tu recepcionista en cada situación</p>
+          <h1 style={{fontSize:17,fontWeight:700,color:C.text}}>Cómo trabaja tu recepcionista</h1>
+          <p style={{fontSize:12,color:C.muted,marginTop:2}}>Enséñale cómo funciona tu negocio y cómo quieres que actúe</p>
         </div>
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
           {saved&&<span style={{fontSize:12,color:C.green,fontWeight:600}}>✓ Guardado</span>}
@@ -237,59 +244,53 @@ export default function ConfiguracionPage() {
         </div>
 
 
-        {/* SECCIÓN 1 — AUTOMATIZACIÓN */}
-        <SectionCard id="automation" icon="⚡" title="Automatización" sub="Qué confirma el agente sin necesitar revisión" active={openSection==='automation'} onClick={()=>toggleSection('automation')}>
-          <Toggle label="Reservas simples automáticas" sub="El agente confirma reservas dentro de los límites sin consultar" value={cfg.automation.auto_simple_reservations} onChange={v=>upCfg('automation','auto_simple_reservations',v)}/>
-          <Toggle label="Cancelaciones automáticas" sub="Permite al agente gestionar cancelaciones sin revisión" value={cfg.automation.auto_cancellations} onChange={v=>upCfg('automation','auto_cancellations',v)}/>
-          <Toggle label="Consultas de información" sub="Preguntas sobre horario, menú, servicios — el agente responde directamente" value={cfg.automation.auto_info_queries} onChange={v=>upCfg('automation','auto_info_queries',v)}/>
-          <Slider label="Máximo de personas para confirmación automática" sub="Por encima de este número, la reserva va a revisión" value={cfg.automation.max_auto_party} min={1} max={20} unit=" personas" onChange={v=>upCfg('automation','max_auto_party',v)}/>
+        <SectionCard id="automation" icon="⚡" title="¿Cuándo confirma sola?" sub="Reservas que Sofía puede gestionar sin consultarte" active={openSection==='automation'} onClick={()=>toggleSection('automation')}>
+          <Toggle label="Confirmar reservas simples sola" sub="Sofía confirma cuando la reserva está dentro de los límites que tú marcas" value={cfg.automation.auto_simple_reservations} onChange={v=>upCfg('automation','auto_simple_reservations',v)}/>
+          <Toggle label="Gestionar cancelaciones sola" sub="Si un cliente cancela, Sofía lo anota sin necesidad de avisarte" value={cfg.automation.auto_cancellations} onChange={v=>upCfg('automation','auto_cancellations',v)}/>
+          <Toggle label="Responder preguntas sola" sub="Horario, precios, servicios — Sofía responde directamente sin molestarte" value={cfg.automation.auto_info_queries} onChange={v=>upCfg('automation','auto_info_queries',v)}/>
+          <Slider label="¿Hasta cuántas personas puede confirmar sola?" sub="Si el grupo es más grande que esto, Sofía te avisa para que decidas tú" value={cfg.automation.max_auto_party} min={1} max={20} unit=" personas" onChange={v=>upCfg('automation','max_auto_party',v)}/>
           <div style={{background:C.amberDim,border:`1px solid ${C.amber}33`,borderRadius:10,padding:'10px 14px'}}>
-            <p style={{fontSize:12,color:C.amber,fontWeight:600}}>Regla activa</p>
+            <p style={{fontSize:12,color:C.amber,fontWeight:600}}>Resumen de tu configuración</p>
             <p style={{fontSize:12,color:C.sub,marginTop:3}}>
-              Reservas hasta <strong style={{color:C.text}}>{cfg.automation.max_auto_party} personas</strong> → automático.{' '}
-              Más de {cfg.automation.max_auto_party} → revisión manual.
+              Grupos de hasta <strong style={{color:C.text}}>{cfg.automation.max_auto_party} personas</strong> → Sofía confirma sola.{' '}
+              Más de {cfg.automation.max_auto_party} → te avisa a ti.
             </p>
           </div>
         </SectionCard>
 
-        {/* SECCIÓN 2 — REVISIÓN */}
-        <SectionCard id="review" icon="👁" title="Casos que van a revisión" sub="Qué situaciones requieren que tú lo veas antes de confirmar" active={openSection==='review'} onClick={()=>toggleSection('review')}>
-          <Toggle label="Grupos grandes" sub={`Más de ${cfg.automation.max_auto_party} personas — requiere revisión`} value={cfg.review.large_groups} onChange={v=>upCfg('review','large_groups',v)} color={C.amber}/>
-          <Toggle label="Peticiones especiales" sub="El cliente menciona algo fuera de lo habitual" value={cfg.review.special_requests} onChange={v=>upCfg('review','special_requests',v)} color={C.amber}/>
-          <Toggle label="Alergias mencionadas" sub="Si el cliente menciona alergias o intolerancias, va a revisión" value={cfg.review.allergies_mentioned} onChange={v=>upCfg('review','allergies_mentioned',v)} color={C.amber}/>
-          <Toggle label="Horarios inusuales" sub="Reservas fuera del horario habitual de mayor demanda" value={cfg.review.unusual_hours} onChange={v=>upCfg('review','unusual_hours',v)} color={C.amber}/>
-          <Toggle label="Clientes nuevos" sub="Primera vez que llama este número — requiere revisión" value={cfg.review.first_time_customers} onChange={v=>upCfg('review','first_time_customers',v)} color={C.amber}/>
+        <SectionCard id="review" icon="👁" title="¿Cuándo te avisa para que revises tú?" sub="Estas situaciones siempre te las consulta antes de confirmar" active={openSection==='review'} onClick={()=>toggleSection('review')}>
+          <Toggle label="Grupos grandes" sub={`Más de ${cfg.automation.max_auto_party} personas — te avisa siempre`} value={cfg.review.large_groups} onChange={v=>upCfg('review','large_groups',v)} color={C.amber}/>
+          <Toggle label="Peticiones especiales" sub="El cliente pide algo fuera de lo habitual" value={cfg.review.special_requests} onChange={v=>upCfg('review','special_requests',v)} color={C.amber}/>
+          <Toggle label="Alergias o intolerancias" sub="Si el cliente menciona alguna alergia, te avisa para que lo prepares" value={cfg.review.allergies_mentioned} onChange={v=>upCfg('review','allergies_mentioned',v)} color={C.amber}/>
+          <Toggle label="Horarios poco habituales" sub="Reservas muy fuera de tu hora punta" value={cfg.review.unusual_hours} onChange={v=>upCfg('review','unusual_hours',v)} color={C.amber}/>
+          <Toggle label="Clientes que llaman por primera vez" sub="Primera llamada de ese número — te avisa para que lo atiendas tú" value={cfg.review.first_time_customers} onChange={v=>upCfg('review','first_time_customers',v)} color={C.amber}/>
         </SectionCard>
 
-        {/* SECCIÓN 3 — RECHAZO */}
-        <SectionCard id="rejection" icon="🚫" title="Cuándo decir NO" sub="Situaciones en que el agente no puede aceptar la solicitud" active={openSection==='rejection'} onClick={()=>toggleSection('rejection')}>
-          <Toggle label="Fuera de horario" sub="Llamadas recibidas cuando el negocio está cerrado" value={cfg.rejection.out_of_hours} onChange={v=>upCfg('rejection','out_of_hours',v)} color={C.red}/>
-          <Toggle label="Sin disponibilidad" sub="Cuando no hay mesas, sillones o huecos disponibles" value={cfg.rejection.no_availability} onChange={v=>upCfg('rejection','no_availability',v)} color={C.red}/>
-          <Toggle label="Servicio no ofrecido" sub="Si el cliente pide algo que no está en tu catálogo" value={cfg.rejection.unknown_service} onChange={v=>upCfg('rejection','unknown_service',v)} color={C.red}/>
+        <SectionCard id="rejection" icon="🚫" title="¿Cuándo tiene que decir que no?" sub="Sofía rechazará educadamente en estas situaciones" active={openSection==='rejection'} onClick={()=>toggleSection('rejection')}>
+          <Toggle label="Cuando estáis cerrados" sub="Si llaman fuera de horario, Sofía les informa y les pide que llamen cuando estéis abiertos" value={cfg.rejection.out_of_hours} onChange={v=>upCfg('rejection','out_of_hours',v)} color={C.red}/>
+          <Toggle label="Cuando no hay sitio" sub="Si no queda disponibilidad, Sofía lo dice claramente y ofrece alternativas" value={cfg.rejection.no_availability} onChange={v=>upCfg('rejection','no_availability',v)} color={C.red}/>
+          <Toggle label="Si piden algo que no ofrecéis" sub="Sofía responde que ese servicio no está disponible en vuestro negocio" value={cfg.rejection.unknown_service} onChange={v=>upCfg('rejection','unknown_service',v)} color={C.red}/>
         </SectionCard>
 
-        {/* SECCIÓN 4 — ALTERNATIVAS */}
-        <SectionCard id="alternatives" icon="↩️" title="Qué ofrecer cuando no puede cumplir" sub="Comportamiento del agente cuando la primera opción no está disponible" active={openSection==='alternatives'} onClick={()=>toggleSection('alternatives')}>
-          <Toggle label="Ofrecer otro horario" sub="Si la hora pedida no está libre, el agente propone alternativas" value={cfg.alternatives.offer_other_time} onChange={v=>upCfg('alternatives','offer_other_time',v)}/>
-          <Toggle label="Dejar pendiente de confirmación" sub="Registrar la solicitud para que tú la gestiones más tarde" value={cfg.alternatives.leave_pending} onChange={v=>upCfg('alternatives','leave_pending',v)}/>
-          <Toggle label="Lista de espera" sub="Ofrecer al cliente que le avises si se libera una plaza" value={cfg.alternatives.suggest_waitlist} onChange={v=>upCfg('alternatives','suggest_waitlist',v)}/>
-          <Slider label="Máximo de alternativas a ofrecer" sub="Cuántas opciones distintas propone el agente antes de cerrar la llamada" value={cfg.alternatives.max_alternatives} min={1} max={5} unit="" onChange={v=>upCfg('alternatives','max_alternatives',v)}/>
+        <SectionCard id="alternatives" icon="↩️" title="¿Qué ofrece cuando no puede?" sub="Si no hay sitio en el horario pedido, Sofía hará esto" active={openSection==='alternatives'} onClick={()=>toggleSection('alternatives')}>
+          <Toggle label="Proponer otro horario disponible" sub="Sofía busca la siguiente hora libre y se la ofrece al cliente" value={cfg.alternatives.offer_other_time} onChange={v=>upCfg('alternatives','offer_other_time',v)}/>
+          <Toggle label="Dejar la solicitud anotada" sub="Si el cliente prefiere esperar, queda guardada para que tú la gestiones" value={cfg.alternatives.leave_pending} onChange={v=>upCfg('alternatives','leave_pending',v)}/>
+          <Toggle label="Apuntar en lista de espera" sub="Sofía ofrece avisar al cliente si se libera un hueco" value={cfg.alternatives.suggest_waitlist} onChange={v=>upCfg('alternatives','suggest_waitlist',v)}/>
+          <Slider label="¿Cuántas opciones le ofrece como mucho?" sub="Sofía no propone más alternativas que este número para no agobiar al cliente" value={cfg.alternatives.max_alternatives} min={1} max={5} unit="" onChange={v=>upCfg('alternatives','max_alternatives',v)}/>
         </SectionCard>
 
 
-        {/* SECCIÓN 5 — CONOCIMIENTO */}
-        <SectionCard id="knowledge" icon="🧠" title="Conocimiento del negocio" sub="Información real que el agente usa para responder preguntas" active={openSection==='knowledge'} onClick={()=>toggleSection('knowledge')}>
-          <KArea label="Servicios / Menú" sub="Lista tus servicios, platos, precios. El agente lo usará para responder preguntas." placeholder={"Corte de pelo: 15€\nTinte completo: 45€\nManicura: 20€\n..."} value={cfg.knowledge.services} onChange={v=>upCfg('knowledge','services',v)}/>
-          <KArea label="Condiciones y política" sub="Cancelaciones, reserva mínima, depósito, normas del negocio" placeholder={"Cancelación con 24h de antelación sin coste\nGrupos de más de 8 requieren señal\n..."} value={cfg.knowledge.conditions} onChange={v=>upCfg('knowledge','conditions',v)}/>
-          <KArea label="Preguntas frecuentes" sub="Respuestas a lo que preguntan tus clientes más a menudo" placeholder={"¿Tenéis terraza? Sí, con capacidad para 20 personas\n¿Hay parking? Sí, en la calle lateral gratuito\n..."} value={cfg.knowledge.faqs} onChange={v=>upCfg('knowledge','faqs',v)}/>
+        <SectionCard id="knowledge" icon="🧠" title="¿Qué sabe de tu negocio?" sub="Cuéntale a Sofía todo lo que necesita para responder bien" active={openSection==='knowledge'} onClick={()=>toggleSection('knowledge')}>
+          <KArea label="Tus servicios y precios" sub="Escribe qué ofreces y cuánto cuesta. Sofía lo usará cuando los clientes pregunten." placeholder={"Corte de pelo: 15€\nTinte completo: 45€\nManicura: 20€\n..."} value={cfg.knowledge.services} onChange={v=>upCfg('knowledge','services',v)}/>
+          <KArea label="Condiciones y normas" sub="Política de cancelaciones, reserva mínima, señal, etc." placeholder={"Cancelación con 24h de antelación sin coste\nGrupos de más de 8 requieren señal\n..."} value={cfg.knowledge.conditions} onChange={v=>upCfg('knowledge','conditions',v)}/>
+          <KArea label="Preguntas que te hacen siempre" sub="Escribe las preguntas más frecuentes y sus respuestas" placeholder={"¿Tenéis terraza? Sí, con capacidad para 20 personas\n¿Hay parking? Sí, en la calle lateral gratuito\n..."} value={cfg.knowledge.faqs} onChange={v=>upCfg('knowledge','faqs',v)}/>
           <div style={{background:C.tealDim,border:`1px solid ${C.teal}33`,borderRadius:10,padding:'10px 14px'}}>
-            <p style={{fontSize:12,color:C.teal,fontWeight:600}}>💡 Cómo funciona</p>
-            <p style={{fontSize:12,color:C.sub,marginTop:3,lineHeight:1.5}}>Esta información se inyecta al agente en cada llamada. Si un cliente pregunta "¿cuánto cuesta un corte?", el agente consultará aquí y responderá con el precio real.</p>
+            <p style={{fontSize:12,color:C.teal,fontWeight:600}}>💡 Por qué es importante</p>
+            <p style={{fontSize:12,color:C.sub,marginTop:3,lineHeight:1.5}}>Cuanto más le cuentes a Sofía, mejor responderá. Piensa en ella como una empleada nueva: necesita conocer tu negocio para atender bien.</p>
           </div>
         </SectionCard>
 
-        {/* SECCIÓN 6 — FLUJO DE CONVERSACIÓN */}
-        <SectionCard id="flow" icon="💬" title="Flujo de conversación" sub="Orden en que el agente pide la información al cliente" active={openSection==='flow'} onClick={()=>toggleSection('flow')}>
+        <SectionCard id="flow" icon="💬" title="¿En qué orden pregunta?" sub="El orden en que Sofía pide los datos al cliente cuando gestiona una solicitud" active={openSection==='flow'} onClick={()=>toggleSection('flow')}>
           <div>
             <p style={{fontSize:12,color:C.sub,marginBottom:12,lineHeight:1.5}}>El agente seguirá este orden al gestionar una solicitud. Arrastra para reordenar. Pulsa para activar/desactivar.</p>
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:14}}>
@@ -315,9 +316,8 @@ export default function ConfiguracionPage() {
           </div>
         </SectionCard>
 
-        {/* SECCIÓN 7 — CASOS ESPECIALES */}
-        <SectionCard id="special" icon="⚠️" title="Casos especiales" sub="Define qué hace el agente ante situaciones concretas" active={openSection==='special'} onClick={()=>toggleSection('special')}>
-          {([['allergies','Alergias / intolerancias','Si el cliente menciona alergias o restricciones alimentarias'],['birthdays','Cumpleaños / celebraciones','Si el cliente menciona que es para una ocasión especial'],['events','Eventos / grupos especiales','Reservas para eventos, fiestas, reuniones de empresa'],['vip','Clientes VIP / frecuentes','Clientes con muchas visitas previas en el sistema']] as [keyof typeof DEFAULT.special_cases, string, string][]).map(([key,label,sub])=>(
+        <SectionCard id="special" icon="⚠️" title="Situaciones especiales" sub="Dile a Sofía exactamente qué hacer en estos casos" active={openSection==='special'} onClick={()=>toggleSection('special')}>
+          {([['allergies','El cliente menciona alergias','Alergias, intolerancias, restricciones alimentarias'],['birthdays','Es para una celebración','Cumpleaños, aniversarios, eventos especiales'],['events','Es un grupo o evento','Cenas de empresa, fiestas, grupos numerosos'],['vip','Es un cliente muy fiel','Clientes que llaman con mucha frecuencia']] as [keyof typeof DEFAULT.special_cases, string, string][]).map(([key,label,sub])=>(
             <div key={key} style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:16}}>
               <div style={{flex:1}}>
                 <p style={{fontSize:13,fontWeight:600,color:C.text}}>{label}</p>
@@ -327,11 +327,11 @@ export default function ConfiguracionPage() {
             </div>
           ))}
           <div style={{background:C.card2,border:`1px solid ${C.border}`,borderRadius:10,padding:'12px 14px'}}>
-            <p style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:8,letterSpacing:'0.04em'}}>LEYENDA</p>
-            <div style={{display:'flex',gap:16}}>
-              <span style={{fontSize:11,color:C.green}}>● Auto-confirmar — el agente lo gestiona solo</span>
-              <span style={{fontSize:11,color:C.amber}}>● Revisar — va a tu panel para revisión</span>
-              <span style={{fontSize:11,color:C.red}}>● Rechazar — el agente declina directamente</span>
+            <p style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:8}}>¿Qué significa cada opción?</p>
+            <div style={{display:'flex',flexDirection:'column',gap:4}}>
+              <span style={{fontSize:11,color:C.green}}>● Confirmar sola — Sofía lo gestiona sin avisarte</span>
+              <span style={{fontSize:11,color:C.amber}}>● Revisar — Sofía te avisa para que decidas tú</span>
+              <span style={{fontSize:11,color:C.red}}>● No aceptar — Sofía lo rechaza educadamente</span>
             </div>
           </div>
         </SectionCard>
