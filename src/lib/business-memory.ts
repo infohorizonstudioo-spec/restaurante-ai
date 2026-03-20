@@ -24,6 +24,35 @@ const admin = createClient(
 
 export async function getBusinessRules(tenantId: string): Promise<BusinessRules> {
   try {
+    // Primero intentar agent_config (nueva configuración visual)
+    const { data: tenant } = await admin
+      .from('tenants')
+      .select('agent_config')
+      .eq('id', tenantId)
+      .maybeSingle()
+
+    const agentCfg = tenant?.agent_config as any
+    if (agentCfg && Object.keys(agentCfg).length > 0) {
+      const auto = agentCfg.automation    || {}
+      const rev  = agentCfg.review        || {}
+      const alt  = agentCfg.alternatives  || {}
+      const spec = agentCfg.special_cases || {}
+      return {
+        ...DEFAULT_RULES,
+        max_auto_party_size:             auto.max_auto_party              ?? DEFAULT_RULES.max_auto_party_size,
+        allow_auto_cancellations:        auto.auto_cancellations          ?? DEFAULT_RULES.allow_auto_cancellations,
+        special_requests_require_review: rev.special_requests             ?? DEFAULT_RULES.special_requests_require_review,
+        offer_alternative_times:         alt.offer_other_time             ?? DEFAULT_RULES.offer_alternative_times,
+        patterns: {
+          ...DEFAULT_RULES.patterns,
+          allergy:  spec.allergies === 'review' ? 'pending_review' : spec.allergies === 'confirm' ? 'confirmed' : DEFAULT_RULES.patterns?.allergy,
+          birthday: spec.birthdays === 'review' ? 'pending_review' : spec.birthdays === 'confirm' ? 'confirmed' : DEFAULT_RULES.patterns?.birthday,
+          vip:      spec.vip       === 'review' ? 'pending_review' : spec.vip       === 'confirm' ? 'confirmed' : DEFAULT_RULES.patterns?.vip,
+        }
+      } as BusinessRules
+    }
+
+    // Fallback: tabla business_rules
     const { data } = await admin
       .from('business_rules')
       .select('rules, patterns')

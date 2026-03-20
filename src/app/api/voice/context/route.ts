@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     }
 
     const { data: tenant } = await admin.from('tenants')
-      .select('id,name,type,plan,agent_name,free_calls_used,free_calls_limit,language,business_hours,business_description')
+      .select('id,name,type,plan,agent_name,free_calls_used,free_calls_limit,language,business_hours,business_description,agent_config')
       .eq('agent_phone', agentPhone).maybeSingle()
 
     if (!tenant) {
@@ -126,7 +126,35 @@ export async function POST(req: Request) {
 
     const lang = (tenant.language as string) || 'es'
 
-    // ── Cargar conocimiento del negocio ────────────────────────────────────
+    // ── Cargar agent_config y construir reglas para el agente ─────────────
+    const agentCfg = (tenant.agent_config as any) || {}
+    const auto = agentCfg.automation || {}
+    const rev  = agentCfg.review     || {}
+    const rej  = agentCfg.rejection  || {}
+    const alt  = agentCfg.alternatives || {}
+    const know = agentCfg.knowledge  || {}
+    const flow = (agentCfg.conversation_flow || ['nombre','personas','fecha','hora','confirmar']) as string[]
+    const spec = agentCfg.special_cases || {}
+
+    // Construir instrucciones de comportamiento en lenguaje natural para el agente
+    const behaviorRules = [
+      `AUTOMATIZACIÓN: Confirma automáticamente reservas hasta ${auto.max_auto_party||6} personas.${auto.auto_cancellations?' Las cancelaciones se gestionan directamente.':''}${auto.auto_info_queries?' Responde preguntas de información directamente.':''}`,
+      `REVISIÓN: Envía a revisión si:${rev.large_groups?` grupos de más de ${auto.max_auto_party||6} personas,`:''} ${rev.special_requests?'peticiones especiales,':''} ${rev.allergies_mentioned?'se mencionan alergias,':''} ${rev.first_time_customers?'es la primera vez que llama este número,':''}`.replace(/,\s*$/,'').replace(/:\s*$/,': ningún caso extra'),
+      `RECHAZO: Di que no puedes atender si:${rej.out_of_hours?' estamos fuera de horario,':''} ${rej.no_availability?' no hay disponibilidad,':''} ${rej.unknown_service?' el servicio no está en nuestra oferta,':''}`.replace(/,\s*$/,''),
+      `ALTERNATIVAS: Cuando no puedas confirmar,${alt.offer_other_time?' ofrece otro horario disponible.':''}${alt.leave_pending?' Deja la solicitud pendiente si el cliente quiere esperar.':''}${alt.suggest_waitlist?' Ofrece lista de espera si no hay hueco.':''} Propón hasta ${alt.max_alternatives||2} alternativas.`,
+      `FLUJO: Pide la información en este orden: ${flow.join(' → ')}.`,
+      spec.allergies==='review' ? 'Si el cliente menciona alergias, anótalo y marca para revisión.' : '',
+      spec.birthdays==='confirm' ? 'Para celebraciones y cumpleaños, confirma con agrado.' : spec.birthdays==='review' ? 'Para celebraciones, marca para revisión.' : '',
+    ].filter(Boolean).join('\n')
+
+    // Conocimiento adicional del negocio (servicios, condiciones, FAQs)
+    const extraKnowledge = [
+      know.services ? `SERVICIOS/MENÚ:\n${know.services}` : '',
+      know.conditions ? `CONDICIONES:\n${know.conditions}` : '',
+      know.faqs ? `PREGUNTAS FRECUENTES:\n${know.faqs}` : '',
+    ].filter(Boolean).join('\n\n')
+
+
     const knowledge = await getBusinessKnowledge(tenant.id as string)
     const knowledgeCtx = buildKnowledgeContext(knowledge)
 
@@ -175,7 +203,8 @@ export async function POST(req: Request) {
         template_type:    tmpl.id,
         reservation_unit: tmpl.labels.reserva,
         agent_context:    agentSystemContext,
-        business_knowledge: knowledgeCtx || '',  // menú, FAQs, servicios, políticas
+        business_knowledge: knowledgeCtx || extraKnowledge || '',
+        behavior_rules:     behaviorRules,
       },
       conversation_config_override: {
         agent: { first_message: greeting }
