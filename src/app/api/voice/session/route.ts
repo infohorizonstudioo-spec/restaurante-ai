@@ -26,8 +26,15 @@ const admin = createClient(
 // ─────────────────────────────────────────────────────────────────────────────
 
 const VALID_STATES = new Set([
+  // Estados base
   'iniciando','escuchando','procesando','respondiendo',
-  'esperando_datos','finalizando','completada','error'
+  'esperando_datos','finalizando','completada','error',
+  // Estados específicos restaurante
+  'tomando_reserva','tomando_pedido','confirmando_reserva',
+  'confirmando_pedido','verificando_disponibilidad',
+  'buscando_alternativas','pendiente_revision',
+  // Estados genéricos servicio
+  'tomando_cita','confirmando_cita',
 ])
 
 export async function POST(req: Request) {

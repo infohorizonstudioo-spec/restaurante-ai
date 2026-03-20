@@ -144,7 +144,40 @@ export async function analyzeFeedbackPatterns(tenantId: string): Promise<{
   }
 }
 
-// ── Aplicar sugerencia aprobada por el negocio ─────────────────────────────
+// ── Auto-aprendizaje: aplica reglas automáticamente al alcanzar umbral ──────
+// Llamado después de cada feedback. Si un patrón acumula N correcciones
+// consistentes, actualiza las reglas sin necesidad de aprobación manual.
+// SÓLO para patrones de baja criticidad (party_size, etc.)
+
+const AUTO_APPLY_THRESHOLD = 5  // correcciones consistentes para auto-aplicar
+const AUTO_APPLY_PATTERNS = new Set(['large_group']) // solo estos se auto-aplican
+
+export async function autoLearnFromFeedback(tenantId: string): Promise<{
+  applied: string[]
+  pending: string[]
+}> {
+  try {
+    const { suggestions } = await analyzeFeedbackPatterns(tenantId)
+    const applied: string[] = []
+    const pending: string[] = []
+
+    for (const s of suggestions) {
+      if (s.count >= AUTO_APPLY_THRESHOLD && AUTO_APPLY_PATTERNS.has(s.pattern)) {
+        // Auto-aplicar: patrón de bajo riesgo con muchas correcciones consistentes
+        await applyLearnedRule(tenantId, s.pattern, s.suggested_status, 'auto_learning')
+        applied.push(s.pattern)
+        console.log(`auto-learned: tenant ${tenantId.slice(0,8)} | pattern:${s.pattern} → ${s.suggested_status} (${s.count} corrections)`)
+      } else if (s.count >= MIN_CORRECTIONS_TO_SUGGEST) {
+        pending.push(s.pattern)
+      }
+    }
+
+    return { applied, pending }
+  } catch(e: any) {
+    console.error('autoLearnFromFeedback error:', e.message)
+    return { applied: [], pending: [] }
+  }
+}
 // Sólo se ejecuta cuando el negocio confirma explícitamente.
 
 export async function applyLearnedRule(

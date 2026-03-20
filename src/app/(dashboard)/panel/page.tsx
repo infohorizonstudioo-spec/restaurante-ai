@@ -245,6 +245,7 @@ export default function PanelPage() {
   const [reservas,setReservas] = useState<any[]>([])
   const [clientes,setClientes] = useState<any[]>([])
   const [activeCalls,setActiveCalls] = useState<any[]>([])
+  const [activeOrders,setActiveOrders] = useState<any[]>([])
   const [events,setEvents]     = useState<LiveEvent[]>([])
   const [demoMode,setDemoMode] = useState(false)
   const demoTimer              = useRef<ReturnType<typeof setInterval>|null>(null)
@@ -262,14 +263,15 @@ export default function PanelPage() {
     if (!p?.tenant_id) { if(p?.role==='superadmin') router.push('/admin'); else router.push('/onboarding'); return }
     const tid = p.tenant_id
     const today = new Date().toISOString().split('T')[0]
-    const [{ data:t },{ data:c },{ data:r },{ data:cl },{ data:ac }] = await Promise.all([
+    const [{ data:t },{ data:c },{ data:r },{ data:cl },{ data:ac },{ data:ao }] = await Promise.all([
       supabase.from('tenants').select('*').eq('id',tid).maybeSingle(),
       supabase.from('calls').select('*').eq('tenant_id',tid).order('started_at',{ascending:false}).limit(8),
       supabase.from('reservations').select('*').eq('tenant_id',tid).eq('date',today).order('time'),
       supabase.from('customers').select('id').eq('tenant_id',tid),
       supabase.from('calls').select('id,call_sid,caller_phone,session_state,started_at').eq('tenant_id',tid).eq('status','activa').order('started_at',{ascending:false}).limit(8),
+      supabase.from('order_events').select('*').eq('tenant_id',tid).eq('status','collecting').order('created_at',{ascending:false}).limit(5),
     ])
-    setTenant(t); setCalls(c||[]); setReservas(r||[]); setClientes(cl||[]); setActiveCalls(ac||[])
+    setTenant(t); setCalls(c||[]); setReservas(r||[]); setClientes(cl||[]); setActiveCalls(ac||[]); setActiveOrders(ao||[])
     setLoading(false)
   }, [router])
 
@@ -323,6 +325,33 @@ export default function PanelPage() {
         const n = payload.new as any
         const icon = n.priority==='critical' ? '🔴' : n.priority==='warning' ? '⚠️' : '💬'
         pushEvent({ type:'system', icon, color: n.priority==='critical'?C.red:n.priority==='warning'?C.yellow:C.text2, title:n.title, sub:n.body||'' })
+      })
+      // Pedidos en tiempo real
+      .on('postgres_changes',{ event:'INSERT', schema:'public', table:'order_events', filter:`tenant_id=eq.${tenantId}` }, payload => {
+        const o = payload.new as any
+        setActiveOrders(prev => [o, ...prev.filter(x => x.id !== o.id)].slice(0,5))
+        const itemList = Array.isArray(o.items) && o.items.length > 0
+          ? o.items.map((i:any)=>`${i.quantity||1}× ${i.name}`).join(', ')
+          : 'tomando pedido…'
+        pushEvent({ type:'order' as any, icon:'🛍️', color:C.violet,
+          title:`Nuevo pedido — ${o.customer_name||o.customer_phone||'Cliente'}`,
+          sub:`${itemList} · ${o.order_type||'recoger'}`, priority:'high' })
+      })
+      .on('postgres_changes',{ event:'UPDATE', schema:'public', table:'order_events', filter:`tenant_id=eq.${tenantId}` }, payload => {
+        const o = payload.new as any
+        if (o.status === 'collecting') {
+          setActiveOrders(prev => prev.map(x => x.id === o.id ? o : x))
+        } else {
+          setActiveOrders(prev => prev.filter(x => x.id !== o.id))
+          if (o.status === 'confirmed') {
+            const itemList = Array.isArray(o.items) && o.items.length > 0
+              ? o.items.map((i:any)=>`${i.quantity||1}× ${i.name}`).join(', ')
+              : 'pedido'
+            pushEvent({ type:'order' as any, icon:'✅', color:C.green,
+              title:`Pedido confirmado — ${o.customer_name||'Cliente'}`,
+              sub:itemList, priority:'high' })
+          }
+        }
       })
       .subscribe(status => {
         if (status === 'SUBSCRIBED') console.log('panel RT subscribed for tenant', tenantId.slice(0,8))
@@ -430,6 +459,41 @@ export default function PanelPage() {
             </div>
             <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
               {activeCalls.map(call=><ActiveCallBlock key={call.id} call={call} businessType={tenant.type||'otro'}/>)}
+            </div>
+          </div>
+        )}
+
+        {/* ── Pedidos en curso (solo hostelería) ── */}
+        {activeOrders.length > 0 && (
+          <div style={{ background:`linear-gradient(135deg,${C.surface},${C.surface2})`,border:`1px solid ${C.violet}25`,borderRadius:16,padding:'18px 20px',position:'relative',overflow:'hidden' }}>
+            <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${C.violet}50,transparent)` }}/>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14 }}>
+              <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                <div style={{ width:8,height:8,borderRadius:'50%',background:C.violet,animation:'rz-pulse 1.5s ease-in-out infinite' }}/>
+                <span style={{ fontSize:14,fontWeight:700,color:C.text }}>🛍️ {activeOrders.length} pedido{activeOrders.length!==1?'s':''} en curso</span>
+              </div>
+              <Link href="/pedidos" style={{ fontSize:11,color:C.violet,fontWeight:600,textDecoration:'none' }}>Ver pedidos →</Link>
+            </div>
+            <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
+              {activeOrders.map(order=>{
+                const items = Array.isArray(order.items) ? order.items : []
+                const itemStr = items.map((i:any)=>`${i.quantity||1}× ${i.name}`).join(', ')
+                return (
+                  <div key={order.id} style={{ display:'flex',alignItems:'center',gap:12,padding:'11px 14px',background:C.surface2,borderRadius:11,border:`1px solid ${C.violet}20` }}>
+                    <div style={{ width:34,height:34,borderRadius:'50%',background:`${C.violet}18`,border:`1.5px solid ${C.violet}30`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:16 }}>🛍️</div>
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <p style={{ fontSize:13,fontWeight:600,color:C.text,marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+                        {order.customer_name||order.customer_phone||'Cliente'}
+                        <span style={{ fontSize:10,color:C.violet,marginLeft:8,padding:'1px 6px',borderRadius:8,background:`${C.violet}15`,fontWeight:600 }}>{order.order_type}</span>
+                      </p>
+                      <p style={{ fontSize:11,color:C.text2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+                        {itemStr||'Tomando pedido…'}{order.pickup_time?` · Recogida ${order.pickup_time}`:''}
+                      </p>
+                    </div>
+                    {order.total_estimate && <span style={{ fontFamily:'var(--rz-mono)',fontSize:12,color:C.violet,flexShrink:0 }}>{order.total_estimate.toFixed(2)}€</span>}
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

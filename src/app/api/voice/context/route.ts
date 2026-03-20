@@ -189,28 +189,70 @@ export async function POST(req: Request) {
     // Contexto del agente desde la plantilla del negocio
     const agentSystemContext = tmpl.agentContext
 
-    // ── Registrar sesión aislada al INICIO de la llamada ─────────────────
-    // Fire-and-forget con IIFE async — NO usar .catch() encadenado sobre
-    // admin.rpc() (rompe Turbopack/Next.js 16 — ver regla crítica en docs)
-    const sessionSid = convId || ('ctx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
-    (async () => {
-      try {
-        await admin.rpc('upsert_call_session', {
-          p_call_sid:        sessionSid,
-          p_tenant_id:       tenant.id,
-          p_caller_phone:    callerPhone || '',
-          p_agent_phone:     agentPhone  || '',
-          p_conversation_id: convId      || null,
-          p_session_state:   'iniciando',
-        })
-      } catch(e: any) {
-        console.error('upsert_call_session error:', e.message)
-      }
-    })()
+    // ── Herramientas del agente para hostelería ─────────────────────────────
+    const isHosteleriaType = ['restaurante','bar','cafeteria'].includes(tenant.type as string)
+    const agentTools = isHosteleriaType ? {
+      tools: [
+        {
+          name: 'check_availability',
+          description: 'Comprueba disponibilidad de mesa antes de confirmar. SIEMPRE llama esto antes de confirmar una reserva.',
+          url: process.env.NEXT_PUBLIC_APP_URL + '/api/voice/availability',
+          method: 'POST',
+          parameters: {
+            tenant_id: '{{tenant_id}}',
+            date: 'fecha en formato YYYY-MM-DD',
+            time: 'hora en formato HH:MM',
+            party_size: 'número de personas',
+            zone_name: 'zona preferida opcional',
+          }
+        },
+        {
+          name: 'create_reservation',
+          description: 'Crea la reserva DESPUÉS de verificar disponibilidad. Solo llama si check_availability devuelve available:true.',
+          url: process.env.NEXT_PUBLIC_APP_URL + '/api/voice/reservation',
+          method: 'POST',
+          parameters: {
+            tenant_id: '{{tenant_id}}',
+            customer_name: 'nombre del cliente',
+            customer_phone: '{{caller_phone}}',
+            reservation_date: 'fecha YYYY-MM-DD',
+            reservation_time: 'hora HH:MM',
+            party_size: 'número de personas',
+            zone_preference: 'zona opcional',
+            notes: 'notas opcionales',
+          }
+        },
+        {
+          name: 'update_order',
+          description: 'Actualiza o confirma un pedido en tiempo real. Llama con action=start al detectar pedido, action=update al añadir items, action=confirm al cerrar.',
+          url: process.env.NEXT_PUBLIC_APP_URL + '/api/voice/order',
+          method: 'POST',
+          parameters: {
+            action: 'start | update | confirm | cancel',
+            call_sid: '{{conversation_id}}',
+            tenant_id: '{{tenant_id}}',
+            order_type: 'recoger | domicilio | mesa',
+            customer_name: 'nombre del cliente',
+            customer_phone: '{{caller_phone}}',
+            items: '[{name, quantity, notes}]',
+            pickup_time: 'hora de recogida HH:MM opcional',
+          }
+        },
+        {
+          name: 'update_session',
+          description: 'Actualiza el estado visible en el panel en tiempo real. Llama cuando cambia la fase de la llamada.',
+          url: process.env.NEXT_PUBLIC_APP_URL + '/api/voice/session',
+          method: 'POST',
+          parameters: {
+            call_sid: '{{conversation_id}}',
+            tenant_id: '{{tenant_id}}',
+            session_state: 'tomando_reserva | tomando_pedido | verificando_disponibilidad | confirmando_reserva | confirmando_pedido | escuchando',
+          }
+        },
+      ]
+    } : {}
 
-    console.log('context ok | tenant:', (tenant.id as string).slice(0, 8), '| type:', tenant.type, '| tmpl:', tmpl.id, '| caller:', callerPhone, '| open:', isOpen, '| sid:', sessionSid.slice(0,20), '| ms:', Date.now() - t0)
-
-    return NextResponse.json({
+    const contextPayload: any = {
       dynamic_variables: {
         tenant_id:        tenant.id,
         business_name:    biz,
@@ -234,7 +276,31 @@ export async function POST(req: Request) {
       conversation_config_override: {
         agent: { first_message: greeting }
       }
-    })
+    }
+    if (isHosteleriaType && agentTools.tools) {
+      contextPayload.client_tools = agentTools.tools
+    }
+    // Fire-and-forget con IIFE async — NO usar .catch() encadenado sobre
+    // admin.rpc() (rompe Turbopack/Next.js 16 — ver regla crítica en docs)
+    const sessionSid = convId || ('ctx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
+    (async () => {
+      try {
+        await admin.rpc('upsert_call_session', {
+          p_call_sid:        sessionSid,
+          p_tenant_id:       tenant.id,
+          p_caller_phone:    callerPhone || '',
+          p_agent_phone:     agentPhone  || '',
+          p_conversation_id: convId      || null,
+          p_session_state:   'iniciando',
+        })
+      } catch(e: any) {
+        console.error('upsert_call_session error:', e.message)
+      }
+    })()
+
+    console.log('context ok | tenant:', (tenant.id as string).slice(0, 8), '| type:', tenant.type, '| tmpl:', tmpl.id, '| caller:', callerPhone, '| open:', isOpen, '| sid:', sessionSid.slice(0,20), '| ms:', Date.now() - t0)
+
+    return NextResponse.json(contextPayload)
   } catch (e: any) {
     console.error('voice/context error:', e.message)
     return NextResponse.json({ dynamic_variables: { ...D } })

@@ -12,7 +12,7 @@
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { recordFeedback, analyzeFeedbackPatterns } from '@/lib/business-memory'
+import { recordFeedback, analyzeFeedbackPatterns, autoLearnFromFeedback } from '@/lib/business-memory'
 import type { InteractionStatus } from '@/lib/agent-decision'
 
 const admin = createClient(
@@ -63,8 +63,10 @@ export async function POST(req: Request) {
       .eq('call_sid', call_sid)
       .eq('tenant_id', tenant_id)
 
-    // Detectar patrones acumulados para sugerir reglas
+    // Detectar patrones + auto-aprender si aplica
     const { suggestions } = await analyzeFeedbackPatterns(tenant_id)
+    // Fire-and-forget auto-learning
+    autoLearnFromFeedback(tenant_id).catch(() => {})
 
     console.log('feedback | call:', call_sid.slice(0,20), '|', original_status, '->', corrected_status, '| suggestions:', suggestions.length)
 
