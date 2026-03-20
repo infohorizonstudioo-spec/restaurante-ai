@@ -137,7 +137,7 @@ export interface SlotCheckInput {
   zones: Array<{ id: string; name: string }>
 }
 
-export function checkSlotAvailability(input: SlotCheckInput): SlotCheckResult {
+export function checkSlotAvailability(input: SlotCheckInput, _depth = 0): SlotCheckResult {
   const { time, party_size, zone_name, cfg, existing_reservations, tables, zones } = input
   const trace: string[] = []
 
@@ -145,7 +145,7 @@ export function checkSlotAvailability(input: SlotCheckInput): SlotCheckResult {
   if (!isValidSlot(time, cfg)) {
     const validSlots = generateSlots(cfg)
     trace.push(`[1] Franja ${time} inválida. Intervalo: ${cfg.reservation_slot_interval_minutes}min`)
-    const alts = findAlternatives({ ...input }, 3)
+    const alts = _depth === 0 ? findAlternatives({ ...input }, 3) : []
     return {
       available: false, reason: 'invalid_slot',
       alternatives: alts, slot_reservations: 0, slot_people: 0,
@@ -168,7 +168,7 @@ export function checkSlotAvailability(input: SlotCheckInput): SlotCheckResult {
     trace.push(`[2] Franja llena por número de reservas`)
     return {
       available: false, reason: 'slot_full_reservations',
-      alternatives: findAlternatives(input, 3),
+      alternatives: _depth === 0 ? findAlternatives(input, 3) : [],
       slot_reservations: slotsUsed, slot_people: slotPeople,
       slots_remaining: 0, people_remaining: peopleRemaining,
       message: `Las ${cfg.max_new_reservations_per_slot} reservas de las ${time} ya están ocupadas`,
@@ -182,7 +182,7 @@ export function checkSlotAvailability(input: SlotCheckInput): SlotCheckResult {
     trace.push(`[3] Franja llena por personas: ${slotPeople}+${party_size} > ${cfg.max_new_people_per_slot}`)
     return {
       available: false, reason: 'slot_full_people',
-      alternatives: findAlternatives(input, 3),
+      alternatives: _depth === 0 ? findAlternatives(input, 3) : [],
       slot_reservations: slotsUsed, slot_people: slotPeople,
       slots_remaining: slotsRemaining, people_remaining: peopleRemaining,
       message: `A las ${time} ya hay ${slotPeople} personas reservadas, el máximo es ${cfg.max_new_people_per_slot}`,
@@ -211,7 +211,7 @@ export function checkSlotAvailability(input: SlotCheckInput): SlotCheckResult {
         trace.push(`[4] Zona llena`)
         return {
           available: false, reason: 'zone_full',
-          alternatives: findAlternatives(input, 3),
+          alternatives: _depth === 0 ? findAlternatives(input, 3) : [],
           slot_reservations: slotsUsed, slot_people: slotPeople,
           slots_remaining: slotsRemaining, people_remaining: peopleRemaining,
           zone_remaining: 0,
@@ -238,7 +238,7 @@ export function checkSlotAvailability(input: SlotCheckInput): SlotCheckResult {
     trace.push(`[5] Sin mesa disponible para ${party_size} personas`)
     return {
       available: false, reason: 'no_table_available',
-      alternatives: findAlternatives(input, 3),
+      alternatives: _depth === 0 ? findAlternatives(input, 3) : [],
       slot_reservations: slotsUsed, slot_people: slotPeople,
       slots_remaining: slotsRemaining, people_remaining: peopleRemaining,
       zone_remaining: zoneRemaining,
@@ -255,7 +255,7 @@ export function checkSlotAvailability(input: SlotCheckInput): SlotCheckResult {
     trace.push(`[6] Conflicto de buffer detectado`)
     return {
       available: false, reason: 'buffer_conflict',
-      alternatives: findAlternatives(input, 3),
+      alternatives: _depth === 0 ? findAlternatives(input, 3) : [],
       slot_reservations: slotsUsed, slot_people: slotPeople,
       slots_remaining: slotsRemaining, people_remaining: peopleRemaining,
       zone_remaining: zoneRemaining,
@@ -283,7 +283,6 @@ export function findAlternatives(input: SlotCheckInput, maxCount = 3): string[] 
   const allSlots = generateSlots(cfg)
   const requestedMins = timeToMinutes(time)
 
-  // Ordenar franjas por distancia a la hora pedida
   const sorted = allSlots
     .filter(s => s !== time.slice(0,5))
     .sort((a, b) => Math.abs(timeToMinutes(a) - requestedMins) - Math.abs(timeToMinutes(b) - requestedMins))
@@ -291,7 +290,8 @@ export function findAlternatives(input: SlotCheckInput, maxCount = 3): string[] 
   const valid: string[] = []
   for (const slot of sorted) {
     if (valid.length >= maxCount) break
-    const result = checkSlotAvailability({ ...input, time: slot })
+    // _depth=1 evita recursión infinita — alternativas no buscan más alternativas
+    const result = checkSlotAvailability({ ...input, time: slot }, 1)
     if (result.available) valid.push(slot)
   }
   return valid
