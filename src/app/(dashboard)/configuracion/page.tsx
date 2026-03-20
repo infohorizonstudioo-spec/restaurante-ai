@@ -189,16 +189,14 @@ export default function ConfiguracionPage() {
       ...(isHosb ? { reservation_config: schedCfg } : {}),
     }).eq('id',tenant.id)
 
-    // Actualizar el first_message de ElevenLabs con el nuevo nombre del negocio
-    if(tenant.elevenlabs_agent_id || process.env.NEXT_PUBLIC_EL_AGENT_ID) {
-      try {
-        await fetch('/api/voice/update-agent-name', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ business_name: newName, agent_name: newAgent })
-        })
-      } catch(e) { /* no crítico */ }
-    }
+    // Actualizar el first_message de ElevenLabs con el nuevo nombre
+    try {
+      await fetch('/api/voice/update-agent-name', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ business_name: newName, agent_name: newAgent })
+      })
+    } catch(e) { /* no crítico */ }
 
     setSaving(false); setSaved(true)
     reloadTenant() // ← actualiza sidebar y header inmediatamente
