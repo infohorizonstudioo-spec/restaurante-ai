@@ -111,20 +111,21 @@ function detectFlags(transcript: string, partySize: number, rules: BusinessRules
 function calcConfidence(analysis: CallAnalysisInput, partySize: number, flags: SpecialFlag[]): number {
   let score = 1.0
 
-  // Datos básicos presentes
-  if (!analysis.customer_name)    score -= 0.15
-  if (!analysis.transcript || analysis.transcript.trim().length < 40) score -= 0.25
+  // Sin nombre del cliente reduce confianza levemente
+  if (!analysis.customer_name) score -= 0.10
+
+  // Sin transcripción reduce confianza
+  if (!analysis.transcript || analysis.transcript.trim().length < 20) score -= 0.20
 
   // Flags que reducen confianza
-  if (flags.includes('confused_customer'))   score -= 0.25
-  if (flags.includes('low_confidence'))      score -= 0.20
-  if (flags.includes('out_of_policy'))       score -= 0.15
+  if (flags.includes('confused_customer'))  score -= 0.25
+  if (flags.includes('out_of_policy'))      score -= 0.10
 
-  // Intención ambigua o desconocida
-  if (['otro', 'unknown'].includes(analysis.intent)) score -= 0.20
+  // Intención desconocida
+  if (['otro', 'unknown', ''].includes(analysis.intent)) score -= 0.20
 
-  // Grupo muy grande
-  if (partySize > 10) score -= 0.10
+  // Grupo muy grande (>12) — reduce ligeramente
+  if (partySize > 12) score -= 0.05
 
   return Math.max(0, Math.min(1, Math.round(score * 100) / 100))
 }
@@ -329,7 +330,7 @@ export const DEFAULT_RULES: BusinessRules = {
   special_requests_require_review: true,
   allow_auto_cancellations:        true,
   offer_alternative_times:         true,
-  min_confidence_to_confirm:       0.72,
+  min_confidence_to_confirm:       0.55,   // Bajado de 0.72 — era demasiado conservador
   patterns: {
     large_group:       'pending_review',
     birthday_requests: 'pending_review',

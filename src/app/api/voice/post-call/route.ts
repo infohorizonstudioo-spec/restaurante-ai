@@ -461,6 +461,44 @@ export async function POST(req: Request) {
       } catch(e: any) { /* columnas pueden no existir aún — no crítico */ }
     })()
 
+    // ── Auto-crear reserva si la llamada confirmó una ──────────────────────
+    ;(async () => {
+      if (decision.status !== 'confirmed' || decision.intent !== 'reserva') return
+      try {
+        // Extraer fecha del transcript o usar mañana como fallback
+        const today = new Date()
+        const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1)
+        const dateMatch = transcript.match(/(\d{4}-\d{2}-\d{2})|(\d{1,2})[\/\-](\d{1,2})/i)
+        const timeMatch = transcript.match(/\b(\d{1,2}):(\d{2})\b/)
+        const peopleMatch = transcript.match(/(\d+)\s*(?:persona|comensal|adulto)/i)
+
+        // Solo crear si el agente YA no creó la reserva via tool (source='voice_agent')
+        const { count } = await admin.from('reservations')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', tenantId)
+          .eq('customer_name', decision.customer_name || '')
+          .eq('source', 'voice_agent')
+          .gte('created_at', new Date(Date.now() - 10 * 60 * 1000).toISOString())
+        if ((count || 0) > 0) return // Ya existe creada por el agente en tiempo real
+
+        const resDate = tomorrow.toISOString().slice(0,10)
+        const resTime = timeMatch ? `${timeMatch[1].padStart(2,'0')}:${timeMatch[2]}` : '20:00'
+        const people  = peopleMatch ? parseInt(peopleMatch[1]) : (decision.details?.party_size || 2)
+
+        const { error: resErr } = await admin.rpc('create_reservation_atomic', {
+          p_tenant_id:     tenantId,
+          p_date:          resDate,
+          p_time:          resTime,
+          p_party_size:    people,
+          p_customer_name: decision.customer_name || callerPhone || 'Cliente',
+          p_customer_phone: callerPhone || '',
+          p_notes:         `Reserva tomada por llamada. ${decision.summary || ''}`,
+        })
+        if (resErr) console.error('auto-reservation error:', resErr.message)
+        else console.log('auto-reservation created | name:', decision.customer_name, '| date:', resDate, '| time:', resTime, '| people:', people)
+      } catch(e: any) { console.error('auto-reservation exception:', e.message) }
+    })()
+
     // ── Notificación en el panel ─────────────────────────────────────────────
     ;(async () => {
       try {
@@ -471,31 +509,34 @@ export async function POST(req: Request) {
           await createNotification({
             tenant_id: tenantId,
             type:      'call_attention',
-            title:     '⚠ Llamada requiere tu atención',
+            title:     '⚠ Llamada requiere atención',
             body:      `${name} — ${decision.summary || 'Revisa esta llamada'}`,
             call_sid:  key,
+            priority:  'warning',
           })
         } else if (decision.status === 'pending_review') {
           await createNotification({
             tenant_id: tenantId,
-            type:      'call_pending',
-            title:     `Llamada pendiente de revisar`,
-            body:      `${name} — ${decision.reasoning_label || decision.summary}`,
+            type:      'pending_review',
+            title:     `Pendiente de revisar — ${name}`,
+            body:      decision.reasoning_label || decision.summary,
             call_sid:  key,
+            priority:  'warning',
           })
         } else if (decision.status === 'confirmed' && decision.intent === 'reserva') {
           await createNotification({
             tenant_id: tenantId,
             type:      'reservation_created',
-            title:     `Nueva reserva confirmada`,
-            body:      decision.summary || `${name}`,
+            title:     `Nueva reserva — ${name}`,
+            body:      decision.summary,
             call_sid:  key,
+            priority:  'info',
           })
         } else if (duration < 10 && callerPhone) {
           await createNotification({
             tenant_id: tenantId,
             type:      'call_missed',
-            title:     `Llamada muy corta`,
+            title:     `Llamada perdida — ${phone}`,
             body:      `${phone} — ${duration}s. Puede que necesite rellamar.`,
             call_sid:  key,
           })

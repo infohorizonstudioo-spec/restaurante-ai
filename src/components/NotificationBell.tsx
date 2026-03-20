@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from './NotificationToast'
+import { useRouter } from 'next/navigation'
 
 const C = {
   amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)', amberBorder:'rgba(240,168,78,0.25)',
@@ -55,6 +56,7 @@ export default function NotificationBell({ tenantId }: { tenantId: string }) {
   const [filter, setFilter]   = useState<'all'|'unread'|'critical'>('all')
   const panelRef              = useRef<HTMLDivElement>(null)
   const { push: pushToast }   = useToast()
+  const router                = useRouter()
 
   const unread   = notifs.filter(n => !n.read).length
   const critical = notifs.filter(n => n.priority === 'critical' && !n.read).length
@@ -203,7 +205,11 @@ export default function NotificationBell({ tenantId }: { tenantId: string }) {
               const cfg = TYPE_CFG[n.type] || TYPE_CFG.default
               const pb  = PRIORITY_BORDER[n.priority || 'info']
               return (
-                <div key={n.id} onClick={() => markRead(n.id)} style={{
+                <div key={n.id} onClick={() => {
+                  markRead(n.id)
+                  const url = n.target_url
+                  if (url) { setOpen(false); router.push(url) }
+                }} style={{
                   display:'flex', gap:10, padding:'12px 16px',
                   borderBottom: i < filtered.length-1 ? `1px solid ${C.border}` : 'none',
                   background: !n.read ? (n.priority==='critical'?'rgba(248,113,113,0.04)':n.priority==='warning'?'rgba(251,181,63,0.03)':'rgba(240,168,78,0.02)') : 'transparent',

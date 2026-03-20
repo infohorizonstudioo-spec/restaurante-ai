@@ -282,10 +282,25 @@ export default function PanelPage() {
       .on('postgres_changes',{ event:'INSERT', schema:'public', table:'calls', filter:`tenant_id=eq.${tid}` }, payload => {
         const c = payload.new as any
         pushEvent({ type:'call_incoming', icon:'📞', color:C.teal, title:'Nueva llamada entrante', sub:c.caller_phone||'Número oculto', priority:'high' })
+        // Añadir a llamadas activas inmediatamente si está activa
+        if (c.status === 'activa') {
+          setActiveCalls(prev => [c, ...prev.filter(x => x.id !== c.id)])
+        }
         load()
       })
       .on('postgres_changes',{ event:'UPDATE', schema:'public', table:'calls', filter:`tenant_id=eq.${tid}` }, payload => {
         const c = payload.new as any
+        // Actualizar llamadas activas en RT
+        if (c.status === 'activa') {
+          setActiveCalls(prev => {
+            const exists = prev.find(x => x.id === c.id)
+            if (exists) return prev.map(x => x.id === c.id ? c : x)
+            return [c, ...prev]
+          })
+        } else {
+          // Ya no está activa — quitarla
+          setActiveCalls(prev => prev.filter(x => x.id !== c.id))
+        }
         if (c.status==='completada'||c.status==='completed') {
           pushEvent({ type:'call_ended', icon:'✅', color:C.green, title:`Llamada finalizada${c.customer_name?' — '+c.customer_name:''}`, sub:c.summary?.slice(0,80)||'Resumen generado' })
         }
