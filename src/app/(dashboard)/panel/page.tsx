@@ -250,6 +250,8 @@ export default function PanelPage() {
   const [demoMode,setDemoMode] = useState(false)
   const demoTimer              = useRef<ReturnType<typeof setInterval>|null>(null)
   const demoIdx                = useRef(0)
+  const rtChannelRef           = useRef<any>(null)
+  const loadedRef              = useRef(false)
 
   const pushEvent = useCallback((evt: Omit<LiveEvent,'id'|'ts'>) => {
     const id = Math.random().toString(36).slice(2)
@@ -257,6 +259,8 @@ export default function PanelPage() {
   }, [])
 
   const load = useCallback(async () => {
+    if (loadedRef.current) return
+    loadedRef.current = true
     const { data:{ user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
     const { data:p } = await supabase.from('profiles').select('tenant_id,role').eq('id',user.id).maybeSingle()
@@ -277,14 +281,20 @@ export default function PanelPage() {
 
   useEffect(() => { load() }, [load])
 
-  // Real-time: solo re-suscribe cuando cambia el tenant ID, no el objeto completo
+  // Real-time: una sola suscripción por tenant, nunca duplicada
   const tenantId = tenant?.id
+  const tenantType = tenant?.type
   useEffect(() => {
     if (!tenantId) return
-    const ch = supabase.channel('panel-rt-v4-' + tenantId)
+    // Limpiar canal anterior si existe
+    if (rtChannelRef.current) {
+      supabase.removeChannel(rtChannelRef.current)
+      rtChannelRef.current = null
+    }
+    const ch = supabase.channel('panel-rt-v5-' + tenantId)
       .on('postgres_changes',{ event:'INSERT', schema:'public', table:'calls', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const c = payload.new as any
-        const cfg = getEventConfig(tenant?.type||'otro')
+        const cfg = getEventConfig(tenantType||'otro')
         const schType = cfg.intentMap[c.intent||'otro'] || 'inquiry'
         const sch = cfg.schemas.find(s=>s.type===schType)
         pushEvent({ type:'call_incoming' as any, icon:'📞', color:C.teal, title:`${cfg.activeCallLabel} — ${c.caller_phone||'Número oculto'}`, sub: sch ? `${sch.icon} ${sch.label} detectada` : '', priority:'high' })
@@ -302,7 +312,7 @@ export default function PanelPage() {
           setActiveCalls(prev => prev.filter(x => x.id !== c.id))
         }
         if (c.status==='completada'||c.status==='completed') {
-          const cfg = getEventConfig(tenant?.type||'otro')
+          const cfg = getEventConfig(tenantType||'otro')
           const schType = cfg.intentMap[c.intent||'otro'] || 'inquiry'
           const sch = cfg.schemas.find(s=>s.type===schType)
           pushEvent({ type:'call_ended' as any, icon:sch?.icon||'✅', color:sch?.color||C.green,
@@ -313,7 +323,7 @@ export default function PanelPage() {
       })
       .on('postgres_changes',{ event:'INSERT', schema:'public', table:'reservations', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const r = payload.new as any
-        const cfg = getEventConfig(tenant?.type||'otro')
+        const cfg = getEventConfig(tenantType||'otro')
         const sch = cfg.schemas.find(s=>s.type==='appointment'||s.type==='reservation'||s.type==='visit')
         pushEvent({ type:'reservation' as any, icon:sch?.icon||'📅', color:sch?.color||C.teal,
           title:`${sch?.label||'Nueva cita'} — ${r.customer_name||r.patient_name||r.owner_name||'Cliente'}`,
@@ -357,8 +367,14 @@ export default function PanelPage() {
         if (status === 'SUBSCRIBED') console.log('panel RT subscribed for tenant', tenantId.slice(0,8))
         if (status === 'CHANNEL_ERROR') console.error('panel RT channel error')
       })
-    return () => { supabase.removeChannel(ch) }
-  }, [tenantId, pushEvent])
+    rtChannelRef.current = ch
+    return () => {
+      if (rtChannelRef.current) {
+        supabase.removeChannel(rtChannelRef.current)
+        rtChannelRef.current = null
+      }
+    }
+  }, [tenantId, tenantType]) // pushEvent es estable (useCallback con deps vacíos)
 
   // Demo mode loop
   const toggleDemo = useCallback(() => {
