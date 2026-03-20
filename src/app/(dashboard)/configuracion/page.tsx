@@ -205,6 +205,8 @@ export default function ConfiguracionPage() {
 
   const toggleSection = (id:string) => setOpen(o=>o===id?null:id)
 
+  const agentName = basicForm.agent_name || 'tu recepcionista'
+
   if(loading) return <PageLoader/>
 
   return (
@@ -249,7 +251,7 @@ export default function ConfiguracionPage() {
             </div>
             <div>
               <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>NOMBRE DEL AGENTE</label>
-              <input className="rz-inp" value={basicForm.agent_name} onChange={e=>setBasic(f=>({...f,agent_name:e.target.value}))} placeholder="Sofía"/>
+              <input className="rz-inp" value={basicForm.agent_name} onChange={e=>setBasic(f=>({...f,agent_name:e.target.value}))} placeholder={agentName}/>
             </div>
             <div style={{gridColumn:'1/-1'}}>
               <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>NÚMERO DE TELÉFONO DEL AGENTE</label>
@@ -259,15 +261,15 @@ export default function ConfiguracionPage() {
         </div>
 
 
-        <SectionCard id="automation" icon="⚡" title="¿Cuándo confirma sola?" sub="Reservas que Sofía puede gestionar sin consultarte" active={openSection==='automation'} onClick={()=>toggleSection('automation')}>
-          <Toggle label="Confirmar reservas simples sola" sub="Sofía confirma cuando la reserva está dentro de los límites que tú marcas" value={cfg.automation.auto_simple_reservations} onChange={v=>upCfg('automation','auto_simple_reservations',v)}/>
-          <Toggle label="Gestionar cancelaciones sola" sub="Si un cliente cancela, Sofía lo anota sin necesidad de avisarte" value={cfg.automation.auto_cancellations} onChange={v=>upCfg('automation','auto_cancellations',v)}/>
-          <Toggle label="Responder preguntas sola" sub="Horario, precios, servicios — Sofía responde directamente sin molestarte" value={cfg.automation.auto_info_queries} onChange={v=>upCfg('automation','auto_info_queries',v)}/>
-          <Slider label="¿Hasta cuántas personas puede confirmar sola?" sub="Si el grupo es más grande que esto, Sofía te avisa para que decidas tú" value={cfg.automation.max_auto_party} min={1} max={20} unit=" personas" onChange={v=>upCfg('automation','max_auto_party',v)}/>
+        <SectionCard id="automation" icon="⚡" title="¿Cuándo confirma sola?" sub={`Reservas que ${agentName} puede gestionar sin consultarte`} active={openSection==='automation'} onClick={()=>toggleSection('automation')}>
+          <Toggle label="Confirmar reservas simples sola" sub={`${agentName} confirma cuando la reserva está dentro de los límites que tú marcas`} value={cfg.automation.auto_simple_reservations} onChange={v=>upCfg('automation','auto_simple_reservations',v)}/>
+          <Toggle label="Gestionar cancelaciones sola" sub={`Si un cliente cancela, ${agentName} lo anota sin necesidad de avisarte`} value={cfg.automation.auto_cancellations} onChange={v=>upCfg('automation','auto_cancellations',v)}/>
+          <Toggle label="Responder preguntas sola" sub={`Horario, precios, servicios — ${agentName} responde directamente sin molestarte`} value={cfg.automation.auto_info_queries} onChange={v=>upCfg('automation','auto_info_queries',v)}/>
+          <Slider label="¿Hasta cuántas personas puede confirmar sola?" sub={`Si el grupo es más grande que esto, ${agentName} te avisa para que decidas tú`} value={cfg.automation.max_auto_party} min={1} max={20} unit=" personas" onChange={v=>upCfg('automation','max_auto_party',v)}/>
           <div style={{background:C.amberDim,border:`1px solid ${C.amber}33`,borderRadius:10,padding:'10px 14px'}}>
             <p style={{fontSize:12,color:C.amber,fontWeight:600}}>Resumen de tu configuración</p>
             <p style={{fontSize:12,color:C.sub,marginTop:3}}>
-              Grupos de hasta <strong style={{color:C.text}}>{cfg.automation.max_auto_party} personas</strong> → Sofía confirma sola.{' '}
+              Grupos de hasta <strong style={{color:C.text}}>{cfg.automation.max_auto_party} personas</strong> → {agentName} confirma sola.{' '}
               Más de {cfg.automation.max_auto_party} → te avisa a ti.
             </p>
           </div>
@@ -281,31 +283,31 @@ export default function ConfiguracionPage() {
           <Toggle label="Clientes que llaman por primera vez" sub="Primera llamada de ese número — te avisa para que lo atiendas tú" value={cfg.review.first_time_customers} onChange={v=>upCfg('review','first_time_customers',v)} color={C.amber}/>
         </SectionCard>
 
-        <SectionCard id="rejection" icon="🚫" title="¿Cuándo tiene que decir que no?" sub="Sofía rechazará educadamente en estas situaciones" active={openSection==='rejection'} onClick={()=>toggleSection('rejection')}>
-          <Toggle label="Cuando estáis cerrados" sub="Si llaman fuera de horario, Sofía les informa y les pide que llamen cuando estéis abiertos" value={cfg.rejection.out_of_hours} onChange={v=>upCfg('rejection','out_of_hours',v)} color={C.red}/>
-          <Toggle label="Cuando no hay sitio" sub="Si no queda disponibilidad, Sofía lo dice claramente y ofrece alternativas" value={cfg.rejection.no_availability} onChange={v=>upCfg('rejection','no_availability',v)} color={C.red}/>
-          <Toggle label="Si piden algo que no ofrecéis" sub="Sofía responde que ese servicio no está disponible en vuestro negocio" value={cfg.rejection.unknown_service} onChange={v=>upCfg('rejection','unknown_service',v)} color={C.red}/>
+        <SectionCard id="rejection" icon="🚫" title="¿Cuándo tiene que decir que no?" sub={`${agentName} rechazará educadamente en estas situaciones`} active={openSection==='rejection'} onClick={()=>toggleSection('rejection')}>
+          <Toggle label="Cuando estáis cerrados" sub={`Si llaman fuera de horario, ${agentName} les informa y les pide que llamen cuando estéis abiertos`} value={cfg.rejection.out_of_hours} onChange={v=>upCfg('rejection','out_of_hours',v)} color={C.red}/>
+          <Toggle label="Cuando no hay sitio" sub={`Si no queda disponibilidad, ${agentName} lo dice claramente y ofrece alternativas`} value={cfg.rejection.no_availability} onChange={v=>upCfg('rejection','no_availability',v)} color={C.red}/>
+          <Toggle label="Si piden algo que no ofrecéis" sub={`${agentName} responde que ese servicio no está disponible en vuestro negocio`} value={cfg.rejection.unknown_service} onChange={v=>upCfg('rejection','unknown_service',v)} color={C.red}/>
         </SectionCard>
 
-        <SectionCard id="alternatives" icon="↩️" title="¿Qué ofrece cuando no puede?" sub="Si no hay sitio en el horario pedido, Sofía hará esto" active={openSection==='alternatives'} onClick={()=>toggleSection('alternatives')}>
-          <Toggle label="Proponer otro horario disponible" sub="Sofía busca la siguiente hora libre y se la ofrece al cliente" value={cfg.alternatives.offer_other_time} onChange={v=>upCfg('alternatives','offer_other_time',v)}/>
+        <SectionCard id="alternatives" icon="↩️" title="¿Qué ofrece cuando no puede?" sub={`Si no hay sitio en el horario pedido, ${agentName} hará esto`} active={openSection==='alternatives'} onClick={()=>toggleSection('alternatives')}>
+          <Toggle label="Proponer otro horario disponible" sub={`${agentName} busca la siguiente hora libre y se la ofrece al cliente`} value={cfg.alternatives.offer_other_time} onChange={v=>upCfg('alternatives','offer_other_time',v)}/>
           <Toggle label="Dejar la solicitud anotada" sub="Si el cliente prefiere esperar, queda guardada para que tú la gestiones" value={cfg.alternatives.leave_pending} onChange={v=>upCfg('alternatives','leave_pending',v)}/>
-          <Toggle label="Apuntar en lista de espera" sub="Sofía ofrece avisar al cliente si se libera un hueco" value={cfg.alternatives.suggest_waitlist} onChange={v=>upCfg('alternatives','suggest_waitlist',v)}/>
-          <Slider label="¿Cuántas opciones le ofrece como mucho?" sub="Sofía no propone más alternativas que este número para no agobiar al cliente" value={cfg.alternatives.max_alternatives} min={1} max={5} unit="" onChange={v=>upCfg('alternatives','max_alternatives',v)}/>
+          <Toggle label="Apuntar en lista de espera" sub={`${agentName} ofrece avisar al cliente si se libera un hueco`} value={cfg.alternatives.suggest_waitlist} onChange={v=>upCfg('alternatives','suggest_waitlist',v)}/>
+          <Slider label="¿Cuántas opciones le ofrece como mucho?" sub={`${agentName} no propone más alternativas que este número para no agobiar al cliente`} value={cfg.alternatives.max_alternatives} min={1} max={5} unit="" onChange={v=>upCfg('alternatives','max_alternatives',v)}/>
         </SectionCard>
 
 
-        <SectionCard id="knowledge" icon="🧠" title="¿Qué sabe de tu negocio?" sub="Cuéntale a Sofía todo lo que necesita para responder bien" active={openSection==='knowledge'} onClick={()=>toggleSection('knowledge')}>
-          <KArea label="Tus servicios y precios" sub="Escribe qué ofreces y cuánto cuesta. Sofía lo usará cuando los clientes pregunten." placeholder={"Corte de pelo: 15€\nTinte completo: 45€\nManicura: 20€\n..."} value={cfg.knowledge.services} onChange={v=>upCfg('knowledge','services',v)}/>
+        <SectionCard id="knowledge" icon="🧠" title="¿Qué sabe de tu negocio?" sub={`Cuéntale a ${agentName} todo lo que necesita para responder bien`} active={openSection==='knowledge'} onClick={()=>toggleSection('knowledge')}>
+          <KArea label="Tus servicios y precios" sub={`Escribe qué ofreces y cuánto cuesta. ${agentName} lo usará cuando los clientes pregunten.`} placeholder={"Corte de pelo: 15€\nTinte completo: 45€\nManicura: 20€\n..."} value={cfg.knowledge.services} onChange={v=>upCfg('knowledge','services',v)}/>
           <KArea label="Condiciones y normas" sub="Política de cancelaciones, reserva mínima, señal, etc." placeholder={"Cancelación con 24h de antelación sin coste\nGrupos de más de 8 requieren señal\n..."} value={cfg.knowledge.conditions} onChange={v=>upCfg('knowledge','conditions',v)}/>
           <KArea label="Preguntas que te hacen siempre" sub="Escribe las preguntas más frecuentes y sus respuestas" placeholder={"¿Tenéis terraza? Sí, con capacidad para 20 personas\n¿Hay parking? Sí, en la calle lateral gratuito\n..."} value={cfg.knowledge.faqs} onChange={v=>upCfg('knowledge','faqs',v)}/>
           <div style={{background:C.tealDim,border:`1px solid ${C.teal}33`,borderRadius:10,padding:'10px 14px'}}>
             <p style={{fontSize:12,color:C.teal,fontWeight:600}}>💡 Por qué es importante</p>
-            <p style={{fontSize:12,color:C.sub,marginTop:3,lineHeight:1.5}}>Cuanto más le cuentes a Sofía, mejor responderá. Piensa en ella como una empleada nueva: necesita conocer tu negocio para atender bien.</p>
+            <p style={{fontSize:12,color:C.sub,marginTop:3,lineHeight:1.5}}>Cuanto más le cuentes a {agentName}, mejor responderá. Piensa en {agentName} como una empleada nueva: necesita conocer tu negocio para atender bien.</p>
           </div>
         </SectionCard>
 
-        <SectionCard id="flow" icon="💬" title="¿En qué orden pregunta?" sub="El orden en que Sofía pide los datos al cliente cuando gestiona una solicitud" active={openSection==='flow'} onClick={()=>toggleSection('flow')}>
+        <SectionCard id="flow" icon="💬" title="¿En qué orden pregunta?" sub={`El orden en que ${agentName} pide los datos al cliente cuando gestiona una solicitud`} active={openSection==='flow'} onClick={()=>toggleSection('flow')}>
           <div>
             <p style={{fontSize:12,color:C.sub,marginBottom:12,lineHeight:1.5}}>El agente seguirá este orden al gestionar una solicitud. Arrastra para reordenar. Pulsa para activar/desactivar.</p>
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:14}}>
@@ -331,7 +333,7 @@ export default function ConfiguracionPage() {
           </div>
         </SectionCard>
 
-        <SectionCard id="special" icon="⚠️" title="Situaciones especiales" sub="Dile a Sofía exactamente qué hacer en estos casos" active={openSection==='special'} onClick={()=>toggleSection('special')}>
+        <SectionCard id="special" icon="⚠️" title="Situaciones especiales" sub={`Dile a ${agentName} exactamente qué hacer en estos casos`} active={openSection==='special'} onClick={()=>toggleSection('special')}>
           {([['allergies','El cliente menciona alergias','Alergias, intolerancias, restricciones alimentarias'],['birthdays','Es para una celebración','Cumpleaños, aniversarios, eventos especiales'],['events','Es un grupo o evento','Cenas de empresa, fiestas, grupos numerosos'],['vip','Es un cliente muy fiel','Clientes que llaman con mucha frecuencia']] as [keyof typeof DEFAULT.special_cases, string, string][]).map(([key,label,sub])=>(
             <div key={key} style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:16}}>
               <div style={{flex:1}}>
@@ -344,9 +346,9 @@ export default function ConfiguracionPage() {
           <div style={{background:C.card2,border:`1px solid ${C.border}`,borderRadius:10,padding:'12px 14px'}}>
             <p style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:8}}>¿Qué significa cada opción?</p>
             <div style={{display:'flex',flexDirection:'column',gap:4}}>
-              <span style={{fontSize:11,color:C.green}}>● Confirmar sola — Sofía lo gestiona sin avisarte</span>
-              <span style={{fontSize:11,color:C.amber}}>● Revisar — Sofía te avisa para que decidas tú</span>
-              <span style={{fontSize:11,color:C.red}}>● No aceptar — Sofía lo rechaza educadamente</span>
+              <span style={{fontSize:11,color:C.green}}>● Confirmar sola — {agentName} lo gestiona sin avisarte</span>
+              <span style={{fontSize:11,color:C.amber}}>● Revisar — {agentName} te avisa para que decidas tú</span>
+              <span style={{fontSize:11,color:C.red}}>● No aceptar — {agentName} lo rechaza educadamente</span>
             </div>
           </div>
         </SectionCard>

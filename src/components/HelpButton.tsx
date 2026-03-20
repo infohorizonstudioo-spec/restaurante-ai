@@ -11,15 +11,15 @@ const C = {
 const SECTIONS = [
   {
     icon:'🤖', title:'¿Qué es Sofía?',
-    content:`Sofía es tu recepcionista virtual. Responde el teléfono por ti las 24 horas, sin descansos, sin días libres.
+    content:`Tu recepcionista virtual atiende el teléfono por ti las 24 horas, sin descansos, sin días libres.
 
-Cuando un cliente llama, Sofía:
+Cuando un cliente llama:
 • Le saluda y entiende qué quiere
 • Si quiere reservar, apunta los datos y confirma
 • Si quiere pedir algo, toma el pedido
 • Si tiene una pregunta, la responde con la información de tu negocio
 
-Tú no tienes que estar pendiente del teléfono. Sofía lo hace por ti.`
+Tú no tienes que estar pendiente del teléfono. Ella lo hace por ti.`
   },
   {
     icon:'📞', title:'¿Qué pasa cuando entra una llamada?',
