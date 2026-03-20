@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       p_order_type: order_type,
       p_customer_name: customer_name || null,
       p_customer_phone: customer_phone || null,
-      p_items: JSON.stringify(items),
+      p_items: items as any,          // Supabase serializa array → jsonb automáticamente
       p_notes: notes || null, p_pickup_time: pickup_time || null,
       p_status: status, p_total_estimate: totalEstimate,
     })

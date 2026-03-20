@@ -97,7 +97,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ available: true, message: `Disponible el ${date} a las ${time} para ${ps} personas.`, tables_available: free.length })
 
   } catch(e: any) {
-    console.error('availability error:', e.message)
-    return NextResponse.json({ available: false, message: 'Error al verificar disponibilidad.' }, { status: 500 })
+    console.error('availability error:', e.message, e.stack?.slice(0,200))
+    return NextResponse.json({ available: false, message: 'Error al verificar disponibilidad.', debug: e.message }, { status: 500 })
   }
 }
