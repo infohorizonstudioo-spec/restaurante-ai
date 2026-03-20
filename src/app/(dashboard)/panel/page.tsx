@@ -245,7 +245,8 @@ export default function PanelPage() {
   const [reservas,setReservas] = useState<any[]>([])
   const [clientes,setClientes] = useState<any[]>([])
   const [activeCalls,setActiveCalls] = useState<any[]>([])
-  const [activeOrders,setActiveOrders] = useState<any[]>([])
+  const [activeOrders,setActiveOrders]           = useState<any[]>([])
+  const [activeConsultations,setActiveConsultations] = useState<any[]>([])
   const [events,setEvents]     = useState<LiveEvent[]>([])
   const [demoMode,setDemoMode] = useState(false)
   const demoTimer              = useRef<ReturnType<typeof setInterval>|null>(null)
@@ -267,15 +268,17 @@ export default function PanelPage() {
     if (!p?.tenant_id) { if(p?.role==='superadmin') router.push('/admin'); else router.push('/onboarding'); return }
     const tid = p.tenant_id
     const today = new Date().toISOString().split('T')[0]
-    const [{ data:t },{ data:c },{ data:r },{ data:cl },{ data:ac },{ data:ao }] = await Promise.all([
+    const [{ data:t },{ data:c },{ data:r },{ data:cl },{ data:ac },{ data:ao },{ data:ac2 }] = await Promise.all([
       supabase.from('tenants').select('*').eq('id',tid).maybeSingle(),
       supabase.from('calls').select('*').eq('tenant_id',tid).order('started_at',{ascending:false}).limit(8),
       supabase.from('reservations').select('*').eq('tenant_id',tid).eq('date',today).order('time'),
       supabase.from('customers').select('id').eq('tenant_id',tid),
       supabase.from('calls').select('id,call_sid,caller_phone,session_state,started_at').eq('tenant_id',tid).eq('status','activa').order('started_at',{ascending:false}).limit(8),
       supabase.from('order_events').select('*').eq('tenant_id',tid).eq('status','collecting').order('created_at',{ascending:false}).limit(5),
+      supabase.from('consultation_events').select('*').eq('tenant_id',tid).eq('status','collecting').order('created_at',{ascending:false}).limit(5),
     ])
-    setTenant(t); setCalls(c||[]); setReservas(r||[]); setClientes(cl||[]); setActiveCalls(ac||[]); setActiveOrders(ao||[])
+    setTenant(t); setCalls(c||[]); setReservas(r||[]); setClientes(cl||[]); setActiveCalls(ac||[])
+    setActiveOrders(ao||[]); setActiveConsultations(ac2||[])
     setLoading(false)
   }, [router])
 
@@ -361,6 +364,36 @@ export default function PanelPage() {
             pushEvent({ type:'order' as any, icon:'✅', color:C.green,
               title:`Pedido confirmado — ${o.customer_name||'Cliente'}`,
               sub:itemList, priority:'high' })
+          }
+        }
+      })
+      // Consultas clínica en tiempo real
+      .on('postgres_changes',{ event:'INSERT', schema:'public', table:'consultation_events', filter:`tenant_id=eq.${tenantId}` }, payload => {
+        const ce = payload.new as any
+        setActiveConsultations(prev => [ce, ...prev.filter(x => x.id !== ce.id)].slice(0,5))
+        const urgIcon = ce.is_urgency ? '🚨' : '⚕️'
+        const urgColor = ce.is_urgency ? C.red : C.teal
+        pushEvent({ type:'reservation' as any, icon:urgIcon, color:urgColor,
+          title:`${ce.is_urgency?'🚨 Urgencia':ce.consultation_type||'Consulta'} — ${ce.patient_name||ce.patient_phone||'Paciente'}`,
+          sub: ce.symptoms ? ce.symptoms.slice(0,60) : `${ce.consultation_type||'consulta'} · ${ce.duration_minutes||20}min`,
+          priority: ce.is_urgency ? 'high' : 'normal' })
+      })
+      .on('postgres_changes',{ event:'UPDATE', schema:'public', table:'consultation_events', filter:`tenant_id=eq.${tenantId}` }, payload => {
+        const ce = payload.new as any
+        if (ce.status === 'collecting') {
+          setActiveConsultations(prev => prev.map(x => x.id === ce.id ? ce : x))
+        } else {
+          setActiveConsultations(prev => prev.filter(x => x.id !== ce.id))
+          if (ce.status === 'confirmed') {
+            pushEvent({ type:'reservation' as any, icon:'✅', color:C.green,
+              title:`Cita confirmada — ${ce.patient_name||'Paciente'}`,
+              sub:`${ce.consultation_type||'consulta'} · ${ce.appointment_date||''} ${(ce.appointment_time||'').slice(0,5)}`.trim(),
+              priority:'high' })
+          } else if (ce.status === 'escalated') {
+            pushEvent({ type:'system' as any, icon:'🚨', color:C.red,
+              title:`🚨 URGENCIA — ${ce.patient_name||ce.patient_phone||'Paciente'}`,
+              sub: ce.symptoms?.slice(0,60) || 'Requiere atención inmediata',
+              priority:'high' })
           }
         }
       })
@@ -508,6 +541,51 @@ export default function PanelPage() {
                       </p>
                     </div>
                     {order.total_estimate && <span style={{ fontFamily:'var(--rz-mono)',fontSize:12,color:C.violet,flexShrink:0 }}>{order.total_estimate.toFixed(2)}€</span>}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Consultas en curso (solo clínicas) ── */}
+        {activeConsultations.length > 0 && (
+          <div style={{ background:`linear-gradient(135deg,${C.surface},${C.surface2})`,border:`1px solid ${C.teal}25`,borderRadius:16,padding:'18px 20px',position:'relative',overflow:'hidden' }}>
+            <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${C.teal}50,transparent)` }}/>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14 }}>
+              <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                <div style={{ width:8,height:8,borderRadius:'50%',background:C.teal,animation:'rz-pulse 1.5s ease-in-out infinite' }}/>
+                <span style={{ fontSize:14,fontWeight:700,color:C.text }}>⚕️ {activeConsultations.length} consulta{activeConsultations.length!==1?'s':''} en curso</span>
+              </div>
+              <Link href="/reservas" style={{ fontSize:11,color:C.teal,fontWeight:600,textDecoration:'none' }}>Ver citas →</Link>
+            </div>
+            <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
+              {activeConsultations.map(ce=>{
+                const isUrgent = ce.is_urgency
+                const borderCol = isUrgent ? C.red : C.teal
+                const bgIcon = isUrgent ? C.red : C.teal
+                return (
+                  <div key={ce.id} style={{ display:'flex',alignItems:'center',gap:12,padding:'11px 14px',background:C.surface2,borderRadius:11,border:`1px solid ${borderCol}20` }}>
+                    <div style={{ width:34,height:34,borderRadius:'50%',background:`${bgIcon}18`,border:`1.5px solid ${bgIcon}30`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:16 }}>
+                      {isUrgent ? '🚨' : '⚕️'}
+                    </div>
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:2 }}>
+                        <p style={{ fontSize:13,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+                          {ce.patient_name||ce.patient_phone||'Paciente'}
+                        </p>
+                        {isUrgent && <span style={{ fontSize:10,color:C.red,fontWeight:700,padding:'1px 6px',borderRadius:8,background:`${C.red}15`,flexShrink:0 }}>URGENTE</span>}
+                        {!isUrgent && ce.consultation_type && <span style={{ fontSize:10,color:C.teal,padding:'1px 6px',borderRadius:8,background:`${C.teal}15`,fontWeight:600,flexShrink:0 }}>{ce.consultation_type}</span>}
+                      </div>
+                      <p style={{ fontSize:11,color:C.text2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+                        {ce.symptoms ? ce.symptoms.slice(0,60) : `${ce.duration_minutes||20}min${ce.is_new_patient?' · Primera visita':''}`}
+                      </p>
+                    </div>
+                    <div style={{ flexShrink:0,textAlign:'right' as const }}>
+                      <span style={{ fontSize:10,color:isUrgent?C.red:C.text3,fontWeight:isUrgent?700:400 }}>
+                        {isUrgent?'⚠ Revisar':'En curso'}
+                      </span>
+                    </div>
                   </div>
                 )
               })}

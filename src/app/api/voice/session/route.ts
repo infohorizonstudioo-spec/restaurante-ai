@@ -29,12 +29,16 @@ const VALID_STATES = new Set([
   // Estados base
   'iniciando','escuchando','procesando','respondiendo',
   'esperando_datos','finalizando','completada','error',
-  // Estados específicos restaurante
+  // Estados restaurante
   'tomando_reserva','tomando_pedido','confirmando_reserva',
   'confirmando_pedido','verificando_disponibilidad',
   'buscando_alternativas','pendiente_revision',
-  // Estados genéricos servicio
-  'tomando_cita','confirmando_cita',
+  // Estados clínica
+  'tomando_cita','confirmando_cita','detectando_urgencia',
+  'recogiendo_sintomas','verificando_disponibilidad_cita',
+  'urgencia_detectada','derivando_urgencia',
+  // Estados genérico servicio
+  'tomando_datos','confirmando_datos',
 ])
 
 export async function POST(req: Request) {

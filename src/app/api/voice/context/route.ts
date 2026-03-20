@@ -191,6 +191,7 @@ export async function POST(req: Request) {
 
     // ── Herramientas del agente para hostelería ─────────────────────────────
     const isHosteleriaType = ['restaurante','bar','cafeteria'].includes(tenant.type as string)
+    const isClinicType     = ['clinica_dental','clinica_medica','veterinaria','fisioterapia','psicologia'].includes(tenant.type as string)
     const agentTools = isHosteleriaType ? {
       tools: [
         {
@@ -279,6 +280,44 @@ export async function POST(req: Request) {
     }
     if (isHosteleriaType && agentTools.tools) {
       contextPayload.client_tools = agentTools.tools
+    }
+
+    // ── Herramientas del agente para clínicas ───────────────────────────────
+    if (isClinicType) {
+      contextPayload.client_tools = [
+        {
+          name: 'update_consultation',
+          description: 'Actualiza datos de la consulta en tiempo real. Llama action=start al inicio, action=update al recoger síntomas, action=escalate si hay urgencia alta, action=confirm con fecha+hora+nombre confirmados.',
+          url: process.env.NEXT_PUBLIC_APP_URL + '/api/voice/consultation',
+          method: 'POST',
+          parameters: {
+            action:'start | update | confirm | cancel | escalate',
+            call_sid:'{{conversation_id}}',tenant_id:'{{tenant_id}}',
+            patient_name:'nombre del paciente',patient_phone:'{{caller_phone}}',
+            symptoms:'síntomas o motivo',notes:'notas adicionales',
+            consultation_type:'limpieza|revision|tratamiento|urgencia|primera_visita|seguimiento|consulta|otro',
+            appointment_date:'YYYY-MM-DD',appointment_time:'HH:MM',
+            is_new_patient:'true si primera vez',doctor_name:'doctor si lo pide',
+          }
+        },
+        {
+          name: 'check_availability',
+          description: 'Comprueba disponibilidad antes de confirmar. SIEMPRE llama esto antes de confirmar cita.',
+          url: process.env.NEXT_PUBLIC_APP_URL + '/api/voice/availability',
+          method: 'POST',
+          parameters: { tenant_id:'{{tenant_id}}', date:'YYYY-MM-DD', time:'HH:MM', party_size:'1' }
+        },
+        {
+          name: 'update_session',
+          description: 'Actualiza estado en el panel en tiempo real.',
+          url: process.env.NEXT_PUBLIC_APP_URL + '/api/voice/session',
+          method: 'POST',
+          parameters: {
+            call_sid:'{{conversation_id}}',tenant_id:'{{tenant_id}}',
+            session_state:'recogiendo_sintomas|tomando_cita|verificando_disponibilidad_cita|confirmando_cita|urgencia_detectada|derivando_urgencia',
+          }
+        },
+      ]
     }
     // Fire-and-forget con IIFE async — NO usar .catch() encadenado sobre
     // admin.rpc() (rompe Turbopack/Next.js 16 — ver regla crítica en docs)
