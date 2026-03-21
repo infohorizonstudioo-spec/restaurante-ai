@@ -5,6 +5,7 @@ import { makeDecision, DEFAULT_RULES } from '@/lib/agent-decision'
 import { getBusinessRules } from '@/lib/business-memory'
 import { getBusinessKnowledge, buildKnowledgeContext, queryKnowledge } from '@/lib/business-knowledge'
 import { createNotification } from '@/lib/notifications'
+import { learnFromCall, getTenantMemory, buildMemoryContext, getAdaptiveThresholds } from '@/lib/tenant-learning'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -371,12 +372,15 @@ export async function POST(req: Request) {
     const businessName  = tenantInfo?.name || 'El negocio'
     const templateType  = tenantInfo?.type?.includes('clinica') || ['asesoria','peluqueria','seguros','inmobiliaria','otro'].includes(tenantInfo?.type||'') ? 'servicios' : 'hosteleria'
 
-    // Cargar knowledge y rules en paralelo
-    const [businessKnowledge, businessRules] = await Promise.all([
+    // Cargar knowledge, rules y memoria del tenant en paralelo
+    const [businessKnowledge, businessRules, tenantMemory] = await Promise.all([
       getBusinessKnowledge(tenantId).catch(() => null),
       getBusinessRules(tenantId).catch(() => DEFAULT_RULES),
+      getTenantMemory(tenantId).catch(() => null),
     ])
     const knowledgeContext = businessKnowledge ? buildKnowledgeContext(businessKnowledge) : ''
+    const memoryContext    = tenantMemory ? buildMemoryContext(tenantMemory) : ''
+    const adaptiveThresholds = tenantMemory ? getAdaptiveThresholds(tenantMemory) : null
 
     const key = callSid || convId || ('call_' + Date.now() + '_' + Math.random().toString(36).slice(2,7))
 
@@ -394,7 +398,15 @@ export async function POST(req: Request) {
     const transcript = bodyTranscript || await getTranscript(key, tenantId)
 
     // ── Análisis con Claude ─────────────────────────────────────────────────
-    const analysis = await analyzeWithClaude(transcript, businessName, callerPhone, templateType, knowledgeContext)
+    // Análisis con Claude — incluye contexto de memoria del negocio específico
+    const fullContext = [knowledgeContext, memoryContext].filter(Boolean).join('\n\n')
+    const analysis = await analyzeWithClaude(transcript, businessName, callerPhone, templateType, fullContext)
+
+    // Aplicar umbrales adaptativos del negocio si están disponibles
+    const effectiveRules = adaptiveThresholds ? {
+      ...businessRules,
+      min_confidence_to_confirm: adaptiveThresholds.confidenceThreshold,
+    } : businessRules
 
     // ── Consultar knowledge para enriquecer el trace ────────────────────────
     let knowledgeSource = 'none'
@@ -412,7 +424,7 @@ export async function POST(req: Request) {
     // ── Motor de decisión inteligente ───────────────────────────────────────
     const decision = makeDecision(
       { ...analysis, transcript, caller_phone: callerPhone },
-      businessRules,
+      effectiveRules,
       knowledgeSource
     )
 
@@ -550,6 +562,23 @@ export async function POST(req: Request) {
           })
         }
       } catch(e: any) { console.error('notification error:', e.message) }
+    })()
+
+    // ── Aprendizaje por tenant — fire & forget, no crítico ─────────────────
+    ;(async () => {
+      try {
+        await learnFromCall(tenantId, {
+          intent:             decision.intent,
+          status:             decision.status,
+          confidence:         decision.confidence,
+          duration_seconds:   duration,
+          customer_name:      decision.customer_name,
+          is_urgency:         decision.special_flags.includes('out_of_policy') ? false
+                              : analysis.details?.is_urgency ?? false,
+          consultation_type:  analysis.details?.consultation_type,
+          started_at:         new Date().toISOString(),
+        })
+      } catch (e: any) { /* non-critical */ }
     })()
 
     const alreadyCounted = (sessionResult as any)?.already_counted === true

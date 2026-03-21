@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { detectVetUrgency, classifyVetConsultation, makeVetDecision } from '@/lib/vet-engine'
 import { createNotification } from '@/lib/notifications'
+import { getTenantMemory, getAdaptiveThresholds } from '@/lib/tenant-learning'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,6 +40,11 @@ export async function POST(req: Request) {
     const urgency = detectVetUrgency(fullText)
     const classification = classifyVetConsultation(fullText, urgency)
     const resolvedType = service_type || classification.type
+
+    // Usar umbrales adaptativos de la memoria del tenant
+    const memory = await getTenantMemory(tenant_id).catch(() => null)
+    const adaptive = memory ? getAdaptiveThresholds(memory) : null
+    const effectiveConfidence = adaptive ? Math.max(classification.confidence, adaptive.confidenceThreshold) : classification.confidence
 
     // Verificar disponibilidad
     let hasAvailability = true
