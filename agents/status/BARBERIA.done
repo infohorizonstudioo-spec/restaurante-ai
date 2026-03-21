@@ -1,0 +1,9 @@
+COMPLETADO
+
+Archivos creados:
+- src/app/(dashboard)/reservas/BarbeReservasView.tsx
+- src/app/(dashboard)/productos/BarbeProductosView.tsx
+
+Archivos modificados:
+- src/app/(dashboard)/reservas/page.tsx (routing barberia → BarbeReservasView)
+- src/app/(dashboard)/productos/page.tsx (routing barberia → BarbeProductosView)
