@@ -5,6 +5,7 @@ import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import PeluProductosView from './PeluProductosView'
+import BarbeProductosView from './BarbeProductosView'
 import NotifBell from '@/components/NotifBell'
 
 const C = {
@@ -28,7 +29,8 @@ const CATEGORIES = ['Entrantes','Carnes','Pescados','Postres','Bebidas','Menú d
 
 export default function ProductosPage() {
   const { tenant } = useTenant()
-  if (tenant?.type === 'peluqueria' || tenant?.type === 'barberia') return <PeluProductosView />
+  if (tenant?.type === 'barberia') return <BarbeProductosView />
+  if (tenant?.type === 'peluqueria') return <PeluProductosView />
 
   const [tid, setTid]         = useState<string|null>(null)
   const [items, setItems]     = useState<any[]>([])
