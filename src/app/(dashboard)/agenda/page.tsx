@@ -6,7 +6,7 @@ import NotifBell from '@/components/NotifBell'
 import Link from 'next/link'
 
 const HOURS = Array.from({length:15},(_,i)=>i+8)  // 08:00 → 22:00
-const DAY_LABELS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
+const _DAY_LABELS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']  // reserved
 const DAY_SHORT  = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM']
 const MONTH_ES   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
@@ -30,11 +30,11 @@ function getWeekDays(base: Date): Date[] {
 }
 
 function fmtTime(t:string){ return (t||'').slice(0,5) }
-function fmtDate(d:Date){ return `${d.getDate()} ${MONTH_ES[d.getMonth()]} ${d.getFullYear()}` }
+function _fmtDate(d:Date){ return `${d.getDate()} ${MONTH_ES[d.getMonth()]} ${d.getFullYear()}` }  // reserved
 
 
 // ── Tooltip flotante ──────────────────────────────────────────────────────
-function ResTooltip({r, anchorRef}: {r:any, anchorRef: React.RefObject<HTMLDivElement>}) {
+function ResTooltip({r}: {r:any, anchorRef?: React.RefObject<HTMLDivElement>}) {
   const cfg = STATUS_CFG[r.status] || STATUS_CFG.confirmada
   const ppl = r.people || r.party_size || 1
   return (
@@ -103,9 +103,8 @@ export default function AgendaPage() {
   const [base,setBase]   = useState(new Date())
   const [res,setRes]     = useState<any[]>([])
   const [loading,setLoad]= useState(true)
-  const [tid,setTid]     = useState<string|null>(null)
+  const [,setTid]        = useState<string|null>(null)
   const [tooltip,setTooltip] = useState<{r:any,x:number,y:number}|null>(null)
-  const anchorRef = useRef<HTMLDivElement>(null)
 
   const load = useCallback(async(tenantId:string)=>{
     const week = getWeekDays(base)
@@ -263,7 +262,7 @@ export default function AgendaPage() {
 
       {/* ── Tooltip flotante ─────────────────────────────────────────────── */}
       {tooltip&&<div style={{position:'fixed',left:Math.min(tooltip.x,window.innerWidth-250),top:Math.max(8,Math.min(tooltip.y,window.innerHeight-200)),zIndex:9999,pointerEvents:'none'}}>
-        <ResTooltip r={tooltip.r} anchorRef={anchorRef}/>
+        <ResTooltip r={tooltip.r}/>
       </div>}
     </div>
   )

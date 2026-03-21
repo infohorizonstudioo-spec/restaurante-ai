@@ -95,7 +95,7 @@ export default function ReservasPage() {
   const today = new Date().toISOString().slice(0,10)
 
   async function updateStatus(id:string, status:string) {
-    await supabase.from('reservations').update({status}).eq('id',id)
+    await supabase.from('reservations').update({status}).eq('id',id).eq('tenant_id',tid)
     if (tid) load(tid)
     setModal(null)
   }

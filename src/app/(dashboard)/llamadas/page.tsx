@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
-import NotificationBell from '@/components/NotificationBell'
 
 // ── Traducciones humanas de estados ──────────────────────────────────────
 const DECISION_CFG: Record<string,{label:string;color:string;bg:string;icon:string}> = {
@@ -112,7 +111,7 @@ export default function LlamadasPage() {
       const sess = await getSessionTenant(); if(!sess) return
       setTid(sess.tenantId)
     })()
-  },[]) // eslint-disable-line
+  },[])
 
   useEffect(() => {
     if (!tid) return
@@ -135,7 +134,7 @@ export default function LlamadasPage() {
   })
   const groups = groupByDate(filtered)
   const today = new Date().toISOString().slice(0,10)
-  const toggle = (id:string) => setOpen(prev => { const n=new Set(prev); n.has(id)?n.delete(id):n.add(id); return n })
+  const toggle = (id:string) => setOpen(prev => { const n=new Set(prev); if(n.has(id)) n.delete(id); else n.add(id); return n })
 
   const sendFeedback = async (callSid: string, correctedStatus: string) => {
     setFeedbackLoading(true)

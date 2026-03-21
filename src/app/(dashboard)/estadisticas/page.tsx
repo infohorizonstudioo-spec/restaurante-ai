@@ -2,7 +2,6 @@
 import NotifBell from '@/components/NotifBell'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import Link from 'next/link'
 
@@ -10,7 +9,7 @@ export default function EstadisticasPage(){
   const [plan,setPlan]   = useState<string>('free')
   const [loading,setLoad]= useState(true)
   const [data,setData]   = useState<any>(null)
-  const [tid,setTid]     = useState<string|null>(null)
+  const [,setTid]        = useState<string|null>(null)
 
   useEffect(()=>{
     (async()=>{
@@ -23,9 +22,6 @@ export default function EstadisticasPage(){
       if (!isPro) { setLoad(false); return }
 
       const today = new Date().toISOString().slice(0,10)
-      const monthStart = today.slice(0,7)+'-01'
-      const prevMonthEnd = new Date(new Date(monthStart).getTime()-86400000).toISOString().slice(0,10)
-      const prevMonthStart = prevMonthEnd.slice(0,7)+'-01'
 
       const [callsR, resR, custR] = await Promise.all([
         // Limitar a últimos 90 días para evitar queries lentas en tenants con historial largo

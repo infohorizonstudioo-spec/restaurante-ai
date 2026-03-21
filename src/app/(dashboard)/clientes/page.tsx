@@ -2,15 +2,8 @@
 import NotifBell from '@/components/NotifBell'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
-import VetClientesView from './VetClientesView'
-import FisioClientesView from './FisioClientesView'
-import InmoClientesView from './InmoClientesView'
-import AcademiaAlumnosView from './AcademiaAlumnosView'
-import AsesorClientesView from './AsesorClientesView'
-import PsicoClientesView from './PsicoClientesView'
 
 const C = {
   amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
@@ -23,27 +16,18 @@ const C = {
 }
 
 export default function ClientesPage() {
-  const { tenant, template } = useTenant()
-  if (tenant?.type === 'veterinaria') return <VetClientesView />
-  if (tenant?.type === 'fisioterapia') return <FisioClientesView />
-  if (tenant?.type === 'inmobiliaria') return <InmoClientesView />
-  if (tenant?.type === 'academia') return <AcademiaAlumnosView />
-  if (tenant?.type === 'asesoria' || tenant?.type === 'seguros') return <AsesorClientesView />
-  if (tenant?.type === 'psicologia') return <PsicoClientesView />
-
   const [clientes,setClientes] = useState<any[]>([])
   const [loading,setLoading]   = useState(true)
   const [search,setSearch]     = useState('')
   const [selected,setSelected] = useState<any|null>(null)
   const [historial,setHistorial] = useState<any[]>([])
   const [loadingH,setLoadingH] = useState(false)
-  const [tid,setTid]           = useState<string|null>(null)
+  const [,setTid]              = useState<string|null>(null)
+  const { template } = useTenant()
 
   // Etiquetas dinámicas: "Clientes" para hostelería, "Pacientes" para clínicas, etc.
   const L = template?.labels
-  const clienteLabel  = L?.cliente  || 'Cliente'
   const clientesLabel = L?.clientes || 'Clientes'
-  const reservaLabel  = L?.reserva  || 'Reserva'
 
   const load = useCallback(async (tenantId:string) => {
     const {data} = await supabase.from('customers').select('*')
