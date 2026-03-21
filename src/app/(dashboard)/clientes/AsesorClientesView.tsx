@@ -2,33 +2,39 @@
 import NotifBell from '@/components/NotifBell'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
-import VetClientesView from './VetClientesView'
-import FisioClientesView from './FisioClientesView'
-import InmoClientesView from './InmoClientesView'
-import AcademiaAlumnosView from './AcademiaAlumnosView'
-import AsesorClientesView from './AsesorClientesView'
 
 const C = {
   amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
   green:'#34D399',greenDim:'rgba(52,211,153,0.10)',
   violet:'#A78BFA',violetDim:'rgba(167,139,250,0.12)',
   yellow:'#FBB53F',yellowDim:'rgba(251,181,63,0.10)',
+  blue:'#60A5FA',blueDim:'rgba(96,165,250,0.10)',
   text:'#E8EEF6',text2:'#8895A7',text3:'#49566A',
   bg:'#0C1018',surface:'#131920',surface2:'#1A2230',surface3:'#202C3E',
   border:'rgba(255,255,255,0.07)',borderMd:'rgba(255,255,255,0.11)',
 }
 
-export default function ClientesPage() {
-  const { tenant, template } = useTenant()
-  if (tenant?.type === 'veterinaria') return <VetClientesView />
-  if (tenant?.type === 'fisioterapia') return <FisioClientesView />
-  if (tenant?.type === 'inmobiliaria') return <InmoClientesView />
-  if (tenant?.type === 'academia') return <AcademiaAlumnosView />
-  if (tenant?.type === 'asesoria' || tenant?.type === 'seguros') return <AsesorClientesView />
+function parseClientType(c: any): {label:string; icon:string} {
+  const notes = (c.notes||'').toLowerCase()
+  if (notes.includes('empresa') || notes.includes('s.l.') || notes.includes('s.a.') || notes.includes('autónomo') || notes.includes('autonomo'))
+    return {label:'Empresa', icon:'🏢'}
+  return {label:'Particular', icon:'👤'}
+}
 
+function parseEspecialidad(notes?: string): string {
+  if (!notes) return ''
+  const lower = notes.toLowerCase()
+  if (lower.includes('laboral')) return 'Laboral'
+  if (lower.includes('fiscal')) return 'Fiscal'
+  if (lower.includes('juríd') || lower.includes('juridic') || lower.includes('legal')) return 'Jurídica'
+  if (lower.includes('contab')) return 'Contable'
+  if (lower.includes('seguro') || lower.includes('póliza') || lower.includes('poliza') || lower.includes('siniestro')) return 'Seguros'
+  return ''
+}
+
+export default function AsesorClientesView() {
   const [clientes,setClientes] = useState<any[]>([])
   const [loading,setLoading]   = useState(true)
   const [search,setSearch]     = useState('')
@@ -36,12 +42,9 @@ export default function ClientesPage() {
   const [historial,setHistorial] = useState<any[]>([])
   const [loadingH,setLoadingH] = useState(false)
   const [tid,setTid]           = useState<string|null>(null)
-
-  // Etiquetas dinámicas: "Clientes" para hostelería, "Pacientes" para clínicas, etc.
+  const { template } = useTenant()
   const L = template?.labels
-  const clienteLabel  = L?.cliente  || 'Cliente'
   const clientesLabel = L?.clientes || 'Clientes'
-  const reservaLabel  = L?.reserva  || 'Reserva'
 
   const load = useCallback(async (tenantId:string) => {
     const {data} = await supabase.from('customers').select('*')
@@ -59,6 +62,14 @@ export default function ClientesPage() {
       setTid(p.tenant_id); await load(p.tenant_id)
     })()
   },[load])
+
+  useEffect(()=>{
+    if (!tid) return
+    const ch = supabase.channel('asesor-cli-rt')
+      .on('postgres_changes',{event:'*',schema:'public',table:'customers',filter:'tenant_id=eq.'+tid},()=>load(tid))
+      .subscribe()
+    return ()=>{ supabase.removeChannel(ch) }
+  },[tid,load])
 
   async function openClient(c:any) {
     setSelected(c); setLoadingH(true); setHistorial([])
@@ -80,19 +91,19 @@ export default function ClientesPage() {
   if (loading) return <PageLoader/>
 
   const filtered = search
-    ? clientes.filter(c => (c.name||'').toLowerCase().includes(search.toLowerCase()) || (c.phone||'').includes(search) || (c.email||'').includes(search))
+    ? clientes.filter(c => (c.name||'').toLowerCase().includes(search.toLowerCase()) || (c.phone||'').includes(search) || (c.email||'').includes(search) || (c.notes||'').toLowerCase().includes(search.toLowerCase()))
     : clientes
 
   return (
     <div style={{background:C.bg,minHeight:'100vh',display:'flex',flexDirection:'column'}}>
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,position:'sticky',top:0,zIndex:20}}>
         <div>
-          <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{clientesLabel}</h1>
+          <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>💼 {clientesLabel}</h1>
           <p style={{fontSize:11,color:C.text3,marginTop:2}}>{clientes.length} registrados</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={'Buscar '+clientesLabel.toLowerCase()+'…'}
-          style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:220,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={'Buscar '+clientesLabel.toLowerCase()+'…'}
+            style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:220,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
           <NotifBell/>
         </div>
       </div>
@@ -106,55 +117,65 @@ export default function ClientesPage() {
               <p style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>Sin clientes</p>
               <p style={{fontSize:13,color:C.text3}}>{clientesLabel} que contacten al agente aparecerán aquí.</p>
             </div>
-          ) : filtered.map(c => (
-            <div key={c.id} onClick={()=>openClient(c)} style={{padding:'12px 16px',cursor:'pointer',borderBottom:`1px solid ${C.border}`,
-              background:selected?.id===c.id?C.surface2:'transparent',transition:'background 0.1s'}}
-              onMouseEnter={e=>{if(selected?.id!==c.id)(e.currentTarget as HTMLElement).style.background=C.surface2}}
-              onMouseLeave={e=>{if(selected?.id!==c.id)(e.currentTarget as HTMLElement).style.background='transparent'}}>
-              <div style={{display:'flex',alignItems:'center',gap:10}}>
-                <div style={{width:36,height:36,borderRadius:'50%',background:c.vip?C.yellowDim:C.amberDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:c.vip?C.yellow:C.amber,flexShrink:0}}>
-                  {c.name?.[0]?.toUpperCase()||'?'}
-                </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{display:'flex',alignItems:'center',gap:6}}>
-                    <p style={{fontSize:13,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name}</p>
-                    {c.vip&&<span style={{fontSize:9,fontWeight:700,color:C.yellow,background:C.yellowDim,padding:'1px 5px',borderRadius:4}}>VIP</span>}
+          ) : filtered.map(c => {
+            const ct = parseClientType(c)
+            const esp = parseEspecialidad(c.notes)
+            return (
+              <div key={c.id} onClick={()=>openClient(c)} style={{padding:'12px 16px',cursor:'pointer',borderBottom:`1px solid ${C.border}`,
+                background:selected?.id===c.id?C.surface2:'transparent',transition:'background 0.1s'}}
+                onMouseEnter={e=>{if(selected?.id!==c.id)(e.currentTarget as HTMLElement).style.background=C.surface2}}
+                onMouseLeave={e=>{if(selected?.id!==c.id)(e.currentTarget as HTMLElement).style.background='transparent'}}>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <div style={{width:36,height:36,borderRadius:'50%',background:C.blueDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:C.blue,flexShrink:0}}>
+                    {c.name?.[0]?.toUpperCase()||'?'}
                   </div>
-                  <p style={{fontSize:11,color:C.text3,marginTop:1}}>{c.phone||c.email||'Sin contacto'}</p>
-                </div>
-                <div style={{textAlign:'right',flexShrink:0}}>
-                  <p style={{fontFamily:'var(--rz-mono)',fontSize:11,fontWeight:600,color:C.text2}}>{c.total_reservations||c.total_visits||0}</p>
-                  {c.last_visit&&<p style={{fontSize:10,color:C.text3,marginTop:1}}>{new Date(c.last_visit).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</p>}
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <p style={{fontSize:13,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name}</p>
+                      <span style={{fontSize:9,fontWeight:600,color:C.text3,background:'rgba(255,255,255,0.06)',padding:'1px 5px',borderRadius:4}}>{ct.icon} {ct.label}</span>
+                    </div>
+                    <p style={{fontSize:11,color:C.text3,marginTop:1}}>
+                      {c.phone||c.email||'Sin contacto'}
+                      {esp?' · '+esp:''}
+                    </p>
+                  </div>
+                  <div style={{textAlign:'right',flexShrink:0}}>
+                    <p style={{fontFamily:'var(--rz-mono)',fontSize:11,fontWeight:600,color:C.text2}}>{c.total_reservations||c.total_visits||0}</p>
+                    {c.last_visit&&<p style={{fontSize:10,color:C.text3,marginTop:1}}>{new Date(c.last_visit).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</p>}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Detalle */}
         <div style={{flex:1,overflowY:'auto',padding:24,background:C.bg}}>
           {!selected ? (
             <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',color:C.text3}}>
-              <div style={{width:64,height:64,borderRadius:'50%',background:C.amberDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,marginBottom:14}}>👤</div>
+              <div style={{width:64,height:64,borderRadius:'50%',background:C.blueDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,marginBottom:14}}>👤</div>
               <p style={{fontSize:14,color:C.text3}}>Selecciona un cliente para ver su historial</p>
             </div>
           ) : (
             <>
               <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:20,marginBottom:16}}>
                 <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:16}}>
-                  <div style={{width:50,height:50,borderRadius:'50%',background:selected.vip?C.yellowDim:C.amberDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,fontWeight:700,color:selected.vip?C.yellow:C.amber}}>
+                  <div style={{width:50,height:50,borderRadius:'50%',background:C.blueDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,fontWeight:700,color:C.blue}}>
                     {selected.name?.[0]?.toUpperCase()||'?'}
                   </div>
                   <div>
-                    <p style={{fontSize:17,fontWeight:700,color:C.text}}>{selected.name}</p>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <p style={{fontSize:17,fontWeight:700,color:C.text}}>{selected.name}</p>
+                      {(()=>{const ct=parseClientType(selected);return <span style={{fontSize:10,fontWeight:600,color:C.text3,background:'rgba(255,255,255,0.06)',padding:'2px 7px',borderRadius:5}}>{ct.icon} {ct.label}</span>})()}
+                    </div>
                     <p style={{fontSize:13,color:C.text2,marginTop:1}}>{selected.phone}{selected.email?' · '+selected.email:''}</p>
                   </div>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
                   {[
-                    {label:'Visitas',value:selected.total_reservations||selected.total_visits||0},
+                    {label:'Citas',value:selected.total_reservations||selected.total_visits||0},
                     {label:'Última visita',value:selected.last_visit?new Date(selected.last_visit).toLocaleDateString('es-ES',{day:'numeric',month:'short'}):'—'},
-                    {label:'Total gastado',value:selected.total_spent?selected.total_spent+'€':'—'},
+                    {label:'Especialidad',value:parseEspecialidad(selected.notes)||'—'},
                   ].map(m=>(
                     <div key={m.label} style={{background:C.surface2,borderRadius:9,padding:'10px 14px'}}>
                       <p style={{fontSize:10,color:C.text3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:3}}>{m.label}</p>
@@ -177,9 +198,12 @@ export default function ClientesPage() {
                     {h._type==='reserva' ? (
                       <>
                         <p style={{fontSize:13,fontWeight:500,color:C.text}}>
-                          {(h.date||h.reservation_date)?.slice(0,10)} a las {(h.time||h.reservation_time||'').slice(0,5)} · {h.people||h.party_size} persona{(h.people||h.party_size)!==1?'s':''}
+                          {(h.date||h.reservation_date)?.slice(0,10)} a las {(h.time||h.reservation_time||'').slice(0,5)}
                         </p>
-                        <p style={{fontSize:11,color:C.text3,marginTop:1}}>{h.table_name||''} {h.status}</p>
+                        <p style={{fontSize:11,color:C.text3,marginTop:1}}>
+                          {h.service||''} {h.status}
+                          {h.table_name?' · Despacho: '+h.table_name:''}
+                        </p>
                       </>
                     ) : (
                       <>
