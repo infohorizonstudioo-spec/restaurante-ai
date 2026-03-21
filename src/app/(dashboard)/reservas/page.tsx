@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
+import EcomReservasView from './EcomReservasView'
 
 const C = {
   amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
@@ -41,6 +42,9 @@ function getWeek(base: Date) {
 }
 
 export default function ReservasPage() {
+  const { tenant, template } = useTenant()
+  if (tenant?.type === 'ecommerce') return <EcomReservasView />
+
   const [base,setBase]         = useState(new Date())
   const [selected,setSelected] = useState(new Date().toISOString().slice(0,10))
   const [reservas,setReservas] = useState<any[]>([])
@@ -48,7 +52,6 @@ export default function ReservasPage() {
   const [tid,setTid]           = useState<string|null>(null)
   const [modal,setModal]       = useState<any|null>(null)
   const [search,setSearch]     = useState('')
-  const { template } = useTenant()
   const L = template?.labels   // etiquetas dinámicas
 
   const load = useCallback(async (tenantId:string) => {

@@ -602,6 +602,74 @@ const GENERIC_CONFIG: BusinessEventConfig = {
 // ─────────────────────────────────────────────────────────
 // MAPA TIPO → CONFIGURACIÓN
 // ─────────────────────────────────────────────────────────
+const ECOMMERCE_CONFIG: BusinessEventConfig = {
+  businessType: 'ecommerce',
+  activeCallLabel: 'Cliente en línea',
+  intentMap: {
+    pedido:      'order',
+    consulta:    'inquiry',
+    devolucion:  'return',
+    cancelacion: 'cancellation',
+    otro:        'inquiry',
+  },
+  schemas: [
+    {
+      type: 'order', label: 'Pedido', labelPlural: 'Pedidos',
+      icon: '🛍️', color: COL.violet, priority: 'high',
+      fields: [
+        { key:'customer_name', label:'Cliente',   icon:'👤', important:true },
+        { key:'product',       label:'Producto',  icon:'📦', important:true },
+        { key:'quantity',      label:'Cantidad',  icon:'🔢', format:'number' },
+        { key:'address',       label:'Dirección', icon:'📍' },
+        { key:'phone',         label:'Teléfono',  icon:'📞', format:'phone' },
+      ],
+      actions: [
+        { id:'confirm', label:'Confirmar pedido', icon:'✓', color:COL.green,  style:'primary', href:'/pedidos' },
+        { id:'review',  label:'Revisar',          icon:'👁', color:COL.amber,  style:'secondary', href:'/pedidos' },
+      ],
+      callStates: {
+        escuchando:    { label:'Escuchando…',        color:COL.teal   },
+        tomando_pedido:{ label:'Tomando pedido',      color:COL.violet },
+        confirmando:   { label:'Confirmando pedido…', color:COL.green  },
+        finalizando:   { label:'Cerrando llamada…',   color:'#8895A7'  },
+      },
+    },
+    {
+      type: 'inquiry', label: 'Consulta', labelPlural: 'Consultas',
+      icon: '❓', color: COL.blue, priority: 'normal',
+      fields: [{ key:'question', label:'Consulta', icon:'💬', important:true }],
+      actions: [{ id:'view', label:'Ver llamada', icon:'📞', color:COL.blue, style:'secondary', href:'/llamadas' }],
+      callStates: { escuchando:{label:'Escuchando…',color:COL.teal}, respondiendo:{label:'Respondiendo…',color:COL.blue} },
+    },
+    {
+      type: 'return', label: 'Devolución', labelPlural: 'Devoluciones',
+      icon: '↩️', color: COL.yellow, priority: 'normal',
+      fields: [
+        { key:'customer_name', label:'Cliente',  icon:'👤', important:true },
+        { key:'product',       label:'Producto', icon:'📦', important:true },
+        { key:'reason',        label:'Motivo',   icon:'💬' },
+      ],
+      actions: [{ id:'process', label:'Gestionar', icon:'✓', color:COL.yellow, style:'primary', href:'/pedidos' }],
+      callStates: { escuchando:{label:'Escuchando…',color:COL.teal} },
+    },
+    {
+      type: 'cancellation', label: 'Cancelación', labelPlural: 'Cancelaciones',
+      icon: '❌', color: COL.red, priority: 'normal',
+      fields: [{ key:'customer_name', label:'Cliente', icon:'👤', important:true }],
+      actions: [{ id:'process', label:'Procesar', icon:'✓', color:COL.red, style:'primary' }],
+      callStates: { escuchando:{label:'Escuchando…',color:COL.teal} },
+    },
+  ],
+  demoEvents: [
+    { schemaType:'order',    priority:'high',   title:'Nuevo pedido — García', sub:'2x Camiseta M negra · envío a Madrid' },
+    { schemaType:'order',    priority:'high',   title:'Pedido confirmado — López', sub:'1x Zapatillas 42 · recogida en tienda' },
+    { schemaType:'inquiry',  priority:'normal',  title:'Consulta sobre stock respondida', sub:'Preguntó por tallas disponibles' },
+    { schemaType:'return',   priority:'normal',  title:'Devolución — Martínez', sub:'Talla incorrecta · gestionar cambio' },
+    { schemaType:'order',    priority:'high',   title:'Pedido — Sánchez', sub:'3x Funda móvil · envío urgente' },
+    { schemaType:'cancellation',priority:'normal',title:'Cancelación — Ruiz', sub:'Pedido de ayer · cambio de opinión' },
+  ],
+}
+
 const CONFIG_MAP: Record<string, BusinessEventConfig> = {
   restaurante:    RESTAURANTE_CONFIG,
   bar:            { ...RESTAURANTE_CONFIG, businessType:'bar' },
@@ -633,6 +701,7 @@ const CONFIG_MAP: Record<string, BusinessEventConfig> = {
   veterinaria:    VETERINARIA_CONFIG,
   asesoria:       ASESORIA_CONFIG,
   inmobiliaria:   INMOBILIARIA_CONFIG,
+  ecommerce:      ECOMMERCE_CONFIG,
   seguros:        { ...ASESORIA_CONFIG, businessType:'seguros',
     activeCallLabel:'Cliente en línea',
     demoEvents:[
