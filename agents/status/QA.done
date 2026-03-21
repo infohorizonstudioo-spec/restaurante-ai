@@ -1,0 +1,53 @@
+COMPLETADO
+
+## Reporte QA — 2026-03-21
+
+### Errores TypeScript encontrados y corregidos: 1
+- agenda/page.tsx: `anchorRef` reference after removal → fixed call site
+
+### Errores ESLint runtime-risk corregidos: 5
+1. admin/page.tsx: `loadTenants` accessed before declaration → moved function before useEffect
+2. configuracion/NotifSettings.tsx: setState in useEffect → replaced with useState initializer
+3. panel/page.tsx: `Date.now()` impure call during render → replaced with useState + setInterval
+4. mesas/page.tsx: unescaped `"` in JSX → escaped with `&quot;`
+5. llamadas/page.tsx: ternary as statement → replaced with if/else
+
+### Queries sin tenant_id encontradas y corregidas: 3
+1. reservas/page.tsx: `update({status}).eq('id',id)` → added `.eq('tenant_id',tid)`
+2. NotificationBell.tsx: `markRead` missing tenant_id → added `.eq('tenant_id', tenantId)`
+3. NotificationBell.tsx: `deleteNotif` missing tenant_id → added `.eq('tenant_id', tenantId)`
+
+### Subscriptions sin cleanup corregidas: 0
+- Todas las 5 subscriptions realtime ya tenían cleanup correcto (removeChannel)
+
+### Variables/imports no usadas eliminadas: 10
+1. agenda/page.tsx: `DAY_LABELS`, `fmtDate`, `anchorRef`, `tid` unused
+2. clientes/page.tsx: `getSessionTenant` import, `tid`, `clienteLabel`, `reservaLabel`
+3. estadisticas/page.tsx: `getSessionTenant` import, `tid`, `prevMonthStart`, `monthStart`
+4. llamadas/page.tsx: `NotificationBell` import, unused eslint-disable directive
+5. panel/page.tsx: `EVT_CFG` unused const, `hasReal` unused var, `tenant` param in AgentBar
+6. configuracion/page.tsx: `id` param in SectionCard, `e` in catch
+
+### Bugs de UX corregidos: 0
+- No se encontraron bugs críticos de UX (modales, dropdowns, loading states presentes)
+
+### Issues pendientes (no corregidos):
+- ~100 warnings de `@typescript-eslint/no-explicit-any` — son cosmetic, no rompen nada. Tipado estricto requeriría definir interfaces para cada entidad Supabase, se recomienda como tarea futura.
+- panel/page.tsx:285 `useEffect(() => { load() }, [load])` — eslint reporta setState-in-effect, pero es patrón estándar de data fetching con useCallback. No es un bug real.
+
+### Estado final del build
+- `npx tsc --noEmit` → 0 errores
+- `npm run build` → compilado exitosamente, 53 páginas generadas
+
+### Archivos modificados:
+- src/app/(dashboard)/admin/page.tsx
+- src/app/(dashboard)/agenda/page.tsx
+- src/app/(dashboard)/clientes/page.tsx
+- src/app/(dashboard)/configuracion/page.tsx
+- src/app/(dashboard)/configuracion/NotifSettings.tsx
+- src/app/(dashboard)/estadisticas/page.tsx
+- src/app/(dashboard)/llamadas/page.tsx
+- src/app/(dashboard)/mesas/page.tsx
+- src/app/(dashboard)/panel/page.tsx
+- src/app/(dashboard)/reservas/page.tsx
+- src/components/NotificationBell.tsx

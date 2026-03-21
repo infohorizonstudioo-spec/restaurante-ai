@@ -62,14 +62,15 @@ export default function AdminPage() {
   const [msg, setMsg]               = useState('')
   const [search, setSearch]         = useState('')
 
-  useEffect(() => { loadTenants() }, [])
-
   async function loadTenants() {
     const { data } = await supabase.from('tenants')
       .select('id,name,slug,type,plan,email,phone,active,created_at,agent_name,agent_phone,plan_calls_used,plan_calls_included,free_calls_used,free_calls_limit,call_count')
       .order('created_at', { ascending: false })
     setTenants(data || [])
   }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadTenants() }, [])
 
   async function createTenant() {
     if (!tenantForm.name || !tenantForm.slug) { setMsg('Nombre y slug obligatorios'); return }

@@ -59,7 +59,7 @@ interface AgentConfig {
 
 
 // ── Componentes UI ────────────────────────────────────────────────────────
-function SectionCard({id,icon,title,sub,children,active,onClick}:{id:string,icon:string,title:string,sub:string,children:React.ReactNode,active:boolean,onClick:()=>void}) {
+function SectionCard({icon,title,sub,children,active,onClick}:{id?:string,icon:string,title:string,sub:string,children:React.ReactNode,active:boolean,onClick:()=>void}) {
   return (
     <div style={{background:C.card,border:`1px solid ${active?C.amber+'44':C.border}`,borderRadius:14,overflow:'hidden',transition:'border-color 0.2s',boxShadow:active?`0 0 0 1px ${C.amber}22`:'none'}}>
       <button onClick={onClick} style={{width:'100%',padding:'16px 20px',background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'space-between',textAlign:'left'}}>
@@ -196,7 +196,7 @@ export default function ConfiguracionPage() {
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ business_name: newName, agent_name: newAgent })
       })
-    } catch(e) { /* no crítico */ }
+    } catch { /* no crítico */ }
 
     setSaving(false); setSaved(true)
     reloadTenant() // ← actualiza sidebar y header inmediatamente

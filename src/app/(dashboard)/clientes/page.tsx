@@ -2,7 +2,6 @@
 import NotifBell from '@/components/NotifBell'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 
@@ -23,14 +22,12 @@ export default function ClientesPage() {
   const [selected,setSelected] = useState<any|null>(null)
   const [historial,setHistorial] = useState<any[]>([])
   const [loadingH,setLoadingH] = useState(false)
-  const [tid,setTid]           = useState<string|null>(null)
+  const [,setTid]              = useState<string|null>(null)
   const { template } = useTenant()
 
   // Etiquetas dinámicas: "Clientes" para hostelería, "Pacientes" para clínicas, etc.
   const L = template?.labels
-  const clienteLabel  = L?.cliente  || 'Cliente'
   const clientesLabel = L?.clientes || 'Clientes'
-  const reservaLabel  = L?.reserva  || 'Reserva'
 
   const load = useCallback(async (tenantId:string) => {
     const {data} = await supabase.from('customers').select('*')

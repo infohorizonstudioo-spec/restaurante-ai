@@ -75,9 +75,9 @@ export default function NotificationBell({ tenantId }: { tenantId: string }) {
   }, [tenantId])
 
   const markRead = useCallback(async (id: string) => {
-    await supabase.from('notifications').update({ read: true }).eq('id', id)
+    await supabase.from('notifications').update({ read: true }).eq('id', id).eq('tenant_id', tenantId)
     setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
-  }, [])
+  }, [tenantId])
 
   const markAllRead = useCallback(async () => {
     if (!unread) return
@@ -87,9 +87,9 @@ export default function NotificationBell({ tenantId }: { tenantId: string }) {
   }, [tenantId, unread])
 
   const deleteNotif = useCallback(async (id: string) => {
-    await supabase.from('notifications').delete().eq('id', id)
+    await supabase.from('notifications').delete().eq('id', id).eq('tenant_id', tenantId)
     setNotifs(prev => prev.filter(n => n.id !== id))
-  }, [])
+  }, [tenantId])
 
   // Tiempo real + toast para cada nueva notificación
   useEffect(() => {

@@ -166,7 +166,7 @@ function ZoneRow({zone,color,tableCount,onRename,onDelete}:{
       </div>
       {confirmDel&&(
         <div style={{marginTop:10,padding:'10px 12px',background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
-          <p style={{fontSize:12,color:C.red}}>¿Eliminar "{zone.name}"? Las mesas quedarán sin zona.</p>
+          <p style={{fontSize:12,color:C.red}}>¿Eliminar &quot;{zone.name}&quot;? Las mesas quedarán sin zona.</p>
           <div style={{display:'flex',gap:6}}>
             <button onClick={()=>setConfirmDel(false)} style={{padding:'5px 12px',fontSize:11,background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>Cancelar</button>
             <button onClick={()=>{setConfirmDel(false);onDelete()}} style={{padding:'5px 12px',fontSize:11,background:C.red,border:'none',borderRadius:7,cursor:'pointer',color:'white',fontFamily:'inherit',fontWeight:700}}>Eliminar</button>

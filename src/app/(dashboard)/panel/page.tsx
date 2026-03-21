@@ -37,16 +37,6 @@ interface LiveEvent {
   demo?: boolean
 }
 
-const EVT_CFG: Record<string, {icon:string;color:string}> = {
-  call_incoming: { icon:'📞', color:C.teal   },
-  call_active:   { icon:'🔴', color:C.red    },
-  call_ended:    { icon:'✅', color:C.green  },
-  call_missed:   { icon:'📵', color:C.red    },
-  reservation:   { icon:'📅', color:C.teal   },
-  order:         { icon:'🛍️', color:C.violet },
-  pending:       { icon:'⏳', color:C.yellow },
-  system:        { icon:'⚡', color:C.amber  },
-}
 
 function timeAgo(d: Date) {
   const s = Math.floor((Date.now()-d.getTime())/1000)
@@ -75,7 +65,6 @@ function buildDemoEvents(evtConfig: BusinessEventConfig): Omit<LiveEvent,'id'|'t
 // ── Live Feed Component
 function LiveFeed({ events, demoMode, onToggleDemo, activeCallLabel }: { events:LiveEvent[], demoMode:boolean, onToggleDemo:()=>void, activeCallLabel:string }) {
   const display = events.slice(0, 12)
-  const hasReal = events.some(e => !e.demo)
 
   return (
     <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, overflow:'hidden' }}>
@@ -165,7 +154,9 @@ function ActiveCallBlock({ call, businessType }:{ call:any; businessType:string 
   const state = call.session_state || 'escuchando'
   const stateInfo = allStates[state] || { label:state, color:C.teal }
   const color = stateInfo.color
-  const elapsed = call.started_at ? Math.floor((Date.now()-new Date(call.started_at).getTime())/1000) : 0
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t) }, [])
+  const elapsed = call.started_at ? Math.floor((now-new Date(call.started_at).getTime())/1000) : 0
   const dur = elapsed>=60 ? `${Math.floor(elapsed/60)}m ${elapsed%60}s` : `${elapsed}s`
   return (
     <div style={{ display:'flex',alignItems:'center',gap:12,padding:'11px 14px',background:C.surface2,borderRadius:11,border:`1px solid ${color}25` }}>
@@ -220,7 +211,7 @@ function CallRow({ call, idx, businessType }:{ call:any; idx:number; businessTyp
 }
 
 // ── Agent status bar
-function AgentBar({ agentOn, agentName, tenant }:any) {
+function AgentBar({ agentOn, agentName }:{ agentOn:boolean; agentName:string }) {
   return (
     <div style={{ display:'flex',alignItems:'center',gap:8 }}>
       <div style={{ display:'flex',alignItems:'center',gap:6,padding:'6px 14px',
@@ -475,7 +466,7 @@ export default function PanelPage() {
           <p style={{ fontSize:11,color:C.text3,marginTop:2,textTransform:'capitalize' }}>{new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
         </div>
         <div style={{ display:'flex',alignItems:'center',gap:10 }}>
-          <AgentBar agentOn={agentOn} agentName={tenant.agent_name} tenant={tenant}/>
+          <AgentBar agentOn={agentOn} agentName={tenant.agent_name}/>
           <NotificationBell tenantId={tenant.id}/>
         </div>
       </div>

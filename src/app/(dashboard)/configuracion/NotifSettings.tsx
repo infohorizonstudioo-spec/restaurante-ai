@@ -33,15 +33,15 @@ const DEFAULT_PREFS = { calls:true, reservas:true, pedidos:true, incidencias:tru
 
 export default function NotifSettings() {
   const { status, requestPermission, sendTest } = usePushNotifications()
-  const [prefs, setPrefs] = useState(DEFAULT_PREFS)
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
+  const [prefs, setPrefs] = useState(() => {
+    if (typeof window === 'undefined') return DEFAULT_PREFS
     try {
       const stored = localStorage.getItem(PREF_KEY)
-      if (stored) setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(stored) })
+      if (stored) return { ...DEFAULT_PREFS, ...JSON.parse(stored) }
     } catch {}
-  }, [])
+    return DEFAULT_PREFS
+  })
+  const [saved, setSaved] = useState(false)
 
   function setPref(k: keyof typeof DEFAULT_PREFS, v: boolean) {
     const next = { ...prefs, [k]: v }
