@@ -1,0 +1,13 @@
+COMPLETADO
+
+Archivos creados:
+- src/app/(dashboard)/reservas/InmoReservasView.tsx — Vista de visitas para inmobiliarias
+- src/app/(dashboard)/clientes/InmoClientesView.tsx — Vista de leads/clientes para inmobiliarias
+
+Archivos modificados:
+- src/app/(dashboard)/reservas/page.tsx — Integración: if tenant.type === 'inmobiliaria' → InmoReservasView
+- src/app/(dashboard)/clientes/page.tsx — Integración: if tenant.type === 'inmobiliaria' → InmoClientesView
+
+Panel (/panel):
+- INMOBILIARIA_CONFIG ya existe en event-schemas.ts con schemas lead + visit
+- El panel ya soporta inmobiliaria vía el motor de eventos existente, no requiere cambios adicionales
