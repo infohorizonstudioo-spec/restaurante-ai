@@ -600,6 +600,74 @@ const GENERIC_CONFIG: BusinessEventConfig = {
 }
 
 // ─────────────────────────────────────────────────────────
+// ACADEMIA / CENTRO EDUCATIVO
+// ─────────────────────────────────────────────────────────
+const ACADEMIA_CONFIG: BusinessEventConfig = {
+  businessType: 'academia',
+  activeCallLabel: 'Alumno/tutor en línea',
+  intentMap: {
+    reserva:       'enrollment',
+    clase:         'enrollment',
+    inscripcion:   'enrollment',
+    consulta:      'inquiry',
+    cancelacion:   'cancellation',
+    otro:          'inquiry',
+  },
+  schemas: [
+    {
+      type: 'enrollment', label: 'Inscripción/Clase', labelPlural: 'Clases',
+      icon: '📚', color: COL.blue, priority: 'high',
+      fields: [
+        { key:'student_name', label:'Alumno',    icon:'👤', important:true },
+        { key:'subject',      label:'Materia',   icon:'📖', important:true },
+        { key:'level',        label:'Nivel',     icon:'📊', format:'badge' },
+        { key:'schedule',     label:'Horario',   icon:'🕐' },
+        { key:'teacher',      label:'Profesor',  icon:'👨‍🏫' },
+        { key:'parent_name',  label:'Tutor',     icon:'👪' },
+      ],
+      actions: [
+        { id:'confirm', label:'Confirmar inscripción', icon:'✓', color:COL.green, style:'primary', href:'/reservas' },
+        { id:'review',  label:'Revisar',               icon:'👁', color:COL.amber, style:'secondary', href:'/reservas' },
+      ],
+      callStates: {
+        escuchando:       { label:'Escuchando…',                 color:COL.teal },
+        tomando_datos:    { label:'Recogiendo datos de alumno',   color:COL.blue },
+        confirmando:      { label:'Confirmando inscripción…',     color:COL.green },
+        finalizando:      { label:'Cerrando llamada…',            color:'#8895A7' },
+      },
+    },
+    {
+      type: 'inquiry', label: 'Consulta', labelPlural: 'Consultas',
+      icon: '❓', color: COL.violet, priority: 'normal',
+      fields: [
+        { key:'topic',    label:'Tema',     icon:'💬', important:true },
+        { key:'interest', label:'Interés',  icon:'📚' },
+      ],
+      actions: [{ id:'view', label:'Ver llamada', icon:'📞', color:COL.blue, style:'secondary', href:'/llamadas' }],
+      callStates: { escuchando:{label:'Escuchando…',color:COL.teal}, respondiendo:{label:'Informando…',color:COL.violet} },
+    },
+    {
+      type: 'cancellation', label: 'Cancelación', labelPlural: 'Cancelaciones',
+      icon: '❌', color: COL.yellow, priority: 'normal',
+      fields: [
+        { key:'student_name', label:'Alumno', icon:'👤', important:true },
+        { key:'subject',      label:'Clase',  icon:'📖' },
+      ],
+      actions: [{ id:'process', label:'Procesar', icon:'✓', color:COL.yellow, style:'primary' }],
+      callStates: { escuchando:{label:'Escuchando…',color:COL.teal} },
+    },
+  ],
+  demoEvents: [
+    { schemaType:'enrollment', priority:'high',   title:'Inscripción — García, inglés B2', sub:'Nivel intermedio · martes/jueves 19:00' },
+    { schemaType:'inquiry',    priority:'normal',  title:'Consulta sobre cursos de verano', sub:'Preguntó por horarios y precios' },
+    { schemaType:'enrollment', priority:'high',   title:'Nueva alumna — Martínez, matemáticas', sub:'Selectividad · horario flexible' },
+    { schemaType:'cancellation',priority:'normal', title:'Cancelación — López', sub:'Clase de guitarra del miércoles' },
+    { schemaType:'enrollment', priority:'high',   title:'Inscripción — niño 8 años, robótica', sub:'Tutor: Sr. Sánchez · sábados 10:00' },
+    { schemaType:'inquiry',    priority:'normal',  title:'Consulta sobre autoescuela respondida', sub:'Precios y disponibilidad de prácticas' },
+  ],
+}
+
+// ─────────────────────────────────────────────────────────
 // MAPA TIPO → CONFIGURACIÓN
 // ─────────────────────────────────────────────────────────
 const CONFIG_MAP: Record<string, BusinessEventConfig> = {
@@ -633,6 +701,7 @@ const CONFIG_MAP: Record<string, BusinessEventConfig> = {
   veterinaria:    VETERINARIA_CONFIG,
   asesoria:       ASESORIA_CONFIG,
   inmobiliaria:   INMOBILIARIA_CONFIG,
+  academia:       ACADEMIA_CONFIG,
   seguros:        { ...ASESORIA_CONFIG, businessType:'seguros',
     activeCallLabel:'Cliente en línea',
     demoEvents:[

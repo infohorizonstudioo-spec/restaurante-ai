@@ -135,7 +135,8 @@ export type BusinessType =
   | 'restaurante' | 'bar' | 'cafeteria'
   | 'clinica_dental' | 'clinica_medica' | 'asesoria'
   | 'peluqueria' | 'barberia' | 'seguros' | 'inmobiliaria'
-  | 'veterinaria' | 'fisioterapia' | 'psicologia' | 'otro'
+  | 'veterinaria' | 'fisioterapia' | 'psicologia'
+  | 'academia' | 'otro'
 
 interface TypeOverride {
   template: MasterTemplate
@@ -206,6 +207,20 @@ const TYPE_MAP: Record<string, TypeOverride> = {
   inmobiliaria: { template: 'servicios',
     reservaLabel: 'Visita', reservasLabel: 'Visitas',
     agentContext: 'Eres la recepcionista de una inmobiliaria. Gestiona llamadas y visitas. Pregunta: si el cliente busca comprar, vender o alquilar, zona de interés y datos de contacto.' },
+
+  academia: {
+    template: 'servicios',
+    hasSpaces: true,
+    clienteLabel: 'Alumno',
+    clientesLabel: 'Alumnos',
+    reservaLabel: 'Clase',
+    reservasLabel: 'Clases',
+    unitLabels: {
+      singular: 'Aula', plural: 'Aulas', icon: '📚',
+      zoneLabel: 'Planta', zonesLabel: 'Plantas'
+    },
+    agentContext: 'Eres la recepcionista virtual de esta academia. Gestiona inscripciones y consultas sobre clases. Pregunta: nombre del alumno, curso o materia de interés, nivel (principiante/intermedio/avanzado), horario preferido. Si llama un padre/tutor, anota también el nombre del menor.',
+  },
 
   otro:         { template: 'servicios' },
 }
