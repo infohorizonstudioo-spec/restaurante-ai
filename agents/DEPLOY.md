@@ -10,6 +10,10 @@ Comprueba que existen estos archivos:
 - `agents/status/PSICOLOGIA.done`
 - `agents/status/INMOBILIARIA.done`
 - `agents/status/PELUQUERIA.done`
+- `agents/status/BARBERIA.done`
+- `agents/status/ASESORIA.done`
+- `agents/status/ECOMMERCE.done`
+- `agents/status/ACADEMIA.done`
 - `agents/status/SECURITY.done`
 - `agents/status/QA.done`
 
@@ -26,6 +30,10 @@ git merge feature/fisioterapia --no-ff -m "merge: fisioterapia"
 git merge feature/psicologia --no-ff -m "merge: psicologia"
 git merge feature/inmobiliaria --no-ff -m "merge: inmobiliaria"
 git merge feature/peluqueria --no-ff -m "merge: peluqueria"
+git merge feature/barberia --no-ff -m "merge: barberia"
+git merge feature/asesoria --no-ff -m "merge: asesoria"
+git merge feature/ecommerce --no-ff -m "merge: ecommerce"
+git merge feature/academia --no-ff -m "merge: academia"
 git merge feature/qa --no-ff -m "merge: qa"
 ```
 

@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase'
 import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
+import { useTenant } from '@/contexts/TenantContext'
+import PeluProductosView from './PeluProductosView'
 
 const C = {
   bg:'#0C1018', card:'#131920', card2:'#161D2A', border:'rgba(255,255,255,0.07)',
@@ -25,6 +27,9 @@ type AvailType = keyof typeof AVAIL_CFG
 const CATEGORIES = ['Entrantes','Carnes','Pescados','Postres','Bebidas','Menú del día','Especiales','Otro']
 
 export default function ProductosPage() {
+  const { tenant } = useTenant()
+  if (tenant?.type === 'peluqueria' || tenant?.type === 'barberia') return <PeluProductosView />
+
   const [tid, setTid]         = useState<string|null>(null)
   const [items, setItems]     = useState<any[]>([])
   const [counts, setCounts]   = useState<Record<string,number>>({})

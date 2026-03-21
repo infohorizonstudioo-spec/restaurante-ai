@@ -1,0 +1,22 @@
+COMPLETADO
+
+## Archivos creados
+- src/app/(dashboard)/reservas/VetReservasView.tsx — Vista especializada de citas veterinarias
+- src/app/(dashboard)/clientes/VetClientesView.tsx — Vista de dueños y mascotas
+
+## Archivos modificados
+- src/app/(dashboard)/reservas/page.tsx — import + early return para veterinaria
+- src/app/(dashboard)/clientes/page.tsx — import + early return para veterinaria
+
+## Resultado tsc
+0 errores en archivos veterinaria (errores existentes en FisioClientesView.tsx no relacionados)
+
+## Decisiones arquitectónicas
+- Filtro por especie (perro/gato/conejo/otro) con botones teal
+- Badge de urgencia detecta keywords en notes (urgente, emergencia, sangre, fractura, etc.)
+- Modal de detalle muestra info de mascota (nombre, especie, servicio) en card separada
+- Colores teal para identidad veterinaria (avatares, badges especie)
+- Campo pet_type mostrado como badge en la lista y en modal
+- Historial de visitas en clientes muestra pet_name por visita
+- Soporte para campo pets[] en customers (array de mascotas con name/species)
+- agentContext ya incluye: nombre dueño, nombre+especie mascota, motivo, fecha (NO se modificó templates.ts)
