@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getBusinessKnowledge, buildKnowledgeContext } from '@/lib/business-knowledge'
+import { requireAuth } from '@/lib/api-auth'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,8 +22,13 @@ Si algo no está en el conocimiento, di "No tengo esa información, mejor llama 
 
 export async function POST(req: Request) {
   try {
-    const { tenant_id, business_name, agent_name } = await req.json()
-    if (!tenant_id || !business_name) {
+    const auth = await requireAuth(req)
+    if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status || 401 })
+    if (!auth.tenantId) return NextResponse.json({ ok: false, error: 'Tenant no encontrado' }, { status: 403 })
+
+    const { business_name, agent_name } = await req.json()
+    const tenant_id = auth.tenantId  // usar siempre el del token
+    if (!business_name) {
       return NextResponse.json({ ok: false, error: 'missing params' }, { status: 400 })
     }
 

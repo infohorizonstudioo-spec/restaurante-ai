@@ -18,9 +18,40 @@ const admin = createClient(
 // deduplicación atómica (complete_call_session + process_billable_call).
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Verificación de firma Twilio para evitar webhooks falsos
+async function validateTwilioSignature(req: Request, body: FormData): Promise<boolean> {
+  const authToken = process.env.TWILIO_AUTH_TOKEN
+  if (!authToken) return true // si no hay token configurado, no bloquear
+
+  const signature = req.headers.get('x-twilio-signature') || ''
+  if (!signature) return false
+
+  const url = process.env.NEXT_PUBLIC_APP_URL + '/api/twilio/webhook'
+  const params: Record<string, string> = {}
+  body.forEach((v, k) => { params[k] = v.toString() })
+
+  // Construir string a firmar: url + params ordenados alfabéticamente
+  const sortedKeys = Object.keys(params).sort()
+  const strToSign = url + sortedKeys.map(k => k + params[k]).join('')
+
+  // HMAC-SHA1 con auth token
+  const encoder = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw', encoder.encode(authToken), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']
+  )
+  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(strToSign))
+  const expected = btoa(String.fromCharCode(...new Uint8Array(sig)))
+  return signature === expected
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.formData()
+
+    // Validar firma Twilio
+    const valid = await validateTwilioSignature(req, body)
+    if (!valid) return NextResponse.json({ error: 'Firma inválida' }, { status: 403 })
+
     const callSid    = body.get('CallSid')?.toString()    || ''
     const callStatus = body.get('CallStatus')?.toString() || ''
     const callerPhone= body.get('From')?.toString()       || ''

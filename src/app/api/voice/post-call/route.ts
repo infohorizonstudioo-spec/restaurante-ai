@@ -328,10 +328,10 @@ export async function POST(req: Request) {
       }
     }
 
-    console.log('post-call recv:', callSid.slice(0,20), '|', callStatus, '| dur:', duration+'s', '| caller:', callerPhone || 'oculto')
-    // Log estructura EL para depuración (solo primeras llamadas reales)
+    console.log('post-call recv:', callSid.slice(0,20), '|', callStatus, '| dur:', duration+'s')
+    // Log estructura EL para depuración
     if (body.data || body.type) {
-      console.log('EL webhook body keys:', Object.keys(body).join(','), '| data keys:', Object.keys(body.data||{}).join(','))
+      console.log('EL webhook body keys:', Object.keys(body).join(','))
     }
 
     // Siempre devolver 200 para que Twilio no reintente
