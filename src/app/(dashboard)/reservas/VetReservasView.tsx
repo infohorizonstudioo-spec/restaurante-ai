@@ -1,26 +1,24 @@
 'use client'
 import NotifBell from '@/components/NotifBell'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
-import VetReservasView from './VetReservasView'
-import FisioReservasView from './FisioReservasView'
-import InmoReservasView from './InmoReservasView'
-import PeluReservasView from './PeluReservasView'
 
 const C = {
   amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
-  teal:'#2DD4BF',green:'#34D399',greenDim:'rgba(52,211,153,0.10)',
+  teal:'#2DD4BF',tealDim:'rgba(45,212,191,0.10)',
+  green:'#34D399',greenDim:'rgba(52,211,153,0.10)',
   red:'#F87171',redDim:'rgba(248,113,113,0.10)',
   yellow:'#FBB53F',violet:'#A78BFA',violetDim:'rgba(167,139,250,0.12)',
+  blue:'#60A5FA',blueDim:'rgba(96,165,250,0.10)',
   text:'#E8EEF6',text2:'#8895A7',text3:'#49566A',
   bg:'#0C1018',surface:'#131920',surface2:'#1A2230',surface3:'#202C3E',
   border:'rgba(255,255,255,0.07)',borderMd:'rgba(255,255,255,0.11)',
 }
 
 const DAYS = ['DO','LU','MA','MI','JU','VI','SA']
+
 const STATUS_STYLES:Record<string,{bg:string;color:string;label:string}> = {
   confirmada: {bg:C.greenDim,  color:C.green,  label:'Confirmada'},
   confirmed:  {bg:C.greenDim,  color:C.green,  label:'Confirmada'},
@@ -32,11 +30,30 @@ const STATUS_STYLES:Record<string,{bg:string;color:string;label:string}> = {
   completed:  {bg:C.amberDim,  color:C.amber,  label:'Completada'},
 }
 
+const SPECIES_ICON: Record<string,string> = {
+  perro:'🐕', gato:'🐈', conejo:'🐇', ave:'🐦', pez:'🐠', reptil:'🦎',
+}
+
+const URGENCY_KEYWORDS = ['urgente','urgencia','emergencia','sangre','fractura','atropello','convulsión','envenenamiento','no respira','dificultad para respirar']
+
+function isUrgent(notes?: string): boolean {
+  if (!notes) return false
+  const lower = notes.toLowerCase()
+  return URGENCY_KEYWORDS.some(k => lower.includes(k))
+}
+
+function getSpeciesIcon(r: any): string {
+  const species = (r.pet_type || r.notes || '').toLowerCase()
+  for (const [k,v] of Object.entries(SPECIES_ICON)) {
+    if (species.includes(k)) return v
+  }
+  return '🐾'
+}
+
 function getWeek(base: Date) {
   const d = new Date(base)
-  // Semana empieza en LUNES (1), no domingo (0)
   const day = d.getDay()
-  const diff = day === 0 ? -6 : 1 - day // domingo → -6, resto → 1-day
+  const diff = day === 0 ? -6 : 1 - day
   d.setDate(d.getDate() + diff)
   return Array.from({ length: 7 }, (_, i) => {
     const dd = new Date(d); dd.setDate(d.getDate() + i)
@@ -44,21 +61,19 @@ function getWeek(base: Date) {
   })
 }
 
-export default function ReservasPage() {
-  const { tenant, template } = useTenant()
-  if (tenant?.type === 'veterinaria') return <VetReservasView />
-  if (tenant?.type === 'fisioterapia') return <FisioReservasView />
-  if (tenant?.type === 'inmobiliaria') return <InmoReservasView />
-  if (tenant?.type === 'peluqueria' || tenant?.type === 'barberia') return <PeluReservasView />
+type SpeciesFilter = 'todos' | 'perro' | 'gato' | 'conejo' | 'otro'
 
-  const [base,setBase]         = useState(new Date())
-  const [selected,setSelected] = useState(new Date().toISOString().slice(0,10))
-  const [reservas,setReservas] = useState<any[]>([])
-  const [loading,setLoading]   = useState(true)
-  const [tid,setTid]           = useState<string|null>(null)
-  const [modal,setModal]       = useState<any|null>(null)
-  const [search,setSearch]     = useState('')
-  const L = template?.labels   // etiquetas dinámicas
+export default function VetReservasView() {
+  const [base,setBase]           = useState(new Date())
+  const [selected,setSelected]   = useState(new Date().toISOString().slice(0,10))
+  const [reservas,setReservas]   = useState<any[]>([])
+  const [loading,setLoading]     = useState(true)
+  const [tid,setTid]             = useState<string|null>(null)
+  const [modal,setModal]         = useState<any|null>(null)
+  const [search,setSearch]       = useState('')
+  const [speciesFilter,setSpeciesFilter] = useState<SpeciesFilter>('todos')
+  const { template } = useTenant()
+  const L = template?.labels
 
   const load = useCallback(async (tenantId:string) => {
     const week = getWeek(base)
@@ -84,7 +99,7 @@ export default function ReservasPage() {
 
   useEffect(()=>{
     if (!tid) return
-    const ch = supabase.channel('res-rt')
+    const ch = supabase.channel('vet-res-rt')
       .on('postgres_changes',{event:'*',schema:'public',table:'reservations',filter:'tenant_id=eq.'+tid},()=>load(tid))
       .subscribe()
     return ()=>{ supabase.removeChannel(ch) }
@@ -94,10 +109,23 @@ export default function ReservasPage() {
 
   const week    = getWeek(base)
   const dayRes  = reservas.filter(r => (r.date||r.reservation_date)===selected)
-  const filtered = search ? dayRes.filter(r =>
+
+  // Filter by species
+  const speciesFiltered = speciesFilter === 'todos' ? dayRes : dayRes.filter(r => {
+    const info = ((r.pet_type||'')+(r.notes||'')).toLowerCase()
+    if (speciesFilter === 'otro') {
+      return !['perro','gato','conejo'].some(s => info.includes(s))
+    }
+    return info.includes(speciesFilter)
+  })
+
+  // Filter by search
+  const filtered = search ? speciesFiltered.filter(r =>
     (r.customer_name||'').toLowerCase().includes(search.toLowerCase()) ||
+    (r.pet_name||'').toLowerCase().includes(search.toLowerCase()) ||
     (r.customer_phone||'').includes(search)
-  ) : dayRes
+  ) : speciesFiltered
+
   const today = new Date().toISOString().slice(0,10)
 
   async function updateStatus(id:string, status:string) {
@@ -108,14 +136,15 @@ export default function ReservasPage() {
 
   return (
     <div style={{background:C.bg,minHeight:'100vh'}}>
+      {/* Header */}
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,position:'sticky',top:0,zIndex:20}}>
         <div>
-          <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{L?.pageTitle || 'Reservas'}</h1>
-          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} para el {new Date(selected+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
+          <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>🐾 {L?.pageTitle || 'Citas'}</h1>
+          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} citas para el {new Date(selected+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={L?.buscarPlaceholder||'Buscar…'}
-          style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:200,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={L?.buscarPlaceholder||'Buscar citas…'}
+            style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:200,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
           <NotifBell/>
         </div>
       </div>
@@ -138,42 +167,61 @@ export default function ReservasPage() {
         <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n})} style={{padding:'12px',background:'none',border:'none',cursor:'pointer',color:C.text3,fontSize:18}}>›</button>
       </div>
 
+      {/* Species filter */}
+      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'8px 24px',display:'flex',gap:6,overflowX:'auto'}}>
+        {([['todos','Todos','📋'],['perro','Perros','🐕'],['gato','Gatos','🐈'],['conejo','Conejos','🐇'],['otro','Otros','🐾']] as [SpeciesFilter,string,string][]).map(([key,label,icon])=>(
+          <button key={key} onClick={()=>setSpeciesFilter(key)}
+            style={{padding:'5px 12px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${speciesFilter===key?C.teal+'40':C.border}`,
+              background:speciesFilter===key?C.tealDim:'transparent',color:speciesFilter===key?C.teal:C.text2,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}}>
+            {icon} {label}
+          </button>
+        ))}
+      </div>
+
+      {/* List */}
       <div style={{maxWidth:760,margin:'0 auto',padding:'20px 24px'}}>
         {filtered.length===0 ? (
           <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'60px 24px',textAlign:'center'}}>
-            <div style={{fontSize:36,marginBottom:10}}>📅</div>
-            <p style={{fontSize:15,fontWeight:600,color:C.text,marginBottom:4}}>{L?.emptyReservas||'Sin reservas este día'}</p>
-            <p style={{fontSize:13,color:C.text3}}>No hay {L?.reservas?.toLowerCase()||'reservas'} para el día seleccionado.</p>
+            <div style={{fontSize:36,marginBottom:10}}>🐾</div>
+            <p style={{fontSize:15,fontWeight:600,color:C.text,marginBottom:4}}>{L?.emptyReservas||'Sin citas este día'}</p>
+            <p style={{fontSize:13,color:C.text3}}>No hay citas veterinarias para el día seleccionado.</p>
           </div>
-        ) : filtered.map((r,i)=>{
+        ) : filtered.map(r=>{
           const ss = STATUS_STYLES[r.status]||STATUS_STYLES.pendiente
           const time = r.time||r.reservation_time||''
-          const name = r.customer_name||'Sin nombre'
-          const people = r.people||r.party_size||1
+          const ownerName = r.customer_name||'Sin nombre'
+          const petName = r.pet_name||''
+          const urgent = isUrgent(r.notes)
+          const specIcon = getSpeciesIcon(r)
           return (
-            <div key={r.id} onClick={()=>setModal(r)} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:'14px 16px',marginBottom:10,cursor:'pointer',display:'flex',alignItems:'center',gap:12,transition:'all 0.12s'}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.surface2;(e.currentTarget as HTMLElement).style.borderColor=C.borderMd}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=C.surface;(e.currentTarget as HTMLElement).style.borderColor=C.border}}>
-              <div style={{width:42,height:42,borderRadius:'50%',background:C.amberDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,color:C.amber,flexShrink:0}}>
-                {name[0]?.toUpperCase()||'?'}
+            <div key={r.id} onClick={()=>setModal(r)} style={{background:C.surface,border:`1px solid ${urgent?C.red+'40':C.border}`,borderRadius:12,padding:'14px 16px',marginBottom:10,cursor:'pointer',display:'flex',alignItems:'center',gap:12,transition:'all 0.12s'}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.surface2;(e.currentTarget as HTMLElement).style.borderColor=urgent?C.red+'60':C.borderMd}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=C.surface;(e.currentTarget as HTMLElement).style.borderColor=urgent?C.red+'40':C.border}}>
+              <div style={{width:42,height:42,borderRadius:'50%',background:urgent?C.redDim:C.tealDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>
+                {specIcon}
               </div>
               <div style={{flex:1,minWidth:0}}>
-                <p style={{fontSize:14,fontWeight:600,color:C.text}}>{name}</p>
+                <div style={{display:'flex',alignItems:'center',gap:6}}>
+                  <p style={{fontSize:14,fontWeight:600,color:C.text}}>{ownerName}</p>
+                  {urgent&&<span style={{fontSize:9,fontWeight:700,color:C.red,background:C.redDim,padding:'1px 6px',borderRadius:4,border:`1px solid ${C.red}30`}}>URGENTE</span>}
+                </div>
                 <p style={{fontSize:12,color:C.text2,marginTop:1}}>
-                  {time.slice(0,5)} · {people} persona{people!==1?'s':''}
-                  {r.table_name?' · '+r.table_name:''}
-                  {r.notes?' · '+r.notes.slice(0,40)+(r.notes.length>40?'...':''):''}
+                  {petName&&<>{specIcon} {petName} · </>}
+                  {time.slice(0,5)}
+                  {r.service?' · '+r.service:''}
+                  {r.notes&&!r.service?' · '+r.notes.slice(0,40)+(r.notes.length>40?'...':''):''}
                 </p>
               </div>
               <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
                 <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,border:`1px solid ${ss.color}25`,flexShrink:0}}>{ss.label}</span>
-                {r.customer_phone&&<p style={{fontSize:11,color:C.text3}}>{r.customer_phone}</p>}
+                {r.pet_type&&<span style={{fontSize:10,padding:'2px 7px',borderRadius:6,background:C.tealDim,color:C.teal,fontWeight:600}}>{r.pet_type}</span>}
               </div>
             </div>
           )
         })}
       </div>
 
+      {/* Detail modal */}
       {modal&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16}} onClick={()=>setModal(null)}>
           <div style={{background:C.surface,border:`1px solid ${C.borderMd}`,borderRadius:16,padding:24,width:'100%',maxWidth:440,boxShadow:'0 20px 60px rgba(0,0,0,0.6)'}} onClick={e=>e.stopPropagation()}>
@@ -181,15 +229,27 @@ export default function ReservasPage() {
               <div>
                 <p style={{fontSize:18,fontWeight:700,color:C.text}}>{modal.customer_name||'Sin nombre'}</p>
                 <p style={{fontSize:13,color:C.text2,marginTop:2}}>
-                  {(modal.date||modal.reservation_date)?.slice(0,10)} · {(modal.time||modal.reservation_time||'').slice(0,5)} · {modal.people||modal.party_size} persona{(modal.people||modal.party_size)!==1?'s':''}
+                  {(modal.date||modal.reservation_date)?.slice(0,10)} · {(modal.time||modal.reservation_time||'').slice(0,5)}
                 </p>
               </div>
               <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:C.text3}}>×</button>
             </div>
+
+            {/* Pet info */}
+            <div style={{background:C.surface2,borderRadius:10,padding:'12px 14px',marginBottom:14}}>
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                <span style={{fontSize:20}}>{getSpeciesIcon(modal)}</span>
+                <p style={{fontSize:15,fontWeight:600,color:C.text}}>{modal.pet_name||'Mascota no indicada'}</p>
+                {modal.pet_type&&<span style={{fontSize:10,padding:'2px 8px',borderRadius:6,background:C.tealDim,color:C.teal,fontWeight:600}}>{modal.pet_type}</span>}
+              </div>
+              {modal.service&&<p style={{fontSize:13,color:C.text2}}>⚕️ {modal.service}</p>}
+            </div>
+
             {modal.customer_phone&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>📞 {modal.customer_phone}</p>}
-            {modal.table_name&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>🪑 {modal.table_name}</p>}
             {modal.notes&&<p style={{fontSize:13,color:C.text2,marginBottom:16}}>📝 {modal.notes}</p>}
-            {modal.source==='voice_agent'&&<p style={{fontSize:12,color:C.violet,marginBottom:16,background:C.violetDim,padding:'6px 10px',borderRadius:8}}>📞 Reserva creada por el agente de voz</p>}
+            {isUrgent(modal.notes)&&<p style={{fontSize:12,color:C.red,marginBottom:16,background:C.redDim,padding:'6px 10px',borderRadius:8,border:`1px solid ${C.red}25`}}>🚨 Cita marcada como urgente</p>}
+            {modal.source==='voice_agent'&&<p style={{fontSize:12,color:C.violet,marginBottom:16,background:C.violetDim,padding:'6px 10px',borderRadius:8}}>📞 Cita creada por el agente de voz</p>}
+
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>
               {['confirmada','pendiente','cancelada','completada'].map(s=>(
                 <button key={s} onClick={()=>updateStatus(modal.id,s)}

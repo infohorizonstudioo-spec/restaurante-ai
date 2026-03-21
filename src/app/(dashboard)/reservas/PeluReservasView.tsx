@@ -187,7 +187,8 @@ export default function PeluReservasView() {
                   {time.slice(0,5)}
                   {professional ? ` · ${professional}` : ''}
                   {duration ? ` · ${duration} min` : ''}
-                  {r.notes ? ` · ${r.notes.slice(0,40)}${r.notes.length>40?'...':''}` : ''}
+                  {r.notes && !service ? ` · ${r.notes.slice(0,40)}${r.notes.length>40?'...':''}` : ''}
+                  {r.notes && service ? ` · ${r.notes.slice(0,40)}${r.notes.length>40?'...':''}` : ''}
                 </p>
               </div>
               <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>

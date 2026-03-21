@@ -1,0 +1,9 @@
+COMPLETADO
+
+Archivos creados:
+- src/app/(dashboard)/reservas/PeluReservasView.tsx — Vista de citas para peluquería y barbería
+- src/app/(dashboard)/productos/PeluProductosView.tsx — Vista de servicios y tarifas (mock, sin Supabase)
+
+Archivos modificados:
+- src/app/(dashboard)/reservas/page.tsx — Integración condicional para peluqueria/barberia
+- src/app/(dashboard)/productos/page.tsx — Integración condicional para peluqueria/barberia

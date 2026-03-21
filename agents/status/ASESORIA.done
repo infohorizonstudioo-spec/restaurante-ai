@@ -1,0 +1,10 @@
+COMPLETADO
+
+Archivos creados:
+- src/app/(dashboard)/reservas/AsesorReservasView.tsx
+- src/app/(dashboard)/reservas/SegurosReservasView.tsx
+- src/app/(dashboard)/clientes/AsesorClientesView.tsx
+
+Archivos modificados:
+- src/app/(dashboard)/reservas/page.tsx
+- src/app/(dashboard)/clientes/page.tsx

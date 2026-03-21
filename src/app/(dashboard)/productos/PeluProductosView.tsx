@@ -19,7 +19,7 @@ interface Servicio {
   nombre: string
   categoria: 'corte' | 'color' | 'tratamiento' | 'barba'
   precio: number
-  duracion: number
+  duracion: number // minutos
 }
 
 const CATEGORIAS = ['corte', 'color', 'tratamiento', 'barba'] as const
@@ -66,8 +66,8 @@ export default function PeluProductosView() {
   function handleSave(data: Omit<Servicio, 'id'>) {
     if (modal === 'new') {
       setServicios(prev => [...prev, { ...data, id: Date.now().toString() }])
-    } else if (modal && typeof modal === 'object') {
-      setServicios(prev => prev.map(s => s.id === (modal as Servicio).id ? { ...s, ...data } : s))
+    } else if (modal) {
+      setServicios(prev => prev.map(s => s.id === modal.id ? { ...s, ...data } : s))
     }
     setModal(null)
   }

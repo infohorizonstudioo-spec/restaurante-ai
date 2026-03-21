@@ -1,0 +1,10 @@
+COMPLETADO
+
+Archivos creados:
+- src/app/(dashboard)/reservas/FisioReservasView.tsx
+- src/app/(dashboard)/clientes/FisioClientesView.tsx
+- src/lib/fisio-engine.ts
+
+Archivos modificados:
+- src/app/(dashboard)/reservas/page.tsx (integración condicional)
+- src/app/(dashboard)/clientes/page.tsx (integración condicional)

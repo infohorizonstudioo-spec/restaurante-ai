@@ -1,0 +1,12 @@
+COMPLETADO
+
+Archivos modificados:
+- src/types/index.ts — añadido 'academia' a BusinessType
+- src/lib/templates.ts — añadido 'academia' a BusinessType y TYPE_MAP
+- src/lib/event-schemas.ts — añadido ACADEMIA_CONFIG y entrada en CONFIG_MAP
+- src/app/(dashboard)/reservas/page.tsx — integración AcademiaClasesView
+- src/app/(dashboard)/clientes/page.tsx — integración AcademiaAlumnosView
+
+Archivos creados:
+- src/app/(dashboard)/reservas/AcademiaClasesView.tsx — vista de clases/inscripciones
+- src/app/(dashboard)/clientes/AcademiaAlumnosView.tsx — vista de alumnos

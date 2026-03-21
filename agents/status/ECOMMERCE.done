@@ -1,0 +1,8 @@
+COMPLETADO
+
+Archivos modificados:
+- src/types/index.ts — añadido 'ecommerce' a BusinessType
+- src/lib/templates.ts — añadido 'ecommerce' a BusinessType y TYPE_MAP
+- src/lib/event-schemas.ts — añadido ECOMMERCE_CONFIG y entrada en CONFIG_MAP
+- src/app/(dashboard)/reservas/page.tsx — integrado guard para ecommerce
+- src/app/(dashboard)/reservas/EcomReservasView.tsx — vista de pedidos ecommerce (NUEVO)

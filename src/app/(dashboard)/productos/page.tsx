@@ -3,10 +3,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
+import NotifBell from '@/components/NotifBell'
 import { useTenant } from '@/contexts/TenantContext'
 import PeluProductosView from './PeluProductosView'
-import BarbeProductosView from './BarbeProductosView'
-import NotifBell from '@/components/NotifBell'
 
 const C = {
   bg:'#0C1018', card:'#131920', card2:'#161D2A', border:'rgba(255,255,255,0.07)',
@@ -29,8 +28,7 @@ const CATEGORIES = ['Entrantes','Carnes','Pescados','Postres','Bebidas','Menú d
 
 export default function ProductosPage() {
   const { tenant } = useTenant()
-  if (tenant?.type === 'barberia') return <BarbeProductosView />
-  if (tenant?.type === 'peluqueria') return <PeluProductosView />
+  if (tenant?.type === 'peluqueria' || tenant?.type === 'barberia') return <PeluProductosView />
 
   const [tid, setTid]         = useState<string|null>(null)
   const [items, setItems]     = useState<any[]>([])

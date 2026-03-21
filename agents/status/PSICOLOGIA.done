@@ -1,0 +1,9 @@
+COMPLETADO
+
+Archivos creados:
+- src/app/(dashboard)/reservas/PsicoReservasView.tsx
+- src/app/(dashboard)/clientes/PsicoClientesView.tsx
+
+Archivos modificados:
+- src/app/(dashboard)/reservas/page.tsx (import + routing)
+- src/app/(dashboard)/clientes/page.tsx (import + routing)
