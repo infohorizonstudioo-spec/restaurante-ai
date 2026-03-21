@@ -1,0 +1,52 @@
+COMPLETADO
+
+## Archivos modificados
+- middleware.ts — Headers de seguridad, /dashboard protegido, webhooks explícitamente públicos
+- next.config.js — Headers de seguridad globales (X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
+- src/components/ErrorBoundary.tsx — CREADO: Error boundary React con mensaje amigable
+
+## Vulnerabilidades encontradas
+
+### CRÍTICAS
+1. /api/auth/reset-password — Sin verificación de autenticación, acepta cualquier userId
+2. /api/voice/post-call — Logging extensivo de PII (teléfonos, transcripciones, nombres)
+3. /api/voice/update-agent-name — Auth falsa (solo verifica existencia del header, no valida token)
+
+### MEDIAS
+4. /api/billing/summary y /api/billing/usage — Sin auth, tenant_id en query param enumerable
+5. /api/twilio/webhook — Sin validación de firma Twilio (cualquiera puede enviar webhooks falsos)
+6. /api/voice/webhook — Sin validación de firma ElevenLabs
+7. /api/stripe/checkout — Sin auth, acepta tenant_id en body
+8. /api/twilio/assign-number — Sin auth, acepta tenant_id en body
+9. /api/update-agent — Sin auth, acepta tenant_id en body
+10. /api/voice/start — Sin auth, acepta tenantId en body
+11. /api/tts — Sin tenant isolation ni auth
+12. /api/auth/register — Password mínimo 6 chars (debería ser 8+), sin rate limiting
+
+### BAJAS
+13. /api/voice/availability — Stack traces en logs de error
+14. /api/voice/context — Teléfonos de clientes en console.log
+
+## Fixes aplicados
+- [x] Middleware: headers de seguridad (X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy, X-XSS-Protection, Permissions-Policy)
+- [x] Middleware: /dashboard/* añadido a rutas protegidas
+- [x] next.config.js: headers de seguridad globales para respuestas estáticas
+- [x] ErrorBoundary.tsx creado
+- [x] Variables de entorno verificadas: ningún secreto expuesto con NEXT_PUBLIC_
+
+## Vulnerabilidades pendientes (requieren acción manual)
+- [ ] Activar RLS en Supabase para TODAS las tablas (verificar en dashboard Supabase)
+- [ ] Añadir validación de firma Twilio en /api/twilio/webhook
+- [ ] Añadir validación de firma/origen en /api/voice/webhook (ElevenLabs)
+- [ ] Proteger /api/auth/reset-password con verificación OTP o token
+- [ ] Eliminar console.log con PII en /api/voice/post-call y /api/voice/context
+- [ ] Añadir auth real a /api/voice/update-agent-name
+- [ ] Añadir auth a rutas de billing (/api/billing/summary, /api/billing/usage)
+- [ ] Considerar rate limiting en /api/auth/register y /api/auth/reset-password
+- [ ] Subir password mínimo a 8 chars en /api/auth/register
+
+## Recomendaciones adicionales
+- Implementar rate limiting global (ej: Vercel Edge Config o middleware con límites por IP)
+- Considerar CSRF protection para mutaciones desde el dashboard
+- Auditar RLS policies en Supabase para asegurar tenant isolation a nivel de base de datos
+- Los webhooks de Twilio deberían validar `X-Twilio-Signature` con el auth token
