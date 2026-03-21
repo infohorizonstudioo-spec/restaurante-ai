@@ -3,6 +3,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
+import { useTenant } from '@/contexts/TenantContext'
+import PeluProductosView from './PeluProductosView'
 import NotifBell from '@/components/NotifBell'
 
 const C = {
@@ -25,6 +27,9 @@ type AvailType = keyof typeof AVAIL_CFG
 const CATEGORIES = ['Entrantes','Carnes','Pescados','Postres','Bebidas','Menú del día','Especiales','Otro']
 
 export default function ProductosPage() {
+  const { tenant } = useTenant()
+  if (tenant?.type === 'peluqueria' || tenant?.type === 'barberia') return <PeluProductosView />
+
   const [tid, setTid]         = useState<string|null>(null)
   const [items, setItems]     = useState<any[]>([])
   const [counts, setCounts]   = useState<Record<string,number>>({})
