@@ -7,7 +7,7 @@ export type BusinessType =
   | 'restaurante' | 'bar' | 'cafeteria'
   | 'clinica_dental' | 'clinica_medica' | 'asesoria'
   | 'peluqueria' | 'seguros' | 'inmobiliaria'
-  | 'academia' | 'otro'
+  | 'ecommerce' | 'otro'
 
 export type TableStatus      = 'libre' | 'reservada' | 'ocupada' | 'bloqueada'
 export type ReservationStatus= 'confirmada' | 'pendiente' | 'cancelada' | 'completada'

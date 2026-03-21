@@ -4,19 +4,28 @@ import { NextResponse, type NextRequest } from 'next/server'
 // Rutas que requieren autenticación
 const PROTECTED = [
   '/panel', '/reservas', '/agenda', '/llamadas', '/clientes',
-  '/mesas', '/pedidos', '/estadisticas', '/facturacion', '/configuracion', '/admin'
+  '/mesas', '/pedidos', '/estadisticas', '/facturacion', '/configuracion', '/admin',
+  '/dashboard'
 ]
 // Rutas solo para no autenticados
 const AUTH_ONLY = ['/login', '/registro']
 // Rutas siempre públicas (sin verificar sesión)
 const PUBLIC_ALWAYS = ['/', '/precios', '/reset', '/onboarding']
 
+// Headers de seguridad
+const SECURITY_HEADERS: [string, string][] = [
+  ['X-Frame-Options', 'DENY'],
+  ['X-Content-Type-Options', 'nosniff'],
+  ['Referrer-Policy', 'strict-origin-when-cross-origin'],
+  ['X-XSS-Protection', '1; mode=block'],
+  ['Permissions-Policy', 'camera=(), microphone=(), geolocation=()'],
+]
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Assets, static, API → siempre pasar
+  // Assets, static → siempre pasar
   if (
-    pathname.startsWith('/api/') ||
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/favicon') ||
     pathname.includes('.')
@@ -24,13 +33,30 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // API webhooks → pasar sin auth (son llamadas externas)
+  if (
+    pathname.startsWith('/api/voice/webhook') ||
+    pathname.startsWith('/api/twilio/webhook') ||
+    pathname.startsWith('/api/stripe/webhook')
+  ) {
+    return NextResponse.next()
+  }
+
+  // Otras rutas API → pasar (protegidas internamente)
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next()
+  }
+
   // Rutas públicas → pasar sin comprobar
   if (PUBLIC_ALWAYS.some(r => pathname === r || pathname.startsWith(r + '/'))) {
-    return NextResponse.next()
+    const response = NextResponse.next()
+    SECURITY_HEADERS.forEach(([k, v]) => response.headers.set(k, v))
+    return response
   }
 
   // Para el resto, verificar sesión con @supabase/ssr (usa cookies correctamente)
   const response = NextResponse.next({ request: { headers: request.headers } })
+  SECURITY_HEADERS.forEach(([k, v]) => response.headers.set(k, v))
 
   try {
     const supabase = createServerClient(

@@ -600,76 +600,76 @@ const GENERIC_CONFIG: BusinessEventConfig = {
 }
 
 // ─────────────────────────────────────────────────────────
-// ACADEMIA / CENTRO EDUCATIVO
+// MAPA TIPO → CONFIGURACIÓN
 // ─────────────────────────────────────────────────────────
-const ACADEMIA_CONFIG: BusinessEventConfig = {
-  businessType: 'academia',
-  activeCallLabel: 'Alumno/tutor en línea',
+const ECOMMERCE_CONFIG: BusinessEventConfig = {
+  businessType: 'ecommerce',
+  activeCallLabel: 'Cliente en línea',
   intentMap: {
-    reserva:       'enrollment',
-    clase:         'enrollment',
-    inscripcion:   'enrollment',
-    consulta:      'inquiry',
-    cancelacion:   'cancellation',
-    otro:          'inquiry',
+    pedido:      'order',
+    consulta:    'inquiry',
+    devolucion:  'return',
+    cancelacion: 'cancellation',
+    otro:        'inquiry',
   },
   schemas: [
     {
-      type: 'enrollment', label: 'Inscripción/Clase', labelPlural: 'Clases',
-      icon: '📚', color: COL.blue, priority: 'high',
+      type: 'order', label: 'Pedido', labelPlural: 'Pedidos',
+      icon: '🛍️', color: COL.violet, priority: 'high',
       fields: [
-        { key:'student_name', label:'Alumno',    icon:'👤', important:true },
-        { key:'subject',      label:'Materia',   icon:'📖', important:true },
-        { key:'level',        label:'Nivel',     icon:'📊', format:'badge' },
-        { key:'schedule',     label:'Horario',   icon:'🕐' },
-        { key:'teacher',      label:'Profesor',  icon:'👨‍🏫' },
-        { key:'parent_name',  label:'Tutor',     icon:'👪' },
+        { key:'customer_name', label:'Cliente',   icon:'👤', important:true },
+        { key:'product',       label:'Producto',  icon:'📦', important:true },
+        { key:'quantity',      label:'Cantidad',  icon:'🔢', format:'number' },
+        { key:'address',       label:'Dirección', icon:'📍' },
+        { key:'phone',         label:'Teléfono',  icon:'📞', format:'phone' },
       ],
       actions: [
-        { id:'confirm', label:'Confirmar inscripción', icon:'✓', color:COL.green, style:'primary', href:'/reservas' },
-        { id:'review',  label:'Revisar',               icon:'👁', color:COL.amber, style:'secondary', href:'/reservas' },
+        { id:'confirm', label:'Confirmar pedido', icon:'✓', color:COL.green,  style:'primary', href:'/pedidos' },
+        { id:'review',  label:'Revisar',          icon:'👁', color:COL.amber,  style:'secondary', href:'/pedidos' },
       ],
       callStates: {
-        escuchando:       { label:'Escuchando…',                 color:COL.teal },
-        tomando_datos:    { label:'Recogiendo datos de alumno',   color:COL.blue },
-        confirmando:      { label:'Confirmando inscripción…',     color:COL.green },
-        finalizando:      { label:'Cerrando llamada…',            color:'#8895A7' },
+        escuchando:    { label:'Escuchando…',        color:COL.teal   },
+        tomando_pedido:{ label:'Tomando pedido',      color:COL.violet },
+        confirmando:   { label:'Confirmando pedido…', color:COL.green  },
+        finalizando:   { label:'Cerrando llamada…',   color:'#8895A7'  },
       },
     },
     {
       type: 'inquiry', label: 'Consulta', labelPlural: 'Consultas',
-      icon: '❓', color: COL.violet, priority: 'normal',
-      fields: [
-        { key:'topic',    label:'Tema',     icon:'💬', important:true },
-        { key:'interest', label:'Interés',  icon:'📚' },
-      ],
+      icon: '❓', color: COL.blue, priority: 'normal',
+      fields: [{ key:'question', label:'Consulta', icon:'💬', important:true }],
       actions: [{ id:'view', label:'Ver llamada', icon:'📞', color:COL.blue, style:'secondary', href:'/llamadas' }],
-      callStates: { escuchando:{label:'Escuchando…',color:COL.teal}, respondiendo:{label:'Informando…',color:COL.violet} },
+      callStates: { escuchando:{label:'Escuchando…',color:COL.teal}, respondiendo:{label:'Respondiendo…',color:COL.blue} },
+    },
+    {
+      type: 'return', label: 'Devolución', labelPlural: 'Devoluciones',
+      icon: '↩️', color: COL.yellow, priority: 'normal',
+      fields: [
+        { key:'customer_name', label:'Cliente',  icon:'👤', important:true },
+        { key:'product',       label:'Producto', icon:'📦', important:true },
+        { key:'reason',        label:'Motivo',   icon:'💬' },
+      ],
+      actions: [{ id:'process', label:'Gestionar', icon:'✓', color:COL.yellow, style:'primary', href:'/pedidos' }],
+      callStates: { escuchando:{label:'Escuchando…',color:COL.teal} },
     },
     {
       type: 'cancellation', label: 'Cancelación', labelPlural: 'Cancelaciones',
-      icon: '❌', color: COL.yellow, priority: 'normal',
-      fields: [
-        { key:'student_name', label:'Alumno', icon:'👤', important:true },
-        { key:'subject',      label:'Clase',  icon:'📖' },
-      ],
-      actions: [{ id:'process', label:'Procesar', icon:'✓', color:COL.yellow, style:'primary' }],
+      icon: '❌', color: COL.red, priority: 'normal',
+      fields: [{ key:'customer_name', label:'Cliente', icon:'👤', important:true }],
+      actions: [{ id:'process', label:'Procesar', icon:'✓', color:COL.red, style:'primary' }],
       callStates: { escuchando:{label:'Escuchando…',color:COL.teal} },
     },
   ],
   demoEvents: [
-    { schemaType:'enrollment', priority:'high',   title:'Inscripción — García, inglés B2', sub:'Nivel intermedio · martes/jueves 19:00' },
-    { schemaType:'inquiry',    priority:'normal',  title:'Consulta sobre cursos de verano', sub:'Preguntó por horarios y precios' },
-    { schemaType:'enrollment', priority:'high',   title:'Nueva alumna — Martínez, matemáticas', sub:'Selectividad · horario flexible' },
-    { schemaType:'cancellation',priority:'normal', title:'Cancelación — López', sub:'Clase de guitarra del miércoles' },
-    { schemaType:'enrollment', priority:'high',   title:'Inscripción — niño 8 años, robótica', sub:'Tutor: Sr. Sánchez · sábados 10:00' },
-    { schemaType:'inquiry',    priority:'normal',  title:'Consulta sobre autoescuela respondida', sub:'Precios y disponibilidad de prácticas' },
+    { schemaType:'order',    priority:'high',   title:'Nuevo pedido — García', sub:'2x Camiseta M negra · envío a Madrid' },
+    { schemaType:'order',    priority:'high',   title:'Pedido confirmado — López', sub:'1x Zapatillas 42 · recogida en tienda' },
+    { schemaType:'inquiry',  priority:'normal',  title:'Consulta sobre stock respondida', sub:'Preguntó por tallas disponibles' },
+    { schemaType:'return',   priority:'normal',  title:'Devolución — Martínez', sub:'Talla incorrecta · gestionar cambio' },
+    { schemaType:'order',    priority:'high',   title:'Pedido — Sánchez', sub:'3x Funda móvil · envío urgente' },
+    { schemaType:'cancellation',priority:'normal',title:'Cancelación — Ruiz', sub:'Pedido de ayer · cambio de opinión' },
   ],
 }
 
-// ─────────────────────────────────────────────────────────
-// MAPA TIPO → CONFIGURACIÓN
-// ─────────────────────────────────────────────────────────
 const CONFIG_MAP: Record<string, BusinessEventConfig> = {
   restaurante:    RESTAURANTE_CONFIG,
   bar:            { ...RESTAURANTE_CONFIG, businessType:'bar' },
@@ -701,7 +701,7 @@ const CONFIG_MAP: Record<string, BusinessEventConfig> = {
   veterinaria:    VETERINARIA_CONFIG,
   asesoria:       ASESORIA_CONFIG,
   inmobiliaria:   INMOBILIARIA_CONFIG,
-  academia:       ACADEMIA_CONFIG,
+  ecommerce:      ECOMMERCE_CONFIG,
   seguros:        { ...ASESORIA_CONFIG, businessType:'seguros',
     activeCallLabel:'Cliente en línea',
     demoEvents:[

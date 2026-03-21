@@ -5,15 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
-import VetReservasView from './VetReservasView'
-import FisioReservasView from './FisioReservasView'
-import InmoReservasView from './InmoReservasView'
-import PeluReservasView from './PeluReservasView'
-import BarbeReservasView from './BarbeReservasView'
-import AcademiaClasesView from './AcademiaClasesView'
-import AsesorReservasView from './AsesorReservasView'
-import SegurosReservasView from './SegurosReservasView'
-import PsicoReservasView from './PsicoReservasView'
+import EcomReservasView from './EcomReservasView'
 
 const C = {
   amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
@@ -51,15 +43,7 @@ function getWeek(base: Date) {
 
 export default function ReservasPage() {
   const { tenant, template } = useTenant()
-  if (tenant?.type === 'veterinaria') return <VetReservasView />
-  if (tenant?.type === 'fisioterapia') return <FisioReservasView />
-  if (tenant?.type === 'inmobiliaria') return <InmoReservasView />
-  if (tenant?.type === 'barberia') return <BarbeReservasView />
-  if (tenant?.type === 'peluqueria') return <PeluReservasView />
-  if (tenant?.type === 'academia') return <AcademiaClasesView />
-  if (tenant?.type === 'asesoria') return <AsesorReservasView />
-  if (tenant?.type === 'seguros') return <SegurosReservasView />
-  if (tenant?.type === 'psicologia') return <PsicoReservasView />
+  if (tenant?.type === 'ecommerce') return <EcomReservasView />
 
   const [base,setBase]         = useState(new Date())
   const [selected,setSelected] = useState(new Date().toISOString().slice(0,10))
