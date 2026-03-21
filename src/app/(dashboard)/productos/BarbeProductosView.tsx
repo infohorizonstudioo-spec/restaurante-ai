@@ -8,7 +8,6 @@ const C = {
   teal:'#2DD4BF',tealDim:'rgba(45,212,191,0.10)',
   green:'#34D399',greenDim:'rgba(52,211,153,0.10)',
   violet:'#A78BFA',violetDim:'rgba(167,139,250,0.12)',
-  blue:'#60A5FA',blueDim:'rgba(96,165,250,0.10)',
   yellow:'#FBB53F',yellowDim:'rgba(251,181,63,0.10)',
   text:'#E8EEF6',text2:'#8895A7',text3:'#49566A',
   bg:'#0C1018',surface:'#131920',surface2:'#1A2230',
@@ -22,7 +21,7 @@ interface Service {
   name: string
   category: Category
   price: number
-  duration: number // minutos
+  duration: number
   description?: string
 }
 
@@ -67,7 +66,7 @@ export default function BarbeProductosView() {
       {/* Header */}
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div>
-          <h1 style={{fontSize:17,fontWeight:700,color:C.text}}>🪒 Servicios y tarifas</h1>
+          <h1 style={{fontSize:17,fontWeight:700,color:C.text}}>Servicios y tarifas</h1>
           <p style={{fontSize:12,color:C.text3,marginTop:2}}>{MOCK_SERVICES.length} servicios disponibles</p>
         </div>
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
