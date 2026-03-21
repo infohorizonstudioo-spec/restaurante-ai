@@ -4,6 +4,14 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
+import VetClientesView from './VetClientesView'
+import FisioClientesView from './FisioClientesView'
+import PsicoClientesView from './PsicoClientesView'
+import InmoClientesView from './InmoClientesView'
+import AsesorClientesView from './AsesorClientesView'
+import AcademiaAlumnosView from './AcademiaAlumnosView'
+import BarbeClientesView from './BarbeClientesView'
+import EcomClientesView from './EcomClientesView'
 
 const C = {
   amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
@@ -15,17 +23,34 @@ const C = {
   border:'rgba(255,255,255,0.07)',borderMd:'rgba(255,255,255,0.11)',
 }
 
+// Router — decide qué vista mostrar según el tipo de negocio
 export default function ClientesPage() {
+  const { tenant } = useTenant()
+  const type = tenant?.type
+
+  if (type === 'veterinaria')  return <VetClientesView />
+  if (type === 'fisioterapia') return <FisioClientesView />
+  if (type === 'psicologia')   return <PsicoClientesView />
+  if (type === 'inmobiliaria') return <InmoClientesView />
+  if (type === 'asesoria' || type === 'seguros') return <AsesorClientesView />
+  if (type === 'academia')     return <AcademiaAlumnosView />
+  if (type === 'barberia')     return <BarbeClientesView />
+  if (type === 'ecommerce')    return <EcomClientesView />
+
+  // Vista por defecto: restaurante / hostelería / otros
+  return <DefaultClientesView />
+}
+
+// Vista por defecto — hostelería y tipos sin vista específica
+function DefaultClientesView() {
   const [clientes,setClientes] = useState<any[]>([])
   const [loading,setLoading]   = useState(true)
   const [search,setSearch]     = useState('')
   const [selected,setSelected] = useState<any|null>(null)
   const [historial,setHistorial] = useState<any[]>([])
   const [loadingH,setLoadingH] = useState(false)
-  const [,setTid]              = useState<string|null>(null)
   const { template } = useTenant()
 
-  // Etiquetas dinámicas: "Clientes" para hostelería, "Pacientes" para clínicas, etc.
   const L = template?.labels
   const clientesLabel = L?.clientes || 'Clientes'
 
@@ -37,12 +62,12 @@ export default function ClientesPage() {
   },[])
 
   useEffect(()=>{
-    (async()=>{
+    ;(async()=>{
       const {data:{user}} = await supabase.auth.getUser()
       if (!user) return
       const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).maybeSingle()
       if (!p?.tenant_id) return
-      setTid(p.tenant_id); await load(p.tenant_id)
+      await load(p.tenant_id)
     })()
   },[load])
 
@@ -77,14 +102,13 @@ export default function ClientesPage() {
           <p style={{fontSize:11,color:C.text3,marginTop:2}}>{clientes.length} registrados</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={'Buscar '+clientesLabel.toLowerCase()+'…'}
-          style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:220,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={'Buscar '+clientesLabel.toLowerCase()+'…'}
+            style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:220,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
           <NotifBell/>
         </div>
       </div>
 
       <div style={{display:'flex',flex:1,overflow:'hidden'}}>
-        {/* Lista */}
         <div style={{width:320,flexShrink:0,overflowY:'auto',borderRight:`1px solid ${C.border}`,background:C.surface}}>
           {filtered.length===0 ? (
             <div style={{padding:'60px 24px',textAlign:'center'}}>
@@ -93,8 +117,7 @@ export default function ClientesPage() {
               <p style={{fontSize:13,color:C.text3}}>{clientesLabel} que contacten al agente aparecerán aquí.</p>
             </div>
           ) : filtered.map(c => (
-            <div key={c.id} onClick={()=>openClient(c)} style={{padding:'12px 16px',cursor:'pointer',borderBottom:`1px solid ${C.border}`,
-              background:selected?.id===c.id?C.surface2:'transparent',transition:'background 0.1s'}}
+            <div key={c.id} onClick={()=>openClient(c)} style={{padding:'12px 16px',cursor:'pointer',borderBottom:`1px solid ${C.border}`,background:selected?.id===c.id?C.surface2:'transparent',transition:'background 0.1s'}}
               onMouseEnter={e=>{if(selected?.id!==c.id)(e.currentTarget as HTMLElement).style.background=C.surface2}}
               onMouseLeave={e=>{if(selected?.id!==c.id)(e.currentTarget as HTMLElement).style.background='transparent'}}>
               <div style={{display:'flex',alignItems:'center',gap:10}}>
@@ -108,7 +131,7 @@ export default function ClientesPage() {
                   </div>
                   <p style={{fontSize:11,color:C.text3,marginTop:1}}>{c.phone||c.email||'Sin contacto'}</p>
                 </div>
-                <div style={{textAlign:'right',flexShrink:0}}>
+                <div style={{textAlign:'right' as const,flexShrink:0}}>
                   <p style={{fontFamily:'var(--rz-mono)',fontSize:11,fontWeight:600,color:C.text2}}>{c.total_reservations||c.total_visits||0}</p>
                   {c.last_visit&&<p style={{fontSize:10,color:C.text3,marginTop:1}}>{new Date(c.last_visit).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</p>}
                 </div>
@@ -117,7 +140,6 @@ export default function ClientesPage() {
           ))}
         </div>
 
-        {/* Detalle */}
         <div style={{flex:1,overflowY:'auto',padding:24,background:C.bg}}>
           {!selected ? (
             <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',color:C.text3}}>
@@ -143,16 +165,15 @@ export default function ClientesPage() {
                     {label:'Total gastado',value:selected.total_spent?selected.total_spent+'€':'—'},
                   ].map(m=>(
                     <div key={m.label} style={{background:C.surface2,borderRadius:9,padding:'10px 14px'}}>
-                      <p style={{fontSize:10,color:C.text3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:3}}>{m.label}</p>
+                      <p style={{fontSize:10,color:C.text3,fontWeight:600,textTransform:'uppercase' as const,letterSpacing:'0.06em',marginBottom:3}}>{m.label}</p>
                       <p style={{fontFamily:'var(--rz-mono)',fontSize:18,fontWeight:700,color:C.text}}>{m.value}</p>
                     </div>
                   ))}
                 </div>
                 {selected.notes&&<p style={{marginTop:12,fontSize:13,color:C.text2,background:C.surface2,padding:'8px 12px',borderRadius:9}}>📝 {selected.notes}</p>}
               </div>
-
-              <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Historial</p>
-              {loadingH ? <div style={{textAlign:'center',padding:20,color:C.text3}}>Cargando...</div>
+              <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:10}}>Historial</p>
+              {loadingH ? <div style={{textAlign:'center' as const,padding:20,color:C.text3}}>Cargando...</div>
               : historial.length===0 ? <p style={{fontSize:13,color:C.text3,padding:'20px 0'}}>Sin actividad registrada.</p>
               : historial.map((h,i)=>(
                 <div key={i} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:'12px 14px',marginBottom:8,display:'flex',gap:10,transition:'background 0.12s'}}
@@ -162,10 +183,8 @@ export default function ClientesPage() {
                   <div style={{flex:1}}>
                     {h._type==='reserva' ? (
                       <>
-                        <p style={{fontSize:13,fontWeight:500,color:C.text}}>
-                          {(h.date||h.reservation_date)?.slice(0,10)} a las {(h.time||h.reservation_time||'').slice(0,5)} · {h.people||h.party_size} persona{(h.people||h.party_size)!==1?'s':''}
-                        </p>
-                        <p style={{fontSize:11,color:C.text3,marginTop:1}}>{h.table_name||''} {h.status}</p>
+                        <p style={{fontSize:13,fontWeight:500,color:C.text}}>{(h.date||h.reservation_date)?.slice(0,10)} a las {(h.time||h.reservation_time||'').slice(0,5)}</p>
+                        <p style={{fontSize:11,color:C.text3,marginTop:1}}>{h.status}</p>
                       </>
                     ) : (
                       <>

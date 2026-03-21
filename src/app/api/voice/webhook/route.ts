@@ -1,13 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase'
 
-/**
- * Webhook de ElevenLabs — recibe eventos de conversación y los persiste en `calls`.
- * Usa la misma tabla `calls` que ya existe en el proyecto, sin romper nada.
- */
+// Verificación de firma HMAC-SHA256 de ElevenLabs
+async function validateElevenLabsSignature(req: NextRequest, rawBody: string): Promise<boolean> {
+  const secret = process.env.ELEVENLABS_WEBHOOK_SECRET
+  if (!secret) return true // si no está configurado, no bloqueamos
+  const signature = req.headers.get('elevenlabs-signature') || req.headers.get('x-elevenlabs-signature') || ''
+  if (!signature) return false
+  const encoder = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  )
+  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(rawBody))
+  const expected = 'sha256=' + Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('')
+  return signature === expected
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const rawBody = await req.text()
+
+    // Verificar firma ElevenLabs
+    const valid = await validateElevenLabsSignature(req, rawBody)
+    if (!valid) return NextResponse.json({ error: 'Firma inválida' }, { status: 403 })
+
+    const body = JSON.parse(rawBody)
     const { event_type, conversation_id, data } = body
     const tenantId = data?.metadata?.tenant_id
     if (!tenantId) return NextResponse.json({ error: 'tenant_id requerido' }, { status: 400 })
