@@ -10,6 +10,7 @@ import FisioClientesView from './FisioClientesView'
 import InmoClientesView from './InmoClientesView'
 import AcademiaAlumnosView from './AcademiaAlumnosView'
 import AsesorClientesView from './AsesorClientesView'
+import PsicoClientesView from './PsicoClientesView'
 
 const C = {
   amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
@@ -28,6 +29,7 @@ export default function ClientesPage() {
   if (tenant?.type === 'inmobiliaria') return <InmoClientesView />
   if (tenant?.type === 'academia') return <AcademiaAlumnosView />
   if (tenant?.type === 'asesoria' || tenant?.type === 'seguros') return <AsesorClientesView />
+  if (tenant?.type === 'psicologia') return <PsicoClientesView />
 
   const [clientes,setClientes] = useState<any[]>([])
   const [loading,setLoading]   = useState(true)
