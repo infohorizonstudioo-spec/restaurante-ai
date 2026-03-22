@@ -21,7 +21,7 @@ const cache: Record<string, CachedTenant> = {}
 const TTL = 10 * 60 * 1000
 
 function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, " ").replace(/\r/g, "")
 }
 
 function twiml(agentId: string, tenantId: string, callerPhone: string, businessName: string, agentName: string, context: string): string {
