@@ -198,6 +198,24 @@ export default function ConfiguracionPage() {
       })
     } catch { /* no crítico */ }
 
+    // Sincronizar knowledge a business_knowledge para que el agente lo use
+    try {
+      await fetch('/api/onboarding/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: tenant.id,
+          agent_phone: basicForm.agent_phone.trim() || null,
+          business_name: newName,
+          agent_name: newAgent,
+          services: cfg.knowledge.services || null,
+          menu: cfg.knowledge.menu || null,
+          faqs: cfg.knowledge.faqs || null,
+          policies: cfg.knowledge.conditions || null,
+        })
+      })
+    } catch { /* no crítico */ }
+
     setSaving(false); setSaved(true)
     reloadTenant() // ← actualiza sidebar y header inmediatamente
     setTimeout(()=>setSaved(false),3000)
