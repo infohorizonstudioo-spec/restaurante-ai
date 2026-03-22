@@ -48,10 +48,17 @@ async function buildContext(tenantId: string): Promise<string> {
   for (const k of kb) {
     parts.push(`${(k.category || "info").toUpperCase()}: ${k.content}`)
   }
+  // Skip rules with JSON values - they break Twilio param limits
   for (const r of rules) {
-    parts.push(`REGLA ${(r.rule_key || "").toUpperCase()}: ${r.rule_value}`)
+    const v = String(r.rule_value || "")
+    if (!v.startsWith("{") && !v.startsWith("[")) {
+      parts.push(`REGLA ${(r.rule_key || "").toUpperCase()}: ${v}`)
+    }
   }
-  return parts.join("\n") || "Sin contexto adicional."
+  // Twilio Stream params have ~2KB combined limit - truncate context
+  let ctx = parts.join(" | ") || "Sin contexto adicional."
+  if (ctx.length > 800) ctx = ctx.slice(0, 800)
+  return ctx
 }
 
 export async function POST(req: NextRequest) {
