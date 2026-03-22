@@ -39,7 +39,7 @@ function twiml(agentId: string, tenantId: string, callerPhone: string, businessN
 async function buildContext(tenantId: string): Promise<string> {
   const [kbRes, rulesRes] = await Promise.all([
     supabase.from("business_knowledge").select("category,content").eq("tenant_id", tenantId),
-    supabase.from("business_rules").select("rule_type,rule_value").eq("tenant_id", tenantId),
+    supabase.from("business_rules").select("rule_key,rule_value").eq("tenant_id", tenantId),
   ])
   const kb = kbRes.data || []
   const rules = rulesRes.data || []
@@ -49,7 +49,7 @@ async function buildContext(tenantId: string): Promise<string> {
     parts.push(`${(k.category || "info").toUpperCase()}: ${k.content}`)
   }
   for (const r of rules) {
-    parts.push(`REGLA ${(r.rule_type || "").toUpperCase()}: ${r.rule_value}`)
+    parts.push(`REGLA ${(r.rule_key || "").toUpperCase()}: ${r.rule_value}`)
   }
   return parts.join("\n") || "Sin contexto adicional."
 }
