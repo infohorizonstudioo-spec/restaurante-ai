@@ -254,7 +254,8 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
       name: `${tenant.name} — Reservo.AI`,
       conversation_config: {
         agent: {
-          first_message: tenant.name + ", buenas, dígame.",
+          // Sin variables — texto fijo con el nombre real del negocio
+          first_message: `${tenant.name}, buenas, dígame.`,
           language: "es",
           prompt: { prompt },
         },
