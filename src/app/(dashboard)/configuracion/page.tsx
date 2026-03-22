@@ -198,8 +198,9 @@ export default function ConfiguracionPage() {
       })
     } catch { /* no crítico */ }
 
-    // Sincronizar knowledge a business_knowledge para que el agente lo use
+    // Sincronizar knowledge a business_knowledge y reprovisionar agente ElevenLabs
     try {
+      // Guardar knowledge actualizado
       await fetch('/api/onboarding/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -213,6 +214,12 @@ export default function ConfiguracionPage() {
           faqs: cfg.knowledge.faqs || null,
           policies: cfg.knowledge.conditions || null,
         })
+      })
+      // Reprovisionar agente ElevenLabs con los nuevos datos
+      await fetch('/api/agent/provision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tenant.id })
       })
     } catch { /* no crítico */ }
 

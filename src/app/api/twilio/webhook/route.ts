@@ -8,24 +8,25 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// Cache: número → { agentId, tenantId, name }
-const cache: Record<string, { agentId: string; tenantId: string; name: string; ts: number }> = {
-  "+12138753573": {
-    agentId: process.env.ELEVENLABS_AGENT_ID || "agent_0701kkw2sdx5fp685xp6ckngf6zj",
-    tenantId: "7be3fb2c-6da4-4129-a49d-3af1c2c45b77",
-    name: "FormaNova",
-    ts: 0
-  }
-}
+// Cache: número → agente  (se invalida cada 10min o al guardar config)
+const cache: Record<string, { agentId: string; tenantId: string; name: string; ts: number }> = {}
 const TTL = 10 * 60 * 1000
 
-function twiml(agentId: string, tenantId: string, callerPhone: string): string {
-  const e = (s: string) => s.replace(/&/g,"&amp;").replace(/"/g,"&quot;")
-  return `<?xml version="1.0" encoding="UTF-8"?><Response><Connect>` +
+function xml(agentId: string, tenantId: string, callerPhone: string): string {
+  const e = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;")
+  return `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<Response><Connect>` +
     `<Stream url="wss://api.elevenlabs.io/v1/convai/twilio-media-stream/${agentId}">` +
     `<Parameter name="tenant_id" value="${e(tenantId)}"/>` +
     `<Parameter name="caller_phone" value="${e(callerPhone)}"/>` +
     `</Stream></Connect></Response>`
+}
+
+function reject(): NextResponse {
+  return new NextResponse(
+    `<?xml version="1.0" encoding="UTF-8"?><Response><Reject/></Response>`,
+    { headers: { "Content-Type": "text/xml" } }
+  )
 }
 
 export async function POST(req: NextRequest) {
@@ -38,32 +39,29 @@ export async function POST(req: NextRequest) {
 
   // Cache hit
   const hit = cache[called]
-  if (hit && (Date.now() - hit.ts) < TTL) {
-    console.log("[webhook] cache:", hit.name, "agent:", hit.agentId)
+  if (hit && Date.now() - hit.ts < TTL) {
+    console.log("[webhook] cache:", hit.name, "| agent:", hit.agentId)
+    // Refresca en background sin bloquear la respuesta
     supabase.from("tenants").select("id,name,el_agent_id").eq("agent_phone", called).single()
-      .then(({ data: t }) => { if (t?.el_agent_id) cache[called] = { agentId: t.el_agent_id, tenantId: t.id, name: t.name, ts: Date.now() } })
-      .catch(() => {})
-    return new NextResponse(twiml(hit.agentId, hit.tenantId, caller), { headers: { "Content-Type": "text/xml" } })
+      .then(({ data: t }) => {
+        if (t?.el_agent_id) cache[called] = { agentId: t.el_agent_id, tenantId: t.id, name: t.name, ts: Date.now() }
+      }).catch(() => {})
+    return new NextResponse(xml(hit.agentId, hit.tenantId, caller), { headers: { "Content-Type": "text/xml" } })
   }
 
-  // DB lookup
-  try {
-    const { data: tenant } = await supabase
-      .from("tenants")
-      .select("id,name,el_agent_id")
-      .eq("agent_phone", called)
-      .single()
+  // Sin cache: buscar en BD
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("id,name,el_agent_id")
+    .eq("agent_phone", called)
+    .single()
 
-    if (!tenant?.el_agent_id) {
-      console.error("[webhook] no agent for:", called)
-      return new NextResponse(`<?xml version="1.0" encoding="UTF-8"?><Response><Reject/></Response>`, { headers: { "Content-Type": "text/xml" } })
-    }
-
-    cache[called] = { agentId: tenant.el_agent_id, tenantId: tenant.id, name: tenant.name, ts: Date.now() }
-    console.log("[webhook] db:", tenant.name, "agent:", tenant.el_agent_id)
-    return new NextResponse(twiml(tenant.el_agent_id, tenant.id, caller), { headers: { "Content-Type": "text/xml" } })
-  } catch (err) {
-    console.error("[webhook] error:", err)
-    return new NextResponse(`<?xml version="1.0" encoding="UTF-8"?><Response><Reject/></Response>`, { headers: { "Content-Type": "text/xml" } })
+  if (!tenant?.el_agent_id) {
+    console.error("[webhook] no agent for:", called, "| tenant:", tenant?.name)
+    return reject()
   }
+
+  cache[called] = { agentId: tenant.el_agent_id, tenantId: tenant.id, name: tenant.name, ts: Date.now() }
+  console.log("[webhook] db:", tenant.name, "| agent:", tenant.el_agent_id)
+  return new NextResponse(xml(tenant.el_agent_id, tenant.id, caller), { headers: { "Content-Type": "text/xml" } })
 }
