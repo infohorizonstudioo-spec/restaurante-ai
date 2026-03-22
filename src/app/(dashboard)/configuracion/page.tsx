@@ -189,12 +189,12 @@ export default function ConfiguracionPage() {
       ...(isHosb ? { reservation_config: schedCfg } : {}),
     }).eq('id',tenant.id)
 
-    // Actualizar el first_message de ElevenLabs con el nuevo nombre
+    // Reprovisionar agente ElevenLabs con datos actualizados
     try {
-      await fetch('/api/voice/update-agent-name', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ business_name: newName, agent_name: newAgent })
+      await fetch('/api/agent/provision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tenant.id })
       })
     } catch { /* no crítico */ }
 
