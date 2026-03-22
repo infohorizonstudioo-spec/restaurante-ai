@@ -3,11 +3,6 @@ import { createClient } from "@supabase/supabase-js"
 
 export const dynamic = "force-dynamic"
 
-// Cache en memoria para tenants (se llena en el primer request, persiste en el proceso)
-const tenantCache: Record<string, { name: string; type: string; agent_name: string }> = {
-  "+12138753573": { name: "FormaNova", type: "restaurante", agent_name: "Sofia" }
-}
-
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -15,8 +10,15 @@ const supabase = createClient(
 
 const AGENT_ID = process.env.ELEVENLABS_AGENT_ID!
 
-function buildTwiML(tenantId: string, businessName: string, agentName: string, callerPhone: string): string {
-  const esc = (s: string) => s.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")
+// Cache completo por número: tenant + knowledge
+const cache: Record<string, { id: string; name: string; type: string; agent_name: string; context: string; ts: number }> = {}
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutos
+
+function esc(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+function buildTwiML(tenantId: string, businessName: string, agentName: string, callerPhone: string, businessContext: string): string {
   return '<?xml version="1.0" encoding="UTF-8"?>' +
     "<Response><Connect>" +
     `<Stream url="wss://api.elevenlabs.io/v1/convai/twilio-media-stream/${AGENT_ID}">` +
@@ -24,7 +26,61 @@ function buildTwiML(tenantId: string, businessName: string, agentName: string, c
     `<Parameter name="business_name" value="${esc(businessName)}"/>` +
     `<Parameter name="agent_name" value="${esc(agentName)}"/>` +
     `<Parameter name="caller_phone" value="${esc(callerPhone)}"/>` +
+    `<Parameter name="business_context" value="${esc(businessContext)}"/>` +
     "</Stream></Connect></Response>"
+}
+
+async function fetchTenantWithContext(phone: string) {
+  // 1. Buscar tenant por número
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("id,name,type,agent_name,agent_config")
+    .eq("agent_phone", phone)
+    .single()
+
+  if (!tenant) return null
+
+  // 2. Leer business_knowledge del tenant
+  const { data: knowledge } = await supabase
+    .from("business_knowledge")
+    .select("category,content")
+    .eq("tenant_id", tenant.id)
+    .eq("active", true)
+
+  // 3. Leer business_rules del tenant
+  const { data: rules } = await supabase
+    .from("business_rules")
+    .select("rule_key,rule_value")
+    .eq("tenant_id", tenant.id)
+
+  // 4. Construir business_context como texto plano para inyectar en el prompt
+  const kv: Record<string, string> = {}
+  for (const k of (knowledge || [])) kv[k.category] = k.content
+
+  const rv: Record<string, string> = {}
+  for (const r of (rules || [])) rv[r.rule_key] = r.rule_value
+
+  const parts: string[] = []
+  if (kv.horarios) parts.push("HORARIOS: " + kv.horarios)
+  if (kv.servicios) parts.push("SERVICIOS: " + kv.servicios)
+  if (kv.menu) parts.push("CARTA: " + kv.menu)
+  if (kv.precios) parts.push("PRECIOS: " + kv.precios)
+  if (kv.politicas) parts.push("POLITICAS: " + kv.politicas)
+  if (kv.faqs) parts.push("FAQS: " + kv.faqs)
+  if (rv.max_capacity) parts.push("AFORO: " + rv.max_capacity + " personas")
+  if (rv.advance_booking_hours) parts.push("RESERVAS: minimo " + rv.advance_booking_hours + "h antelacion")
+  if (rv.large_group_min) parts.push("GRUPOS: mas de " + rv.large_group_min + " personas requiere llamar directamente")
+
+  const context = parts.join(" | ")
+
+  return {
+    id: tenant.id,
+    name: tenant.name,
+    type: tenant.type,
+    agent_name: tenant.agent_name || "Sofia",
+    context,
+    ts: Date.now()
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -35,37 +91,43 @@ export async function POST(req: NextRequest) {
 
   console.log("[webhook] call from", callerPhone, "to", calledNumber)
 
-  // 1. Respuesta INMEDIATA desde cache (si existe)
-  const cached = tenantCache[calledNumber]
-  if (cached) {
-    console.log("[webhook] cache hit:", cached.name)
-    // Actualiza cache en background sin bloquear
-    supabase.from("tenants").select("id,name,type,agent_name").eq("agent_phone", calledNumber).single()
-      .then(({ data }) => { if (data) tenantCache[calledNumber] = { name: data.name, type: data.type, agent_name: data.agent_name || "Sofia" } })
-      .catch(() => {})
-    const twiml = buildTwiML("7be3fb2c-6da4-4129-a49d-3af1c2c45b77", cached.name, cached.agent_name, callerPhone)
-    return new NextResponse(twiml, { headers: { "Content-Type": "text/xml" } })
+  // Cache válido?
+  const cached = cache[calledNumber]
+  if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
+    console.log("[webhook] cache hit:", cached.name, "| context chars:", cached.context.length)
+    // Refresca en background
+    fetchTenantWithContext(calledNumber).then(t => { if (t) cache[calledNumber] = t }).catch(() => {})
+    return new NextResponse(
+      buildTwiML(cached.id, cached.name, cached.agent_name, callerPhone, cached.context),
+      { headers: { "Content-Type": "text/xml" } }
+    )
   }
 
-  // 2. Si no está en cache, busca en Supabase (con timeout de 3s)
+  // Sin cache: buscar en Supabase con timeout
   try {
-    const timeout = new Promise<null>((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000))
-    const query = supabase.from("tenants").select("id,name,type,agent_name").eq("agent_phone", calledNumber).single()
-    const { data: tenant } = await Promise.race([query, timeout]) as any
+    const timeout = new Promise<null>((_, reject) => setTimeout(() => reject(new Error("timeout")), 4000))
+    const tenant = await Promise.race([fetchTenantWithContext(calledNumber), timeout])
 
     if (!tenant) {
       console.error("[webhook] tenant not found:", calledNumber)
-      return new NextResponse('<?xml version="1.0" encoding="UTF-8"?><Response><Reject/></Response>', { headers: { "Content-Type": "text/xml" } })
+      return new NextResponse(
+        '<?xml version="1.0" encoding="UTF-8"?><Response><Reject/></Response>',
+        { headers: { "Content-Type": "text/xml" } }
+      )
     }
 
-    // Guardar en cache para próximas llamadas
-    tenantCache[calledNumber] = { name: tenant.name, type: tenant.type, agent_name: tenant.agent_name || "Sofia" }
-    console.log("[webhook] db hit:", tenant.name)
+    cache[calledNumber] = tenant
+    console.log("[webhook] db hit:", tenant.name, "| context:", tenant.context.slice(0, 80))
 
-    const twiml = buildTwiML(tenant.id, tenant.name, tenant.agent_name || "Sofia", callerPhone)
-    return new NextResponse(twiml, { headers: { "Content-Type": "text/xml" } })
+    return new NextResponse(
+      buildTwiML(tenant.id, tenant.name, tenant.agent_name, callerPhone, tenant.context),
+      { headers: { "Content-Type": "text/xml" } }
+    )
   } catch (err) {
     console.error("[webhook] error:", err)
-    return new NextResponse('<?xml version="1.0" encoding="UTF-8"?><Response><Reject/></Response>', { headers: { "Content-Type": "text/xml" } })
+    return new NextResponse(
+      '<?xml version="1.0" encoding="UTF-8"?><Response><Reject/></Response>',
+      { headers: { "Content-Type": "text/xml" } }
+    )
   }
 }
