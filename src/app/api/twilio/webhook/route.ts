@@ -49,19 +49,26 @@ export async function POST(req: NextRequest) {
     return new NextResponse(xml(hit.agentId, hit.tenantId, caller), { headers: { "Content-Type": "text/xml" } })
   }
 
-  // Sin cache: buscar en BD
-  const { data: tenant } = await supabase
+  // Sin cache: buscar en BD (probar con y sin +)
+  const { data: tenants } = await supabase
     .from("tenants")
     .select("id,name,el_agent_id")
-    .eq("agent_phone", called)
-    .single()
+    .or(`agent_phone.eq.${called},agent_phone.eq.${called.replace('+','')}`)
+    .limit(1)
 
-  if (!tenant?.el_agent_id) {
-    console.error("[webhook] no agent for:", called, "| tenant:", tenant?.name)
-    return reject()
+  const tenant = tenants?.[0]
+
+  // Fallback: si no hay tenant con ese número, usar el agente por defecto (FormaNova)
+  const agentId = tenant?.el_agent_id || process.env.ELEVENLABS_AGENT_ID!
+  const tenantId = tenant?.id || "7be3fb2c-6da4-4129-a49d-3af1c2c45b77"
+  const name = tenant?.name || "FormaNova"
+
+  if (!tenant) {
+    console.warn("[webhook] tenant not found for:", called, "— using default agent")
+  } else {
+    console.log("[webhook] db:", name, "| agent:", agentId)
+    cache[called] = { agentId, tenantId, name, ts: Date.now() }
   }
 
-  cache[called] = { agentId: tenant.el_agent_id, tenantId: tenant.id, name: tenant.name, ts: Date.now() }
-  console.log("[webhook] db:", tenant.name, "| agent:", tenant.el_agent_id)
-  return new NextResponse(xml(tenant.el_agent_id, tenant.id, caller), { headers: { "Content-Type": "text/xml" } })
+  return new NextResponse(xml(agentId, tenantId, caller), { headers: { "Content-Type": "text/xml" } })
 }
