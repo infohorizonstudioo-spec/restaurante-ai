@@ -8,25 +8,50 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// Cache: número → agente  (se invalida cada 10min o al guardar config)
-const cache: Record<string, { agentId: string; tenantId: string; name: string; ts: number }> = {}
+interface CachedTenant {
+  agentId: string
+  tenantId: string
+  name: string
+  agentName: string
+  context: string
+  ts: number
+}
+
+const cache: Record<string, CachedTenant> = {}
 const TTL = 10 * 60 * 1000
 
-function xml(agentId: string, tenantId: string, callerPhone: string): string {
-  const e = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;")
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+function twiml(agentId: string, tenantId: string, callerPhone: string, businessName: string, agentName: string, context: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>` +
     `<Response><Connect>` +
     `<Stream url="wss://api.elevenlabs.io/v1/convai/twilio-media-stream/${agentId}">` +
-    `<Parameter name="tenant_id" value="${e(tenantId)}"/>` +
-    `<Parameter name="caller_phone" value="${e(callerPhone)}"/>` +
+    `<Parameter name="tenant_id" value="${esc(tenantId)}"/>` +
+    `<Parameter name="caller_phone" value="${esc(callerPhone)}"/>` +
+    `<Parameter name="business_name" value="${esc(businessName)}"/>` +
+    `<Parameter name="agent_name" value="${esc(agentName)}"/>` +
+    `<Parameter name="business_context" value="${esc(context)}"/>` +
     `</Stream></Connect></Response>`
 }
 
-function reject(): NextResponse {
-  return new NextResponse(
-    `<?xml version="1.0" encoding="UTF-8"?><Response><Reject/></Response>`,
-    { headers: { "Content-Type": "text/xml" } }
-  )
+async function buildContext(tenantId: string): Promise<string> {
+  const [kbRes, rulesRes] = await Promise.all([
+    supabase.from("business_knowledge").select("category,content").eq("tenant_id", tenantId),
+    supabase.from("business_rules").select("rule_type,rule_value").eq("tenant_id", tenantId),
+  ])
+  const kb = kbRes.data || []
+  const rules = rulesRes.data || []
+
+  const parts: string[] = []
+  for (const k of kb) {
+    parts.push(`${(k.category || "info").toUpperCase()}: ${k.content}`)
+  }
+  for (const r of rules) {
+    parts.push(`REGLA ${(r.rule_type || "").toUpperCase()}: ${r.rule_value}`)
+  }
+  return parts.join("\n") || "Sin contexto adicional."
 }
 
 export async function POST(req: NextRequest) {
@@ -35,40 +60,50 @@ export async function POST(req: NextRequest) {
   const called = p.get("Called") || p.get("To") || ""
   const caller = p.get("Caller") || p.get("From") || ""
 
-  console.log("[webhook] call", caller, "→", called)
+  console.log("[webhook] call", caller, "->", called)
 
   // Cache hit
   const hit = cache[called]
   if (hit && Date.now() - hit.ts < TTL) {
-    console.log("[webhook] cache:", hit.name, "| agent:", hit.agentId)
-    // Refresca en background sin bloquear la respuesta
-    supabase.from("tenants").select("id,name,el_agent_id").eq("agent_phone", called).single()
-      .then(({ data: t }) => {
-        if (t?.el_agent_id) cache[called] = { agentId: t.el_agent_id, tenantId: t.id, name: t.name, ts: Date.now() }
-      }).catch(() => {})
-    return new NextResponse(xml(hit.agentId, hit.tenantId, caller), { headers: { "Content-Type": "text/xml" } })
+    console.log("[webhook] cache:", hit.name)
+    return new NextResponse(
+      twiml(hit.agentId, hit.tenantId, caller, hit.name, hit.agentName, hit.context),
+      { headers: { "Content-Type": "text/xml" } }
+    )
   }
 
-  // Sin cache: buscar en BD (probar con y sin +)
+  // DB lookup (with and without +)
   const { data: tenants } = await supabase
     .from("tenants")
-    .select("id,name,el_agent_id")
-    .or(`agent_phone.eq.${called},agent_phone.eq.${called.replace('+','')}`)
+    .select("id,name,agent_name,el_agent_id")
+    .or(`agent_phone.eq.${called},agent_phone.eq.${called.replace("+","")}`)
     .limit(1)
 
   const tenant = tenants?.[0]
-
-  // Fallback: si no hay tenant con ese número, usar el agente por defecto (FormaNova)
   const agentId = tenant?.el_agent_id || process.env.ELEVENLABS_AGENT_ID!
   const tenantId = tenant?.id || "7be3fb2c-6da4-4129-a49d-3af1c2c45b77"
   const name = tenant?.name || "FormaNova"
+  const agentName = tenant?.agent_name || "Sofia"
 
   if (!tenant) {
-    console.warn("[webhook] tenant not found for:", called, "— using default agent")
+    console.warn("[webhook] tenant not found for:", called, "- using default")
   } else {
     console.log("[webhook] db:", name, "| agent:", agentId)
-    cache[called] = { agentId, tenantId, name, ts: Date.now() }
   }
 
-  return new NextResponse(xml(agentId, tenantId, caller), { headers: { "Content-Type": "text/xml" } })
+  // Load business context from knowledge + rules
+  let context = "Sin contexto adicional."
+  try {
+    context = await buildContext(tenantId)
+  } catch (e) {
+    console.error("[webhook] context error:", e)
+  }
+
+  // Cache for next calls
+  cache[called] = { agentId, tenantId, name, agentName, context, ts: Date.now() }
+
+  return new NextResponse(
+    twiml(agentId, tenantId, caller, name, agentName, context),
+    { headers: { "Content-Type": "text/xml" } }
+  )
 }
