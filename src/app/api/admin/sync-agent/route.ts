@@ -10,7 +10,7 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { tenant_id } = await req.json()
+    const { tenant_id, el_key, agent_id: reqAgentId } = await req.json()
     if (!tenant_id) {
       return NextResponse.json({ error: "tenant_id required" }, { status: 400 })
     }
@@ -65,10 +65,10 @@ Para reservas pregunta nombre, dia, hora y cuantos son, de una en una. Cuando te
 Si preguntan por la carta o precios contesta con lo que sabes. Si preguntan algo que no esta en los datos, di que no lo sabes.`
 
     // 5. Patch ElevenLabs agent
-    const elKey = process.env.ELEVENLABS_API_KEY
-    const agentId = process.env.ELEVENLABS_AGENT_ID
+    const elKey = el_key || process.env.ELEVENLABS_API_KEY
+    const agentId = reqAgentId || process.env.ELEVENLABS_AGENT_ID
     if (!elKey || !agentId) {
-      return NextResponse.json({ error: "ELEVENLABS keys not configured" }, { status: 503 })
+      return NextResponse.json({ error: "ELEVENLABS keys not configured. Pass el_key and agent_id in body or set env vars." }, { status: 503 })
     }
 
     const elRes = await fetch(`https://api.elevenlabs.io/v1/convai/agents/${agentId}`, {
