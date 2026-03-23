@@ -77,7 +77,7 @@ Si preguntan por la carta o precios contesta con lo que sabes. Si preguntan algo
       body: JSON.stringify({
         conversation_config: {
           agent: {
-            first_message: `Hola buenas, ${businessName}.`,
+            first_message: `Hola buenas, ${businessName}, digame.`,
             prompt: { prompt: prompt }
           }
         }
