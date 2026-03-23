@@ -221,6 +221,12 @@ export default function ConfiguracionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenant_id: tenant.id })
       })
+      // Sincronizar prompt del agente ElevenLabs con datos actualizados de Supabase
+      await fetch('/api/admin/sync-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tenant.id })
+      })
     } catch { /* no crítico */ }
 
     setSaving(false); setSaved(true)
