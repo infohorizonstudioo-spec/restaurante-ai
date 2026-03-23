@@ -42,7 +42,7 @@ const DEFAULT: AgentConfig = {
     suggest_waitlist: false,
     max_alternatives: 2,
   },
-  knowledge: { services:'', menu:'', conditions:'', faqs:'' },
+  knowledge: { services:'', menu:'', conditions:'', faqs:'', horarios:'' },
   conversation_flow: ['nombre','personas','fecha','hora','confirmar'],
   special_cases: { allergies:'review', birthdays:'confirm', events:'review', vip:'confirm' },
 }
@@ -52,7 +52,7 @@ interface AgentConfig {
   review: { large_groups:boolean; special_requests:boolean; allergies_mentioned:boolean; unusual_hours:boolean; first_time_customers:boolean }
   rejection: { out_of_hours:boolean; no_availability:boolean; unknown_service:boolean }
   alternatives: { offer_other_time:boolean; leave_pending:boolean; suggest_waitlist:boolean; max_alternatives:number }
-  knowledge: { services:string; menu:string; conditions:string; faqs:string }
+  knowledge: { services:string; menu:string; conditions:string; faqs:string; horarios:string }
   conversation_flow: string[]
   special_cases: { allergies:string; birthdays:string; events:string; vip:string }
 }
@@ -213,6 +213,7 @@ export default function ConfiguracionPage() {
           menu: cfg.knowledge.menu || null,
           faqs: cfg.knowledge.faqs || null,
           policies: cfg.knowledge.conditions || null,
+          horarios: cfg.knowledge.horarios || null,
         })
       })
       // Reprovisionar agente ElevenLabs con los nuevos datos
@@ -329,7 +330,9 @@ export default function ConfiguracionPage() {
 
 
         <SectionCard id="knowledge" icon="🧠" title="¿Qué sabe de tu negocio?" sub={`Cuéntale a ${agentName} todo lo que necesita para responder bien`} active={openSection==='knowledge'} onClick={()=>toggleSection('knowledge')}>
-          <KArea label="Tus servicios y precios" sub={`Escribe qué ofreces y cuánto cuesta. ${agentName} lo usará cuando los clientes pregunten.`} placeholder={"Corte de pelo: 15€\nTinte completo: 45€\nManicura: 20€\n..."} value={cfg.knowledge.services} onChange={v=>upCfg('knowledge','services',v)}/>
+          <KArea label="Horarios" sub="Cuándo abrís y cuándo cerráis. Escríbelo como lo dirías por teléfono." placeholder={"Lunes a viernes de 9 a 14 y de 17 a 20\nSábados de 10 a 14\nDomingos cerrado"} value={cfg.knowledge.horarios||''} onChange={v=>upCfg('knowledge','horarios',v)}/>
+          {isHosb && <KArea label="Carta / Menú" sub={`Escribe los platos y precios. ${agentName} se lo aprenderá de memoria.`} placeholder={"Arroz a banda: 14€\nPaella: 13€\nChuletón: 22€\nMenú del día: 13.50€ (primero, segundo, postre y pan)"} value={cfg.knowledge.menu||''} onChange={v=>upCfg('knowledge','menu',v)}/>}
+          <KArea label={isHosb?"Otros servicios y precios":"Tus servicios y precios"} sub={`Escribe qué ofreces y cuánto cuesta. ${agentName} lo usará cuando los clientes pregunten.`} placeholder={"Corte de pelo: 15€\nTinte completo: 45€\nManicura: 20€\n..."} value={cfg.knowledge.services} onChange={v=>upCfg('knowledge','services',v)}/>
           <KArea label="Condiciones y normas" sub="Política de cancelaciones, reserva mínima, señal, etc." placeholder={"Cancelación con 24h de antelación sin coste\nGrupos de más de 8 requieren señal\n..."} value={cfg.knowledge.conditions} onChange={v=>upCfg('knowledge','conditions',v)}/>
           <KArea label="Preguntas que te hacen siempre" sub="Escribe las preguntas más frecuentes y sus respuestas" placeholder={"¿Tenéis terraza? Sí, con capacidad para 20 personas\n¿Hay parking? Sí, en la calle lateral gratuito\n..."} value={cfg.knowledge.faqs} onChange={v=>upCfg('knowledge','faqs',v)}/>
           <div style={{background:C.tealDim,border:`1px solid ${C.teal}33`,borderRadius:10,padding:'10px 14px'}}>

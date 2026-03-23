@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   try {
     const {
       tenant_id, agent_phone, business_name, business_type, agent_name,
-      hours, menu, services, prices, faqs, policies,
+      hours, horarios, menu, services, prices, faqs, policies,
       max_capacity, advance_hours, large_group_min,
     } = await req.json()
 
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     // 1. Guardar business_knowledge
     await supabase.from("business_knowledge").delete().eq("tenant_id", tenant_id)
     const knowledge = []
-    if (hours) knowledge.push({ tenant_id, category: "horarios", content: typeof hours === "string" ? hours : JSON.stringify(hours) })
+    if (hours || horarios) knowledge.push({ tenant_id, category: "horarios", content: typeof (hours||horarios) === "string" ? (hours||horarios) : JSON.stringify(hours||horarios) })
     if (menu) knowledge.push({ tenant_id, category: "menu", content: Array.isArray(menu) ? menu.join("\n") : menu })
     if (services) knowledge.push({ tenant_id, category: "servicios", content: Array.isArray(services) ? services.join("\n") : services })
     if (prices) knowledge.push({ tenant_id, category: "precios", content: prices })
