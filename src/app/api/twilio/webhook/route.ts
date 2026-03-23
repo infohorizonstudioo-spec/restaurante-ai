@@ -19,6 +19,22 @@ interface CachedTenant {
 const cache: Record<string, CachedTenant> = {}
 const TTL = 10 * 60 * 1000
 
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, " ").replace(/\r/g, "")
+}
+
+async function getSignedUrl(agentId: string): Promise<string> {
+  const apiKey = process.env.ELEVENLABS_API_KEY
+  if (!apiKey) throw new Error("Missing ELEVENLABS_API_KEY")
+  const r = await fetch(
+    `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
+    { headers: { "xi-api-key": apiKey } }
+  )
+  if (!r.ok) throw new Error(`ElevenLabs signed URL error: ${r.status}`)
+  const d = await r.json()
+  return d.signed_url
+}
+
 async function buildContext(tenantId: string): Promise<string> {
   const [kbRes, rulesRes] = await Promise.all([
     supabase.from("business_knowledge").select("category,content").eq("tenant_id", tenantId),
@@ -33,7 +49,7 @@ async function buildContext(tenantId: string): Promise<string> {
     if (!v.startsWith("{") && !v.startsWith("[")) parts.push(`REGLA ${(r.rule_key || "").toUpperCase()}: ${v}`)
   }
   let ctx = parts.join(" | ") || "Sin contexto adicional."
-  if (ctx.length > 800) ctx = ctx.slice(0, 800)
+  if (ctx.length > 600) ctx = ctx.slice(0, 600)
   return ctx
 }
 
@@ -65,23 +81,3 @@ export async function POST(req: NextRequest) {
     cache[called] = { tenantId, name, agentName, context, ts: Date.now() }
     console.log("[webhook] db:", name)
   }
-
-  // Proxy to ElevenLabs inbound_call - they handle WebSocket auth
-  const agentId = process.env.ELEVENLABS_AGENT_ID || "agent_0701kkw2sdx5fp685xp6ckngf6zj"
-  const elUrl = `https://api.elevenlabs.io/v1/convai/twilio/inbound_call?agent_id=${agentId}`
-  
-  console.log("[webhook] proxying to ElevenLabs:", agentId)
-  
-  const elRes = await fetch(elUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body,
-  })
-  
-  const twiml = await elRes.text()
-  console.log("[webhook] ElevenLabs status:", elRes.status, "len:", twiml.length)
-  
-  return new NextResponse(twiml, {
-    headers: { "Content-Type": "text/xml" },
-  })
-}
