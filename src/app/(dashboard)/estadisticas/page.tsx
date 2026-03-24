@@ -13,8 +13,8 @@ export default function EstadisticasPage(){
 
   useEffect(()=>{
     (async()=>{
-      const {data:{user}} = await supabase.auth.getUser(); if(!user) return
-      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).maybeSingle(); if(!p?.tenant_id) return
+      const {data:{user}} = await supabase.auth.getUser(); if(!user) { setLoad(false); return }
+      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).maybeSingle(); if(!p?.tenant_id) { setLoad(false); return }
       const {data:t} = await supabase.from('tenants').select('plan,free_calls_used,free_calls_limit,plan_calls_used,plan_calls_included,plan_extra_rate,name').eq('id',p.tenant_id).maybeSingle()
       setPlan(t?.plan||'free'); setTid(p.tenant_id)
 

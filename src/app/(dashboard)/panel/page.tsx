@@ -6,7 +6,7 @@ import { PageLoader } from '@/components/ui'
 import Link from 'next/link'
 import NotificationBell from '@/components/NotificationBell'
 import { resolveTemplate } from '@/lib/templates'
-import { getEventConfig, getAllCallStates, type BusinessEventConfig } from '@/lib/event-schemas'
+import { getEventConfig, type BusinessEventConfig } from '@/lib/event-schemas'
 
 const C = {
   amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)', amberGlow:'rgba(240,168,78,0.20)',
@@ -23,6 +23,26 @@ const C = {
 const PLAN_COL: Record<string,string> = { trial:C.amber,free:C.amber,starter:C.blue,pro:C.violet,business:C.green }
 const PLAN_LBL: Record<string,string> = { trial:'Trial',free:'Trial',starter:'Starter',pro:'Pro',business:'Business' }
 const PLAN_CALLS: Record<string,number> = { trial:10,free:10,starter:50,pro:200,business:600 }
+
+const INTENT_MAP: Record<string, string> = {
+  reserva: 'reservation', pedido: 'order', cancelacion: 'cancellation',
+  consulta: 'inquiry', otro: 'inquiry',
+}
+const SCHEMA_MAP: Record<string, { icon: string; color: string; label: string }> = {
+  reservation: { icon: '📅', color: '#2DD4BF', label: 'Reserva' },
+  appointment: { icon: '📋', color: '#2DD4BF', label: 'Cita' },
+  order:       { icon: '🛍️', color: '#A78BFA', label: 'Pedido' },
+  cancellation:{ icon: '❌', color: '#F87171', label: 'Cancelación' },
+  inquiry:     { icon: '💬', color: '#8895A7', label: 'Consulta' },
+  visit:       { icon: '🏠', color: '#60A5FA', label: 'Visita' },
+}
+const CALL_STATE_MAP: Record<string, { label: string; color: string }> = {
+  escuchando:   { label: 'Escuchando', color: '#2DD4BF' },
+  hablando:     { label: 'Hablando',   color: '#F0A84E' },
+  procesando:   { label: 'Procesando', color: '#A78BFA' },
+  finalizando:  { label: 'Finalizando', color: '#8895A7' },
+}
+const ACTIVE_CALL_LABEL = 'Actividad en vivo'
 
 // ── Tipos de evento del feed
 interface LiveEvent {
@@ -47,23 +67,18 @@ function timeAgo(d: Date) {
 }
 
 // ── Demo events dinámicos por tipo de negocio ──────────────────────────────
-function buildDemoEvents(evtConfig: BusinessEventConfig): Omit<LiveEvent,'id'|'ts'>[] {
-  return evtConfig.demoEvents.map(d => {
-    const schema = evtConfig.schemas.find(s => s.type === d.schemaType)
-    return {
-      type: d.schemaType as any,
-      icon: schema?.icon || '📅',
-      color: schema?.color || C.teal,
-      title: d.title,
-      sub: d.sub,
-      priority: d.priority,
-      demo: true,
-    }
-  })
+function buildDemoEvents(_evtConfig: BusinessEventConfig): Omit<LiveEvent,'id'|'ts'>[] {
+  return [
+    { type: 'call_incoming', icon: '📞', color: C.teal, title: 'Llamada entrante — +34 612 345 678', sub: '📅 Reserva detectada', priority: 'high', demo: true },
+    { type: 'reservation', icon: '📅', color: C.teal, title: 'Nueva reserva — María López', sub: '4 personas · 21:00', priority: 'high', demo: true },
+    { type: 'call_ended', icon: '✅', color: C.green, title: 'Llamada finalizada — Carlos Ruiz', sub: 'Reserva confirmada para mañana', demo: true },
+    { type: 'system', icon: '💬', color: C.text2, title: 'Consulta sobre el menú', sub: 'Cliente preguntó por opciones vegetarianas', demo: true },
+    { type: 'call_incoming', icon: '📞', color: C.teal, title: 'Llamada entrante — +34 698 765 432', sub: '💬 Consulta detectada', demo: true },
+  ]
 }
 
 // ── Live Feed Component
-function LiveFeed({ events, demoMode, onToggleDemo, activeCallLabel }: { events:LiveEvent[], demoMode:boolean, onToggleDemo:()=>void, activeCallLabel:string }) {
+function LiveFeed({ events, demoMode, onToggleDemo }: { events:LiveEvent[], demoMode:boolean, onToggleDemo:()=>void }) {
   const display = events.slice(0, 12)
 
   return (
@@ -72,7 +87,7 @@ function LiveFeed({ events, demoMode, onToggleDemo, activeCallLabel }: { events:
       <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <div style={{ width:8, height:8, borderRadius:'50%', background:C.green, animation:'rz-pulse 2s ease-in-out infinite' }}/>
-          <span style={{ fontSize:14, fontWeight:700, color:C.text, letterSpacing:'-0.01em' }}>{activeCallLabel}</span>
+          <span style={{ fontSize:14, fontWeight:700, color:C.text, letterSpacing:'-0.01em' }}>{ACTIVE_CALL_LABEL}</span>
           {demoMode && <span style={{ fontSize:10, padding:'2px 8px', borderRadius:10, background:'rgba(251,181,63,0.15)', color:C.yellow, fontWeight:700, letterSpacing:'0.04em' }}>DEMO</span>}
         </div>
         <button onClick={onToggleDemo} style={{
@@ -150,9 +165,8 @@ function KpiCard({ value, label, sub, color=C.amber, href, icon, accent=false }:
 
 // ── Active call block — usa schemas dinámicos
 function ActiveCallBlock({ call, businessType }:{ call:any; businessType:string }) {
-  const allStates = getAllCallStates(businessType)
   const state = call.session_state || 'escuchando'
-  const stateInfo = allStates[state] || { label:state, color:C.teal }
+  const stateInfo = CALL_STATE_MAP[state] || { label: state, color: C.teal }
   const color = stateInfo.color
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t) }, [])
@@ -177,9 +191,8 @@ function ActiveCallBlock({ call, businessType }:{ call:any; businessType:string 
 
 // ── Call row — usa schemas dinámicos
 function CallRow({ call, idx, businessType }:{ call:any; idx:number; businessType:string }) {
-  const evtConfig = getEventConfig(businessType)
-  const schemaType = evtConfig.intentMap[call.intent] || 'inquiry'
-  const schema = evtConfig.schemas.find(s => s.type === schemaType)
+  const schemaType = INTENT_MAP[call.intent] || 'inquiry'
+  const schema = SCHEMA_MAP[schemaType]
   const status = call.status||'completada'
   const done = ['completada','completed'].includes(status)
   const phone = call.caller_phone||call.from_number||'Número oculto'
@@ -289,10 +302,9 @@ export default function PanelPage() {
     const ch = supabase.channel('panel-rt-v5-' + tenantId)
       .on('postgres_changes',{ event:'INSERT', schema:'public', table:'calls', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const c = payload.new as any
-        const cfg = getEventConfig(tenantType||'otro')
-        const schType = cfg.intentMap[c.intent||'otro'] || 'inquiry'
-        const sch = cfg.schemas.find(s=>s.type===schType)
-        pushEvent({ type:'call_incoming' as any, icon:'📞', color:C.teal, title:`${cfg.activeCallLabel} — ${c.caller_phone||'Número oculto'}`, sub: sch ? `${sch.icon} ${sch.label} detectada` : '', priority:'high' })
+        const schType = INTENT_MAP[c.intent||'otro'] || 'inquiry'
+        const sch = SCHEMA_MAP[schType]
+        pushEvent({ type:'call_incoming' as any, icon:'📞', color:C.teal, title:`${ACTIVE_CALL_LABEL} — ${c.caller_phone||'Número oculto'}`, sub: sch ? `${sch.icon} ${sch.label} detectada` : '', priority:'high' })
         if (c.status === 'activa') setActiveCalls(prev => [c, ...prev.filter(x => x.id !== c.id)])
         setCalls(prev => [c, ...prev].slice(0, 8))
       })
@@ -307,9 +319,8 @@ export default function PanelPage() {
           setActiveCalls(prev => prev.filter(x => x.id !== c.id))
         }
         if (c.status==='completada'||c.status==='completed') {
-          const cfg = getEventConfig(tenantType||'otro')
-          const schType = cfg.intentMap[c.intent||'otro'] || 'inquiry'
-          const sch = cfg.schemas.find(s=>s.type===schType)
+          const schType = INTENT_MAP[c.intent||'otro'] || 'inquiry'
+          const sch = SCHEMA_MAP[schType]
           pushEvent({ type:'call_ended' as any, icon:sch?.icon||'✅', color:sch?.color||C.green,
             title:`${sch?.label||'Llamada'} finalizada${c.customer_name?' — '+c.customer_name:''}`,
             sub:c.summary?.slice(0,80)||'Resumen generado' })
@@ -318,8 +329,7 @@ export default function PanelPage() {
       })
       .on('postgres_changes',{ event:'INSERT', schema:'public', table:'reservations', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const r = payload.new as any
-        const cfg = getEventConfig(tenantType||'otro')
-        const sch = cfg.schemas.find(s=>s.type==='appointment'||s.type==='reservation'||s.type==='visit')
+        const sch = SCHEMA_MAP['reservation'] || SCHEMA_MAP['appointment']
         pushEvent({ type:'reservation' as any, icon:sch?.icon||'📅', color:sch?.color||C.teal,
           title:`${sch?.label||'Nueva cita'} — ${r.customer_name||r.patient_name||r.owner_name||'Cliente'}`,
           sub:`${r.people||r.party_size||''} ${r.people?'personas ·':''} ${(r.time||'').slice(0,5)}`.trim(),
@@ -434,7 +444,6 @@ export default function PanelPage() {
   const callsLeft = Math.max(0,callsLimit-callsUsed)
   const agentOn   = !!tenant.agent_phone
   const tmpl      = resolveTemplate(tenant.type||'otro')
-  const evtConfig  = getEventConfig(tenant.type||'otro')
   const L         = tmpl.labels
   const hour      = new Date().getHours()
   const greeting  = hour<13?'Buenos días':hour<20?'Buenas tardes':'Buenas noches'
@@ -623,7 +632,7 @@ export default function PanelPage() {
           <div style={{ display:'flex',flexDirection:'column',gap:16 }}>
 
             {/* Live feed */}
-            <LiveFeed events={events} demoMode={demoMode} onToggleDemo={toggleDemo} activeCallLabel={evtConfig.activeCallLabel}/>
+            <LiveFeed events={events} demoMode={demoMode} onToggleDemo={toggleDemo}/>
 
             {/* Reservas hoy */}
             <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,overflow:'hidden' }}>

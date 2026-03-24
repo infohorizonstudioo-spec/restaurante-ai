@@ -428,13 +428,6 @@ export async function POST(req: Request) {
       knowledgeSource
     )
 
-    console.log(
-      'decision |', decision.status,
-      '| confidence:', (decision.confidence * 100).toFixed(0) + '%',
-      '| flags:', decision.special_flags.join(',') || 'none',
-      '| reasoning:', decision.reasoning_label
-    )
-
     // ── Guardar en DB (atómico, idempotente) ────────────────────────────────
     const { data: sessionResult, error: sessionError } = await admin.rpc('complete_call_session', {
       p_call_sid:        key,
@@ -452,11 +445,11 @@ export async function POST(req: Request) {
     })
 
     if (sessionError) {
-      console.error('complete_call_session error:', sessionError.message)
+      // complete_call_session failed — non-critical, continue processing
     }
 
-    // ── Guardar decisión estructurada (flags, estado, confianza, trace) ────
-    ;(async () => {
+    // ── Post-processing en paralelo ──────────────────────────────────────────
+    const saveDecision = async () => {
       try {
         await admin.from('calls')
           .update({
@@ -470,11 +463,10 @@ export async function POST(req: Request) {
           })
           .eq('call_sid', key)
           .eq('tenant_id', tenantId)
-      } catch(e: any) { /* columnas pueden no existir aún — no crítico */ }
-    })()
+      } catch {}
+    }
 
-    // ── Auto-crear reserva si la llamada confirmó una ──────────────────────
-    ;(async () => {
+    const autoCreateReservation = async () => {
       if (decision.status !== 'confirmed' || decision.intent !== 'reserva') return
       try {
         // Extraer fecha del transcript o usar mañana como fallback
@@ -497,7 +489,7 @@ export async function POST(req: Request) {
         const resTime = timeMatch ? `${timeMatch[1].padStart(2,'0')}:${timeMatch[2]}` : '20:00'
         const people  = peopleMatch ? parseInt(peopleMatch[1]) : (decision.details?.party_size || 2)
 
-        const { error: resErr } = await admin.rpc('create_reservation_atomic', {
+        await admin.rpc('create_reservation_atomic', {
           p_tenant_id:     tenantId,
           p_date:          resDate,
           p_time:          resTime,
@@ -506,13 +498,10 @@ export async function POST(req: Request) {
           p_customer_phone: callerPhone || '',
           p_notes:         `Reserva tomada por llamada. ${decision.summary || ''}`,
         })
-        if (resErr) console.error('auto-reservation error:', resErr.message)
-        else console.log('auto-reservation created | name:', decision.customer_name, '| date:', resDate, '| time:', resTime, '| people:', people)
-      } catch(e: any) { console.error('auto-reservation exception:', e.message) }
-    })()
+      } catch {}
+    }
 
-    // ── Notificación en el panel ─────────────────────────────────────────────
-    ;(async () => {
+    const sendNotification = async () => {
       try {
         const phone = callerPhone || 'Número oculto'
         const name  = decision.customer_name ? decision.customer_name : phone
@@ -561,11 +550,10 @@ export async function POST(req: Request) {
             call_sid:  key,
           })
         }
-      } catch(e: any) { console.error('notification error:', e.message) }
-    })()
+      } catch {}
+    }
 
-    // ── Aprendizaje por tenant — fire & forget, no crítico ─────────────────
-    ;(async () => {
+    const learnFromCallAsync = async () => {
       try {
         await learnFromCall(tenantId, {
           intent:             decision.intent,
@@ -578,8 +566,15 @@ export async function POST(req: Request) {
           consultation_type:  analysis.details?.consultation_type,
           started_at:         new Date().toISOString(),
         })
-      } catch (e: any) { /* non-critical */ }
-    })()
+      } catch {}
+    }
+
+    await Promise.allSettled([
+      saveDecision(),
+      autoCreateReservation(),
+      sendNotification(),
+      learnFromCallAsync(),
+    ])
 
     const alreadyCounted = (sessionResult as any)?.already_counted === true
 
@@ -592,10 +587,8 @@ export async function POST(req: Request) {
           p_call_sid:         key,
           p_duration_seconds: duration
         })
-      } catch(e: any) { console.error('billing error:', e.message) }
+      } catch {}
     }
-
-    console.log('post-call done | sid:', key.slice(0,20), '| intent:', decision.intent, '| status:', decision.status, '| confidence:', (decision.confidence*100).toFixed(0)+'%', '| billed:', shouldBill, '| ms:', Date.now()-t0)
 
     // Objeto estructurado según spec del agente
     return NextResponse.json({

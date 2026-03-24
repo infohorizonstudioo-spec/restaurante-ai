@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { validateAgentKey } from "@/lib/agent-auth"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -201,6 +202,7 @@ const BUSINESS_TYPE_LOGIC: Record<string, object> = {
 
 export async function POST(req: NextRequest) {
   try {
+    if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
     const { tenant_id } = await req.json()
     if (!tenant_id) return NextResponse.json({ error: "tenant_id required" }, { status: 400 })
 

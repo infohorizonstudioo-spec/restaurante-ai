@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { validateAgentKey } from "@/lib/agent-auth"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
   try {
+    if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
     const { tenant_id, caller_phone, summary, outcome, reservation_id } = await req.json()
     if (!tenant_id || !summary) {
       return NextResponse.json({ error: "tenant_id and summary required" }, { status: 400 })
