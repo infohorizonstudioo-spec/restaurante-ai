@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 
-export default function NotificationBell() {
+export default function NotificationBell({ tenantId: propTenantId }: { tenantId?: string } = {}) {
   const [count, setCount] = useState(0)
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
@@ -25,11 +25,15 @@ export default function NotificationBell() {
   }, [])
 
   async function loadNotifications() {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return
-    const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).maybeSingle()
-    if (!profile?.tenant_id) return
-    const tenant = { id: profile.tenant_id }
+    let tid = propTenantId
+    if (!tid) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).maybeSingle()
+      if (!profile?.tenant_id) return
+      tid = profile.tenant_id
+    }
+    const tenant = { id: tid }
     const { data } = await supabase.from('notifications').select('*').eq('tenant_id', tenant.id).order('created_at', { ascending: false }).limit(10)
     if (data) {
       setNotifications(data)
