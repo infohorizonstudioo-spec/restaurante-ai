@@ -264,6 +264,94 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://restaurante-ai.vercel.app'
     const agentApiKey = process.env.AGENT_API_KEY || ''
 
+    const headers = agentApiKey ? { "x-agent-key": agentApiKey } : {}
+
+    function webhookTool(name: string, description: string, endpoint: string, bodySchema: Record<string, any>) {
+      return {
+        type: "webhook" as const,
+        name,
+        description,
+        api_schema: {
+          url: `${appUrl}${endpoint}`,
+          method: "POST" as const,
+          request_headers: { "Content-Type": "application/json", ...headers },
+          request_body_schema: bodySchema,
+        },
+        response_timeout_secs: 20,
+      }
+    }
+
+    const tools = [
+      webhookTool(
+        "check_availability",
+        "Comprueba si hay disponibilidad para una fecha, hora y número de personas. Llámalo SIEMPRE antes de confirmar una reserva.",
+        "/api/agent/check-availability",
+        {
+          type: "object",
+          properties: {
+            tenant_id: { type: "string", description: "ID del negocio" },
+            date: { type: "string", description: "Fecha en formato YYYY-MM-DD" },
+            time: { type: "string", description: "Hora en formato HH:MM" },
+            party_size: { type: "number", description: "Número de personas" },
+          },
+          required: ["tenant_id", "date"],
+        }
+      ),
+      webhookTool(
+        "create_reservation",
+        "Crea una reserva confirmada. Solo llámalo después de verificar disponibilidad y confirmar con el cliente.",
+        "/api/agent/create-reservation",
+        {
+          type: "object",
+          properties: {
+            tenant_id: { type: "string", description: "ID del negocio" },
+            customer_name: { type: "string", description: "Nombre del cliente" },
+            customer_phone: { type: "string", description: "Teléfono del cliente" },
+            date: { type: "string", description: "Fecha YYYY-MM-DD" },
+            time: { type: "string", description: "Hora HH:MM" },
+            party_size: { type: "number", description: "Número de personas" },
+            notes: { type: "string", description: "Notas: alergias, preferencias, etc." },
+          },
+          required: ["tenant_id", "customer_name", "date", "time"],
+        }
+      ),
+      webhookTool(
+        "get_menu_or_services",
+        "Obtiene la carta, servicios o precios del negocio. Llámalo cuando pregunten por menú, servicios o precios.",
+        "/api/agent/get-menu",
+        {
+          type: "object",
+          properties: {
+            tenant_id: { type: "string", description: "ID del negocio" },
+          },
+          required: ["tenant_id"],
+        }
+      ),
+      webhookTool(
+        "save_call_summary",
+        "Guarda un resumen de la llamada al finalizar. Llámalo siempre al despedirte del cliente.",
+        "/api/agent/save-summary",
+        {
+          type: "object",
+          properties: {
+            tenant_id: { type: "string", description: "ID del negocio" },
+            customer_name: { type: "string", description: "Nombre del cliente" },
+            intent: { type: "string", description: "Intención: reserva, cancelacion, consulta, pedido, otro" },
+            summary: { type: "string", description: "Resumen breve de la llamada" },
+          },
+          required: ["tenant_id", "summary"],
+        }
+      ),
+    ]
+
+    // Inyectar tenant_id fijo en cada tool para que el agente no tenga que adivinarlo
+    for (const tool of tools) {
+      const props = tool.api_schema.request_body_schema.properties
+      if (props.tenant_id) {
+        props.tenant_id.default = tenantId
+      }
+    }
+
     const agentBody: Record<string, any> = {
       name: `${tenant.name} — Reservo.AI`,
       conversation_config: {
@@ -271,88 +359,7 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
           first_message: `${tenant.name}, buenas, dígame.`,
           language: "es",
           prompt: { prompt },
-          tools: [
-            {
-              type: "webhook",
-              name: "check_availability",
-              description: "Comprueba si hay disponibilidad para una fecha, hora y número de personas. Llámalo SIEMPRE antes de confirmar una reserva.",
-              api: {
-                url: `${appUrl}/api/agent/check-availability`,
-                method: "POST",
-                ...(agentApiKey ? { headers: { "x-agent-key": agentApiKey } } : {}),
-              },
-              parameters: {
-                type: "object",
-                properties: {
-                  tenant_id: { type: "string", description: "ID del negocio", const: tenantId },
-                  date: { type: "string", description: "Fecha en formato YYYY-MM-DD" },
-                  time: { type: "string", description: "Hora en formato HH:MM (opcional)" },
-                  party_size: { type: "number", description: "Número de personas" },
-                },
-                required: ["tenant_id", "date"],
-              },
-            },
-            {
-              type: "webhook",
-              name: "create_reservation",
-              description: "Crea una reserva confirmada. Solo llámalo después de verificar disponibilidad y confirmar con el cliente.",
-              api: {
-                url: `${appUrl}/api/agent/create-reservation`,
-                method: "POST",
-                ...(agentApiKey ? { headers: { "x-agent-key": agentApiKey } } : {}),
-              },
-              parameters: {
-                type: "object",
-                properties: {
-                  tenant_id: { type: "string", description: "ID del negocio", const: tenantId },
-                  customer_name: { type: "string", description: "Nombre del cliente" },
-                  customer_phone: { type: "string", description: "Teléfono del cliente" },
-                  date: { type: "string", description: "Fecha en formato YYYY-MM-DD" },
-                  time: { type: "string", description: "Hora en formato HH:MM" },
-                  party_size: { type: "number", description: "Número de personas" },
-                  notes: { type: "string", description: "Notas adicionales (alergias, preferencias, etc.)" },
-                },
-                required: ["tenant_id", "customer_name", "date", "time"],
-              },
-            },
-            {
-              type: "webhook",
-              name: "get_menu_or_services",
-              description: "Obtiene la carta, servicios o precios del negocio. Llámalo cuando el cliente pregunte por menú, servicios o precios.",
-              api: {
-                url: `${appUrl}/api/agent/get-menu`,
-                method: "POST",
-                ...(agentApiKey ? { headers: { "x-agent-key": agentApiKey } } : {}),
-              },
-              parameters: {
-                type: "object",
-                properties: {
-                  tenant_id: { type: "string", description: "ID del negocio", const: tenantId },
-                },
-                required: ["tenant_id"],
-              },
-            },
-            {
-              type: "webhook",
-              name: "save_call_summary",
-              description: "Guarda un resumen de la llamada al finalizar. Llámalo siempre al despedirte del cliente.",
-              api: {
-                url: `${appUrl}/api/agent/save-summary`,
-                method: "POST",
-                ...(agentApiKey ? { headers: { "x-agent-key": agentApiKey } } : {}),
-              },
-              parameters: {
-                type: "object",
-                properties: {
-                  tenant_id: { type: "string", description: "ID del negocio", const: tenantId },
-                  customer_name: { type: "string", description: "Nombre del cliente" },
-                  intent: { type: "string", description: "Intención: reserva, cancelacion, consulta, pedido, otro" },
-                  summary: { type: "string", description: "Resumen breve de la llamada" },
-                },
-                required: ["tenant_id", "summary"],
-              },
-            },
-          ],
+          tools,
         },
         tts: { voice_id: voiceConfig.voice_id, stability: voiceConfig.stability, similarity_boost: voiceConfig.similarity_boost }
       }
