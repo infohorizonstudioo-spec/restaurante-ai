@@ -58,7 +58,7 @@ export default function Sidebar() {
   const plan      = tenant?.plan || 'trial'
   const isTrial   = plan === 'trial' || plan === 'free'
   const used      = isTrial ? (tenant?.free_calls_used||0) : (tenant?.plan_calls_used||0)
-  const included  = isTrial ? (tenant?.free_calls_limit||10) : (tenant?.plan_calls_included||50)
+  const included  = isTrial ? 10 : (tenant?.plan_calls_included||50)
   const pct       = included > 0 ? Math.min(100, Math.round((used/included)*100)) : 0
   const planColor = PLAN_COL[plan] || '#F0A84E'
   const planLabel = PLAN_LBL[plan] || 'Trial'

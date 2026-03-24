@@ -27,8 +27,9 @@ export default function NotificationBell() {
   async function loadNotifications() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
-    const { data: tenant } = await supabase.from('tenants').select('id').eq('owner_id', session.user.id).single()
-    if (!tenant) return
+    const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).maybeSingle()
+    if (!profile?.tenant_id) return
+    const tenant = { id: profile.tenant_id }
     const { data } = await supabase.from('notifications').select('*').eq('tenant_id', tenant.id).order('created_at', { ascending: false }).limit(10)
     if (data) {
       setNotifications(data)

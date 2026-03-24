@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
+import { useTenant } from '@/contexts/TenantContext'
 
 const C = {
   bg:'#0C1018', card:'#131920', card2:'#161D2A', border:'rgba(255,255,255,0.07)',
@@ -179,6 +180,9 @@ function ZoneRow({zone,color,tableCount,onRename,onDelete}:{
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function MesasPage() {
+  const { template } = useTenant()
+  const unitS = template?.labels?.unit?.singular || 'Mesa'
+  const unitP = template?.labels?.unit?.plural   || 'Mesas'
   const [tid,setTid]               = useState<string|null>(null)
   const [zones,setZones]           = useState<Zone[]>([])
   const [tables,setTables]         = useState<TableItem[]>([])
@@ -271,7 +275,7 @@ export default function MesasPage() {
         <div style={{display:'flex',alignItems:'center',gap:16}}>
           <div>
             <h1 style={{fontSize:16,fontWeight:700,color:C.text}}>Plano del local</h1>
-            <p style={{fontSize:11,color:C.muted,marginTop:1}}>{tables.length} mesas · {zones.length} zonas</p>
+            <p style={{fontSize:11,color:C.muted,marginTop:1}}>{tables.length} {unitP.toLowerCase()} · {zones.length} zonas</p>
           </div>
           <div style={{display:'flex',gap:8}}>
             {[{l:'Libres',v:freeCount,c:C.green},{l:'Reservadas',v:resCount,c:C.amber},{l:'Ocupadas',v:occCount,c:C.red}].map(s=>(
@@ -286,7 +290,7 @@ export default function MesasPage() {
           {([['floor','Plano'],['zones','Zonas']] as const).map(([k,l])=>(
             <button key={k} onClick={()=>setTab(k)} style={{padding:'6px 14px',fontSize:12,fontWeight:600,borderRadius:9,border:`1px solid ${tab===k?C.amber+'44':C.border}`,background:tab===k?C.amberDim:'transparent',color:tab===k?C.amber:C.sub,cursor:'pointer',fontFamily:'inherit'}}>{l}</button>
           ))}
-          <button onClick={()=>addTable()} style={{padding:'7px 16px',fontSize:12,fontWeight:700,background:`linear-gradient(135deg,${C.amber},#E8923A)`,color:'#0C1018',border:'none',borderRadius:9,cursor:'pointer',fontFamily:'inherit'}}>+ Mesa</button>
+          <button onClick={()=>addTable()} style={{padding:'7px 16px',fontSize:12,fontWeight:700,background:`linear-gradient(135deg,${C.amber},#E8923A)`,color:'#0C1018',border:'none',borderRadius:9,cursor:'pointer',fontFamily:'inherit'}}>+ {unitS}</button>
           <NotifBell/>
         </div>
       </div>
@@ -309,9 +313,9 @@ export default function MesasPage() {
             {visible.length===0?(
               <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12}}>
                 <p style={{fontSize:32}}>🍽️</p>
-                <p style={{fontSize:15,fontWeight:600,color:C.text}}>Sin mesas en el plano</p>
+                <p style={{fontSize:15,fontWeight:600,color:C.text}}>Sin {unitP.toLowerCase()} en el plano</p>
                 <p style={{fontSize:13,color:C.muted}}>Añade mesas para configurar tu local visualmente.</p>
-                <button onClick={()=>addTable()} style={{padding:'10px 24px',fontSize:13,fontWeight:700,background:`linear-gradient(135deg,${C.amber},#E8923A)`,color:'#0C1018',border:'none',borderRadius:10,cursor:'pointer',fontFamily:'inherit'}}>+ Añadir primera mesa</button>
+                <button onClick={()=>addTable()} style={{padding:'10px 24px',fontSize:13,fontWeight:700,background:`linear-gradient(135deg,${C.amber},#E8923A)`,color:'#0C1018',border:'none',borderRadius:10,cursor:'pointer',fontFamily:'inherit'}}>+ Añadir primer {unitS.toLowerCase()}</button>
               </div>
             ):visible.map(t=>(
               <TableBlock key={t.id} table={t} selected={selectedId===t.id}
