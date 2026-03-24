@@ -58,10 +58,49 @@ export async function POST(req: NextRequest) {
       addSlots(openHours.dinner_open || "", openHours.dinner_close || "")
     }
 
+    // ── Rank slots by predicted success ──────────────────────────────────
+    const rankedSlots = slots.map(slot => {
+      let score = 50 // base score
+      const slotHour = parseInt(slot.split(':')[0])
+
+      // Peak hours get lower score (busier = less available)
+      const slotBooked = (existingRes.data || [])
+        .filter((r) => r.reservation_time?.includes("T" + slot))
+        .reduce((s, r) => s + (r.party_size || 0), 0)
+      const occupancyRate = maxCapacity > 0 ? slotBooked / maxCapacity : 0
+      score -= Math.round(occupancyRate * 30) // Less score if busy
+
+      // Prefer dinner prime time (20:00-21:30) and lunch (13:30-14:30)
+      if ((slotHour >= 20 && slotHour <= 21) || (slotHour >= 13 && slotHour <= 14)) {
+        score += 10 // popular times get slight boost (customers expect them)
+      }
+
+      // Very early/late slots get penalty
+      if (slotHour < 12 || slotHour > 22) score -= 15
+
+      return { slot, score, occupancy: Math.round(occupancyRate * 100) }
+    }).sort((a, b) => b.score - a.score)
+
+    const bestSlots = rankedSlots.slice(0, 3).map(s => s.slot)
+    const allSlots = rankedSlots.map(s => s.slot)
+
+    // Build suggestion for agent
+    let suggestion = ''
+    if (rankedSlots.length > 0) {
+      const best = rankedSlots[0]
+      if (best.occupancy > 70) {
+        suggestion = `El horario de las ${best.slot} está bastante lleno (${best.occupancy}% ocupado). Mejor sugerir ${rankedSlots[1]?.slot || best.slot}.`
+      } else if (bestSlots.length >= 2) {
+        suggestion = `Los mejores horarios son ${bestSlots[0]} y ${bestSlots[1]}.`
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      available: available > 0 && slots.length > 0,
-      available_slots: slots.slice(0, 6),
+      available: available > 0 && allSlots.length > 0,
+      available_slots: allSlots.slice(0, 6),
+      best_slots: bestSlots,
+      suggestion,
       capacity_remaining: available,
       rules,
     })

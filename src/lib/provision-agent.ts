@@ -13,6 +13,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js"
+import { getVoiceConfig } from "@/lib/elevenlabs"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,7 +21,6 @@ const supabase = createClient(
 )
 
 const EL_KEY = process.env.ELEVENLABS_API_KEY!
-const VOICE_ID = "kvVjNZvtnCv3Sl1Hr70T" // Flavia - Spanish Peninsular
 
 // ─────────────────────────────────────────────────────────────
 // PROMPTS BASE POR VERTICAL
@@ -242,7 +242,10 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
 
     const memoryLines = (memories || []).map(m => m.content)
 
-    // 5. Construir prompt
+    // 5. Voice config per business type
+    const voiceConfig = getVoiceConfig(tenant.type || 'otro')
+
+    // 6. Construir prompt
     const prompt = buildPrompt({
       agent_name: tenant.agent_name || "Sofia",
       business_name: tenant.name,
@@ -267,7 +270,7 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
           language: "es",
           prompt: { prompt },
         },
-        tts: { voice_id: VOICE_ID }
+        tts: { voice_id: voiceConfig.voice_id, stability: voiceConfig.stability, similarity_boost: voiceConfig.similarity_boost }
       }
     }
 
