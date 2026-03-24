@@ -238,6 +238,43 @@ function AgentBar({ agentOn, agentName }:{ agentOn:boolean; agentName:string }) 
   )
 }
 
+// ── Insights Panel — AI thoughts
+function InsightsPanel({ insights }: { insights: any[] }) {
+  if (insights.length === 0) return null
+  const priorityOrder = { high: 0, normal: 1, low: 2 }
+  const sorted = [...insights].sort((a, b) => (priorityOrder[a.priority as keyof typeof priorityOrder] || 1) - (priorityOrder[b.priority as keyof typeof priorityOrder] || 1))
+
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ padding: '14px 18px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.violet, animation: 'rz-pulse 2s ease-in-out infinite' }}/>
+        <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Sofía ha detectado</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {sorted.map((insight, i) => (
+          <div key={insight.id} style={{
+            padding: '12px 18px', borderTop: i > 0 ? `1px solid ${C.border}` : 'none',
+            background: insight.priority === 'high' ? 'rgba(240,168,78,0.04)' : 'transparent',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <span style={{ fontSize: 18, flexShrink: 0, lineHeight: 1 }}>{insight.icon}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 3 }}>{insight.title}</p>
+                <p style={{ fontSize: 12, color: C.text2, lineHeight: 1.5 }}>{insight.body}</p>
+                {insight.action && insight.actionHref && (
+                  <a href={insight.actionHref} style={{ fontSize: 11, color: C.amber, fontWeight: 600, textDecoration: 'none', marginTop: 6, display: 'inline-block' }}>
+                    {insight.action} →
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ══════════════════════════════════════════════════
 // MAIN PAGE
 // ══════════════════════════════════════════════════
@@ -253,6 +290,7 @@ export default function PanelPage() {
   const [activeConsultations,setActiveConsultations] = useState<any[]>([])
   const [events,setEvents]     = useState<LiveEvent[]>([])
   const [demoMode,setDemoMode] = useState(false)
+  const [insights, setInsights] = useState<any[]>([])
   const demoTimer              = useRef<ReturnType<typeof setInterval>|null>(null)
   const demoIdx                = useRef(0)
   const rtChannelRef           = useRef<any>(null)
@@ -284,6 +322,11 @@ export default function PanelPage() {
     setTenant(t); setCalls(c||[]); setReservas(r||[]); setClientes(cl||[]); setActiveCalls(ac||[])
     setActiveOrders(ao||[]); setActiveConsultations(ac2||[])
     setLoading(false)
+
+    // Load insights after main data
+    fetch('/api/insights', {
+      headers: { 'Authorization': 'Bearer ' + (await supabase.auth.getSession()).data.session?.access_token }
+    }).then(r => r.json()).then(d => setInsights(d.insights || [])).catch(() => {})
   }, [router])
 
   useEffect(() => { load() }, [load])
@@ -633,6 +676,8 @@ export default function PanelPage() {
 
             {/* Live feed */}
             <LiveFeed events={events} demoMode={demoMode} onToggleDemo={toggleDemo}/>
+
+            <InsightsPanel insights={insights}/>
 
             {/* Reservas hoy */}
             <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,overflow:'hidden' }}>

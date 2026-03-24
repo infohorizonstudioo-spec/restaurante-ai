@@ -571,12 +571,49 @@ export async function POST(req: Request) {
 
     const learnFromCallAsync = async () => {
       try {
-        await learnFromCall({
+        // Save call pattern as memory
+        const memories: { tenantId: string; memoryType: string; content: string; confidence: number }[] = []
+
+        // Learn intent patterns
+        memories.push({
           tenantId,
-          memoryType: decision.intent || 'call',
-          content: `${decision.status} | ${decision.summary || ''} | confidence:${decision.confidence}`,
+          memoryType: 'pattern',
+          content: `${decision.intent} | ${decision.status} | confidence:${decision.confidence.toFixed(2)}`,
           confidence: decision.confidence,
         })
+
+        // Learn customer preferences from transcript
+        if (decision.customer_name && transcript) {
+          const lowerT = transcript.toLowerCase()
+          if (/alergi|intoleranci|celiac|vegetarian|vegan/i.test(lowerT)) {
+            memories.push({
+              tenantId,
+              memoryType: 'preference',
+              content: `${decision.customer_name} mencionó restricciones alimentarias`,
+              confidence: 0.8,
+            })
+          }
+          if (/terraza|interior|ventana|barra|privad/i.test(lowerT)) {
+            memories.push({
+              tenantId,
+              memoryType: 'preference',
+              content: `${decision.customer_name} tiene preferencia de zona/ubicación`,
+              confidence: 0.7,
+            })
+          }
+          if (/cumpleaños|aniversario|celebraci/i.test(lowerT)) {
+            memories.push({
+              tenantId,
+              memoryType: 'preference',
+              content: `${decision.customer_name} menciona ocasión especial`,
+              confidence: 0.75,
+            })
+          }
+        }
+
+        for (const m of memories) {
+          await learnFromCall(m)
+        }
       } catch {}
     }
 

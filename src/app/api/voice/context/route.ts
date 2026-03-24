@@ -47,6 +47,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ dynamic_variables: DEFAULTS })
     }
 
+    // ── Customer recognition ──────────────────────────────────────────────
+    let customerContext = ''
+    if (callerPhone && tenant) {
+      const cleanPhone = callerPhone.replace(/[^0-9+]/g, '')
+      if (cleanPhone.length >= 7) {
+        const { data: customer } = await supabase
+          .from('customers')
+          .select('name, phone, total_reservations')
+          .eq('tenant_id', tenant.id)
+          .or(`phone.eq.${cleanPhone},phone.eq.+${cleanPhone.replace(/^\+/, '')}`)
+          .limit(1)
+
+        if (customer?.[0]) {
+          const c = customer[0]
+          // Get last reservation
+          const { data: lastRes } = await supabase
+            .from('reservations')
+            .select('date, time, people, status')
+            .eq('tenant_id', tenant.id)
+            .eq('customer_phone', cleanPhone)
+            .order('date', { ascending: false })
+            .limit(1)
+
+          const parts = [`Cliente conocido: ${c.name || 'sin nombre'}`]
+          if (c.total_reservations) parts.push(`${c.total_reservations} reservas previas`)
+          if (lastRes?.[0]) {
+            const lr = lastRes[0]
+            parts.push(`Última reserva: ${lr.date} a las ${(lr.time||'').slice(0,5)} para ${lr.people} personas (${lr.status})`)
+          }
+          customerContext = parts.join('. ') + '.'
+        }
+      }
+    }
+
     // Load business knowledge
     const { data: kb } = await supabase
       .from("business_knowledge")
@@ -67,6 +101,7 @@ export async function POST(req: NextRequest) {
         business_info: info,
         tenant_id: tenant.id,
         caller_phone: callerPhone,
+        customer_context: customerContext,
       }
     })
 
