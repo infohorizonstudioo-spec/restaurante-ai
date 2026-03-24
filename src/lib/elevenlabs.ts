@@ -35,6 +35,7 @@ export async function createConversation(params: {
   tenantId:     string
   businessType: string
   tenantName:   string
+  elAgentId?:   string
 }): Promise<{ conversationId: string; signedUrl: string }> {
   const apiKey = process.env.ELEVENLABS_API_KEY
   if (!apiKey) throw new Error('ELEVENLABS_API_KEY no configurada')
@@ -48,7 +49,7 @@ export async function createConversation(params: {
     method: 'POST',
     headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      agent_id: process.env.ELEVENLABS_AGENT_ID ?? '',
+      agent_id: params.elAgentId || process.env.ELEVENLABS_AGENT_ID || '',
       conversation_config_override: {
         agent: {
           prompt: { prompt },

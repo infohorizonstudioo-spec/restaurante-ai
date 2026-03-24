@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     // 1. Load tenant
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("id, name, agent_name, type")
+      .select("id, name, agent_name, type, el_agent_id")
       .eq("id", tenant_id)
       .single()
 
@@ -70,7 +70,8 @@ Si preguntan por la carta o precios contesta con lo que sabes. Si preguntan algo
 
     // 5. Patch ElevenLabs agent
     const elKey = el_key || process.env.ELEVENLABS_API_KEY
-    const agentId = reqAgentId || process.env.ELEVENLABS_AGENT_ID
+    // Usar el agente específico del tenant, no uno global
+    const agentId = reqAgentId || tenant.el_agent_id || process.env.ELEVENLABS_AGENT_ID
     if (!elKey || !agentId) {
       return NextResponse.json({ error: "ELEVENLABS keys not configured. Pass el_key and agent_id in body or set env vars." }, { status: 503 })
     }

@@ -8,27 +8,27 @@ const admin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
-const AGENT_ID = process.env.ELEVENLABS_AGENT_ID
-const EL_KEY   = process.env.ELEVENLABS_API_KEY
+const EL_KEY = process.env.ELEVENLABS_API_KEY
 
 export async function POST(req: Request) {
   try {
-    // Verificar autenticación real
     const auth = await requireAuth(req)
     if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status || 401 })
     if (!auth.tenantId) return NextResponse.json({ ok: false, error: 'Tenant no encontrado' }, { status: 403 })
-
-    if (!AGENT_ID || !EL_KEY) return NextResponse.json({ ok: false, error: 'ElevenLabs not configured' }, { status: 503 })
+    if (!EL_KEY) return NextResponse.json({ ok: false, error: 'ElevenLabs not configured' }, { status: 503 })
 
     const { business_name } = await req.json()
     if (!business_name) return NextResponse.json({ ok: false, error: 'missing business_name' }, { status: 400 })
 
-    // Verificar que el tenant pertenece al usuario autenticado
-    const { data: tenant } = await admin.from('tenants').select('id,name').eq('id', auth.tenantId).maybeSingle()
+    // Usar el agente específico del tenant
+    const { data: tenant } = await admin.from('tenants').select('id,name,el_agent_id').eq('id', auth.tenantId).maybeSingle()
     if (!tenant) return NextResponse.json({ ok: false, error: 'Tenant no encontrado' }, { status: 404 })
 
+    const agentId = tenant.el_agent_id || process.env.ELEVENLABS_AGENT_ID
+    if (!agentId) return NextResponse.json({ ok: false, error: 'Agent not provisioned' }, { status: 503 })
+
     const greeting = `${business_name}, dígame.`
-    const res = await fetch(`https://api.elevenlabs.io/v1/convai/agents/${AGENT_ID}`, {
+    const res = await fetch(`https://api.elevenlabs.io/v1/convai/agents/${agentId}`, {
       method: 'PATCH',
       headers: { 'xi-api-key': EL_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
