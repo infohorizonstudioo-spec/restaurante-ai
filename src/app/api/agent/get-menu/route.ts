@@ -53,7 +53,6 @@ export async function POST(req: NextRequest) {
       note: Object.keys(grouped).length === 0 ? "No hay carta disponible. Indica al cliente que consulte en el local o por la web." : undefined,
     })
   } catch (err) {
-    console.error("[get-menu]", err)
     return NextResponse.json({ error: "internal error" }, { status: 500 })
   }
-  }
+}

@@ -285,7 +285,6 @@ export async function POST(req: NextRequest) {
       summary: "Negocio: " + t.name + " | Tipo: " + businessType + " | Logica: " + JSON.stringify(business_type_logic) + " | Contexto: " + JSON.stringify(business_context)
     })
   } catch (err) {
-    console.error("[get-context]", err)
     return NextResponse.json({ error: "internal error" }, { status: 500 })
   }
-    }
+}

@@ -10,11 +10,13 @@ export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
   try {
-    const { tenant_id, customer_name, customer_phone, date, time, party_size, notes, event_type, service_type, order_items } = await req.json()
+    const { tenant_id, customer_name, customer_phone, date, time, party_size, people, notes, event_type, service_type, order_items } = await req.json()
 
     if (!tenant_id || !customer_name) {
       return NextResponse.json({ error: "tenant_id and customer_name required" }, { status: 400 })
     }
+
+    const finalPartySize = party_size || people || 1
 
     // Crear o recuperar cliente
     let customerId: string | null = null
@@ -41,14 +43,14 @@ export async function POST(req: NextRequest) {
       customer_name,
       customer_phone: customer_phone || null,
       reservation_time: reservationTime,
-      party_size: party_size || 1,
+      party_size: finalPartySize,
       notes: notesStr || null,
       status: "confirmed",
       source: "phone_agent",
     }).select("id, reservation_time, status").single()
 
     if (error) {
-      console.error("[create-reservation] DB error:", error)
+      // DB error creating reservation
       return NextResponse.json({ error: "could not create reservation" }, { status: 500 })
     }
 
@@ -57,12 +59,11 @@ export async function POST(req: NextRequest) {
       reservation_id: reservation.id,
       customer_name,
       datetime: reservationTime,
-      party_size: party_size || 1,
+      party_size: finalPartySize,
       status: "confirmed",
       message: "Reserva confirmada para " + customer_name + (date ? " el " + date : "") + (time ? " a las " + time : ""),
     })
   } catch (err) {
-    console.error("[create-reservation]", err)
     return NextResponse.json({ error: "internal error" }, { status: 500 })
   }
-        }
+}

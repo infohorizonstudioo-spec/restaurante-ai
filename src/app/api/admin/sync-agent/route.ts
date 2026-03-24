@@ -65,8 +65,8 @@ Para reservas pregunta nombre, dia, hora y cuantos son, de una en una. Cuando te
 Si preguntan por la carta o precios contesta con lo que sabes. Si preguntan algo que no esta en los datos, di que no lo sabes.`
 
     // 5. Patch ElevenLabs agent
-    const elKey = el_key || process.env.ELEVENLABS_API_KEY || "e67f7cf43ec8b8c629e6bebcbac4c4f57c5cc449d7fbfc82f254506dbbc053b0"
-    const agentId = reqAgentId || process.env.ELEVENLABS_AGENT_ID || "agent_0701kkw2sdx5fp685xp6ckngf6zj"
+    const elKey = el_key || process.env.ELEVENLABS_API_KEY
+    const agentId = reqAgentId || process.env.ELEVENLABS_AGENT_ID
     if (!elKey || !agentId) {
       return NextResponse.json({ error: "ELEVENLABS keys not configured. Pass el_key and agent_id in body or set env vars." }, { status: 503 })
     }
@@ -86,11 +86,8 @@ Si preguntan por la carta o precios contesta con lo que sabes. Si preguntan algo
 
     if (!elRes.ok) {
       const err = await elRes.text()
-      console.error("[sync-agent] ElevenLabs error:", err)
       return NextResponse.json({ error: "ElevenLabs update failed" }, { status: 500 })
     }
-
-    console.log("[sync-agent] updated agent for", businessName, "prompt length:", prompt.length)
 
     return NextResponse.json({
       success: true,
@@ -101,7 +98,7 @@ Si preguntan por la carta o precios contesta con lo que sabes. Si preguntan algo
     })
 
   } catch (e: any) {
-    console.error("[sync-agent] error:", e.message)
+    // sync-agent error
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }

@@ -65,8 +65,10 @@ export default function TurnosPage() {
 
   useEffect(() => {
     (async () => {
-      const sess = await getSessionTenant(); if(!sess) return
+      const sess = await getSessionTenant()
+      if (!sess) { setLoading(false); return }
       setTid(sess.tenantId)
+      await load(sess.tenantId, date)
     })()
   }, [load, date])
 

@@ -10,8 +10,9 @@ export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
   try {
-    const { tenant_id, date, time, party_size } = await req.json()
+    const { tenant_id, date, time, party_size, people } = await req.json()
     if (!tenant_id || !date) return NextResponse.json({ error: "tenant_id and date required" }, { status: 400 })
+    const size = party_size || people || 2
 
     const [rulesRes, existingRes] = await Promise.all([
       supabase.from("business_rules").select("rule_key, rule_value").eq("tenant_id", tenant_id),
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
         const slotBooked = (existingRes.data || [])
           .filter((r) => r.reservation_time?.includes("T" + slot))
           .reduce((s, r) => s + (r.party_size || 0), 0)
-        if (slotBooked + (party_size || 2) <= maxCapacity) slots.push(slot)
+        if (slotBooked + size <= maxCapacity) slots.push(slot)
         h++
       }
     }
@@ -63,7 +64,6 @@ export async function POST(req: NextRequest) {
       rules,
     })
   } catch (err) {
-    console.error("[check-availability]", err)
     return NextResponse.json({ error: "internal error" }, { status: 500 })
   }
-      }
+}

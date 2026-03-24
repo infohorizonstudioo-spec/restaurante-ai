@@ -156,7 +156,6 @@ export default function LlamadasPage() {
         if (data.suggestions?.length > 0) setSuggestions(data.suggestions)
       }
     } catch(e) {
-        console.error('feedback error:', e)
         setFeedbackLoading(false)
       }
     finally { setFeedbackLoading(false) }

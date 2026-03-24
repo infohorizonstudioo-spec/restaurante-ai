@@ -389,8 +389,7 @@ export default function PanelPage() {
         }
       })
       .subscribe(status => {
-        if (status === 'SUBSCRIBED') console.log('panel RT subscribed for tenant', tenantId.slice(0,8))
-        if (status === 'CHANNEL_ERROR') console.error('panel RT channel error')
+        // RT status: subscribed or error
       })
     rtChannelRef.current = ch
     return () => {

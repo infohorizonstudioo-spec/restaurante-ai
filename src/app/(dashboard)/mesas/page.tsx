@@ -248,14 +248,16 @@ export default function MesasPage() {
   }
 
   async function deleteZone(zoneId:string){
-    await supabase.from('tables').update({zone_id:null}).eq('zone_id',zoneId)
-    await supabase.from('zones').update({active:false}).eq('id',zoneId)
+    if(!tid)return
+    await supabase.from('tables').update({zone_id:null}).eq('zone_id',zoneId).eq('tenant_id',tid)
+    await supabase.from('zones').update({active:false}).eq('id',zoneId).eq('tenant_id',tid)
     setZones(prev=>prev.filter(z=>z.id!==zoneId))
     setTables(prev=>prev.map(t=>t.zone_id===zoneId?{...t,zone_id:undefined}:t))
   }
 
   async function renameZone(zoneId:string,name:string){
-    await supabase.from('zones').update({name}).eq('id',zoneId)
+    if(!tid)return
+    await supabase.from('zones').update({name}).eq('id',zoneId).eq('tenant_id',tid)
     setZones(prev=>prev.map(z=>z.id===zoneId?{...z,name}:z))
   }
 
