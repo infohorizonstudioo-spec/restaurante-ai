@@ -19,8 +19,6 @@ const DEFAULTS = {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    console.log("[voice/context] payload:", JSON.stringify(body).slice(0, 500))
-
     // Extract phone numbers from ElevenLabs payload
     const agentNumber = body?.phone_call?.agent_number
       || body?.phone_call?.to
@@ -29,26 +27,25 @@ export async function POST(req: NextRequest) {
       || body?.phone_call?.from
       || body?.caller_number || ""
 
-    console.log("[voice/context] agent:", agentNumber, "caller:", callerPhone)
-
     // Find tenant by phone number
     let tenant = null
     if (agentNumber) {
       const clean = agentNumber.replace(/[^0-9+]/g, "")
-      const { data } = await supabase
-        .from("tenants")
-        .select("id, name, agent_name, type")
-        .or(`agent_phone.eq.${clean},agent_phone.eq.+${clean.replace("+","")}`)
-        .limit(1)
-      tenant = data?.[0]
+      if (/^\+?[0-9]{7,15}$/.test(clean)) {
+        const withPlus = clean.startsWith("+") ? clean : "+" + clean
+        const withoutPlus = clean.replace(/^\+/, "")
+        const { data } = await supabase
+          .from("tenants")
+          .select("id, name, agent_name, type")
+          .or(`agent_phone.eq.${withPlus},agent_phone.eq.${withoutPlus}`)
+          .limit(1)
+        tenant = data?.[0]
+      }
     }
 
     if (!tenant) {
-      console.log("[voice/context] no tenant found, using defaults")
       return NextResponse.json({ dynamic_variables: DEFAULTS })
     }
-
-    console.log("[voice/context] tenant:", tenant.name, tenant.id)
 
     // Load business knowledge
     const { data: kb } = await supabase
@@ -74,7 +71,7 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (e: any) {
-    console.error("[voice/context] error:", e.message)
+    // voice/context error
     return NextResponse.json({ dynamic_variables: DEFAULTS })
   }
 }

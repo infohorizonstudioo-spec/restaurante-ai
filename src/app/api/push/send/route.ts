@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
 
     // Solo enviar si viene de servidor (no exponer al cliente)
     const internalKey = req.headers.get('x-internal-key')
-    if (internalKey !== process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(-20)) {
+    const expectedKey = process.env.INTERNAL_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(-40)
+    if (!internalKey || !expectedKey || internalKey !== expectedKey) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 

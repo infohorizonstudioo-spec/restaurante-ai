@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/api-auth'
 
-export async function POST() {
+export async function POST(req: Request) {
+  const auth = await requireAuth(req)
+  if (!auth.ok) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const SID = process.env.TWILIO_ACCOUNT_SID
   const TOKEN = process.env.TWILIO_AUTH_TOKEN
 

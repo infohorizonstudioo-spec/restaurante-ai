@@ -8,8 +8,8 @@ const admin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
-const AGENT_ID = process.env.ELEVENLABS_AGENT_ID || 'agent_0701kkw2sdx5fp685xp6ckngf6zj'
-const EL_KEY   = process.env.ELEVENLABS_API_KEY!
+const AGENT_ID = process.env.ELEVENLABS_AGENT_ID
+const EL_KEY   = process.env.ELEVENLABS_API_KEY
 
 export async function POST(req: Request) {
   try {
@@ -17,6 +17,8 @@ export async function POST(req: Request) {
     const auth = await requireAuth(req)
     if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status || 401 })
     if (!auth.tenantId) return NextResponse.json({ ok: false, error: 'Tenant no encontrado' }, { status: 403 })
+
+    if (!AGENT_ID || !EL_KEY) return NextResponse.json({ ok: false, error: 'ElevenLabs not configured' }, { status: 503 })
 
     const { business_name } = await req.json()
     if (!business_name) return NextResponse.json({ ok: false, error: 'missing business_name' }, { status: 400 })
