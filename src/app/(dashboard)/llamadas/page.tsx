@@ -97,7 +97,7 @@ export default function LlamadasPage() {
   const load = useCallback(async (tenantId:string, reset=true) => {
     if (reset) setLoading(true)
     const from = reset ? 0 : page * PAGE_SIZE
-    const { data, count } = await supabase.from('calls').select('*',{count:'exact'})
+    const { data, count } = await supabase.from('calls').select('id,call_sid,tenant_id,status,intent,summary,started_at,duration_seconds,caller_phone,customer_name,from_number,decision_status,decision_flags,decision_confidence,reasoning_label,action_required,action_suggested,transcript',{count:'exact'})
       .eq('tenant_id',tenantId).order('started_at',{ascending:false})
       .range(from, from + PAGE_SIZE - 1)
     if (reset) { setCalls(data||[]); setPage(1) }

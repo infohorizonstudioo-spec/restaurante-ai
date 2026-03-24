@@ -59,7 +59,7 @@ export default function ReservasPage() {
     const from = week[0].toISOString().slice(0,10)
     const to   = week[6].toISOString().slice(0,10)
     const {data} = await supabase.from('reservations')
-      .select('*').eq('tenant_id',tenantId)
+      .select('id,tenant_id,customer_id,customer_name,customer_phone,date,time,reservation_time,people,party_size,status,source,notes,table_id').eq('tenant_id',tenantId)
       .gte('date',from).lte('date',to)
       .order('date').order('time')
     setReservas(data||[])

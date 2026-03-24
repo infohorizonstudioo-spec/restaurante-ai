@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
-import { makeDecision, DEFAULT_RULES } from '@/lib/agent-decision'
 import { getBusinessRules } from '@/lib/business-memory'
-import { getBusinessKnowledge, buildKnowledgeContext, queryKnowledge } from '@/lib/business-knowledge'
+import { getBusinessKnowledge, buildKnowledgeContext } from '@/lib/business-knowledge'
 import { createNotification } from '@/lib/notifications'
 import { learnFromCall, getTenantMemory, buildMemoryContext, getAdaptiveThresholds } from '@/lib/tenant-learning'
 
@@ -375,7 +374,7 @@ export async function POST(req: Request) {
     // Cargar knowledge, rules y memoria del tenant en paralelo
     const [businessKnowledge, businessRules, tenantMemory] = await Promise.all([
       getBusinessKnowledge(tenantId).catch(() => null),
-      getBusinessRules(tenantId).catch(() => DEFAULT_RULES),
+      getBusinessRules(tenantId).catch(() => ({ max_capacity: 60, slot_duration: 120, advance_booking_hours: 24, large_group_min: 8 } as Record<string, any>)),
       getTenantMemory(tenantId).catch(() => null),
     ])
     const knowledgeContext = businessKnowledge ? buildKnowledgeContext(businessKnowledge) : ''
@@ -408,25 +407,49 @@ export async function POST(req: Request) {
       min_confidence_to_confirm: adaptiveThresholds.confidenceThreshold,
     } : businessRules
 
-    // ── Consultar knowledge para enriquecer el trace ────────────────────────
+    // ── Consultar knowledge local para enriquecer el trace ────────────────
     let knowledgeSource = 'none'
     if (businessKnowledge && transcript) {
       const clientText = transcript.split('\n')
-        .filter(l => /^(cliente|client):/i.test(l))
-        .map(l => l.replace(/^(cliente|client):\s*/i, ''))
+        .filter((l: string) => /^(cliente|client):/i.test(l))
+        .map((l: string) => l.replace(/^(cliente|client):\s*/i, ''))
         .join(' ')
       if (clientText.length > 5) {
-        const kResult = queryKnowledge(businessKnowledge, clientText)
-        if (kResult.found) knowledgeSource = kResult.source
+        const match = (businessKnowledge as any[]).find((k: any) =>
+          clientText.toLowerCase().includes((k.content || '').toLowerCase().slice(0, 30))
+        )
+        if (match) knowledgeSource = match.category || 'knowledge'
       }
     }
 
-    // ── Motor de decisión inteligente ───────────────────────────────────────
-    const decision = makeDecision(
-      { ...analysis, transcript, caller_phone: callerPhone },
-      effectiveRules,
-      knowledgeSource
-    )
+    // ── Construir decisión desde análisis ──────────────────────────────────
+    const confidence = analysis.intent === 'consulta' ? 0.6 : 0.8
+    const specialFlags: string[] = []
+    if (analysis.details?.party_size >= 8) specialFlags.push('large_group')
+    if (analysis.details?.is_urgency) specialFlags.push('out_of_policy')
+    if (confidence < (effectiveRules.min_confidence_to_confirm || 0.7)) specialFlags.push('low_confidence')
+
+    const decisionStatus = analysis.intent === 'reserva' && confidence >= (effectiveRules.min_confidence_to_confirm || 0.7)
+      ? 'confirmed'
+      : analysis.intent === 'cancelacion' ? 'cancelled'
+      : confidence < 0.55 ? 'needs_human_attention'
+      : 'pending_review'
+
+    const decision = {
+      status:           decisionStatus,
+      intent:           analysis.intent,
+      summary:          analysis.summary,
+      customer_name:    analysis.customer_name,
+      action_required:  analysis.action_required,
+      phone_number:     callerPhone,
+      details:          analysis.details,
+      confidence,
+      special_flags:    specialFlags,
+      reasoning_label:  `${analysis.intent} — confianza ${(confidence * 100).toFixed(0)}%`,
+      applied_rule:     null as string | null,
+      knowledge_source: knowledgeSource,
+      decision_trace:   [] as any[],
+    }
 
     // ── Guardar en DB (atómico, idempotente) ────────────────────────────────
     const { data: sessionResult, error: sessionError } = await admin.rpc('complete_call_session', {
@@ -555,16 +578,11 @@ export async function POST(req: Request) {
 
     const learnFromCallAsync = async () => {
       try {
-        await learnFromCall(tenantId, {
-          intent:             decision.intent,
-          status:             decision.status,
-          confidence:         decision.confidence,
-          duration_seconds:   duration,
-          customer_name:      decision.customer_name,
-          is_urgency:         decision.special_flags.includes('out_of_policy') ? false
-                              : analysis.details?.is_urgency ?? false,
-          consultation_type:  analysis.details?.consultation_type,
-          started_at:         new Date().toISOString(),
+        await learnFromCall({
+          tenantId,
+          memoryType: decision.intent || 'call',
+          content: `${decision.status} | ${decision.summary || ''} | confidence:${decision.confidence}`,
+          confidence: decision.confidence,
         })
       } catch {}
     }
@@ -605,7 +623,7 @@ export async function POST(req: Request) {
       action_required:  decision.action_required,
       special_flags:    decision.special_flags,
       reasoning_label:  decision.reasoning_label,
-      response_hint:    decision.response_hint,
+      response_hint:    null,
       applied_rule:     decision.applied_rule,
       knowledge_source: decision.knowledge_source,
       decision_trace:   decision.decision_trace,

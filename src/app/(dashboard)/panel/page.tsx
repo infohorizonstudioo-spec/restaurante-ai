@@ -273,9 +273,9 @@ export default function PanelPage() {
     const tid = p.tenant_id
     const today = new Date().toISOString().split('T')[0]
     const [{ data:t },{ data:c },{ data:r },{ data:cl },{ data:ac },{ data:ao },{ data:ac2 }] = await Promise.all([
-      supabase.from('tenants').select('*').eq('id',tid).maybeSingle(),
-      supabase.from('calls').select('*').eq('tenant_id',tid).order('started_at',{ascending:false}).limit(8),
-      supabase.from('reservations').select('*').eq('tenant_id',tid).eq('date',today).order('time'),
+      supabase.from('tenants').select('id,name,slug,type,plan,agent_name,agent_phone,free_calls_used,free_calls_limit,plan_calls_used,plan_calls_included,reservation_config,agent_config').eq('id',tid).maybeSingle(),
+      supabase.from('calls').select('id,call_sid,status,intent,summary,started_at,duration_seconds,caller_phone,customer_name,from_number,decision_status,decision_flags,decision_confidence,session_state').eq('tenant_id',tid).order('started_at',{ascending:false}).limit(8),
+      supabase.from('reservations').select('id,customer_name,customer_phone,date,time,reservation_time,people,party_size,status,source,notes').eq('tenant_id',tid).eq('date',today).order('time'),
       supabase.from('customers').select('id').eq('tenant_id',tid),
       supabase.from('calls').select('id,call_sid,caller_phone,session_state,started_at').eq('tenant_id',tid).eq('status','activa').order('started_at',{ascending:false}).limit(8),
       supabase.from('order_events').select('*').eq('tenant_id',tid).eq('status','collecting').order('created_at',{ascending:false}).limit(5),
