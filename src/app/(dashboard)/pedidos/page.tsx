@@ -46,7 +46,7 @@ export default function PedidosPage(){
 
   useEffect(()=>{
     if(!tid) return
-    const ch = supabase.channel('orders-rt')
+    const ch = supabase.channel('orders-rt-' + tid)
       .on('postgres_changes',{event:'*',schema:'public',table:'orders',filter:'tenant_id=eq.'+tid},()=>load(tid))
       .subscribe()
     return ()=>{ supabase.removeChannel(ch) }

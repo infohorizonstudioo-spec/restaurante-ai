@@ -161,7 +161,6 @@ export default function AgendaPage() {
   return (
     <div style={{background:C.bg,minHeight:'100vh',display:'flex',flexDirection:'column',fontFamily:"'Sora',-apple-system,sans-serif"}}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap');
         *{box-sizing:border-box}
         ::-webkit-scrollbar{width:5px;height:5px}
         ::-webkit-scrollbar-track{background:transparent}

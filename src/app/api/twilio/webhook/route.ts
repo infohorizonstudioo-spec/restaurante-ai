@@ -12,8 +12,6 @@ export async function POST(req: NextRequest) {
   const called = p.get("Called") || p.get("To") || ""
   const caller = p.get("Caller") || p.get("From") || ""
 
-  console.log("[webhook] call", caller, "->", called, "(fallback)")
-
   return new NextResponse(
     '<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-ES">Lo sentimos, no se ha podido conectar la llamada.</Say></Response>',
     { headers: { "Content-Type": "text/xml" } }

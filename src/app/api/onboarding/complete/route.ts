@@ -59,14 +59,11 @@ export async function POST(req: NextRequest) {
     // 4. Crear/actualizar agente en ElevenLabs con los datos reales
     const provision = await provisionElevenAgent(tenant_id)
     if (!provision.success) {
-      console.error("[onboarding/complete] provision failed:", provision.error)
       // No falla el onboarding por esto — el agente se puede reprovisionar después
     }
 
-    console.log("[onboarding/complete] done. tenant:", tenant_id, "agent:", provision.agent_id)
     return NextResponse.json({ success: true, agent_id: provision.agent_id })
   } catch (err: any) {
-    console.error("[onboarding/complete]", err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

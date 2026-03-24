@@ -82,7 +82,7 @@ export default function TurnosPage() {
 
   return (
     <div style={{ background:C.bg, minHeight:'100vh', fontFamily:"'Sora',-apple-system,sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap');*{box-sizing:border-box}`}</style>
+      <style>{`*{box-sizing:border-box}`}</style>
 
       {/* Header */}
       <div style={{ background:C.card, borderBottom:`1px solid ${C.border}`, padding:'14px 24px', position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', justifyContent:'space-between' }}>

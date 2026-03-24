@@ -69,7 +69,6 @@ export default function NuevaReservaPage() {
   return (
     <div style={{background:C.bg, minHeight:'100vh', fontFamily:"'Sora',-apple-system,sans-serif"}}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap');
         *{box-sizing:border-box}
         .rz-inp:focus{border-color:${C.amber}!important; box-shadow:0 0 0 3px rgba(240,168,78,0.12)!important}
         .rz-inp::placeholder{color:${C.muted}}

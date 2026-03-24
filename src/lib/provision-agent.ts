@@ -275,11 +275,8 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
       })
       if (!r.ok) {
         const err = await r.text()
-        console.error("[provision] PATCH failed:", err)
-        // Si el agente no existe, crear uno nuevo
+        // PATCH failed — agent may not exist, create new one
         agentId = null
-      } else {
-        console.log("[provision] updated agent", agentId, "for tenant", tenant.name)
       }
     }
 
@@ -296,7 +293,7 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
       }
       const d = await r.json()
       agentId = d.agent_id
-      console.log("[provision] created agent", agentId, "for tenant", tenant.name)
+      // Agent created successfully
     }
 
     // 7. Guardar agent_id en el tenant
@@ -304,7 +301,7 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
 
     return { success: true, agent_id: agentId }
   } catch (err: any) {
-    console.error("[provision] error:", err)
+    // provision error
     return { success: false, error: err.message }
   }
 }

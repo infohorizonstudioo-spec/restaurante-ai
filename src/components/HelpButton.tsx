@@ -161,7 +161,6 @@ export default function HelpButton() {
           }}>
             <style>{`
               @keyframes helpSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-              @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap');
               .help-section-btn{background:none;border:none;cursor:pointer;text-align:left;width:100%;padding:10px 14px;border-radius:9px;transition:background 0.12s;font-family:inherit;}
               .help-section-btn:hover{background:rgba(255,255,255,0.05);}
               .help-section-btn.active{background:${C.amberDim};}

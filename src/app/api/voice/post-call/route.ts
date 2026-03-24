@@ -182,7 +182,7 @@ ${transcript.slice(0, 2500)}` }]
       details:         typeof parsed.details === 'object' ? parsed.details : {}
     }
   } catch(e: any) {
-    console.error('claude analysis fallback to local:', e.message?.slice(0,60))
+    // Claude analysis failed — fallback to local
     return local
   }
 }
@@ -228,7 +228,7 @@ async function getTranscriptFromEL(convOrSid: string, isConvId = false): Promise
       .filter((l: string) => l.length > 10)
       .join('\n')
   } catch(e: any) {
-    console.error('EL transcript error:', e.message)
+    // EL transcript fetch failed
     return ''
   }
 }
@@ -267,7 +267,7 @@ async function getTranscript(callSid: string, tenantId: string): Promise<string>
     // 4. Último recurso: buscar en lista de EL por callSid
     return await getTranscriptFromEL(callSid, false)
   } catch(e: any) {
-    console.error('getTranscript error:', e.message)
+    // getTranscript failed
     return ''
   }
 }
@@ -328,12 +328,6 @@ export async function POST(req: Request) {
       }
     }
 
-    console.log('post-call recv:', callSid.slice(0,20), '|', callStatus, '| dur:', duration+'s')
-    // Log estructura EL para depuración
-    if (body.data || body.type) {
-      console.log('EL webhook body keys:', Object.keys(body).join(','))
-    }
-
     // Siempre devolver 200 para que Twilio no reintente
     if (!['completed','done','ended'].includes(callStatus.toLowerCase())) {
       return NextResponse.json({ ok: true, skipped: 'status:' + callStatus })
@@ -361,7 +355,6 @@ export async function POST(req: Request) {
 
     // Tenant no encontrado — guardar llamada de todas formas para no perderla
     if (!tenantId) {
-      console.log('post-call: tenant not found | agent:', agentPhone, '| sid:', callSid.slice(0,20))
       return NextResponse.json({ ok: true, skipped: 'tenant not found' })
     }
 
@@ -633,7 +626,7 @@ export async function POST(req: Request) {
     })
   } catch(e: any) {
     // NUNCA perder la llamada — guardar lo mínimo aunque todo falle
-    console.error('post-call error:', e.message, '| ms:', Date.now()-t0)
+    // post-call error — save minimal record
     if (callSid && tenantId) {
       try {
         await admin.rpc('complete_call_session', {

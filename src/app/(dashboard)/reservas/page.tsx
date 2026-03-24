@@ -78,7 +78,7 @@ export default function ReservasPage() {
 
   useEffect(()=>{
     if (!tid) return
-    const ch = supabase.channel('res-rt')
+    const ch = supabase.channel('res-rt-' + tid)
       .on('postgres_changes',{event:'*',schema:'public',table:'reservations',filter:'tenant_id=eq.'+tid},()=>load(tid))
       .subscribe()
     return ()=>{ supabase.removeChannel(ch) }

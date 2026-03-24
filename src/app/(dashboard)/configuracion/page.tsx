@@ -244,7 +244,6 @@ export default function ConfiguracionPage() {
   return (
     <div style={{background:C.bg,minHeight:'100vh',fontFamily:"'Sora',-apple-system,sans-serif"}}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap');
         *{box-sizing:border-box}
         .rz-inp{background:rgba(255,255,255,0.04);border:1px solid ${C.border};border-radius:10px;padding:10px 14px;color:${C.text};font-size:13px;font-family:inherit;outline:none;width:100%;transition:border-color 0.15s}
         .rz-inp:focus{border-color:${C.amber}!important;box-shadow:0 0 0 3px rgba(240,168,78,0.1)!important}
