@@ -261,14 +261,98 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
       memory: memoryLines.join(". "),
     })
 
-    const agentBody = {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://restaurante-ai.vercel.app'
+    const agentApiKey = process.env.AGENT_API_KEY || ''
+
+    const agentBody: Record<string, any> = {
       name: `${tenant.name} — Reservo.AI`,
       conversation_config: {
         agent: {
-          // Sin variables — texto fijo con el nombre real del negocio
           first_message: `${tenant.name}, buenas, dígame.`,
           language: "es",
           prompt: { prompt },
+          tools: [
+            {
+              type: "webhook",
+              name: "check_availability",
+              description: "Comprueba si hay disponibilidad para una fecha, hora y número de personas. Llámalo SIEMPRE antes de confirmar una reserva.",
+              api: {
+                url: `${appUrl}/api/agent/check-availability`,
+                method: "POST",
+                ...(agentApiKey ? { headers: { "x-agent-key": agentApiKey } } : {}),
+              },
+              parameters: {
+                type: "object",
+                properties: {
+                  tenant_id: { type: "string", description: "ID del negocio", const: tenantId },
+                  date: { type: "string", description: "Fecha en formato YYYY-MM-DD" },
+                  time: { type: "string", description: "Hora en formato HH:MM (opcional)" },
+                  party_size: { type: "number", description: "Número de personas" },
+                },
+                required: ["tenant_id", "date"],
+              },
+            },
+            {
+              type: "webhook",
+              name: "create_reservation",
+              description: "Crea una reserva confirmada. Solo llámalo después de verificar disponibilidad y confirmar con el cliente.",
+              api: {
+                url: `${appUrl}/api/agent/create-reservation`,
+                method: "POST",
+                ...(agentApiKey ? { headers: { "x-agent-key": agentApiKey } } : {}),
+              },
+              parameters: {
+                type: "object",
+                properties: {
+                  tenant_id: { type: "string", description: "ID del negocio", const: tenantId },
+                  customer_name: { type: "string", description: "Nombre del cliente" },
+                  customer_phone: { type: "string", description: "Teléfono del cliente" },
+                  date: { type: "string", description: "Fecha en formato YYYY-MM-DD" },
+                  time: { type: "string", description: "Hora en formato HH:MM" },
+                  party_size: { type: "number", description: "Número de personas" },
+                  notes: { type: "string", description: "Notas adicionales (alergias, preferencias, etc.)" },
+                },
+                required: ["tenant_id", "customer_name", "date", "time"],
+              },
+            },
+            {
+              type: "webhook",
+              name: "get_menu_or_services",
+              description: "Obtiene la carta, servicios o precios del negocio. Llámalo cuando el cliente pregunte por menú, servicios o precios.",
+              api: {
+                url: `${appUrl}/api/agent/get-menu`,
+                method: "POST",
+                ...(agentApiKey ? { headers: { "x-agent-key": agentApiKey } } : {}),
+              },
+              parameters: {
+                type: "object",
+                properties: {
+                  tenant_id: { type: "string", description: "ID del negocio", const: tenantId },
+                },
+                required: ["tenant_id"],
+              },
+            },
+            {
+              type: "webhook",
+              name: "save_call_summary",
+              description: "Guarda un resumen de la llamada al finalizar. Llámalo siempre al despedirte del cliente.",
+              api: {
+                url: `${appUrl}/api/agent/save-summary`,
+                method: "POST",
+                ...(agentApiKey ? { headers: { "x-agent-key": agentApiKey } } : {}),
+              },
+              parameters: {
+                type: "object",
+                properties: {
+                  tenant_id: { type: "string", description: "ID del negocio", const: tenantId },
+                  customer_name: { type: "string", description: "Nombre del cliente" },
+                  intent: { type: "string", description: "Intención: reserva, cancelacion, consulta, pedido, otro" },
+                  summary: { type: "string", description: "Resumen breve de la llamada" },
+                },
+                required: ["tenant_id", "summary"],
+              },
+            },
+          ],
         },
         tts: { voice_id: voiceConfig.voice_id, stability: voiceConfig.stability, similarity_boost: voiceConfig.similarity_boost }
       }
