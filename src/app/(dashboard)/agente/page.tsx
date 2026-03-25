@@ -3,6 +3,7 @@ import NotifBell from '@/components/NotifBell'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
+import { useTenant } from '@/contexts/TenantContext'
 
 const C = {
   amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)', amberBorder:'rgba(240,168,78,0.25)',
@@ -48,6 +49,7 @@ const TABS = [
 ]
 
 export default function AgentePage() {
+  const { tx } = useTenant()
   const [loading, setLoading]       = useState(true)
   const [tab, setTab]               = useState<'rules'|'knowledge'|'memory'>('rules')
   const [token, setToken]           = useState<string>('')
@@ -117,22 +119,22 @@ export default function AgentePage() {
       {/* Header */}
       <div style={{ background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:40 }}>
         <div>
-          <h1 style={{ fontSize:16, fontWeight:700, color:C.text }}>Comportamiento del agente</h1>
-          <p style={{ fontSize:11, color:C.text3, marginTop:2 }}>Configura cómo decide y responde tu recepcionista IA</p>
+          <h1 style={{ fontSize:16, fontWeight:700, color:C.text }}>{tx('Comportamiento del agente')}</h1>
+          <p style={{ fontSize:11, color:C.text3, marginTop:2 }}>{tx('Configura cómo decide y responde tu recepcionista IA')}</p>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          {tab==='rules' && updatedAt && <p style={{ fontSize:11, color:C.text3 }}>Guardado {new Date(updatedAt).toLocaleDateString('es-ES')}</p>}
-          {tab==='rules' && saved  && <span style={{ fontSize:12, color:C.green, fontWeight:600 }}>✓ Guardado</span>}
-          {tab==='knowledge' && savedK && <span style={{ fontSize:12, color:C.green, fontWeight:600 }}>✓ Guardado</span>}
+          {tab==='rules' && updatedAt && <p style={{ fontSize:11, color:C.text3 }}>{tx('Guardado')} {new Date(updatedAt).toLocaleDateString('es-ES')}</p>}
+          {tab==='rules' && saved  && <span style={{ fontSize:12, color:C.green, fontWeight:600 }}>✓ {tx('Guardado')}</span>}
+          {tab==='knowledge' && savedK && <span style={{ fontSize:12, color:C.green, fontWeight:600 }}>✓ {tx('Guardado')}</span>}
           {error && <span style={{ fontSize:12, color:C.red }}>{error}</span>}
           {tab==='rules' && (
             <button onClick={saveRules} disabled={saving} style={{ padding:'8px 20px', fontSize:13, fontWeight:700, borderRadius:9, border:'none', background:saving?'rgba(240,168,78,0.4)':C.amber, color:'#0A0D14', cursor:'pointer', fontFamily:'inherit' }}>
-              {saving ? 'Guardando...' : 'Guardar cambios'}
+              {saving ? tx('Guardando...') : tx('Guardar cambios')}
             </button>
           )}
           {tab==='knowledge' && (
             <button onClick={saveKnowledge} disabled={savingK} style={{ padding:'8px 20px', fontSize:13, fontWeight:700, borderRadius:9, border:'none', background:savingK?'rgba(240,168,78,0.4)':C.amber, color:'#0A0D14', cursor:'pointer', fontFamily:'inherit' }}>
-              {savingK ? 'Guardando...' : 'Guardar conocimiento'}
+              {savingK ? tx('Guardando...') : tx('Guardar conocimiento')}
             </button>
           )}
           <NotifBell/>
@@ -146,7 +148,7 @@ export default function AgentePage() {
             padding:'12px 20px', fontSize:13, fontWeight:600, background:'none', border:'none',
             borderBottom: tab===t.id ? `2px solid ${C.amber}` : '2px solid transparent',
             color: tab===t.id ? C.amber : C.text3, cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s',
-          }}>{t.label}</button>
+          }}>{tx(t.label)}</button>
         ))}
       </div>
 
@@ -158,17 +160,17 @@ export default function AgentePage() {
 
             {/* Reglas numéricas */}
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:18 }}>Reglas automáticas</h2>
+              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:18 }}>{tx('Reglas automáticas')}</h2>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
                 <div>
-                  <label style={{ fontSize:12, color:C.text2, fontWeight:600, display:'block', marginBottom:6 }}>Tamaño máximo sin revisión</label>
+                  <label style={{ fontSize:12, color:C.text2, fontWeight:600, display:'block', marginBottom:6 }}>{tx('Tamaño máximo sin revisión')}</label>
                   <input type="number" min={1} max={50} value={rules.max_auto_party_size} onChange={e=>setRules((r:any)=>({...r,max_auto_party_size:parseInt(e.target.value)||6}))} style={inp()} />
-                  <p style={{ fontSize:11, color:C.text3, marginTop:4 }}>Grupos más grandes quedarán pendientes de revisión</p>
+                  <p style={{ fontSize:11, color:C.text3, marginTop:4 }}>{tx('Grupos más grandes quedarán pendientes de revisión')}</p>
                 </div>
                 <div>
-                  <label style={{ fontSize:12, color:C.text2, fontWeight:600, display:'block', marginBottom:6 }}>Confianza mínima para confirmar</label>
+                  <label style={{ fontSize:12, color:C.text2, fontWeight:600, display:'block', marginBottom:6 }}>{tx('Confianza mínima para confirmar')}</label>
                   <input type="number" min={0.3} max={1} step={0.05} value={rules.min_confidence_to_confirm} onChange={e=>setRules((r:any)=>({...r,min_confidence_to_confirm:parseFloat(e.target.value)||0.72}))} style={inp()} />
-                  <p style={{ fontSize:11, color:C.text3, marginTop:4 }}>0.72 = 72%. Por debajo: requiere atención humana</p>
+                  <p style={{ fontSize:11, color:C.text3, marginTop:4 }}>{tx('0.72 = 72%. Por debajo: requiere atención humana')}</p>
                 </div>
               </div>
               <div style={{ display:'flex', gap:12, marginTop:14, flexWrap:'wrap' }}>
@@ -182,26 +184,26 @@ export default function AgentePage() {
                     background: (rules[key] as boolean) ? 'rgba(74,222,128,0.12)' : C.surface2,
                     border: `1px solid ${(rules[key] as boolean) ? C.green+'40' : C.border}`,
                     color: (rules[key] as boolean) ? C.green : C.text3, transition:'all 0.15s',
-                  }}>{(rules[key] as boolean) ? '✓' : '○'} {label}</button>
+                  }}>{(rules[key] as boolean) ? '✓' : '○'} {tx(label)}</button>
                 ))}
               </div>
             </div>
 
             {/* Patrones */}
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>Patrones de decisión</h2>
-              <p style={{ fontSize:12, color:C.text3, marginBottom:18 }}>Define qué hace el agente cuando detecta cada situación</p>
+              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>{tx('Patrones de decisión')}</h2>
+              <p style={{ fontSize:12, color:C.text3, marginBottom:18 }}>{tx('Define qué hace el agente cuando detecta cada situación')}</p>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 {PATTERN_KEYS.map(({ key, label, icon, desc }) => (
                   <div key={key} style={{ display:'flex', alignItems:'center', gap:14, padding:'12px 16px', background:C.surface2, borderRadius:10, border:`1px solid ${C.border}` }}>
                     <span style={{ fontSize:20, flexShrink:0 }}>{icon}</span>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <p style={{ fontSize:13, fontWeight:600, color:C.text }}>{label}</p>
-                      <p style={{ fontSize:11, color:C.text3 }}>{desc}</p>
+                      <p style={{ fontSize:13, fontWeight:600, color:C.text }}>{tx(label)}</p>
+                      <p style={{ fontSize:11, color:C.text3 }}>{tx(desc)}</p>
                     </div>
                     <select value={patterns[key]||'pending_review'} onChange={e=>setPatterns(p=>({...p,[key]:e.target.value}))}
                       style={{ ...inp({ width:'auto', minWidth:220, padding:'7px 12px' }) }}>
-                      {STATUS_OPTS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
+                      {STATUS_OPTS.map(o=><option key={o.value} value={o.value}>{tx(o.label)}</option>)}
                     </select>
                   </div>
                 ))}
@@ -211,7 +213,7 @@ export default function AgentePage() {
             {/* Historial de feedback */}
             {feedback.length > 0 && (
               <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-                <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:14 }}>📚 Correcciones recientes</h2>
+                <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:14 }}>📚 {tx('Correcciones recientes')}</h2>
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {feedback.slice(0,8).map((f:any,i:number) => (
                     <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', background:C.surface2, borderRadius:8 }}>
@@ -220,7 +222,7 @@ export default function AgentePage() {
                       <span style={{ fontSize:11, color:C.text3 }}>→</span>
                       <span style={{ fontSize:12, color:C.green }}>{f.corrected_status}</span>
                       {(f.flags||[]).map((flag:string)=>(
-                        <span key={flag} style={{ fontSize:10, padding:'1px 7px', borderRadius:10, background:C.amberDim||'rgba(240,168,78,0.10)', color:C.amber, fontWeight:600 }}>{FLAG_LABELS[flag]||flag}</span>
+                        <span key={flag} style={{ fontSize:10, padding:'1px 7px', borderRadius:10, background:C.amberDim||'rgba(240,168,78,0.10)', color:C.amber, fontWeight:600 }}>{tx(FLAG_LABELS[flag]||flag)}</span>
                       ))}
                       {f.note && <span style={{ fontSize:11, color:C.text3, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.note}</span>}
                     </div>
@@ -237,23 +239,23 @@ export default function AgentePage() {
 
             {/* Servicios */}
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>🛎️ Servicios ofrecidos</h2>
-              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>Qué servicios ofrece tu negocio (separados por coma)</p>
+              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>🛎️ {tx('Servicios ofrecidos')}</h2>
+              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('Qué servicios ofrece tu negocio (separados por coma)')}</p>
               <input value={(knowledge.services||[]).join(', ')} onChange={e=>setKnowledge((k:any)=>({...k,services:e.target.value.split(',').map((s:string)=>s.trim()).filter(Boolean)}))}
-                placeholder="reservas, pedido para recoger, menú del día, entrega a domicilio..."
+                placeholder={tx('reservas, pedido para recoger, menú del día, entrega a domicilio...')}
                 style={{...inp()}}/>
             </div>
 
             {/* Horarios */}
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>🕐 Horarios</h2>
-              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>Define los turnos de tu negocio</p>
+              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>🕐 {tx('Horarios')}</h2>
+              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('Define los turnos de tu negocio')}</p>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 {[['lunch','Mediodía'],['dinner','Noche'],['morning','Mañana'],['weekend','Fin de semana']].map(([key,label])=>(
                   <div key={key} style={{ display:'flex', alignItems:'center', gap:12 }}>
-                    <span style={{ fontSize:12, color:C.text2, fontWeight:600, width:100, flexShrink:0 }}>{label}</span>
+                    <span style={{ fontSize:12, color:C.text2, fontWeight:600, width:100, flexShrink:0 }}>{tx(label)}</span>
                     <input value={(knowledge.hours||{})[key]||''} onChange={e=>setKnowledge((k:any)=>({...k,hours:{...(k.hours||{}),[key]:e.target.value}}))}
-                      placeholder="ej: 13:00-16:00" style={{...inp()}}/>
+                      placeholder={tx('ej: 13:00-16:00')} style={{...inp()}}/>
                   </div>
                 ))}
               </div>
@@ -261,24 +263,24 @@ export default function AgentePage() {
 
             {/* Menú */}
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>🍽️ Menú / Catálogo</h2>
-              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>Categorías y productos. El agente usará esto para responder preguntas sobre disponibilidad.</p>
-              <MenuEditor menu={knowledge.menu||{}} onChange={(m:any)=>setKnowledge((k:any)=>({...k,menu:m}))}/>
+              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>🍽️ {tx('Menú / Catálogo')}</h2>
+              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('Categorías y productos. El agente usará esto para responder preguntas sobre disponibilidad.')}</p>
+              <MenuEditor menu={knowledge.menu||{}} onChange={(m:any)=>setKnowledge((k:any)=>({...k,menu:m}))} tx={tx}/>
             </div>
 
             {/* FAQs */}
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>❓ Preguntas frecuentes</h2>
-              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>Preguntas que el agente responderá directamente sin improvisar</p>
-              <FaqEditor faqs={knowledge.faqs||[]} onChange={(f:any)=>setKnowledge((k:any)=>({...k,faqs:f}))}/>
+              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>❓ {tx('Preguntas frecuentes')}</h2>
+              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('Preguntas que el agente responderá directamente sin improvisar')}</p>
+              <FaqEditor faqs={knowledge.faqs||[]} onChange={(f:any)=>setKnowledge((k:any)=>({...k,faqs:f}))} tx={tx}/>
             </div>
 
             {/* Notas especiales */}
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>📝 Notas especiales</h2>
-              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>Información adicional para el agente (políticas, restricciones, etc.)</p>
+              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>📝 {tx('Notas especiales')}</h2>
+              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('Información adicional para el agente (políticas, restricciones, etc.)')}</p>
               <textarea value={knowledge.special_notes||''} onChange={e=>setKnowledge((k:any)=>({...k,special_notes:e.target.value}))}
-                rows={4} placeholder="Ej: Los domingos solo abrimos para cenas. No aceptamos grupos de más de 20 sin reserva previa..."
+                rows={4} placeholder={tx('Ej: Los domingos solo abrimos para cenas. No aceptamos grupos de más de 20 sin reserva previa...')}
                 style={{...inp(), resize:'vertical'}}/>
             </div>
 
@@ -289,12 +291,12 @@ export default function AgentePage() {
         {tab==='memory' && (
           <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>📚 Correcciones acumuladas</h2>
-              <p style={{ fontSize:12, color:C.text3, marginBottom:16 }}>Patrones detectados a partir de tus correcciones. Cuando hay 3 o más del mismo tipo, el sistema puede sugerirte automatizarlos.</p>
+              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>📚 {tx('Correcciones acumuladas')}</h2>
+              <p style={{ fontSize:12, color:C.text3, marginBottom:16 }}>{tx('Patrones detectados a partir de tus correcciones. Cuando hay 3 o más del mismo tipo, el sistema puede sugerirte automatizarlos.')}</p>
               {feedback.length === 0 ? (
                 <div style={{ padding:'32px 0', textAlign:'center' }}>
                   <div style={{ fontSize:28, marginBottom:10 }}>🧠</div>
-                  <p style={{ fontSize:13, color:C.text3 }}>Sin correcciones aún. Cuando corrijas decisiones del agente, aparecerán aquí y el sistema aprenderá.</p>
+                  <p style={{ fontSize:13, color:C.text3 }}>{tx('Sin correcciones aún. Cuando corrijas decisiones del agente, aparecerán aquí y el sistema aprenderá.')}</p>
                 </div>
               ) : (
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -303,7 +305,7 @@ export default function AgentePage() {
                       <span style={{ fontSize:11, color:C.text3 }}>{new Date(f.created_at).toLocaleDateString('es-ES')}</span>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                         {(f.flags||[]).map((flag:string)=>(
-                          <span key={flag} style={{ fontSize:10, padding:'2px 8px', borderRadius:10, background:`${C.amber}18`, color:C.amber, fontWeight:600 }}>{FLAG_LABELS[flag]||flag}</span>
+                          <span key={flag} style={{ fontSize:10, padding:'2px 8px', borderRadius:10, background:`${C.amber}18`, color:C.amber, fontWeight:600 }}>{tx(FLAG_LABELS[flag]||flag)}</span>
                         ))}
                         {!f.flags?.length && <span style={{ fontSize:11, color:C.text3 }}>{f.intent||'—'}</span>}
                       </div>
@@ -327,7 +329,7 @@ export default function AgentePage() {
 }
 
 // ── MenuEditor sub-component ──────────────────────────────────────────────
-function MenuEditor({ menu, onChange }: { menu: Record<string,string[]>; onChange:(m:any)=>void }) {
+function MenuEditor({ menu, onChange, tx=(s:string)=>s }: { menu: Record<string,string[]>; onChange:(m:any)=>void; tx?:(s:string)=>string }) {
   const [newCat, setNewCat] = useState('')
   const categories = Object.keys(menu)
   const addCategory = () => {
@@ -347,23 +349,23 @@ function MenuEditor({ menu, onChange }: { menu: Record<string,string[]>; onChang
         <div key={cat} style={{ background:C.surface2, borderRadius:9, padding:'12px 14px', border:`1px solid ${C.border}` }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
             <span style={{ fontSize:13, fontWeight:600, color:C.text, textTransform:'capitalize' }}>{cat}</span>
-            <button onClick={()=>removeCategory(cat)} style={{ fontSize:11, color:C.red, background:'none', border:'none', cursor:'pointer' }}>✕ eliminar</button>
+            <button onClick={()=>removeCategory(cat)} style={{ fontSize:11, color:C.red, background:'none', border:'none', cursor:'pointer' }}>✕ {tx('eliminar')}</button>
           </div>
           <input value={(menu[cat]||[]).join(', ')} onChange={e=>updateItems(cat,e.target.value)}
-            placeholder={`Productos en ${cat} (separados por coma)`} style={{...inp()}}/>
+            placeholder={`${tx('Productos en')} ${cat} (${tx('separados por coma')})`} style={{...inp()}}/>
         </div>
       ))}
       <div style={{ display:'flex', gap:8 }}>
         <input value={newCat} onChange={e=>setNewCat(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addCategory()}
-          placeholder="Nueva categoría (ej: carnes, postres...)" style={{...inp()}}/>
-        <button onClick={addCategory} style={{ padding:'10px 18px', fontSize:13, fontWeight:600, background:C.amberDim, border:`1px solid ${C.amberBorder}`, borderRadius:9, color:C.amber, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>+ Añadir</button>
+          placeholder={tx('Nueva categoría (ej: carnes, postres...)')} style={{...inp()}}/>
+        <button onClick={addCategory} style={{ padding:'10px 18px', fontSize:13, fontWeight:600, background:C.amberDim, border:`1px solid ${C.amberBorder}`, borderRadius:9, color:C.amber, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>+ {tx('Añadir')}</button>
       </div>
     </div>
   )
 }
 
 // ── FaqEditor sub-component ───────────────────────────────────────────────
-function FaqEditor({ faqs, onChange }: { faqs: Array<{q:string;a:string}>; onChange:(f:any)=>void }) {
+function FaqEditor({ faqs, onChange, tx=(s:string)=>s }: { faqs: Array<{q:string;a:string}>; onChange:(f:any)=>void; tx?:(s:string)=>string }) {
   const addFaq = () => onChange([...faqs, { q:'', a:'' }])
   const removeFaq = (i:number) => onChange(faqs.filter((_:any,idx:number)=>idx!==i))
   const updateFaq = (i:number, field:'q'|'a', val:string) => {
@@ -376,18 +378,18 @@ function FaqEditor({ faqs, onChange }: { faqs: Array<{q:string;a:string}>; onCha
         <div key={i} style={{ background:C.surface2, borderRadius:9, padding:'12px 14px', border:`1px solid ${C.border}`, display:'flex', flexDirection:'column', gap:8 }}>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             <span style={{ fontSize:11, color:C.text3, fontWeight:600, width:18, flexShrink:0 }}>P:</span>
-            <input value={faq.q} onChange={e=>updateFaq(i,'q',e.target.value)} placeholder="Pregunta del cliente..." style={{...inp()}}/>
+            <input value={faq.q} onChange={e=>updateFaq(i,'q',e.target.value)} placeholder={tx('Pregunta del cliente...')} style={{...inp()}}/>
             <button onClick={()=>removeFaq(i)} style={{ fontSize:11, color:C.red, background:'none', border:'none', cursor:'pointer', flexShrink:0 }}>✕</button>
           </div>
           <div style={{ display:'flex', alignItems:'flex-start', gap:8 }}>
             <span style={{ fontSize:11, color:C.teal, fontWeight:600, width:18, flexShrink:0, marginTop:10 }}>R:</span>
             <textarea value={faq.a} onChange={e=>updateFaq(i,'a',e.target.value)} rows={2}
-              placeholder="Respuesta exacta que dará el agente..." style={{...inp(), resize:'vertical'}}/>
+              placeholder={tx('Respuesta exacta que dará el agente...')} style={{...inp(), resize:'vertical'}}/>
           </div>
         </div>
       ))}
       <button onClick={addFaq} style={{ padding:'10px 18px', fontSize:13, fontWeight:600, background:C.amberDim, border:`1px solid ${C.amberBorder}`, borderRadius:9, color:C.amber, cursor:'pointer', fontFamily:'inherit', textAlign:'center' }}>
-        + Añadir pregunta frecuente
+        + {tx('Añadir pregunta frecuente')}
       </button>
     </div>
   )

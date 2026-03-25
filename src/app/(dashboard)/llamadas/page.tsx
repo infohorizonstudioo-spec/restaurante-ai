@@ -81,7 +81,7 @@ function fmt(sec:number|null) {
 }
 
 export default function LlamadasPage() {
-  const { t } = useTenant()
+  const { t, tx } = useTenant()
   const cs = getCommonStrings(t.locale)
   const [calls,setCalls]       = useState<any[]>([])
   const [loading,setLoading]   = useState(true)
@@ -179,7 +179,7 @@ export default function LlamadasPage() {
             {k:'all',        label:t.common.all,              count:calls.length},
             {k:'completada', label:t.reservations.completed,  count:calls.filter(c=>c.status==='completada'||c.status==='completed').length},
             {k:'perdida',    label:t.agent.callMissed,        count:calls.filter(c=>c.status==='perdida'||c.status==='no-answer'||c.status==='busy').length},
-            {k:'fallida',    label:'Fallidas',                 count:calls.filter(c=>c.status==='fallida'||c.status==='failed').length},
+            {k:'fallida',    label:tx('Fallidas'),                 count:calls.filter(c=>c.status==='fallida'||c.status==='failed').length},
           ] as const).map(f => (
             <button key={f.k} onClick={()=>setFilter(f.k as any)}
               style={{fontSize:11, padding:'4px 12px', borderRadius:10, border:'1px solid',
@@ -201,10 +201,10 @@ export default function LlamadasPage() {
           <div style={{background:'rgba(240,168,78,0.08)',border:'1px solid rgba(240,168,78,0.25)',borderRadius:12,padding:'12px 16px',marginBottom:16,display:'flex',alignItems:'flex-start',gap:10}}>
             <span style={{fontSize:18,flexShrink:0}}>🧠</span>
             <div style={{flex:1}}>
-              <p style={{fontSize:11, fontWeight:700, color:C.amber, marginBottom:4}}>Sofía ha aprendido algo nuevo</p>
+              <p style={{fontSize:11, fontWeight:700, color:C.amber, marginBottom:4}}>{tx('Sofía ha aprendido algo nuevo')}</p>
               {suggestions.map((s,i)=>(
                 <p key={i} style={{fontSize:12,color:C.text2}}>
-                  Ha corregido {s.count} veces llamadas similares → ahora sabrá manejarlas mejor
+                  {tx('Ha corregido')} {s.count} {tx('veces llamadas similares')} → {tx('ahora sabrá manejarlas mejor')}
                 </p>
               ))}
             </div>
@@ -215,18 +215,18 @@ export default function LlamadasPage() {
           <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'60px 24px', textAlign:'center'}}>
             <div style={{width:56, height:56, borderRadius:'50%', background:C.amberDim, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 14px', fontSize:24}}>📞</div>
             <p style={{fontSize:15, fontWeight:600, color:C.text, marginBottom:6}}>{cs.noCalls}</p>
-            <p style={{fontSize:13, color:C.text3, lineHeight:1.6}}>Las llamadas recibidas aparecerán aquí.</p>
+            <p style={{fontSize:13, color:C.text3, lineHeight:1.6}}>{tx('Las llamadas recibidas aparecerán aquí.')}</p>
           </div>
         ) : groups.map(([date,dayCalls]) => (
           <div key={date} style={{marginBottom:20}}>
             <p style={{fontSize:10, fontWeight:700, color:C.text3, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:10}}>
-              {date===today ? 'HOY' : new Date(date+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'}).toUpperCase()}
+              {date===today ? tx('HOY') : new Date(date+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'}).toUpperCase()}
               <span style={{marginLeft:8, fontWeight:400}}>({dayCalls.length})</span>
             </p>
             <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden'}}>
               {dayCalls.map((call,i) => {
                 const expanded = open.has(call.id)
-                const phone = call.caller_phone||call.from_number||'Número oculto'
+                const phone = call.caller_phone||call.from_number||tx('Número oculto')
                 const status = call.status||'completed'
                 const dur = fmt(call.duration_seconds||call.duration)
                 return (
@@ -243,7 +243,7 @@ export default function LlamadasPage() {
                           <span style={{fontSize:10, padding:'2px 8px', borderRadius:8, background:SB[status], color:SC[status], fontWeight:700, flexShrink:0}}>{getStatusLabel(status, t.locale)}</span>
                           {call.intent&&call.intent!=='consulta'&&<span style={{fontSize:10, padding:'2px 8px', borderRadius:8, background:C.violetDim, color:C.violet, fontWeight:600, textTransform:'capitalize'}}>{call.intent}</span>}
                         </div>
-                        {call.summary ? <p style={{fontSize:12, color:C.text2, lineHeight:1.5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{call.summary}</p> : <p style={{fontSize:12, color:C.text3}}>Sin resumen</p>}
+                        {call.summary ? <p style={{fontSize:12, color:C.text2, lineHeight:1.5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{call.summary}</p> : <p style={{fontSize:12, color:C.text3}}>{tx('Sin resumen')}</p>}
                       </div>
                       <div style={{flexShrink:0, textAlign:'right'}}>
                         <p style={{fontSize:11, color:C.text3}}>{(call.started_at||call.created_at) ? new Date(call.started_at||call.created_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : ''}</p>
@@ -254,14 +254,14 @@ export default function LlamadasPage() {
                     {expanded && (
                       <div style={{padding:'12px 16px 16px', borderTop:`1px solid ${C.border}`, background:C.surface2}}>
                         {/* Resumen */}
-                        {call.summary&&<div style={{background:C.surface3, borderRadius:9, padding:'10px 14px', marginBottom:10}}><p style={{fontSize:10, fontWeight:700, color:C.text3, marginBottom:4, textTransform:'uppercase', letterSpacing:'0.06em'}}>Resumen</p><p style={{fontSize:13, color:C.text, lineHeight:1.6}}>{call.summary}</p></div>}
+                        {call.summary&&<div style={{background:C.surface3, borderRadius:9, padding:'10px 14px', marginBottom:10}}><p style={{fontSize:10, fontWeight:700, color:C.text3, marginBottom:4, textTransform:'uppercase', letterSpacing:'0.06em'}}>{tx('Resumen')}</p><p style={{fontSize:13, color:C.text, lineHeight:1.6}}>{call.summary}</p></div>}
                         {/* Acción requerida */}
-                        {(call.action_suggested||call.action_required)&&<div style={{background:`${C.amber}10`, borderRadius:9, padding:'8px 14px', marginBottom:10, border:`1px solid ${C.amber}20`}}><p style={{fontSize:10, fontWeight:700, color:C.amber, marginBottom:2, textTransform:'uppercase', letterSpacing:'0.05em'}}>Acción</p><p style={{fontSize:13, color:C.amber}}>{call.action_suggested||call.action_required}</p></div>}
+                        {(call.action_suggested||call.action_required)&&<div style={{background:`${C.amber}10`, borderRadius:9, padding:'8px 14px', marginBottom:10, border:`1px solid ${C.amber}20`}}><p style={{fontSize:10, fontWeight:700, color:C.amber, marginBottom:2, textTransform:'uppercase', letterSpacing:'0.05em'}}>{tx('Acción')}</p><p style={{fontSize:13, color:C.amber}}>{call.action_suggested||call.action_required}</p></div>}
 
                         {/* Estado de decisión + flags — en lenguaje humano */}
                         {(call.decision_status||call.decision_flags?.length>0) && (
                           <div style={{background:C.surface3, borderRadius:9, padding:'10px 14px', marginBottom:10}}>
-                            <p style={{fontSize:10, fontWeight:700, color:C.text3, marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em'}}>Lo que hizo Sofía</p>
+                            <p style={{fontSize:10, fontWeight:700, color:C.text3, marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em'}}>{tx('Lo que hizo')} {tx('Sofía')}</p>
                             <div style={{display:'flex', flexWrap:'wrap', gap:6, alignItems:'center'}}>
                               {call.decision_status&&(()=>{
                                 const dcfg = DECISION_CFG[call.decision_status]
@@ -275,10 +275,10 @@ export default function LlamadasPage() {
                               {call.decision_confidence!=null&&(
                                 <span style={{fontSize:11, color:C.text3}}>
                                   {call.decision_confidence>=0.8
-                                    ? '✓ Entendió bien la llamada'
+                                    ? '✓ '+tx('Entendió bien la llamada')
                                     : call.decision_confidence>=0.55
-                                    ? '~ Tuvo algunas dudas'
-                                    : '? Tuvo dificultades para entender'}
+                                    ? '~ '+tx('Tuvo algunas dudas')
+                                    : '? '+tx('Tuvo dificultades para entender')}
                                 </span>
                               )}
                               {/* Flags en lenguaje humano */}
@@ -297,7 +297,7 @@ export default function LlamadasPage() {
                             {/* Detalles técnicos — ocultos por defecto, solo para curiosos */}
                             {(call.decision_trace?.length > 0) && (
                               <details style={{marginTop:8}}>
-                                <summary style={{fontSize:10, color:C.text3, cursor:'pointer', userSelect:'none' as const}}>Ver detalles técnicos</summary>
+                                <summary style={{fontSize:10, color:C.text3, cursor:'pointer', userSelect:'none' as const}}>{tx('Ver detalles técnicos')}</summary>
                                 <div style={{marginTop:6, display:'flex', flexDirection:'column', gap:4}}>
                                   {call.decision_trace.map((step:any,i:number)=>(
                                     <div key={i} style={{display:'flex', gap:8, alignItems:'baseline', fontSize:11}}>
@@ -316,8 +316,8 @@ export default function LlamadasPage() {
                         <div style={{marginBottom:10}}>
                           {correcting===call.call_sid ? (
                             <div style={{background:'rgba(240,168,78,0.05)', border:'1px solid rgba(240,168,78,0.2)', borderRadius:10, padding:'12px 14px'}}>
-                              <p style={{fontSize:12, fontWeight:700, color:C.amber, marginBottom:6}}>¿Qué pasó realmente con esta llamada?</p>
-                              <p style={{fontSize:11, color:C.text3, marginBottom:10}}>Elige la opción correcta y Sofía aprenderá para la próxima vez.</p>
+                              <p style={{fontSize:12, fontWeight:700, color:C.amber, marginBottom:6}}>{tx('¿Qué pasó realmente con esta llamada?')}</p>
+                              <p style={{fontSize:11, color:C.text3, marginBottom:10}}>{tx('Elige la opción correcta y Sofía aprenderá para la próxima vez.')}</p>
                               <div style={{display:'flex', flexWrap:'wrap', gap:6, marginBottom:10}}>
                                 {CORRECTION_OPTIONS.map(opt=>(
                                   <button key={opt.value} onClick={()=>sendFeedback(call.call_sid, opt.value)}
@@ -328,15 +328,15 @@ export default function LlamadasPage() {
                                 ))}
                               </div>
                               <input value={feedbackNote} onChange={e=>setFeedbackNote(e.target.value)}
-                                placeholder="Comentario opcional (ej: el cliente confirmó por teléfono)"
+                                placeholder={tx('Comentario opcional (ej: el cliente confirmó por teléfono)')}
                                 style={{width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'7px 10px', fontSize:12, color:C.text, fontFamily:'inherit', boxSizing:'border-box' as const, marginBottom:8}}/>
                               <button onClick={()=>{setCorrecting(null);setFeedbackNote('')}}
                                 style={{fontSize:11, color:C.text3, background:'none', border:'none', cursor:'pointer', fontFamily:'inherit'}}>
-                                Cancelar
+                                {tx('Cancelar')}
                               </button>
                             </div>
                           ) : feedbackDone.has(call.call_sid) ? (
-                            <p style={{fontSize:11, color:C.green}}>✓ Listo — Sofía tendrá esto en cuenta la próxima vez</p>
+                            <p style={{fontSize:11, color:C.green}}>✓ {tx('Listo — Sofía tendrá esto en cuenta la próxima vez')}</p>
                           ) : (
                             <div style={{display:'flex',alignItems:'center',gap:0}}>
                               {call.caller_phone && call.caller_phone !== 'Número oculto' && (
@@ -355,7 +355,7 @@ export default function LlamadasPage() {
                               )}
                               <button onClick={()=>{setCorrecting(call.call_sid);setFeedbackNote('')}}
                                 style={{fontSize:11, padding:'5px 12px', borderRadius:7, border:`1px solid ${C.border}`, background:'transparent', color:C.text3, cursor:'pointer', fontFamily:'inherit', fontWeight:500}}>
-                                Esto no es correcto, quiero cambiarlo
+                                {tx('Esto no es correcto, quiero cambiarlo')}
                               </button>
                             </div>
                           )}
@@ -364,10 +364,10 @@ export default function LlamadasPage() {
                         {/* Intención del cliente — en lenguaje humano */}
                         {call.intent && call.intent !== 'consulta' &&
                           <p style={{fontSize:12, color:C.text3, marginTop:4}}>
-                            El cliente quería: <strong style={{color:C.text2}}>{INTENT_LABELS[call.intent]||call.intent}</strong>
+                            {tx('El cliente quería:')} <strong style={{color:C.text2}}>{INTENT_LABELS[call.intent]||call.intent}</strong>
                           </p>
                         }
-                        {call.transcript&&<details style={{marginTop:8}}><summary style={{fontSize:12, color:C.text3, cursor:'pointer'}}>Ver la conversación completa</summary><p style={{fontSize:12, color:C.text2, lineHeight:1.6, marginTop:8, whiteSpace:'pre-wrap', background:C.surface3, padding:'10px', borderRadius:8}}>{call.transcript}</p></details>}
+                        {call.transcript&&<details style={{marginTop:8}}><summary style={{fontSize:12, color:C.text3, cursor:'pointer'}}>{tx('Ver la conversación completa')}</summary><p style={{fontSize:12, color:C.text2, lineHeight:1.6, marginTop:8, whiteSpace:'pre-wrap', background:C.surface3, padding:'10px', borderRadius:8}}>{call.transcript}</p></details>}
                       </div>
                     )}
                   </div>
@@ -380,7 +380,7 @@ export default function LlamadasPage() {
           <div style={{textAlign:'center', paddingTop:8}}>
             <button onClick={()=>{ setLoadingMore(true); if(tid) load(tid,false) }} disabled={loadingMore}
               style={{padding:'9px 24px', fontSize:13, fontWeight:600, color:C.amber, background:'transparent', border:`1px solid ${C.amber}40`, borderRadius:9, cursor:'pointer', fontFamily:'inherit', opacity:loadingMore?0.6:1}}>
-              {loadingMore ? 'Cargando...' : 'Cargar más llamadas'}
+              {loadingMore ? tx('Cargando...') : tx('Cargar más llamadas')}
             </button>
           </div>
         )}

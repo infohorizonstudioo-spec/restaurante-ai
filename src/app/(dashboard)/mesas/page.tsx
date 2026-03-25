@@ -71,9 +71,9 @@ function TableBlock({ table, selected, onSelect, onDragEnd, onDoubleClick, unitI
 }
 
 // ── Modal edición ───────────────────────────────────────────────────────────
-function TableModal({table,zones,onSave,onDelete,onClose,unitS,unitP,zoneLabel,isRoom}:{
+function TableModal({table,zones,onSave,onDelete,onClose,unitS,unitP,zoneLabel,isRoom,tx=(s:string)=>s}:{
   table:TableItem; zones:Zone[]; onSave:(t:Partial<TableItem>)=>void; onDelete:()=>void; onClose:()=>void
-  unitS:string; unitP:string; zoneLabel:string; isRoom:boolean
+  unitS:string; unitP:string; zoneLabel:string; isRoom:boolean; tx?:(s:string)=>string
 }) {
   const [form,setForm]=useState({
     number:table.number||'',name:table.name||'',capacity:table.capacity||2,
@@ -93,33 +93,33 @@ function TableModal({table,zones,onSave,onDelete,onClose,unitS,unitP,zoneLabel,i
         </div>
         <div style={{display:'flex',flexDirection:'column',gap:12}}>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-            <div><label style={lbl}>NÚMERO</label><input className="rz-inp" value={form.number} onChange={e=>up('number',e.target.value)}/></div>
-            <div><label style={lbl}>NOMBRE</label><input className="rz-inp" value={form.name} onChange={e=>up('name',e.target.value)} placeholder={isRoom ? 'Sala A' : 'Terraza A'}/></div>
+            <div><label style={lbl}>{tx('NÚMERO')}</label><input className="rz-inp" value={form.number} onChange={e=>up('number',e.target.value)}/></div>
+            <div><label style={lbl}>{tx('NOMBRE')}</label><input className="rz-inp" value={form.name} onChange={e=>up('name',e.target.value)} placeholder={isRoom ? 'Sala A' : 'Terraza A'}/></div>
             <div><label style={lbl}>{capacityLabel}</label><input className="rz-inp" type="number" min={1} max={50} value={form.capacity} onChange={e=>up('capacity',parseInt(e.target.value)||1)}/></div>
             <div><label style={lbl}>{zoneLabel.toUpperCase()}</label>
               <select className="rz-inp" value={form.zone_id} onChange={e=>up('zone_id',e.target.value)} style={{cursor:'pointer'}}>
-                <option value="">Sin {zoneLabel.toLowerCase()}</option>
+                <option value="">{tx('Sin')} {zoneLabel.toLowerCase()}</option>
                 {zones.map(z=><option key={z.id} value={z.id} style={{background:C.card}}>{z.name}</option>)}
               </select>
             </div>
           </div>
-          <div><label style={lbl}>FORMA</label>
+          <div><label style={lbl}>{tx('FORMA')}</label>
             <div style={{display:'flex',gap:8}}>
-              {([['square','Cuadrada'],['round','Redonda'],['rectangle','Rectangular']] as const).map(([k,l])=>(
+              {([['square',tx('Cuadrada')],['round',tx('Redonda')],['rectangle',tx('Rectangular')]] as [string,string][]).map(([k,l])=>(
                 <button key={k} onClick={()=>up('shape_type',k)} style={{flex:1,padding:'8px',borderRadius:9,border:`1px solid ${form.shape_type===k?C.amber+'44':C.border}`,background:form.shape_type===k?C.amberDim:'transparent',color:form.shape_type===k?C.amber:C.sub,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>{l}</button>
               ))}
             </div>
           </div>
-          <div><label style={lbl}>ESTADO</label>
+          <div><label style={lbl}>{tx('ESTADO')}</label>
             <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
               {Object.entries(STATUS_CFG).map(([k,v])=>(
-                <button key={k} onClick={()=>up('status',k)} style={{padding:'5px 12px',borderRadius:8,border:`1px solid ${form.status===k?v.color+'44':C.border}`,background:form.status===k?v.bg:'transparent',color:form.status===k?v.color:C.sub,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>{v.label}</button>
+                <button key={k} onClick={()=>up('status',k)} style={{padding:'5px 12px',borderRadius:8,border:`1px solid ${form.status===k?v.color+'44':C.border}`,background:form.status===k?v.bg:'transparent',color:form.status===k?v.color:C.sub,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>{tx(v.label)}</button>
               ))}
             </div>
           </div>
           {!isRoom && (
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-              <div><p style={{fontSize:13,fontWeight:600,color:C.text}}>Combinable</p><p style={{fontSize:11,color:C.muted}}>Se puede juntar con otros {unitP.toLowerCase()}</p></div>
+              <div><p style={{fontSize:13,fontWeight:600,color:C.text}}>{tx('Combinable')}</p><p style={{fontSize:11,color:C.muted}}>{tx('Se puede juntar con otros')} {unitP.toLowerCase()}</p></div>
               <button onClick={()=>up('combinable',!form.combinable)} style={{width:44,height:24,borderRadius:12,border:'none',cursor:'pointer',background:form.combinable?C.amber:'rgba(255,255,255,0.1)',position:'relative',transition:'background 0.2s'}}>
                 <div style={{position:'absolute',top:2,left:form.combinable?20:2,width:20,height:20,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.3)'}}/>
               </button>
@@ -127,17 +127,17 @@ function TableModal({table,zones,onSave,onDelete,onClose,unitS,unitP,zoneLabel,i
           )}
           {confirmDel ? (
             <div style={{background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:9,padding:'10px 12px'}}>
-              <p style={{fontSize:12,color:C.red,marginBottom:8}}>¿Eliminar {unitS.toLowerCase()} &quot;{table.name||table.number}&quot;?</p>
+              <p style={{fontSize:12,color:C.red,marginBottom:8}}>{tx('¿Eliminar')} {unitS.toLowerCase()} &quot;{table.name||table.number}&quot;?</p>
               <div style={{display:'flex',gap:6}}>
-                <button onClick={()=>setConfirmDel(false)} style={{flex:1,padding:'7px',fontSize:12,background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border}`,borderRadius:8,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>Cancelar</button>
-                <button onClick={onDelete} style={{flex:1,padding:'7px',fontSize:12,background:C.red,border:'none',borderRadius:8,cursor:'pointer',color:'white',fontFamily:'inherit',fontWeight:700}}>Eliminar</button>
+                <button onClick={()=>setConfirmDel(false)} style={{flex:1,padding:'7px',fontSize:12,background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border}`,borderRadius:8,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>{tx('Cancelar')}</button>
+                <button onClick={onDelete} style={{flex:1,padding:'7px',fontSize:12,background:C.red,border:'none',borderRadius:8,cursor:'pointer',color:'white',fontFamily:'inherit',fontWeight:700}}>{tx('Eliminar')}</button>
               </div>
             </div>
           ):(
             <div style={{display:'flex',gap:8,marginTop:4}}>
-              <button onClick={()=>setConfirmDel(true)} style={{padding:'10px 14px',background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:10,cursor:'pointer',color:C.red,fontSize:12,fontFamily:'inherit'}}>Eliminar</button>
-              <button onClick={onClose} style={{flex:1,padding:'10px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:10,cursor:'pointer',color:C.sub,fontSize:13,fontFamily:'inherit'}}>Cancelar</button>
-              <button onClick={()=>onSave(form)} style={{flex:2,padding:'10px',background:`linear-gradient(135deg,${C.amber},#E8923A)`,border:'none',borderRadius:10,cursor:'pointer',color:'#0C1018',fontSize:13,fontWeight:700,fontFamily:'inherit'}}>Guardar</button>
+              <button onClick={()=>setConfirmDel(true)} style={{padding:'10px 14px',background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:10,cursor:'pointer',color:C.red,fontSize:12,fontFamily:'inherit'}}>{tx('Eliminar')}</button>
+              <button onClick={onClose} style={{flex:1,padding:'10px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:10,cursor:'pointer',color:C.sub,fontSize:13,fontFamily:'inherit'}}>{tx('Cancelar')}</button>
+              <button onClick={()=>onSave(form)} style={{flex:2,padding:'10px',background:`linear-gradient(135deg,${C.amber},#E8923A)`,border:'none',borderRadius:10,cursor:'pointer',color:'#0C1018',fontSize:13,fontWeight:700,fontFamily:'inherit'}}>{tx('Guardar')}</button>
             </div>
           )}
         </div>
@@ -147,8 +147,8 @@ function TableModal({table,zones,onSave,onDelete,onClose,unitS,unitP,zoneLabel,i
 }
 
 // ── Fila de zona — componente propio para respetar reglas de hooks ───────────
-function ZoneRow({zone,color,tableCount,onRename,onDelete,unitP}:{
-  zone:Zone; color:string; tableCount:number; onRename:(n:string)=>void; onDelete:()=>void; unitP:string
+function ZoneRow({zone,color,tableCount,onRename,onDelete,unitP,tx=(s:string)=>s}:{
+  zone:Zone; color:string; tableCount:number; onRename:(n:string)=>void; onDelete:()=>void; unitP:string; tx?:(s:string)=>string
 }) {
   const [editing,setEditing]=useState(false)
   const [name,setName]=useState(zone.name)
@@ -166,15 +166,15 @@ function ZoneRow({zone,color,tableCount,onRename,onDelete,unitP}:{
           <p style={{flex:1,fontSize:14,fontWeight:600,color:C.text,cursor:'pointer'}} onClick={()=>setEditing(true)}>{zone.name}</p>
         )}
         <span style={{fontSize:12,color:C.muted}}>{tableCount} {unitP.toLowerCase()}</span>
-        <button onClick={()=>{setEditing(true);setName(zone.name)}} style={{padding:'4px 10px',fontSize:11,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>Editar</button>
-        <button onClick={()=>setConfirmDel(true)} style={{padding:'4px 10px',fontSize:11,background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:7,cursor:'pointer',color:C.red,fontFamily:'inherit'}}>Borrar</button>
+        <button onClick={()=>{setEditing(true);setName(zone.name)}} style={{padding:'4px 10px',fontSize:11,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>{tx('Editar')}</button>
+        <button onClick={()=>setConfirmDel(true)} style={{padding:'4px 10px',fontSize:11,background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:7,cursor:'pointer',color:C.red,fontFamily:'inherit'}}>{tx('Borrar')}</button>
       </div>
       {confirmDel&&(
         <div style={{marginTop:10,padding:'10px 12px',background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
-          <p style={{fontSize:12,color:C.red}}>¿Eliminar &quot;{zone.name}&quot;? Los {unitP.toLowerCase()} quedarán sin asignar.</p>
+          <p style={{fontSize:12,color:C.red}}>{tx('¿Eliminar')} &quot;{zone.name}&quot;? {tx('Los')} {unitP.toLowerCase()} {tx('quedarán sin asignar.')}</p>
           <div style={{display:'flex',gap:6}}>
-            <button onClick={()=>setConfirmDel(false)} style={{padding:'5px 12px',fontSize:11,background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>Cancelar</button>
-            <button onClick={()=>{setConfirmDel(false);onDelete()}} style={{padding:'5px 12px',fontSize:11,background:C.red,border:'none',borderRadius:7,cursor:'pointer',color:'white',fontFamily:'inherit',fontWeight:700}}>Eliminar</button>
+            <button onClick={()=>setConfirmDel(false)} style={{padding:'5px 12px',fontSize:11,background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>{tx('Cancelar')}</button>
+            <button onClick={()=>{setConfirmDel(false);onDelete()}} style={{padding:'5px 12px',fontSize:11,background:C.red,border:'none',borderRadius:7,cursor:'pointer',color:'white',fontFamily:'inherit',fontWeight:700}}>{tx('Eliminar')}</button>
           </div>
         </div>
       )}
@@ -184,7 +184,7 @@ function ZoneRow({zone,color,tableCount,onRename,onDelete,unitP}:{
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function MesasPage() {
-  const { template } = useTenant()
+  const { template, tx } = useTenant()
   const unitS      = template?.labels?.unit?.singular  || 'Mesa'
   const unitP      = template?.labels?.unit?.plural    || 'Mesas'
   const unitIcon   = template?.labels?.unit?.icon      || 'M'
@@ -291,11 +291,11 @@ export default function MesasPage() {
       <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:'12px 20px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
         <div style={{display:'flex',alignItems:'center',gap:16}}>
           <div>
-            <h1 style={{fontSize:16,fontWeight:700,color:C.text}}>Plano de {unitP.toLowerCase()}</h1>
+            <h1 style={{fontSize:16,fontWeight:700,color:C.text}}>{tx('Plano de')} {unitP.toLowerCase()}</h1>
             <p style={{fontSize:11,color:C.muted,marginTop:1}}>{tables.length} {unitP.toLowerCase()} · {zones.length} {zonesLabel.toLowerCase()}</p>
           </div>
           <div style={{display:'flex',gap:8}}>
-            {[{l:'Libres',v:freeCount,c:C.green},{l:'Reservados',v:resCount,c:C.amber},{l:'Ocupados',v:occCount,c:C.red}].map(s=>(
+            {[{l:tx('Libres'),v:freeCount,c:C.green},{l:tx('Reservados'),v:resCount,c:C.amber},{l:tx('Ocupados'),v:occCount,c:C.red}].map(s=>(
               <div key={s.l} style={{padding:'4px 10px',borderRadius:8,background:`${s.c}14`,border:`1px solid ${s.c}33`}}>
                 <span style={{fontSize:13,fontWeight:800,color:s.c}}>{s.v}</span>
                 <span style={{fontSize:10,color:C.muted,marginLeft:4}}>{s.l}</span>
@@ -304,7 +304,7 @@ export default function MesasPage() {
           </div>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          {([['floor','Plano'],['zones',zonesLabel]] as const).map(([k,l])=>(
+          {([['floor',tx('Plano')],['zones',zonesLabel]] as const).map(([k,l])=>(
             <button key={k} onClick={()=>setTab(k as 'floor'|'zones')} style={{padding:'6px 14px',fontSize:12,fontWeight:600,borderRadius:9,border:`1px solid ${tab===k?C.amber+'44':C.border}`,background:tab===k?C.amberDim:'transparent',color:tab===k?C.amber:C.sub,cursor:'pointer',fontFamily:'inherit'}}>{l}</button>
           ))}
           <button onClick={()=>addTable()} style={{padding:'7px 16px',fontSize:12,fontWeight:700,background:`linear-gradient(135deg,${C.amber},#E8923A)`,color:'#0C1018',border:'none',borderRadius:9,cursor:'pointer',fontFamily:'inherit'}}>+ {unitS}</button>
@@ -317,7 +317,7 @@ export default function MesasPage() {
         <div style={{flex:1,display:'flex',flexDirection:'column'}}>
           {zones.length>0&&(
             <div style={{padding:'10px 20px',background:C.card2,borderBottom:`1px solid ${C.border}`,display:'flex',gap:6,overflowX:'auto'}}>
-              <button onClick={()=>setZoneFilter('all')} style={{padding:'4px 12px',fontSize:11,fontWeight:600,borderRadius:8,border:`1px solid ${zoneFilter==='all'?C.amber+'44':C.border}`,background:zoneFilter==='all'?C.amberDim:'transparent',color:zoneFilter==='all'?C.amber:C.sub,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}}>Todos ({tables.length})</button>
+              <button onClick={()=>setZoneFilter('all')} style={{padding:'4px 12px',fontSize:11,fontWeight:600,borderRadius:8,border:`1px solid ${zoneFilter==='all'?C.amber+'44':C.border}`,background:zoneFilter==='all'?C.amberDim:'transparent',color:zoneFilter==='all'?C.amber:C.sub,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}}>{tx('Todos')} ({tables.length})</button>
               {zones.map((z,zi)=>{
                 const cnt=tables.filter(t=>t.zone_id===z.id).length
                 const col=ZONE_COLORS[zi%ZONE_COLORS.length]
@@ -330,9 +330,9 @@ export default function MesasPage() {
             {visible.length===0?(
               <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12}}>
                 <p style={{fontSize:32}}>{unitIcon.length<=2 ? unitIcon : '📋'}</p>
-                <p style={{fontSize:15,fontWeight:600,color:C.text}}>Sin {unitP.toLowerCase()} en el plano</p>
-                <p style={{fontSize:13,color:C.muted}}>Añade {unitP.toLowerCase()} para configurar tu espacio visualmente.</p>
-                <button onClick={()=>addTable()} style={{padding:'10px 24px',fontSize:13,fontWeight:700,background:`linear-gradient(135deg,${C.amber},#E8923A)`,color:'#0C1018',border:'none',borderRadius:10,cursor:'pointer',fontFamily:'inherit'}}>+ Añadir {unitS.toLowerCase()}</button>
+                <p style={{fontSize:15,fontWeight:600,color:C.text}}>{tx('Sin')} {unitP.toLowerCase()} {tx('en el plano')}</p>
+                <p style={{fontSize:13,color:C.muted}}>{tx('Añade')} {unitP.toLowerCase()} {tx('para configurar tu espacio visualmente.')}</p>
+                <button onClick={()=>addTable()} style={{padding:'10px 24px',fontSize:13,fontWeight:700,background:`linear-gradient(135deg,${C.amber},#E8923A)`,color:'#0C1018',border:'none',borderRadius:10,cursor:'pointer',fontFamily:'inherit'}}>+ {tx('Añadir')} {unitS.toLowerCase()}</button>
               </div>
             ):visible.map(t=>(
               <TableBlock key={t.id} table={t} selected={selectedId===t.id}
@@ -346,10 +346,10 @@ export default function MesasPage() {
             {Object.entries(STATUS_CFG).map(([k,v])=>(
               <div key={k} style={{display:'flex',alignItems:'center',gap:5}}>
                 <div style={{width:10,height:10,borderRadius:3,background:v.bg,border:`1px solid ${v.color}44`}}/>
-                <span style={{fontSize:11,color:C.muted}}>{v.label}</span>
+                <span style={{fontSize:11,color:C.muted}}>{tx(v.label)}</span>
               </div>
             ))}
-            <span style={{fontSize:11,color:C.muted,marginLeft:'auto'}}>Doble click para editar · Arrastra para mover</span>
+            <span style={{fontSize:11,color:C.muted,marginLeft:'auto'}}>{tx('Doble click para editar · Arrastra para mover')}</span>
           </div>
         </div>
       )}
@@ -364,20 +364,20 @@ export default function MesasPage() {
           {zones.length===0?(
             <div style={{textAlign:'center',padding:'48px 0'}}>
               <p style={{fontSize:28,marginBottom:10}}>🏠</p>
-              <p style={{fontSize:14,fontWeight:600,color:C.sub,marginBottom:6}}>Sin {zonesLabel.toLowerCase()} configuradas</p>
-              <p style={{fontSize:12,color:C.muted}}>Las {zonesLabel.toLowerCase()} son opcionales. Puedes operar sin ellas.</p>
+              <p style={{fontSize:14,fontWeight:600,color:C.sub,marginBottom:6}}>{tx('Sin')} {zonesLabel.toLowerCase()} {tx('configuradas')}</p>
+              <p style={{fontSize:12,color:C.muted}}>{tx('Las')} {zonesLabel.toLowerCase()} {tx('son opcionales. Puedes operar sin ellas.')}</p>
             </div>
           ):zones.map((z,zi)=>(
             <ZoneRow key={z.id} zone={z} color={ZONE_COLORS[zi%ZONE_COLORS.length]}
               tableCount={tables.filter(t=>t.zone_id===z.id).length}
               onRename={n=>renameZone(z.id,n)}
               onDelete={()=>deleteZone(z.id)}
-              unitP={unitP}/>
+              unitP={unitP} tx={tx}/>
           ))}
         </div>
       )}
 
-      {editTable&&<TableModal table={editTable} zones={zones} onSave={u=>saveTable(editTable.id,u)} onDelete={()=>deleteTable(editTable.id)} onClose={()=>setEditTable(null)} unitS={unitS} unitP={unitP} zoneLabel={zoneLabel} isRoom={isRoom}/>}
+      {editTable&&<TableModal table={editTable} zones={zones} onSave={u=>saveTable(editTable.id,u)} onDelete={()=>deleteTable(editTable.id)} onClose={()=>setEditTable(null)} unitS={unitS} unitP={unitP} zoneLabel={zoneLabel} isRoom={isRoom} tx={tx}/>}
     </div>
   )
 }

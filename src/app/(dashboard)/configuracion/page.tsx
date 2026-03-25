@@ -113,7 +113,7 @@ function Slider({label,sub,value,min,max,unit,onChange}:{label:string,sub?:strin
   )
 }
 
-function KArea({label,sub,placeholder,value,onChange}:{label:string,sub?:string,placeholder:string,value:string,onChange:(v:string)=>void}) {
+function KArea({label,sub,placeholder,value,onChange,tx=(s:string)=>s}:{label:string,sub?:string,placeholder:string,value:string,onChange:(v:string)=>void,tx?:(s:string)=>string}) {
   const lines = value ? value.split('\n').length : 0
   return (
     <div>
@@ -122,7 +122,7 @@ function KArea({label,sub,placeholder,value,onChange}:{label:string,sub?:string,
           <p style={{fontSize:13,fontWeight:600,color:C.text}}>{label}</p>
           {sub&&<p style={{fontSize:11,color:C.muted,marginTop:2}}>{sub}</p>}
         </div>
-        <span style={{fontSize:10,color:C.muted}}>{lines} líneas</span>
+        <span style={{fontSize:10,color:C.muted}}>{lines} {tx('líneas')}</span>
       </div>
       <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
         style={{width:'100%',minHeight:100,background:C.card2,border:`1px solid ${C.border}`,borderRadius:10,padding:'10px 12px',color:C.text,fontSize:13,fontFamily:'monospace',resize:'vertical',outline:'none',lineHeight:1.6}}
@@ -132,8 +132,8 @@ function KArea({label,sub,placeholder,value,onChange}:{label:string,sub?:string,
   )
 }
 
-function CaseBadge({value,onChange}:{value:string,onChange:(v:string)=>void}) {
-  const opts=[{v:'confirm',l:'Auto-confirmar',c:C.green},{v:'review',l:'Revisar',c:C.amber},{v:'reject',l:'Rechazar',c:C.red}]
+function CaseBadge({value,onChange,tx}:{value:string,onChange:(v:string)=>void,tx:(s:string)=>string}) {
+  const opts=[{v:'confirm',l:tx('Auto-confirmar'),c:C.green},{v:'review',l:tx('Revisar'),c:C.amber},{v:'reject',l:tx('Rechazar'),c:C.red}]
   return (
     <div style={{display:'flex',gap:6}}>
       {opts.map(o=>(
@@ -148,7 +148,7 @@ function CaseBadge({value,onChange}:{value:string,onChange:(v:string)=>void}) {
 const FLOW_OPTIONS = ['nombre','teléfono','personas','fecha','hora','zona','servicio','notas','confirmar']
 
 export default function ConfiguracionPage() {
-  const { reload: reloadTenant } = useTenant()
+  const { reload: reloadTenant, tx } = useTenant()
   const [tenant, setTenant]   = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
@@ -271,12 +271,12 @@ export default function ConfiguracionPage() {
       {/* Header */}
       <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div>
-          <h1 style={{fontSize:17,fontWeight:700,color:C.text}}>Cómo trabaja tu recepcionista</h1>
-          <p style={{fontSize:12,color:C.muted,marginTop:2}}>Enséñale cómo funciona tu negocio y cómo quieres que actúe</p>
+          <h1 style={{fontSize:17,fontWeight:700,color:C.text}}>{tx('Cómo trabaja tu recepcionista')}</h1>
+          <p style={{fontSize:12,color:C.muted,marginTop:2}}>{tx('Enséñale cómo funciona tu negocio y cómo quieres que actúe')}</p>
         </div>
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
-          {saved&&<span style={{fontSize:12,color:C.green,fontWeight:600}}>✓ Guardado</span>}
-          <button className="save-btn" onClick={save} disabled={saving}>{saving?'Guardando...':'Guardar cambios'}</button>
+          {saved&&<span style={{fontSize:12,color:C.green,fontWeight:600}}>✓ {tx('Guardado')}</span>}
+          <button className="save-btn" onClick={save} disabled={saving}>{saving?tx('Guardando...'):tx('Guardar cambios')}</button>
           <NotifBell/>
         </div>
       </div>
@@ -285,27 +285,27 @@ export default function ConfiguracionPage() {
 
         {/* Datos básicos */}
         <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:'20px'}}>
-          <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.04em',marginBottom:14}}>⚙ CONFIGURACIÓN BÁSICA</p>
+          <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.04em',marginBottom:14}}>⚙ {tx('CONFIGURACIÓN BÁSICA')}</p>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
             <div>
-              <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>NOMBRE DEL NEGOCIO</label>
-              <input className="rz-inp" value={basicForm.business_name} onChange={e=>setBasic(f=>({...f,business_name:e.target.value}))} placeholder="Mi negocio"/>
+              <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>{tx('NOMBRE DEL NEGOCIO')}</label>
+              <input className="rz-inp" value={basicForm.business_name} onChange={e=>setBasic(f=>({...f,business_name:e.target.value}))} placeholder={tx('Mi negocio')}/>
             </div>
             <div>
-              <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>NOMBRE DEL AGENTE</label>
+              <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>{tx('NOMBRE DEL AGENTE')}</label>
               <input className="rz-inp" value={basicForm.agent_name} onChange={e=>setBasic(f=>({...f,agent_name:e.target.value}))} placeholder={agentName}/>
             </div>
             <div style={{gridColumn:'1/-1'}}>
-              <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>NÚMERO DE TELÉFONO DEL AGENTE</label>
+              <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>{tx('NÚMERO DE TELÉFONO DEL AGENTE')}</label>
               <input className="rz-inp" value={basicForm.agent_phone} onChange={e=>setBasic(f=>({...f,agent_phone:e.target.value}))} placeholder="+34 600 000 000"/>
             </div>
             <div style={{gridColumn:'1/-1'}}>
-              <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>NÚMERO DE TRANSFERENCIA</label>
+              <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>{tx('NÚMERO DE TRANSFERENCIA')}</label>
               <input className="rz-inp" value={basicForm.transfer_phone} onChange={e=>setBasic(f=>({...f,transfer_phone:e.target.value}))} placeholder="+34 600 000 000"/>
-              <p style={{fontSize:11,color:C.muted,marginTop:4}}>Cuando tu recepcionista no pueda resolver, transferirá la llamada a este número</p>
+              <p style={{fontSize:11,color:C.muted,marginTop:4}}>{tx('Cuando tu recepcionista no pueda resolver, transferirá la llamada a este número')}</p>
             </div>
             <div style={{gridColumn:'1/-1'}}>
-              <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>IDIOMA DEL PANEL</label>
+              <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>{tx('IDIOMA DEL PANEL')}</label>
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 {[{code:'es',flag:'🇪🇸',name:'Español'},{code:'en',flag:'🇬🇧',name:'English'},{code:'fr',flag:'🇫🇷',name:'Français'},{code:'pt',flag:'🇵🇹',name:'Português'},{code:'ca',flag:'🏴',name:'Català'}].map(lang=>(
                   <button key={lang.code} onClick={()=>setBasic(f=>({...f,language:lang.code}))}
@@ -317,7 +317,7 @@ export default function ConfiguracionPage() {
                   </button>
                 ))}
               </div>
-              <p style={{fontSize:11,color:C.muted,marginTop:4}}>Cambia el idioma de todo el panel de control</p>
+              <p style={{fontSize:11,color:C.muted,marginTop:4}}>{tx('Cambia el idioma de todo el panel de control')}</p>
             </div>
           </div>
         </div>
@@ -327,17 +327,17 @@ export default function ConfiguracionPage() {
         <SectionCard id="scheduling" icon="🕐" title="Horarios y capacidad" sub="Configura cuándo atiendes y cuánta gente puedes recibir" active={openSection==='scheduling'} onClick={()=>toggleSection('scheduling')}>
           {/* Horario */}
           <div>
-            <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.03em',marginBottom:12}}>Horario de apertura</p>
+            <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.03em',marginBottom:12}}>{tx('Horario de apertura')}</p>
             {isHosb ? (
               <div style={{display:'flex',flexDirection:'column',gap:12}}>
                 <div style={{display:'flex',alignItems:'center',gap:10}}>
-                  <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:70}}>Comidas</span>
+                  <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:70}}>{tx('Comidas')}</span>
                   <input type="time" className="rz-inp" style={{width:120,textAlign:'center'}} value={schedCfg.service_hours?.lunch_start||'13:00'} onChange={e=>setSchedCfg(s=>({...s,service_hours:{...s.service_hours,lunch_start:e.target.value}}))}/>
                   <span style={{fontSize:12,color:C.muted}}>a</span>
                   <input type="time" className="rz-inp" style={{width:120,textAlign:'center'}} value={schedCfg.service_hours?.lunch_end||'16:00'} onChange={e=>setSchedCfg(s=>({...s,service_hours:{...s.service_hours,lunch_end:e.target.value}}))}/>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:10}}>
-                  <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:70}}>Cenas</span>
+                  <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:70}}>{tx('Cenas')}</span>
                   <input type="time" className="rz-inp" style={{width:120,textAlign:'center'}} value={schedCfg.service_hours?.dinner_start||'20:00'} onChange={e=>setSchedCfg(s=>({...s,service_hours:{...s.service_hours,dinner_start:e.target.value}}))}/>
                   <span style={{fontSize:12,color:C.muted}}>a</span>
                   <input type="time" className="rz-inp" style={{width:120,textAlign:'center'}} value={schedCfg.service_hours?.dinner_end||'23:30'} onChange={e=>setSchedCfg(s=>({...s,service_hours:{...s.service_hours,dinner_end:e.target.value}}))}/>
@@ -345,9 +345,9 @@ export default function ConfiguracionPage() {
               </div>
             ) : (
               <div style={{display:'flex',alignItems:'center',gap:10}}>
-                <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:70}}>Apertura</span>
+                <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:70}}>{tx('Apertura')}</span>
                 <input type="time" className="rz-inp" style={{width:120,textAlign:'center'}} value={schedCfg.service_hours?.open||'09:00'} onChange={e=>setSchedCfg(s=>({...s,service_hours:{...s.service_hours,open:e.target.value}}))}/>
-                <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:50,textAlign:'center'}}>Cierre</span>
+                <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:50,textAlign:'center'}}>{tx('Cierre')}</span>
                 <input type="time" className="rz-inp" style={{width:120,textAlign:'center'}} value={schedCfg.service_hours?.close||'21:00'} onChange={e=>setSchedCfg(s=>({...s,service_hours:{...s.service_hours,close:e.target.value}}))}/>
               </div>
             )}
@@ -355,8 +355,8 @@ export default function ConfiguracionPage() {
 
           {/* Días cerrados */}
           <div>
-            <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.03em',marginBottom:4}}>Días que abres</p>
-            <p style={{fontSize:11,color:C.muted,marginBottom:10}}>Pulsa un día para cerrarlo. Los días activos aparecen en color.</p>
+            <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.03em',marginBottom:4}}>{tx('Días que abres')}</p>
+            <p style={{fontSize:11,color:C.muted,marginBottom:10}}>{tx('Pulsa un día para cerrarlo. Los días activos aparecen en color.')}</p>
             <div style={{display:'flex',gap:6}}>
               {[{d:1,l:'L'},{d:2,l:'M'},{d:3,l:'X'},{d:4,l:'J'},{d:5,l:'V'},{d:6,l:'S'},{d:0,l:'D'}].map(day=>{
                 const closed = schedCfg.service_hours?.closed_days||[]
@@ -376,12 +376,12 @@ export default function ConfiguracionPage() {
 
           {/* Capacidad por franja */}
           <div>
-            <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.03em',marginBottom:12}}>Capacidad por franja</p>
+            <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.03em',marginBottom:12}}>{tx('Capacidad por franja')}</p>
             <div style={{display:'flex',flexDirection:'column',gap:14}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                 <div>
-                  <p style={{fontSize:13,fontWeight:600,color:C.text}}>Máximo de reservas por franja</p>
-                  <p style={{fontSize:11,color:C.muted,marginTop:2}}>Cuántas reservas/citas puedes atender a la vez</p>
+                  <p style={{fontSize:13,fontWeight:600,color:C.text}}>{tx('Máximo de reservas por franja')}</p>
+                  <p style={{fontSize:11,color:C.muted,marginTop:2}}>{tx('Cuántas reservas/citas puedes atender a la vez')}</p>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
                   <button onClick={()=>setSchedCfg(s=>({...s,max_new_reservations_per_slot:Math.max(1,s.max_new_reservations_per_slot-1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>−</button>
@@ -391,8 +391,8 @@ export default function ConfiguracionPage() {
               </div>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                 <div>
-                  <p style={{fontSize:13,fontWeight:600,color:C.text}}>Máximo de personas por franja</p>
-                  <p style={{fontSize:11,color:C.muted,marginTop:2}}>Total de personas que caben en una misma franja horaria</p>
+                  <p style={{fontSize:13,fontWeight:600,color:C.text}}>{tx('Máximo de personas por franja')}</p>
+                  <p style={{fontSize:11,color:C.muted,marginTop:2}}>{tx('Total de personas que caben en una misma franja horaria')}</p>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
                   <button onClick={()=>setSchedCfg(s=>({...s,max_new_people_per_slot:Math.max(1,s.max_new_people_per_slot-1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>−</button>
@@ -405,11 +405,11 @@ export default function ConfiguracionPage() {
 
           {/* Duración y tiempos */}
           <div>
-            <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.03em',marginBottom:12}}>Duración y tiempos</p>
+            <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.03em',marginBottom:12}}>{tx('Duración y tiempos')}</p>
             <div style={{display:'flex',flexDirection:'column',gap:14}}>
               <div>
-                <p style={{fontSize:13,fontWeight:600,color:C.text}}>Duración media de cada reserva/cita</p>
-                <p style={{fontSize:11,color:C.muted,marginTop:2,marginBottom:8}}>Cuánto dura normalmente una visita o servicio</p>
+                <p style={{fontSize:13,fontWeight:600,color:C.text}}>{tx('Duración media de cada reserva/cita')}</p>
+                <p style={{fontSize:11,color:C.muted,marginTop:2,marginBottom:8}}>{tx('Cuánto dura normalmente una visita o servicio')}</p>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                   {[15,20,30,45,60,90,120].map(m=>(
                     <button key={m} onClick={()=>setSchedCfg(s=>({...s,default_reservation_duration_minutes:m}))}
@@ -423,8 +423,8 @@ export default function ConfiguracionPage() {
                 </div>
               </div>
               <div>
-                <p style={{fontSize:13,fontWeight:600,color:C.text}}>Tiempo entre reservas (descanso)</p>
-                <p style={{fontSize:11,color:C.muted,marginTop:2,marginBottom:8}}>Minutos de margen entre una reserva y la siguiente</p>
+                <p style={{fontSize:13,fontWeight:600,color:C.text}}>{tx('Tiempo entre reservas (descanso)')}</p>
+                <p style={{fontSize:11,color:C.muted,marginTop:2,marginBottom:8}}>{tx('Minutos de margen entre una reserva y la siguiente')}</p>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                   {[0,5,10,15,20,30].map(m=>(
                     <button key={m} onClick={()=>setSchedCfg(s=>({...s,buffer_minutes:m}))}
@@ -432,14 +432,14 @@ export default function ConfiguracionPage() {
                         background:schedCfg.buffer_minutes===m?'rgba(167,139,250,0.10)':'transparent',
                         color:schedCfg.buffer_minutes===m?C.violet:C.sub,
                         fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'all 0.12s'}}>
-                      {m===0?'Sin pausa':`${m} min`}
+                      {m===0?tx('Sin pausa'):`${m} min`}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <p style={{fontSize:13,fontWeight:600,color:C.text}}>Intervalo de franjas</p>
-                <p style={{fontSize:11,color:C.muted,marginTop:2,marginBottom:8}}>Cada cuántos minutos se puede reservar (ej: 13:00, 13:30, 14:00...)</p>
+                <p style={{fontSize:13,fontWeight:600,color:C.text}}>{tx('Intervalo de franjas')}</p>
+                <p style={{fontSize:11,color:C.muted,marginTop:2,marginBottom:8}}>{tx('Cada cuántos minutos se puede reservar (ej: 13:00, 13:30, 14:00...)')}</p>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                   {[15,30,60].map(m=>(
                     <button key={m} onClick={()=>setSchedCfg(s=>({...s,reservation_slot_interval_minutes:m}))}
@@ -447,7 +447,7 @@ export default function ConfiguracionPage() {
                         background:schedCfg.reservation_slot_interval_minutes===m?C.tealDim:'transparent',
                         color:schedCfg.reservation_slot_interval_minutes===m?C.teal:C.sub,
                         fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'all 0.12s'}}>
-                      Cada {m} min
+                      {tx('Cada')} {m} min
                     </button>
                   ))}
                 </div>
@@ -457,15 +457,15 @@ export default function ConfiguracionPage() {
 
           {/* Resumen */}
           <div style={{background:C.tealDim,border:`1px solid ${C.teal}33`,borderRadius:10,padding:'10px 14px'}}>
-            <p style={{fontSize:12,color:C.teal,fontWeight:600}}>Resumen de tu configuración</p>
+            <p style={{fontSize:12,color:C.teal,fontWeight:600}}>{tx('Resumen de tu configuración')}</p>
             <p style={{fontSize:12,color:C.sub,marginTop:3,lineHeight:1.6}}>
               {isHosb
-                ? <>Comidas de <strong style={{color:C.text}}>{schedCfg.service_hours?.lunch_start||'13:00'}</strong> a <strong style={{color:C.text}}>{schedCfg.service_hours?.lunch_end||'16:00'}</strong> · Cenas de <strong style={{color:C.text}}>{schedCfg.service_hours?.dinner_start||'20:00'}</strong> a <strong style={{color:C.text}}>{schedCfg.service_hours?.dinner_end||'23:30'}</strong></>
-                : <>Abierto de <strong style={{color:C.text}}>{schedCfg.service_hours?.open||'09:00'}</strong> a <strong style={{color:C.text}}>{schedCfg.service_hours?.close||'21:00'}</strong></>
+                ? <>{tx('Comidas de')} <strong style={{color:C.text}}>{schedCfg.service_hours?.lunch_start||'13:00'}</strong> {tx('a')} <strong style={{color:C.text}}>{schedCfg.service_hours?.lunch_end||'16:00'}</strong> · {tx('Cenas de')} <strong style={{color:C.text}}>{schedCfg.service_hours?.dinner_start||'20:00'}</strong> {tx('a')} <strong style={{color:C.text}}>{schedCfg.service_hours?.dinner_end||'23:30'}</strong></>
+                : <>{tx('Abierto de')} <strong style={{color:C.text}}>{schedCfg.service_hours?.open||'09:00'}</strong> {tx('a')} <strong style={{color:C.text}}>{schedCfg.service_hours?.close||'21:00'}</strong></>
               }
-              {' · '}Hasta <strong style={{color:C.text}}>{schedCfg.max_new_reservations_per_slot}</strong> reservas y <strong style={{color:C.text}}>{schedCfg.max_new_people_per_slot}</strong> personas por franja
-              {' · '}<strong style={{color:C.text}}>{schedCfg.default_reservation_duration_minutes} min</strong> por reserva
-              {schedCfg.buffer_minutes>0 && <> · <strong style={{color:C.text}}>{schedCfg.buffer_minutes} min</strong> de descanso</>}
+              {' · '}{tx('Hasta')} <strong style={{color:C.text}}>{schedCfg.max_new_reservations_per_slot}</strong> {tx('reservas y')} <strong style={{color:C.text}}>{schedCfg.max_new_people_per_slot}</strong> {tx('personas por franja')}
+              {' · '}<strong style={{color:C.text}}>{schedCfg.default_reservation_duration_minutes} min</strong> {tx('por reserva')}
+              {schedCfg.buffer_minutes>0 && <> · <strong style={{color:C.text}}>{schedCfg.buffer_minutes} min</strong> {tx('de descanso')}</>}
             </p>
           </div>
         </SectionCard>
@@ -476,10 +476,10 @@ export default function ConfiguracionPage() {
           <Toggle label="¿Puede contestar preguntas de horarios y precios?" sub={`Horario, precios, servicios — ${agentName} responde directamente sin molestarte`} value={cfg.automation.auto_info_queries} onChange={v=>upCfg('automation','auto_info_queries',v)}/>
           <Slider label="¿Hasta cuántas personas puede aceptar sola?" sub={`Si el grupo es más grande que esto, ${agentName} te avisa para que decidas tú`} value={cfg.automation.max_auto_party} min={1} max={20} unit=" personas" onChange={v=>upCfg('automation','max_auto_party',v)}/>
           <div style={{background:C.amberDim,border:`1px solid ${C.amber}33`,borderRadius:10,padding:'10px 14px'}}>
-            <p style={{fontSize:12,color:C.amber,fontWeight:600}}>Resumen de tu configuración</p>
+            <p style={{fontSize:12,color:C.amber,fontWeight:600}}>{tx('Resumen de tu configuración')}</p>
             <p style={{fontSize:12,color:C.sub,marginTop:3}}>
-              Grupos de hasta <strong style={{color:C.text}}>{cfg.automation.max_auto_party} personas</strong> → {agentName} confirma sola.{' '}
-              Más de {cfg.automation.max_auto_party} → te avisa a ti.
+              {tx('Grupos de hasta')} <strong style={{color:C.text}}>{cfg.automation.max_auto_party} {tx('personas')}</strong> → {agentName} {tx('confirma sola.')}{' '}
+              {tx('Más de')} {cfg.automation.max_auto_party} → {tx('te avisa a ti.')}
             </p>
           </div>
         </SectionCard>
@@ -507,20 +507,20 @@ export default function ConfiguracionPage() {
 
 
         <SectionCard id="knowledge" icon="🧠" title="¿Qué sabe de tu negocio?" sub={`Cuéntale a ${agentName} todo lo que necesita para responder bien`} active={openSection==='knowledge'} onClick={()=>toggleSection('knowledge')}>
-          <KArea label="Horarios" sub="Cuándo abrís y cuándo cerráis. Escríbelo como lo dirías por teléfono." placeholder={"Lunes a viernes de 9 a 14 y de 17 a 20\nSábados de 10 a 14\nDomingos cerrado"} value={cfg.knowledge.horarios||''} onChange={v=>upCfg('knowledge','horarios',v)}/>
-          {isHosb && <KArea label="Carta / Menú" sub={`Escribe los platos y precios. ${agentName} se lo aprenderá de memoria.`} placeholder={"Arroz a banda: 14€\nPaella: 13€\nChuletón: 22€\nMenú del día: 13.50€ (primero, segundo, postre y pan)"} value={cfg.knowledge.menu||''} onChange={v=>upCfg('knowledge','menu',v)}/>}
-          <KArea label={isHosb?"Otros servicios y precios":"Tus servicios y precios"} sub={`Escribe qué ofreces y cuánto cuesta. ${agentName} lo usará cuando los clientes pregunten.`} placeholder={"Corte de pelo: 15€\nTinte completo: 45€\nManicura: 20€\n..."} value={cfg.knowledge.services} onChange={v=>upCfg('knowledge','services',v)}/>
-          <KArea label="Condiciones y normas" sub="Política de cancelaciones, reserva mínima, señal, etc." placeholder={"Cancelación con 24h de antelación sin coste\nGrupos de más de 8 requieren señal\n..."} value={cfg.knowledge.conditions} onChange={v=>upCfg('knowledge','conditions',v)}/>
-          <KArea label="Preguntas que te hacen siempre" sub="Escribe las preguntas más frecuentes y sus respuestas" placeholder={"¿Tenéis terraza? Sí, con capacidad para 20 personas\n¿Hay parking? Sí, en la calle lateral gratuito\n..."} value={cfg.knowledge.faqs} onChange={v=>upCfg('knowledge','faqs',v)}/>
+          <KArea tx={tx} label={tx('Horarios')} sub={tx('Cuándo abrís y cuándo cerráis. Escríbelo como lo dirías por teléfono.')} placeholder={"Lunes a viernes de 9 a 14 y de 17 a 20\nSábados de 10 a 14\nDomingos cerrado"} value={cfg.knowledge.horarios||''} onChange={v=>upCfg('knowledge','horarios',v)}/>
+          {isHosb && <KArea tx={tx} label={tx('Carta / Menú')} sub={`${tx('Escribe los platos y precios.')} ${agentName} ${tx('se lo aprenderá de memoria.')}`} placeholder={"Arroz a banda: 14€\nPaella: 13€\nChuletón: 22€\nMenú del día: 13.50€ (primero, segundo, postre y pan)"} value={cfg.knowledge.menu||''} onChange={v=>upCfg('knowledge','menu',v)}/>}
+          <KArea tx={tx} label={isHosb?tx('Otros servicios y precios'):tx('Tus servicios y precios')} sub={`${tx('Escribe qué ofreces y cuánto cuesta.')} ${agentName} ${tx('lo usará cuando los clientes pregunten.')}`} placeholder={"Corte de pelo: 15€\nTinte completo: 45€\nManicura: 20€\n..."} value={cfg.knowledge.services} onChange={v=>upCfg('knowledge','services',v)}/>
+          <KArea tx={tx} label={tx('Condiciones y normas')} sub={tx('Política de cancelaciones, reserva mínima, señal, etc.')} placeholder={"Cancelación con 24h de antelación sin coste\nGrupos de más de 8 requieren señal\n..."} value={cfg.knowledge.conditions} onChange={v=>upCfg('knowledge','conditions',v)}/>
+          <KArea tx={tx} label={tx('Preguntas que te hacen siempre')} sub={tx('Escribe las preguntas más frecuentes y sus respuestas')} placeholder={"¿Tenéis terraza? Sí, con capacidad para 20 personas\n¿Hay parking? Sí, en la calle lateral gratuito\n..."} value={cfg.knowledge.faqs} onChange={v=>upCfg('knowledge','faqs',v)}/>
           <div style={{background:C.tealDim,border:`1px solid ${C.teal}33`,borderRadius:10,padding:'10px 14px'}}>
-            <p style={{fontSize:12,color:C.teal,fontWeight:600}}>💡 Por qué es importante</p>
-            <p style={{fontSize:12,color:C.sub,marginTop:3,lineHeight:1.5}}>Cuanto más le cuentes a {agentName}, mejor responderá. Piensa en {agentName} como una empleada nueva: necesita conocer tu negocio para atender bien.</p>
+            <p style={{fontSize:12,color:C.teal,fontWeight:600}}>💡 {tx('Por qué es importante')}</p>
+            <p style={{fontSize:12,color:C.sub,marginTop:3,lineHeight:1.5}}>{tx('Cuanto más le cuentes a')} {agentName}{tx(', mejor responderá. Piensa en')} {agentName} {tx('como una empleada nueva: necesita conocer tu negocio para atender bien.')}</p>
           </div>
         </SectionCard>
 
         <SectionCard id="flow" icon="💬" title="¿En qué orden pregunta?" sub={`El orden en que ${agentName} pide los datos al cliente cuando gestiona una solicitud`} active={openSection==='flow'} onClick={()=>toggleSection('flow')}>
           <div>
-            <p style={{fontSize:12,color:C.sub,marginBottom:12,lineHeight:1.5}}>El agente seguirá este orden al gestionar una solicitud. Arrastra para reordenar. Pulsa para activar/desactivar.</p>
+            <p style={{fontSize:12,color:C.sub,marginBottom:12,lineHeight:1.5}}>{tx('El agente seguirá este orden al gestionar una solicitud. Arrastra para reordenar. Pulsa para activar/desactivar.')}</p>
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:14}}>
               {cfg.conversation_flow.map((step,i)=>(
                 <div key={step} className="flow-chip" style={{background:C.amberDim,border:`1px solid ${C.amber}44`,color:C.amber}}>
@@ -539,7 +539,7 @@ export default function ConfiguracionPage() {
             </div>
           </div>
           <div style={{background:C.amberDim,border:`1px solid ${C.amber}33`,borderRadius:10,padding:'10px 14px'}}>
-            <p style={{fontSize:12,color:C.amber,fontWeight:600}}>Flujo actual</p>
+            <p style={{fontSize:12,color:C.amber,fontWeight:600}}>{tx('Flujo actual')}</p>
             <p style={{fontSize:13,color:C.text,marginTop:3,fontFamily:'monospace'}}>{cfg.conversation_flow.join(' → ')}</p>
           </div>
         </SectionCard>
@@ -551,15 +551,15 @@ export default function ConfiguracionPage() {
                 <p style={{fontSize:13,fontWeight:600,color:C.text}}>{label}</p>
                 <p style={{fontSize:11,color:C.muted,marginTop:2}}>{sub}</p>
               </div>
-              <CaseBadge value={cfg.special_cases[key]} onChange={v=>upCfg('special_cases',key,v)}/>
+              <CaseBadge value={cfg.special_cases[key]} onChange={v=>upCfg('special_cases',key,v)} tx={tx}/>
             </div>
           ))}
           <div style={{background:C.card2,border:`1px solid ${C.border}`,borderRadius:10,padding:'12px 14px'}}>
-            <p style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:8}}>¿Qué significa cada opción?</p>
+            <p style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:8}}>{tx('¿Qué significa cada opción?')}</p>
             <div style={{display:'flex',flexDirection:'column',gap:4}}>
-              <span style={{fontSize:11,color:C.green}}>● Confirmar sola — {agentName} lo gestiona sin avisarte</span>
-              <span style={{fontSize:11,color:C.amber}}>● Revisar — {agentName} te avisa para que decidas tú</span>
-              <span style={{fontSize:11,color:C.red}}>● No aceptar — {agentName} lo rechaza educadamente</span>
+              <span style={{fontSize:11,color:C.green}}>● {tx('Confirmar sola')} — {agentName} {tx('lo gestiona sin avisarte')}</span>
+              <span style={{fontSize:11,color:C.amber}}>● {tx('Revisar')} — {agentName} {tx('te avisa para que decidas tú')}</span>
+              <span style={{fontSize:11,color:C.red}}>● {tx('No aceptar')} — {agentName} {tx('lo rechaza educadamente')}</span>
             </div>
           </div>
         </SectionCard>
@@ -567,7 +567,7 @@ export default function ConfiguracionPage() {
         {/* Solo para hostelería */}
         {isHosb && (
         <SectionCard id="orders" icon="🛍️" title="Alertas de pedidos" sub="Cómo te avisa cuando entra un pedido por teléfono" active={openSection==='orders'} onClick={()=>toggleSection('orders')}>
-          <p style={{fontSize:12,color:C.muted,marginBottom:14}}>Cuando un cliente hace un pedido por teléfono, ¿cómo quieres enterarte?</p>
+          <p style={{fontSize:12,color:C.muted,marginBottom:14}}>{tx('Cuando un cliente hace un pedido por teléfono, ¿cómo quieres enterarte?')}</p>
           {([
             { value:'banner', label:'Banner + sonido', desc:'Aparece un aviso arriba de la pantalla con sonido. Toca para ir a pedidos.', icon:'🔔' },
             { value:'redirect', label:'Ir a pedidos automáticamente', desc:'Te cambia directamente a la pantalla de pedidos cuando entra uno nuevo.', icon:'📲' },

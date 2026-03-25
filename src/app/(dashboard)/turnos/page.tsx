@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
+import { useTenant } from '@/contexts/TenantContext'
 import { calculateDayStats, parseReservationConfig, generateSlots } from '@/lib/scheduling-engine'
 import type { SlotStats, ReservationConfig } from '@/lib/scheduling-engine'
 
@@ -34,6 +35,7 @@ function SlotBar({ label, used, max }: { label: string; used: number; max: numbe
 }
 
 export default function TurnosPage() {
+  const { tx } = useTenant()
   const [tid, setTid]           = useState<string|null>(null)
   const [loading, setLoading]   = useState(true)
   const [stats, setStats]       = useState<SlotStats[]>([])
@@ -87,8 +89,8 @@ export default function TurnosPage() {
       {/* Header */}
       <div style={{ background:C.card, borderBottom:`1px solid ${C.border}`, padding:'14px 24px', position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div>
-          <h1 style={{ fontSize:17, fontWeight:700, color:C.text }}>Control de turnos</h1>
-          <p style={{ fontSize:12, color:C.muted, marginTop:2 }}>Capacidad por franja · {date===today?'Hoy':date}</p>
+          <h1 style={{ fontSize:17, fontWeight:700, color:C.text }}>{tx('Control de turnos')}</h1>
+          <p style={{ fontSize:12, color:C.muted, marginTop:2 }}>{tx('Capacidad por franja')} · {date===today?tx('Hoy'):date}</p>
         </div>
         <div style={{ display:'flex', gap:10, alignItems:'center' }}>
           <input type="date" value={date} onChange={e=>{setDate(e.target.value);if(tid)load(tid,e.target.value)}}
@@ -102,10 +104,10 @@ export default function TurnosPage() {
         {/* KPIs */}
         <div className="rz-grid-4col" style={{ gap:10, marginBottom:20 }}>
           {[
-            { label:'Reservas hoy', value:totalReservas, color:C.amber },
-            { label:'Personas hoy', value:totalPersonas, color:C.teal },
-            { label:'Franjas activas', value:slotsWithRes, color:C.green },
-            { label:'Franjas completas', value:slotsFull, color:slotsFull>0?C.red:C.muted },
+            { label:tx('Reservas hoy'), value:totalReservas, color:C.amber },
+            { label:tx('Personas hoy'), value:totalPersonas, color:C.teal },
+            { label:tx('Franjas activas'), value:slotsWithRes, color:C.green },
+            { label:tx('Franjas completas'), value:slotsFull, color:slotsFull>0?C.red:C.muted },
           ].map(k=>(
             <div key={k.label} style={{ background:`${k.color}12`, border:`1px solid ${k.color}22`, borderRadius:12, padding:'14px 16px' }}>
               <p style={{ fontSize:24, fontWeight:800, color:k.color, lineHeight:1 }}>{k.value}</p>
@@ -117,13 +119,13 @@ export default function TurnosPage() {
         {/* Config activa */}
         {cfg && (
           <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:'14px 18px', marginBottom:20, display:'flex', gap:20, flexWrap:'wrap' }}>
-            <p style={{ fontSize:11, fontWeight:700, color:C.amber, letterSpacing:'0.04em', alignSelf:'center' }}>CONFIG ACTIVA</p>
+            <p style={{ fontSize:11, fontWeight:700, color:C.amber, letterSpacing:'0.04em', alignSelf:'center' }}>{tx('CONFIG ACTIVA')}</p>
             {[
-              { l:'Intervalo', v:cfg.reservation_slot_interval_minutes+'min' },
-              { l:'Duración media', v:cfg.default_reservation_duration_minutes+'min' },
-              { l:'Buffer', v:cfg.buffer_minutes+'min' },
-              { l:'Máx. reservas/franja', v:String(cfg.max_new_reservations_per_slot) },
-              { l:'Máx. personas/franja', v:String(cfg.max_new_people_per_slot) },
+              { l:tx('Intervalo'), v:cfg.reservation_slot_interval_minutes+'min' },
+              { l:tx('Duración media'), v:cfg.default_reservation_duration_minutes+'min' },
+              { l:tx('Buffer'), v:cfg.buffer_minutes+'min' },
+              { l:tx('Máx. reservas/franja'), v:String(cfg.max_new_reservations_per_slot) },
+              { l:tx('Máx. personas/franja'), v:String(cfg.max_new_people_per_slot) },
             ].map(x=>(
               <div key={x.l}>
                 <p style={{ fontSize:10, color:C.muted }}>{x.l}</p>
@@ -137,8 +139,8 @@ export default function TurnosPage() {
         {stats.length === 0 ? (
           <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:'48px 24px', textAlign:'center' }}>
             <p style={{ fontSize:28, marginBottom:10 }}>📋</p>
-            <p style={{ fontSize:15, fontWeight:600, color:C.text, marginBottom:6 }}>Sin franjas configuradas</p>
-            <p style={{ fontSize:13, color:C.muted }}>Configura los horarios de servicio en Configuración para ver las franjas.</p>
+            <p style={{ fontSize:15, fontWeight:600, color:C.text, marginBottom:6 }}>{tx('Sin franjas configuradas')}</p>
+            <p style={{ fontSize:13, color:C.muted }}>{tx('Configura los horarios de servicio en Configuración para ver las franjas.')}</p>
           </div>
         ) : (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px,1fr))', gap:10 }}>
@@ -160,11 +162,11 @@ export default function TurnosPage() {
                       fontSize:9, fontWeight:700, padding:'2px 7px', borderRadius:8,
                       background: isFull ? C.redDim : isActive ? C.amberDim : 'rgba(255,255,255,0.04)',
                       color: isFull ? C.red : isActive ? C.amber : C.muted,
-                    }}>{isFull ? 'COMPLETO' : isActive ? 'ACTIVO' : 'LIBRE'}</span>
+                    }}>{isFull ? tx('COMPLETO') : isActive ? tx('ACTIVO') : tx('LIBRE')}</span>
                   </div>
 
-                  <SlotBar label="Reservas" used={slot.reservations} max={slot.max_reservations}/>
-                  <SlotBar label="Personas" used={slot.people} max={slot.max_people}/>
+                  <SlotBar label={tx('Reservas')} used={slot.reservations} max={slot.max_reservations}/>
+                  <SlotBar label={tx('Personas')} used={slot.people} max={slot.max_people}/>
 
                   {/* Zonas */}
                   {Object.entries(slot.zones).map(([z,v])=>(
@@ -176,7 +178,7 @@ export default function TurnosPage() {
                     <div style={{ marginTop:8, borderTop:`1px solid ${C.border}`, paddingTop:8, display:'flex', flexDirection:'column', gap:4 }}>
                       {slotReservas.map((r:any)=>(
                         <div key={r.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                          <span style={{ fontSize:11, color:C.sub, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:120 }}>{r.customer_name||'Cliente'}</span>
+                          <span style={{ fontSize:11, color:C.sub, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:120 }}>{r.customer_name||tx('Cliente')}</span>
                           <span style={{ fontSize:10, color:C.muted }}>{r.people}p</span>
                         </div>
                       ))}

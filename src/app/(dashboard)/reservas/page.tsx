@@ -44,7 +44,7 @@ function getWeek(base: Date) {
 }
 
 export default function ReservasPage() {
-  const { tenant, template, t } = useTenant()
+  const { tenant, template, t, tx } = useTenant()
   if (tenant?.type === 'ecommerce') return <EcomReservasView />
 
   const [base,setBase]         = useState(new Date())
@@ -163,7 +163,7 @@ export default function ReservasPage() {
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,position:'sticky',top:0,zIndex:20}}>
         <div>
           <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{L?.pageTitle || 'Reservas'}</h1>
-          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} para el {new Date(selected+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
+          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} {tx('para el')} {new Date(selected+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={L?.buscarPlaceholder||'Buscar…'}
@@ -197,12 +197,12 @@ export default function ReservasPage() {
           <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'60px 24px',textAlign:'center'}}>
             <div style={{fontSize:36,marginBottom:10}}>📅</div>
             <p style={{fontSize:15,fontWeight:600,color:C.text,marginBottom:4}}>{L?.emptyReservas||'Sin reservas este día'}</p>
-            <p style={{fontSize:13,color:C.text3}}>No hay {L?.reservas?.toLowerCase()||'reservas'} para el día seleccionado.</p>
+            <p style={{fontSize:13,color:C.text3}}>{tx('No hay')} {L?.reservas?.toLowerCase()||tx('reservas')} {tx('para el día seleccionado.')}</p>
           </div>
         ) : filtered.map((r,i)=>{
           const ss = STATUS_STYLES[r.status]||STATUS_STYLES.pendiente
           const time = r.time||r.reservation_time||''
-          const name = r.customer_name||'Sin nombre'
+          const name = r.customer_name||tx('Sin nombre')
           const people = r.people||r.party_size||1
           return (
             <div key={r.id} onClick={()=>setModal(r)} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:'14px 16px',marginBottom:10,cursor:'pointer',display:'flex',alignItems:'center',gap:12,transition:'all 0.12s'}}
@@ -214,7 +214,7 @@ export default function ReservasPage() {
               <div style={{flex:1,minWidth:0}}>
                 <p style={{fontSize:14,fontWeight:600,color:C.text}}>{name}</p>
                 <p style={{fontSize:12,color:C.text2,marginTop:1}}>
-                  {time.slice(0,5)} · {people} persona{people!==1?'s':''}
+                  {time.slice(0,5)} · {people} {tx(people!==1?'personas':'persona')}
                   {r.table_name?' · '+r.table_name:''}
                   {r.notes?' · '+r.notes.slice(0,40)+(r.notes.length>40?'...':''):''}
                 </p>
@@ -233,9 +233,9 @@ export default function ReservasPage() {
           <div style={{background:C.surface,border:`1px solid ${C.borderMd}`,borderRadius:16,padding:24,width:'100%',maxWidth:440,boxShadow:'0 20px 60px rgba(0,0,0,0.6)'}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
               <div>
-                <p style={{fontSize:18,fontWeight:700,color:C.text}}>{modal.customer_name||'Sin nombre'}</p>
+                <p style={{fontSize:18,fontWeight:700,color:C.text}}>{modal.customer_name||tx('Sin nombre')}</p>
                 <p style={{fontSize:13,color:C.text2,marginTop:2}}>
-                  {(modal.date||modal.reservation_date)?.slice(0,10)} · {(modal.time||modal.reservation_time||'').slice(0,5)} · {modal.people||modal.party_size} persona{(modal.people||modal.party_size)!==1?'s':''}
+                  {(modal.date||modal.reservation_date)?.slice(0,10)} · {(modal.time||modal.reservation_time||'').slice(0,5)} · {modal.people||modal.party_size} {tx((modal.people||modal.party_size)!==1?'personas':'persona')}
                 </p>
               </div>
               <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:C.text3}}>×</button>
@@ -243,7 +243,7 @@ export default function ReservasPage() {
             {modal.customer_phone&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>📞 {modal.customer_phone}</p>}
             {modal.table_name&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>🪑 {modal.table_name}</p>}
             {modal.notes&&<p style={{fontSize:13,color:C.text2,marginBottom:16}}>📝 {modal.notes}</p>}
-            {modal.source==='voice_agent'&&<p style={{fontSize:12,color:C.violet,marginBottom:16,background:C.violetDim,padding:'6px 10px',borderRadius:8}}>📞 Reserva creada por el agente de voz</p>}
+            {modal.source==='voice_agent'&&<p style={{fontSize:12,color:C.violet,marginBottom:16,background:C.violetDim,padding:'6px 10px',borderRadius:8}}>📞 {tx('Reserva creada por el agente de voz')}</p>}
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>
               {['confirmada','pendiente','cancelada','completada','no_show'].map(s=>(
                 <button key={s} onClick={()=>updateStatus(modal.id,s)}

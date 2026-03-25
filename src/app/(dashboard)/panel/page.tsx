@@ -7,7 +7,7 @@ import Link from 'next/link'
 import NotificationBell from '@/components/NotificationBell'
 import { resolveTemplate } from '@/lib/templates'
 import { getEventConfig, type BusinessEventConfig } from '@/lib/event-schemas'
-import { getTranslations, getCommonStrings } from '@/lib/i18n'
+import { getTranslations, getCommonStrings, tx } from '@/lib/i18n'
 
 const C = {
   amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)', amberGlow:'rgba(240,168,78,0.20)',
@@ -59,9 +59,9 @@ interface LiveEvent {
 }
 
 
-function timeAgo(d: Date) {
+function timeAgo(d: Date, lang='es') {
   const s = Math.floor((Date.now()-d.getTime())/1000)
-  if (s < 5) return 'ahora mismo'
+  if (s < 5) return tx('ahora mismo', lang)
   if (s < 60) return s+'s'
   if (s < 3600) return Math.floor(s/60)+'m'
   return Math.floor(s/3600)+'h'
@@ -79,7 +79,8 @@ function buildDemoEvents(_evtConfig: BusinessEventConfig): Omit<LiveEvent,'id'|'
 }
 
 // ── Live Feed Component
-function LiveFeed({ events, demoMode, onToggleDemo }: { events:LiveEvent[], demoMode:boolean, onToggleDemo:()=>void }) {
+function LiveFeed({ events, demoMode, onToggleDemo, lang='es' }: { events:LiveEvent[], demoMode:boolean, onToggleDemo:()=>void, lang?:string }) {
+  const _tx = (s:string) => tx(s, lang)
   const display = events.slice(0, 12)
 
   return (
@@ -88,7 +89,7 @@ function LiveFeed({ events, demoMode, onToggleDemo }: { events:LiveEvent[], demo
       <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <div style={{ width:8, height:8, borderRadius:'50%', background:C.green, animation:'rz-pulse 2s ease-in-out infinite' }}/>
-          <span style={{ fontSize:14, fontWeight:700, color:C.text, letterSpacing:'-0.01em' }}>{ACTIVE_CALL_LABEL}</span>
+          <span style={{ fontSize:14, fontWeight:700, color:C.text, letterSpacing:'-0.01em' }}>{_tx(ACTIVE_CALL_LABEL)}</span>
           {demoMode && <span style={{ fontSize:10, padding:'2px 8px', borderRadius:10, background:'rgba(251,181,63,0.15)', color:C.yellow, fontWeight:700, letterSpacing:'0.04em' }}>DEMO</span>}
         </div>
         <button onClick={onToggleDemo} style={{
@@ -96,7 +97,7 @@ function LiveFeed({ events, demoMode, onToggleDemo }: { events:LiveEvent[], demo
           background:demoMode?'rgba(251,181,63,0.08)':'rgba(255,255,255,0.03)',
           color:demoMode?C.yellow:C.text3, cursor:'pointer', fontFamily:'inherit', fontWeight:600, transition:'all 0.15s'
         }}>
-          {demoMode ? '⏹ Salir demo' : '▶ Modo demo'}
+          {demoMode ? '⏹ '+_tx('Salir demo') : '▶ '+_tx('Modo demo')}
         </button>
       </div>
 
@@ -105,10 +106,10 @@ function LiveFeed({ events, demoMode, onToggleDemo }: { events:LiveEvent[], demo
         {display.length === 0 ? (
           <div style={{ padding:'40px 20px', textAlign:'center' }}>
             <div style={{ width:48, height:48, borderRadius:'50%', background:'rgba(45,212,191,0.08)', border:'1px solid rgba(45,212,191,0.15)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 14px', fontSize:20 }}>⚡</div>
-            <p style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:6 }}>El sistema está listo</p>
-            <p style={{ fontSize:12, color:C.text3, lineHeight:1.7, maxWidth:260, margin:'0 auto' }}>Tu recepcionista está activa y preparada. Los eventos aparecerán aquí en tiempo real.</p>
+            <p style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:6 }}>{_tx('El sistema está listo')}</p>
+            <p style={{ fontSize:12, color:C.text3, lineHeight:1.7, maxWidth:260, margin:'0 auto' }}>{_tx('Tu recepcionista está activa y preparada. Los eventos aparecerán aquí en tiempo real.')}</p>
             <button onClick={onToggleDemo} style={{ marginTop:16, padding:'8px 18px', fontSize:12, fontWeight:700, borderRadius:9, border:`1px solid ${C.amber}40`, background:C.amberDim, color:C.amber, cursor:'pointer', fontFamily:'inherit' }}>
-              ▶ Ver demo
+              ▶ {_tx('Ver demo')}
             </button>
           </div>
         ) : display.map((evt, i) => (
@@ -130,7 +131,7 @@ function LiveFeed({ events, demoMode, onToggleDemo }: { events:LiveEvent[], demo
               {evt.sub && <p style={{ fontSize:11.5, color:C.text2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{evt.sub}</p>}
             </div>
             <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4 }}>
-              <span style={{ fontSize:10, color:C.text3, whiteSpace:'nowrap' }}>{timeAgo(evt.ts)}</span>
+              <span style={{ fontSize:10, color:C.text3, whiteSpace:'nowrap' }}>{timeAgo(evt.ts, lang)}</span>
               {evt.demo && <span style={{ fontSize:9, color:C.yellow, fontWeight:700, letterSpacing:'0.04em' }}>DEMO</span>}
             </div>
           </div>
@@ -165,7 +166,8 @@ function KpiCard({ value, label, sub, color=C.amber, href, icon, accent=false }:
 }
 
 // ── Active call block — usa schemas dinámicos
-function ActiveCallBlock({ call, businessType }:{ call:any; businessType:string }) {
+function ActiveCallBlock({ call, businessType, lang='es' }:{ call:any; businessType:string; lang?:string }) {
+  const _tx = (s:string) => tx(s, lang)
   const state = call.session_state || 'escuchando'
   const stateInfo = CALL_STATE_MAP[state] || { label: state, color: C.teal }
   const color = stateInfo.color
@@ -179,7 +181,7 @@ function ActiveCallBlock({ call, businessType }:{ call:any; businessType:string 
         <svg width="14" height="14" viewBox="0 0 24 24" fill={color}><path d="M22 17a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A2 2 0 014 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 17z"/></svg>
       </div>
       <div style={{ flex:1,minWidth:0 }}>
-        <p style={{ fontSize:13,fontWeight:600,color:C.text,marginBottom:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{call.caller_phone||'Número oculto'}</p>
+        <p style={{ fontSize:13,fontWeight:600,color:C.text,marginBottom:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{call.caller_phone||_tx('Número oculto')}</p>
         <div style={{ display:'flex',alignItems:'center',gap:6 }}>
           <div style={{ width:5,height:5,borderRadius:'50%',background:color,animation:'rz-pulse 1.5s ease-in-out infinite' }}/>
           <span style={{ fontSize:11,color,fontWeight:500 }}>{stateInfo.label}</span>
@@ -191,12 +193,13 @@ function ActiveCallBlock({ call, businessType }:{ call:any; businessType:string 
 }
 
 // ── Call row — usa schemas dinámicos
-function CallRow({ call, idx, businessType }:{ call:any; idx:number; businessType:string }) {
+function CallRow({ call, idx, businessType, lang='es' }:{ call:any; idx:number; businessType:string; lang?:string }) {
+  const _tx = (s:string) => tx(s, lang)
   const schemaType = INTENT_MAP[call.intent] || 'inquiry'
   const schema = SCHEMA_MAP[schemaType]
   const status = call.status||'completada'
   const done = ['completada','completed'].includes(status)
-  const phone = call.caller_phone||call.from_number||'Número oculto'
+  const phone = call.caller_phone||call.from_number||_tx('Número oculto')
   const dur = call.duration_seconds ? (call.duration_seconds>=60?`${Math.round(call.duration_seconds/60)}m`:`${call.duration_seconds}s`) : null
   const time = call.started_at ? new Date(call.started_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : ''
   const ic = schema?.color || C.text3
@@ -211,10 +214,10 @@ function CallRow({ call, idx, businessType }:{ call:any; idx:number; businessTyp
         <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:3 }}>
           <p style={{ fontSize:13,fontWeight:600,color:C.text }}>{phone}</p>
           {schema && call.intent && <span style={{ fontSize:10,padding:'1px 7px',borderRadius:10,background:`${ic}18`,color:ic,fontWeight:600 }}>{schema.icon} {intentLabel}</span>}
-          {done && <span style={{ fontSize:10,padding:'1px 7px',borderRadius:10,background:C.greenDim,color:C.green,fontWeight:600 }}>Completada</span>}
+          {done && <span style={{ fontSize:10,padding:'1px 7px',borderRadius:10,background:C.greenDim,color:C.green,fontWeight:600 }}>{_tx('Completada')}</span>}
         </div>
         {call.summary ? <p style={{ fontSize:12,color:C.text2,lineHeight:1.5,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' as const,overflow:'hidden' }}>{call.summary}</p>
-          : <p style={{ fontSize:12,color:C.text3 }}>Sin resumen</p>}
+          : <p style={{ fontSize:12,color:C.text3 }}>{_tx('Sin resumen')}</p>}
       </div>
       <div style={{ flexShrink:0,textAlign:'right' as const }}>
         <p style={{ fontSize:11,color:C.text3 }}>{time}</p>
@@ -225,22 +228,24 @@ function CallRow({ call, idx, businessType }:{ call:any; idx:number; businessTyp
 }
 
 // ── Agent status bar
-function AgentBar({ agentOn, agentName }:{ agentOn:boolean; agentName:string }) {
+function AgentBar({ agentOn, agentName, lang='es' }:{ agentOn:boolean; agentName:string; lang?:string }) {
+  const _tx = (s:string) => tx(s, lang)
   return (
     <div style={{ display:'flex',alignItems:'center',gap:8 }}>
       <div style={{ display:'flex',alignItems:'center',gap:6,padding:'6px 14px',
         background:agentOn?'rgba(45,212,191,0.08)':'rgba(248,113,113,0.08)',
         border:`1px solid ${agentOn?'rgba(45,212,191,0.2)':'rgba(248,113,113,0.2)'}`,borderRadius:20 }}>
         <div style={{ width:6,height:6,borderRadius:'50%',background:agentOn?C.teal:C.red,animation:agentOn?'rz-pulse 2s ease-in-out infinite':'none' }}/>
-        <span style={{ fontSize:12,fontWeight:600,color:agentOn?C.teal:C.red }}>{agentOn?(agentName||'Sofía')+' activa':'Sin número asignado'}</span>
+        <span style={{ fontSize:12,fontWeight:600,color:agentOn?C.teal:C.red }}>{agentOn?(agentName||'Sofía')+' '+_tx('activa'):_tx('Sin número asignado')}</span>
       </div>
-      {!agentOn && <Link href="/configuracion" style={{ padding:'6px 14px',fontSize:12,fontWeight:600,color:'#0C1018',background:C.amber,borderRadius:8,textDecoration:'none' }}>Configurar →</Link>}
+      {!agentOn && <Link href="/configuracion" style={{ padding:'6px 14px',fontSize:12,fontWeight:600,color:'#0C1018',background:C.amber,borderRadius:8,textDecoration:'none' }}>{_tx('Configurar')} →</Link>}
     </div>
   )
 }
 
 // ── Insights Panel — AI thoughts
-function InsightsPanel({ insights, headerLabel }: { insights: any[]; headerLabel?: string }) {
+function InsightsPanel({ insights, headerLabel, lang='es' }: { insights: any[]; headerLabel?: string; lang?:string }) {
+  const _tx = (s:string) => tx(s, lang)
   if (insights.length === 0) return null
   const priorityOrder = { high: 0, normal: 1, low: 2 }
   const sorted = [...insights].sort((a, b) => (priorityOrder[a.priority as keyof typeof priorityOrder] || 1) - (priorityOrder[b.priority as keyof typeof priorityOrder] || 1))
@@ -249,7 +254,7 @@ function InsightsPanel({ insights, headerLabel }: { insights: any[]; headerLabel
     <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
       <div style={{ padding: '14px 18px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.violet, animation: 'rz-pulse 2s ease-in-out infinite' }}/>
-        <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{headerLabel || 'Sofía ha detectado'}</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{headerLabel || _tx('Sofía ha detectado')}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {sorted.map((insight, i) => (
@@ -277,7 +282,8 @@ function InsightsPanel({ insights, headerLabel }: { insights: any[]; headerLabel
 }
 
 // ── Forecast Chart — previsión de demanda por hora
-function ForecastChart({ data, forecastLabel }: { data: { hour: string; predicted: number; actual: number; level: string; color: string }[]; forecastLabel?: string }) {
+function ForecastChart({ data, forecastLabel, lang='es' }: { data: { hour: string; predicted: number; actual: number; level: string; color: string }[]; forecastLabel?: string; lang?:string }) {
+  const _tx = (s:string) => tx(s, lang)
   if (!data || data.length === 0) return null
   const max = Math.max(...data.map(d => d.predicted), 1)
   const nowHour = new Date().getHours()
@@ -285,7 +291,7 @@ function ForecastChart({ data, forecastLabel }: { data: { hour: string; predicte
     <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:'18px 20px', overflow:'hidden' }}>
       <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
         <span style={{ fontSize:15 }}>📊</span>
-        <span style={{ fontSize:14, fontWeight:700, color:C.text }}>{forecastLabel || 'Así pinta hoy'}</span>
+        <span style={{ fontSize:14, fontWeight:700, color:C.text }}>{forecastLabel || _tx('Así pinta hoy')}</span>
       </div>
       <div style={{ display:'flex', gap:3, alignItems:'flex-end', height:80 }}>
         {data.map(d => {
@@ -300,7 +306,7 @@ function ForecastChart({ data, forecastLabel }: { data: { hour: string; predicte
         })}
       </div>
       <div style={{ display:'flex', gap:12, marginTop:12, flexWrap:'wrap' }}>
-        {[{l:'Tranquilo',c:'#34D399'},{l:'Normal',c:'#F0A84E'},{l:'Fuerte',c:'#FB923C'},{l:'A tope',c:'#F87171'}].map(x => (
+        {[{l:_tx('Tranquilo'),c:'#34D399'},{l:_tx('Normal'),c:'#F0A84E'},{l:_tx('Fuerte'),c:'#FB923C'},{l:_tx('A tope'),c:'#F87171'}].map(x => (
           <div key={x.l} style={{ display:'flex', alignItems:'center', gap:4 }}>
             <div style={{ width:8, height:8, borderRadius:2, background:x.c }}/>
             <span style={{ fontSize:10, color:C.text3 }}>{x.l}</span>
@@ -543,6 +549,8 @@ export default function PanelPage() {
   if (loading) return <PageLoader/>
   if (!tenant) return null
 
+  const lang      = tenant.language||'es'
+  const _tx       = (s:string) => tx(s, lang)
   const plan      = tenant.plan||'free'
   const isTrial   = plan==='free'||plan==='trial'
   const planColor = PLAN_COL[plan]||C.amber
@@ -556,7 +564,7 @@ export default function PanelPage() {
   const panelT    = getTranslations(tenant.language || 'es')
   const cs        = getCommonStrings(tenant.language || 'es')
   const hour      = new Date().getHours()
-  const greeting  = hour<13?'Buenos días':hour<20?'Buenas tardes':'Buenas noches'
+  const greeting  = hour<13?_tx('Buenos días'):hour<20?_tx('Buenas tardes'):_tx('Buenas noches')
   const todayCalls= calls.filter(c=>c.started_at?.slice(0,10)===new Date().toISOString().split('T')[0])
 
   return (
@@ -577,14 +585,14 @@ export default function PanelPage() {
             {activeCalls.length > 0 && (
               <div style={{ display:'flex',alignItems:'center',gap:5,padding:'3px 10px',background:C.tealDim,borderRadius:20,border:'1px solid rgba(45,212,191,0.2)' }}>
                 <div className="rz-live-dot" style={{ width:6,height:6 }}/>
-                <span style={{ fontSize:11,fontWeight:600,color:C.teal }}>{activeCalls.length} en vivo</span>
+                <span style={{ fontSize:11,fontWeight:600,color:C.teal }}>{activeCalls.length} {_tx('en vivo')}</span>
               </div>
             )}
           </div>
           <p style={{ fontSize:11,color:C.text3,marginTop:2,textTransform:'capitalize' }}>{new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
         </div>
         <div style={{ display:'flex',alignItems:'center',gap:10 }}>
-          <AgentBar agentOn={agentOn} agentName={tenant.agent_name}/>
+          <AgentBar agentOn={agentOn} agentName={tenant.agent_name} lang={lang}/>
           <NotificationBell tenantId={tenant.id}/>
         </div>
       </div>
@@ -601,10 +609,10 @@ export default function PanelPage() {
         }}>
           <span style={{ fontSize:22 }}>🛍️</span>
           <div>
-            <p style={{ fontSize:15, fontWeight:700, color:'white' }}>Nuevo pedido de {orderAlert.name}</p>
-            <p style={{ fontSize:12, color:'rgba(255,255,255,0.8)' }}>Para {orderAlert.type} · Toca para ver en pedidos</p>
+            <p style={{ fontSize:15, fontWeight:700, color:'white' }}>{_tx('Nuevo pedido de')} {orderAlert.name}</p>
+            <p style={{ fontSize:12, color:'rgba(255,255,255,0.8)' }}>{_tx('Para')} {orderAlert.type} · {_tx('Toca para ver en pedidos')}</p>
           </div>
-          <span style={{ fontSize:13, color:'rgba(255,255,255,0.6)', marginLeft:'auto' }}>→ Ver pedidos</span>
+          <span style={{ fontSize:13, color:'rgba(255,255,255,0.6)', marginLeft:'auto' }}>→ {_tx('Ver pedidos')}</span>
           <button onClick={e => { e.stopPropagation(); setOrderAlert(null) }} style={{ background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8, padding:'4px 10px', color:'white', cursor:'pointer', fontSize:14, marginLeft:8 }}>✕</button>
         </div>
       )}
@@ -617,11 +625,11 @@ export default function PanelPage() {
             <div style={{ display:'flex',alignItems:'center',gap:10 }}>
               <div style={{ width:7,height:7,borderRadius:'50%',background:C.amber,animation:'rz-pulse 1.5s ease-in-out infinite' }}/>
               <div>
-                <p style={{ fontWeight:700,fontSize:14,color:C.amber }}>{callsLeft===0?'Trial agotado':`${callsLeft} llamada${callsLeft!==1?'s':''} restante${callsLeft!==1?'s':''}`}</p>
-                <p style={{ fontSize:12,color:`${C.amber}90`,marginTop:1 }}>Activa un plan para seguir recibiendo llamadas sin límites</p>
+                <p style={{ fontWeight:700,fontSize:14,color:C.amber }}>{callsLeft===0?_tx('Trial agotado'):`${callsLeft} ${_tx(callsLeft!==1?'llamadas restantes':'llamada restante')}`}</p>
+                <p style={{ fontSize:12,color:`${C.amber}90`,marginTop:1 }}>{_tx('Activa un plan para seguir recibiendo llamadas sin límites')}</p>
               </div>
             </div>
-            <Link href="/precios" style={{ padding:'8px 18px',fontSize:13,fontWeight:700,color:'#0C1018',background:C.amber,borderRadius:9,textDecoration:'none',whiteSpace:'nowrap',flexShrink:0 }}>Ver planes</Link>
+            <Link href="/precios" style={{ padding:'8px 18px',fontSize:13,fontWeight:700,color:'#0C1018',background:C.amber,borderRadius:9,textDecoration:'none',whiteSpace:'nowrap',flexShrink:0 }}>{_tx('Ver planes')}</Link>
           </div>
         )}
 
@@ -632,12 +640,12 @@ export default function PanelPage() {
             <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14 }}>
               <div style={{ display:'flex',alignItems:'center',gap:10 }}>
                 <div className="rz-live-dot"/>
-                <span style={{ fontSize:14,fontWeight:700,color:C.text }}>{activeCalls.length} llamada{activeCalls.length!==1?'s':''} en curso</span>
+                <span style={{ fontSize:14,fontWeight:700,color:C.text }}>{activeCalls.length} {_tx(activeCalls.length!==1?'llamadas en curso':'llamada en curso')}</span>
               </div>
-              <span style={{ fontSize:10,color:C.text3,fontWeight:600,textTransform:'uppercase' as const,letterSpacing:'0.07em' }}>Tiempo real</span>
+              <span style={{ fontSize:10,color:C.text3,fontWeight:600,textTransform:'uppercase' as const,letterSpacing:'0.07em' }}>{_tx('Tiempo real')}</span>
             </div>
             <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
-              {activeCalls.map(call=><ActiveCallBlock key={call.id} call={call} businessType={tenant.type||'otro'}/>)}
+              {activeCalls.map(call=><ActiveCallBlock key={call.id} call={call} businessType={tenant.type||'otro'} lang={lang}/>)}
             </div>
           </div>
         )}
@@ -649,9 +657,9 @@ export default function PanelPage() {
             <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14 }}>
               <div style={{ display:'flex',alignItems:'center',gap:10 }}>
                 <div style={{ width:8,height:8,borderRadius:'50%',background:C.violet,animation:'rz-pulse 1.5s ease-in-out infinite' }}/>
-                <span style={{ fontSize:14,fontWeight:700,color:C.text }}>🛍️ {activeOrders.length} pedido{activeOrders.length!==1?'s':''} en curso</span>
+                <span style={{ fontSize:14,fontWeight:700,color:C.text }}>🛍️ {activeOrders.length} {_tx(activeOrders.length!==1?'pedidos en curso':'pedido en curso')}</span>
               </div>
-              <Link href="/pedidos" style={{ fontSize:11,color:C.violet,fontWeight:600,textDecoration:'none' }}>Ver pedidos →</Link>
+              <Link href="/pedidos" style={{ fontSize:11,color:C.violet,fontWeight:600,textDecoration:'none' }}>{_tx('Ver pedidos')} →</Link>
             </div>
             <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
               {activeOrders.map(order=>{
@@ -666,7 +674,7 @@ export default function PanelPage() {
                         <span style={{ fontSize:10,color:C.violet,marginLeft:8,padding:'1px 6px',borderRadius:8,background:`${C.violet}15`,fontWeight:600 }}>{order.order_type}</span>
                       </p>
                       <p style={{ fontSize:11,color:C.text2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
-                        {itemStr||'Tomando pedido…'}{order.pickup_time?` · Recogida ${order.pickup_time}`:''}
+                        {itemStr||_tx('Tomando pedido...')}{order.pickup_time?` · ${_tx('Recogida')} ${order.pickup_time}`:''}
                       </p>
                     </div>
                     {order.total_estimate && <span style={{ fontFamily:'var(--rz-mono)',fontSize:12,color:C.violet,flexShrink:0 }}>{order.total_estimate.toFixed(2)}€</span>}
@@ -684,9 +692,9 @@ export default function PanelPage() {
             <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14 }}>
               <div style={{ display:'flex',alignItems:'center',gap:10 }}>
                 <div style={{ width:8,height:8,borderRadius:'50%',background:C.teal,animation:'rz-pulse 1.5s ease-in-out infinite' }}/>
-                <span style={{ fontSize:14,fontWeight:700,color:C.text }}>⚕️ {activeConsultations.length} consulta{activeConsultations.length!==1?'s':''} en curso</span>
+                <span style={{ fontSize:14,fontWeight:700,color:C.text }}>⚕️ {activeConsultations.length} {_tx(activeConsultations.length!==1?'consultas en curso':'consulta en curso')}</span>
               </div>
-              <Link href="/reservas" style={{ fontSize:11,color:C.teal,fontWeight:600,textDecoration:'none' }}>Ver citas →</Link>
+              <Link href="/reservas" style={{ fontSize:11,color:C.teal,fontWeight:600,textDecoration:'none' }}>{_tx('Ver citas')} →</Link>
             </div>
             <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
               {activeConsultations.map(ce=>{
@@ -703,16 +711,16 @@ export default function PanelPage() {
                         <p style={{ fontSize:13,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
                           {ce.patient_name||ce.patient_phone||'Paciente'}
                         </p>
-                        {isUrgent && <span style={{ fontSize:10,color:C.red,fontWeight:700,padding:'1px 6px',borderRadius:8,background:`${C.red}15`,flexShrink:0 }}>URGENTE</span>}
+                        {isUrgent && <span style={{ fontSize:10,color:C.red,fontWeight:700,padding:'1px 6px',borderRadius:8,background:`${C.red}15`,flexShrink:0 }}>{_tx('URGENTE')}</span>}
                         {!isUrgent && ce.consultation_type && <span style={{ fontSize:10,color:C.teal,padding:'1px 6px',borderRadius:8,background:`${C.teal}15`,fontWeight:600,flexShrink:0 }}>{ce.consultation_type}</span>}
                       </div>
                       <p style={{ fontSize:11,color:C.text2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
-                        {ce.symptoms ? ce.symptoms.slice(0,60) : `${ce.duration_minutes||20}min${ce.is_new_patient?' · Primera visita':''}`}
+                        {ce.symptoms ? ce.symptoms.slice(0,60) : `${ce.duration_minutes||20}min${ce.is_new_patient?' · '+_tx('Primera visita'):''}`}
                       </p>
                     </div>
                     <div style={{ flexShrink:0,textAlign:'right' as const }}>
                       <span style={{ fontSize:10,color:isUrgent?C.red:C.text3,fontWeight:isUrgent?700:400 }}>
-                        {isUrgent?'⚠ Revisar':'En curso'}
+                        {isUrgent?'⚠ '+_tx('Revisar'):_tx('En curso')}
                       </span>
                     </div>
                   </div>
@@ -724,14 +732,14 @@ export default function PanelPage() {
 
         {/* ── KPIs ── */}
         <div className="rz-grid-4col" style={{ gap:12 }}>
-          <KpiCard value={todayCalls.length} label="Llamadas hoy" icon="📞" color={C.amber} accent href="/llamadas"/>
-          <KpiCard value={reservas.length} label={`${L.reservas} hoy`} sub={`${reservas.filter(r=>r.status==='confirmada').length} confirmadas`} icon="📅" color={C.teal} accent href="/reservas"/>
+          <KpiCard value={todayCalls.length} label={_tx('Llamadas hoy')} icon="📞" color={C.amber} accent href="/llamadas"/>
+          <KpiCard value={reservas.length} label={`${L.reservas} ${_tx('hoy')}`} sub={`${reservas.filter(r=>r.status==='confirmada').length} ${_tx('confirmadas')}`} icon="📅" color={C.teal} accent href="/reservas"/>
           <KpiCard value={clientes.length} label={L.clientes} icon="👥" color={C.violet} href="/clientes"/>
-          <KpiCard value={isTrial?callsLeft:`${callsUsed}/${callsLimit}`} label={isTrial?'Llamadas restantes':'Uso del plan'} sub={planLabel} icon={isTrial?'⚡':'📊'} color={callsLeft<=3?C.red:planColor} accent={isTrial} href="/facturacion"/>
+          <KpiCard value={isTrial?callsLeft:`${callsUsed}/${callsLimit}`} label={isTrial?_tx('Llamadas restantes'):_tx('Uso del plan')} sub={planLabel} icon={isTrial?'⚡':'📊'} color={callsLeft<=3?C.red:planColor} accent={isTrial} href="/facturacion"/>
         </div>
 
         {/* ── Previsión de hoy ── */}
-        {forecast.length > 0 && <ForecastChart data={forecast} forecastLabel={cs.forecast}/>}
+        {forecast.length > 0 && <ForecastChart data={forecast} forecastLabel={cs.forecast} lang={lang}/>}
 
         {/* ── Main grid: Live feed + Llamadas ── */}
         <div className="rz-grid-2col" style={{ gap:16 }}>
@@ -745,41 +753,41 @@ export default function PanelPage() {
             {calls.length===0 ? (
               <div style={{ padding:'52px 20px',textAlign:'center' }}>
                 <div style={{ width:56,height:56,borderRadius:'50%',background:'rgba(45,212,191,0.08)',border:'1px solid rgba(45,212,191,0.15)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',fontSize:24 }}>📞</div>
-                <p style={{ fontSize:15,fontWeight:700,color:C.text,marginBottom:8 }}>Tu recepcionista está activa</p>
+                <p style={{ fontSize:15,fontWeight:700,color:C.text,marginBottom:8 }}>{_tx('Tu recepcionista está activa')}</p>
                 <p style={{ fontSize:13,color:C.text3,lineHeight:1.7,maxWidth:280,margin:'0 auto' }}>
-                  {agentOn ? 'Esperando llamadas. Cuando entren, aparecerán aquí en tiempo real con su resumen.' : 'Configura tu número de teléfono para empezar a recibir llamadas.'}
+                  {agentOn ? _tx('Esperando llamadas. Cuando entren, aparecerán aquí en tiempo real con su resumen.') : _tx('Configura tu número de teléfono para empezar a recibir llamadas.')}
                 </p>
-                {!agentOn && <Link href="/configuracion" style={{ display:'inline-block',marginTop:16,padding:'9px 20px',fontSize:13,fontWeight:600,color:'#0C1018',background:C.amber,borderRadius:9,textDecoration:'none' }}>Configurar número →</Link>}
+                {!agentOn && <Link href="/configuracion" style={{ display:'inline-block',marginTop:16,padding:'9px 20px',fontSize:13,fontWeight:600,color:'#0C1018',background:C.amber,borderRadius:9,textDecoration:'none' }}>{_tx('Configurar número')} →</Link>}
                 {agentOn && (
                   <div style={{ marginTop:20,display:'flex',alignItems:'center',justifyContent:'center',gap:16 }}>
-                    {['📞 Responde 24/7','📅 Detecta reservas','🛍️ Toma pedidos'].map(s=>(
+                    {['📞 '+_tx('Responde 24/7'),'📅 '+_tx('Detecta reservas'),'🛍️ '+_tx('Toma pedidos')].map(s=>(
                       <div key={s} style={{ fontSize:12,color:C.text3,display:'flex',alignItems:'center',gap:5 }}>{s}</div>
                     ))}
                   </div>
                 )}
               </div>
-            ) : calls.map((call,i)=><CallRow key={call.id} call={call} idx={i} businessType={tenant.type||'otro'}/>)}
+            ) : calls.map((call,i)=><CallRow key={call.id} call={call} idx={i} businessType={tenant.type||'otro'} lang={lang}/>)}
           </div>
 
           {/* Columna derecha: feed + reservas */}
           <div style={{ display:'flex',flexDirection:'column',gap:16 }}>
 
             {/* Live feed */}
-            <LiveFeed events={events} demoMode={demoMode} onToggleDemo={toggleDemo}/>
+            <LiveFeed events={events} demoMode={demoMode} onToggleDemo={toggleDemo} lang={lang}/>
 
-            <InsightsPanel insights={insights} headerLabel={panelT.insights.detected}/>
+            <InsightsPanel insights={insights} headerLabel={panelT.insights.detected} lang={lang}/>
 
             {/* Reservas hoy */}
             <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,overflow:'hidden' }}>
               <div style={{ padding:'14px 18px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between' }}>
-                <h2 style={{ fontSize:14,fontWeight:700,color:C.text }}>{L.reservas} hoy</h2>
+                <h2 style={{ fontSize:14,fontWeight:700,color:C.text }}>{L.reservas} {_tx('hoy')}</h2>
                 <Link href="/reservas" style={{ fontSize:12,color:C.amber,fontWeight:600,textDecoration:'none' }}>{cs.manage}</Link>
               </div>
               {reservas.length===0 ? (
                 <div style={{ padding:'32px 16px',textAlign:'center' }}>
                   <div style={{ fontSize:24,marginBottom:10 }}>📅</div>
-                  <p style={{ fontSize:13,fontWeight:600,color:C.text,marginBottom:6 }}>Sin {L.reservas.toLowerCase()} hoy</p>
-                  <p style={{ fontSize:12,color:C.text3,lineHeight:1.6 }}>Las {L.reservas.toLowerCase()} se mostrarán automáticamente cuando entren.</p>
+                  <p style={{ fontSize:13,fontWeight:600,color:C.text,marginBottom:6 }}>{_tx('Sin')} {L.reservas.toLowerCase()} {_tx('hoy')}</p>
+                  <p style={{ fontSize:12,color:C.text3,lineHeight:1.6 }}>{_tx('Las')} {L.reservas.toLowerCase()} {_tx('se mostrarán automáticamente cuando entren.')}</p>
                 </div>
               ) : reservas.slice(0,8).map((r,i)=>(
                 <div key={r.id} style={{ display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderTop:i>0?`1px solid ${C.border}`:'none',transition:'background 0.12s' }}
@@ -803,13 +811,13 @@ export default function PanelPage() {
         {isTrial && (
           <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:'16px 20px' }}>
             <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8 }}>
-              <span style={{ fontSize:13,fontWeight:600,color:C.text }}>Uso del trial gratuito</span>
+              <span style={{ fontSize:13,fontWeight:600,color:C.text }}>{_tx('Uso del trial gratuito')}</span>
               <span style={{ fontFamily:'var(--rz-mono)',fontSize:13,fontWeight:600,color:callsLeft<=3?C.red:C.text }}>{callsUsed}<span style={{ color:C.text3 }}> / {callsLimit}</span></span>
             </div>
             <div style={{ height:5,background:'rgba(255,255,255,0.05)',borderRadius:3,overflow:'hidden',marginBottom:8 }}>
               <div style={{ height:'100%',width:`${Math.min(100,Math.round(callsUsed/callsLimit*100))}%`,background:callsLeft<=3?C.red:callsUsed/callsLimit>0.7?C.yellow:C.amber,borderRadius:3,transition:'width 0.6s ease' }}/>
             </div>
-            <p style={{ fontSize:11,color:C.text3 }}>Cada llamada recibida cuenta como una del plan.</p>
+            <p style={{ fontSize:11,color:C.text3 }}>{_tx('Cada llamada recibida cuenta como una del plan.')}</p>
           </div>
         )}
 
