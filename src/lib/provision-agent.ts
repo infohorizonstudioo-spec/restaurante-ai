@@ -369,6 +369,17 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
           language: "es",
           prompt: { prompt },
           tools,
+          dynamic_variables: {
+            dynamic_variable_placeholders: {
+              current_date: 'fecha actual',
+              caller_phone: '',
+              customer_context: '',
+              business_name: tenant.name,
+              agent_name: tenant.agent_name || 'Sofia',
+              business_info: '',
+              tenant_id: tenantId,
+            }
+          },
         },
         asr: {
           quality: "high",
