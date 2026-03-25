@@ -17,6 +17,14 @@ const ESTADO_COL:Record<string,{bg:string;color:string;label:string}> = {
   entregado:   {bg:'#f1f5f9',color:'#8895A7',label:'Entregado'},
 }
 
+function timeAgo(dateStr:string):string{
+  const diff = Math.floor((Date.now()-new Date(dateStr).getTime())/1000)
+  if(diff<60) return 'hace <1 min'
+  if(diff<3600){ const m=Math.floor(diff/60); return `hace ${m} min` }
+  if(diff<86400){ const h=Math.floor(diff/3600); return `hace ${h}h` }
+  const d=Math.floor(diff/86400); return `hace ${d}d`
+}
+
 export default function PedidosPage(){
   const [plan,setPlan]       = useState<string>('free')
   const [loading,setLoading] = useState(true)
@@ -24,6 +32,7 @@ export default function PedidosPage(){
   const [tid,setTid]         = useState<string|null>(null)
   const [tipo,setTipo]       = useState<string>('todos')
   const [modal,setModal]     = useState<any|null>(null)
+  const [,setTick]           = useState(0)
   const { template } = useTenant()
 
   const load = useCallback(async(tenantId:string)=>{
@@ -44,10 +53,21 @@ export default function PedidosPage(){
     })()
   },[load])
 
+  // Tick every 30s to keep "hace X min" timers fresh
+  useEffect(()=>{
+    const iv = setInterval(()=>setTick(t=>t+1),30000)
+    return ()=>clearInterval(iv)
+  },[])
+
   useEffect(()=>{
     if(!tid) return
     const ch = supabase.channel('orders-rt-' + tid)
-      .on('postgres_changes',{event:'*',schema:'public',table:'orders',filter:'tenant_id=eq.'+tid},()=>load(tid))
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'tenant_id=eq.'+tid},()=>{
+        try { new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2JkZiYl5OSjYeFgoB/f4GDhYmNkJKUlZWUko+MiIWCf31+f4GDhYmMj5GTlJWVlJKQjYmGg4B+fX5/gYSHioyPkZOUlZWUkpCNiYaDgH5+fn+BhIeKjI+Rk5SVlZSSkI2JhoOAfn5+f4GEh4qMj5GTlJWVlJKQjYmGg4B+fn5/gYSHioyPkZOUlZWUkpCNiYaDgH5+fn+BhIeKjI+Rk5SVlQ==').play() } catch {}
+        load(tid)
+      })
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'tenant_id=eq.'+tid},()=>load(tid))
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:'orders',filter:'tenant_id=eq.'+tid},()=>load(tid))
       .subscribe()
     return ()=>{ supabase.removeChannel(ch) }
   },[tid,load])
@@ -175,12 +195,18 @@ export default function PedidosPage(){
                   <p style={{fontSize:14,fontWeight:600,color:'#E8EEF6'}}>{o.customer_name}</p>
                   <span style={{fontSize:10,padding:'2px 7px',borderRadius:6,background:ss.bg,color:ss.color,fontWeight:700,flexShrink:0}}>{ss.label}</span>
                   <span style={{fontSize:10,color:'#49566A',textTransform:'capitalize'}}>{o.type}</span>
+                  <span style={{fontSize:10,color:o.status==='nuevo'?'#F0A84E':'#49566A',fontWeight:o.status==='nuevo'?600:400}}>{timeAgo(o.created_at)}</span>
                 </div>
                 {items.length>0&&<p style={{fontSize:12,color:'#8895A7',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{items.map((it:any)=>(it.name||it.toString())).join(', ')}</p>}
-                {o.notes&&<p style={{fontSize:11,color:'#49566A',marginTop:2,fontStyle:'italic'}}>{o.notes.slice(0,60)}</p>}
+                {o.notes&&typeof o.notes==='string'&&o.notes.startsWith('DIRECCIÓN:')?(
+                  <p style={{fontSize:11,color:'#2DD4BF',marginTop:2,fontWeight:600}}>{'📍 '+o.notes}</p>
+                ):o.notes?(
+                  <p style={{fontSize:11,color:'#49566A',marginTop:2,fontStyle:'italic'}}>{o.notes.slice(0,60)}</p>
+                ):null}
+                {o.customer_address&&<p style={{fontSize:11,color:'#2DD4BF',marginTop:2,fontWeight:600}}>{'📍 '+o.customer_address}</p>}
               </div>
               <div style={{textAlign:'right',flexShrink:0}}>
-                {o.total>0&&<p style={{fontSize:14,fontWeight:700,color:'#E8EEF6'}}>{o.total}€</p>}
+                {(o.total_estimate||o.total)>0&&<p style={{fontSize:15,fontWeight:700,color:'#34D399'}}>{(o.total_estimate||o.total).toFixed(2)}€</p>}
                 <p style={{fontSize:11,color:'#49566A',marginTop:2}}>{new Date(o.created_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</p>
               </div>
             </div>
