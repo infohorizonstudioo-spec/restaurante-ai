@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   if (upserts.length > 0) {
     const { error } = await admin.from('business_rules')
       .upsert(upserts, { onConflict: 'tenant_id,rule_key' })
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true })

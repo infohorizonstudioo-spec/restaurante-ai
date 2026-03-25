@@ -22,9 +22,9 @@ export async function POST(req: Request) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
     const { data, error } = await admin.auth.admin.updateUserById(auth.userId!, { password })
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    if (error) return NextResponse.json({ error: 'Internal server error' }, { status: 400 })
     return NextResponse.json({ success: true, email: data.user?.email })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

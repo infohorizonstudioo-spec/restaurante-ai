@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         onboarding_complete: false, onboarding_step: 1,
       })
       .select().single()
-    if (tenantError) return NextResponse.json({ error: tenantError.message }, { status: 400 })
+    if (tenantError) return NextResponse.json({ error: 'Internal server error' }, { status: 400 })
 
     const { data: userData, error: userError } = await admin.auth.admin.createUser({
       email, password, email_confirm: true,
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     })
     if (userError) {
       await admin.from('tenants').delete().eq('id', tenant.id)
-      return NextResponse.json({ error: userError.message }, { status: 400 })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 400 })
     }
 
     await admin.from('profiles').update({
@@ -73,6 +73,6 @@ export async function POST(req: NextRequest) {
     }).eq('id', userData.user.id)
     return NextResponse.json({ success: true, tenantId: tenant.id, slug })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

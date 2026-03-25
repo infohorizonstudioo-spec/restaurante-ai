@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
         .select("id, status, items, total_estimate")
         .maybeSingle()
 
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      if (error) return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
 
       // SMS al cliente cuando el pedido se confirma
       if (action === 'confirm' && customer_phone) {
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
       table_id: table_id || null,
     }).select("id, status").maybeSingle()
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
 
     return NextResponse.json({
       success: true,

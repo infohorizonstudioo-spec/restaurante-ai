@@ -38,6 +38,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: res.status === 200 })
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e.message }, { status: 500 })
+    return NextResponse.json({ ok: false, error: 'Internal server error' }, { status: 500 })
   }
 }

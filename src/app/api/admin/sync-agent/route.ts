@@ -105,6 +105,6 @@ Si preguntan por la carta o precios contesta con lo que sabes. Si preguntan algo
 
   } catch (e: any) {
     // sync-agent error
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

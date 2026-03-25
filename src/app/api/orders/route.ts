@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     const page  = parseInt(url.searchParams.get('page')  || '0')
 
     const { data, error, count } = await admin.from('orders')
-      .select('*', { count: 'exact' })
+      .select('id,tenant_id,call_sid,status,order_type,customer_name,customer_phone,items,notes,pickup_time,total_estimate,table_id,created_at,updated_at', { count: 'exact' })
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .range(page * limit, (page + 1) * limit - 1)

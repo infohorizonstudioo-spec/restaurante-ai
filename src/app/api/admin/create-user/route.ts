@@ -37,17 +37,17 @@ export async function POST(req: Request) {
       email, password, email_confirm: true,
       user_metadata: { name, role }
     })
-    if (userError) return NextResponse.json({ error: userError.message }, { status: 400 })
+    if (userError) return NextResponse.json({ error: 'Internal server error' }, { status: 400 })
 
     // El trigger handle_new_user crea el perfil automáticamente.
     // Solo actualizamos tenant_id y role.
     const { error: profileError } = await admin.from('profiles')
       .update({ tenant_id: tenantId, role, name })
       .eq('id', userData.user.id)
-    if (profileError) return NextResponse.json({ error: profileError.message }, { status: 400 })
+    if (profileError) return NextResponse.json({ error: 'Internal server error' }, { status: 400 })
 
     return NextResponse.json({ success: true, userId: userData.user.id })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

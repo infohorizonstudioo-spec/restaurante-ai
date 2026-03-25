@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuth } from '@/lib/api-auth'
+import { rateLimit, getRateLimitKey } from '@/lib/rate-limit'
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-02-24.acacia' })
@@ -21,6 +22,9 @@ const PLANS: Record<string, { priceId: string; name: string; calls: number; rate
 }
 
 export async function POST(req: Request) {
+  const rl = rateLimit(getRateLimitKey(req), 5, 60000)
+  if (!rl.ok) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+
   // Verificar autenticación
   const auth = await requireAuth(req)
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status || 401 })
@@ -68,6 +72,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ url: session.url, session_id: session.id })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

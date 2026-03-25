@@ -52,6 +52,6 @@ export async function POST(req: Request) {
       new_voice_url: updateData.voice_url,
     })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

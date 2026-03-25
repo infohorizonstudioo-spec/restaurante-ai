@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     }
 
     const { error } = await admin.from('tenants').update(updates).eq('id', tenantId)
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    if (error) return NextResponse.json({ error: 'Internal server error' }, { status: 400 })
     return NextResponse.json({ success: true, plan, limits })
   } catch(e: any) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
