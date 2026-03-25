@@ -190,7 +190,7 @@ export default function ConfiguracionPage() {
       transfer_phone: basicForm.transfer_phone.trim()||null,
       language: basicForm.language || 'es',
       agent_config: cfg,
-      ...(isHosb ? { reservation_config: schedCfg } : {}),
+      reservation_config: schedCfg,
     }).eq('id',tenant.id)
 
     // Sincronizar knowledge a business_knowledge y reprovisionar agente ElevenLabs
@@ -302,6 +302,153 @@ export default function ConfiguracionPage() {
           </div>
         </div>
 
+
+        {/* ── Horarios y capacidad ────────────────────────────────────── */}
+        <SectionCard id="scheduling" icon="🕐" title="Horarios y capacidad" sub="Configura cuándo atiendes y cuánta gente puedes recibir" active={openSection==='scheduling'} onClick={()=>toggleSection('scheduling')}>
+          {/* Horario */}
+          <div>
+            <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.03em',marginBottom:12}}>Horario de apertura</p>
+            {isHosb ? (
+              <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:70}}>Comidas</span>
+                  <input type="time" className="rz-inp" style={{width:120,textAlign:'center'}} value={schedCfg.service_hours?.lunch_start||'13:00'} onChange={e=>setSchedCfg(s=>({...s,service_hours:{...s.service_hours,lunch_start:e.target.value}}))}/>
+                  <span style={{fontSize:12,color:C.muted}}>a</span>
+                  <input type="time" className="rz-inp" style={{width:120,textAlign:'center'}} value={schedCfg.service_hours?.lunch_end||'16:00'} onChange={e=>setSchedCfg(s=>({...s,service_hours:{...s.service_hours,lunch_end:e.target.value}}))}/>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:70}}>Cenas</span>
+                  <input type="time" className="rz-inp" style={{width:120,textAlign:'center'}} value={schedCfg.service_hours?.dinner_start||'20:00'} onChange={e=>setSchedCfg(s=>({...s,service_hours:{...s.service_hours,dinner_start:e.target.value}}))}/>
+                  <span style={{fontSize:12,color:C.muted}}>a</span>
+                  <input type="time" className="rz-inp" style={{width:120,textAlign:'center'}} value={schedCfg.service_hours?.dinner_end||'23:30'} onChange={e=>setSchedCfg(s=>({...s,service_hours:{...s.service_hours,dinner_end:e.target.value}}))}/>
+                </div>
+              </div>
+            ) : (
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:70}}>Apertura</span>
+                <input type="time" className="rz-inp" style={{width:120,textAlign:'center'}} value={schedCfg.service_hours?.open||'09:00'} onChange={e=>setSchedCfg(s=>({...s,service_hours:{...s.service_hours,open:e.target.value}}))}/>
+                <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:50,textAlign:'center'}}>Cierre</span>
+                <input type="time" className="rz-inp" style={{width:120,textAlign:'center'}} value={schedCfg.service_hours?.close||'21:00'} onChange={e=>setSchedCfg(s=>({...s,service_hours:{...s.service_hours,close:e.target.value}}))}/>
+              </div>
+            )}
+          </div>
+
+          {/* Días cerrados */}
+          <div>
+            <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.03em',marginBottom:4}}>Días que abres</p>
+            <p style={{fontSize:11,color:C.muted,marginBottom:10}}>Pulsa un día para cerrarlo. Los días activos aparecen en color.</p>
+            <div style={{display:'flex',gap:6}}>
+              {[{d:1,l:'L'},{d:2,l:'M'},{d:3,l:'X'},{d:4,l:'J'},{d:5,l:'V'},{d:6,l:'S'},{d:0,l:'D'}].map(day=>{
+                const closed = schedCfg.service_hours?.closed_days||[]
+                const isOpen = !closed.includes(day.d)
+                return (
+                  <button key={day.d} onClick={()=>{
+                    const cur = schedCfg.service_hours?.closed_days||[]
+                    const next = isOpen ? [...cur,day.d] : cur.filter(x=>x!==day.d)
+                    setSchedCfg(s=>({...s,service_hours:{...s.service_hours,closed_days:next}}))
+                  }} style={{width:42,height:42,borderRadius:10,border:`1px solid ${isOpen?C.teal+'66':C.border}`,background:isOpen?C.tealDim:'transparent',color:isOpen?C.teal:C.muted,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}>
+                    {day.l}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Capacidad por franja */}
+          <div>
+            <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.03em',marginBottom:12}}>Capacidad por franja</p>
+            <div style={{display:'flex',flexDirection:'column',gap:14}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <div>
+                  <p style={{fontSize:13,fontWeight:600,color:C.text}}>Máximo de reservas por franja</p>
+                  <p style={{fontSize:11,color:C.muted,marginTop:2}}>Cuántas reservas/citas puedes atender a la vez</p>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_reservations_per_slot:Math.max(1,s.max_new_reservations_per_slot-1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>−</button>
+                  <span style={{fontSize:18,fontWeight:700,color:C.amber,minWidth:32,textAlign:'center'}}>{schedCfg.max_new_reservations_per_slot}</span>
+                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_reservations_per_slot:Math.min(50,s.max_new_reservations_per_slot+1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>+</button>
+                </div>
+              </div>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <div>
+                  <p style={{fontSize:13,fontWeight:600,color:C.text}}>Máximo de personas por franja</p>
+                  <p style={{fontSize:11,color:C.muted,marginTop:2}}>Total de personas que caben en una misma franja horaria</p>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_people_per_slot:Math.max(1,s.max_new_people_per_slot-1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>−</button>
+                  <span style={{fontSize:18,fontWeight:700,color:C.amber,minWidth:32,textAlign:'center'}}>{schedCfg.max_new_people_per_slot}</span>
+                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_people_per_slot:Math.min(100,s.max_new_people_per_slot+1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>+</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Duración y tiempos */}
+          <div>
+            <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.03em',marginBottom:12}}>Duración y tiempos</p>
+            <div style={{display:'flex',flexDirection:'column',gap:14}}>
+              <div>
+                <p style={{fontSize:13,fontWeight:600,color:C.text}}>Duración media de cada reserva/cita</p>
+                <p style={{fontSize:11,color:C.muted,marginTop:2,marginBottom:8}}>Cuánto dura normalmente una visita o servicio</p>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {[15,20,30,45,60,90,120].map(m=>(
+                    <button key={m} onClick={()=>setSchedCfg(s=>({...s,default_reservation_duration_minutes:m}))}
+                      style={{padding:'7px 14px',borderRadius:8,border:`1px solid ${schedCfg.default_reservation_duration_minutes===m?C.amber+'66':C.border}`,
+                        background:schedCfg.default_reservation_duration_minutes===m?C.amberDim:'transparent',
+                        color:schedCfg.default_reservation_duration_minutes===m?C.amber:C.sub,
+                        fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'all 0.12s'}}>
+                      {m} min
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p style={{fontSize:13,fontWeight:600,color:C.text}}>Tiempo entre reservas (descanso)</p>
+                <p style={{fontSize:11,color:C.muted,marginTop:2,marginBottom:8}}>Minutos de margen entre una reserva y la siguiente</p>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {[0,5,10,15,20,30].map(m=>(
+                    <button key={m} onClick={()=>setSchedCfg(s=>({...s,buffer_minutes:m}))}
+                      style={{padding:'7px 14px',borderRadius:8,border:`1px solid ${schedCfg.buffer_minutes===m?C.violet+'66':C.border}`,
+                        background:schedCfg.buffer_minutes===m?'rgba(167,139,250,0.10)':'transparent',
+                        color:schedCfg.buffer_minutes===m?C.violet:C.sub,
+                        fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'all 0.12s'}}>
+                      {m===0?'Sin pausa':`${m} min`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p style={{fontSize:13,fontWeight:600,color:C.text}}>Intervalo de franjas</p>
+                <p style={{fontSize:11,color:C.muted,marginTop:2,marginBottom:8}}>Cada cuántos minutos se puede reservar (ej: 13:00, 13:30, 14:00...)</p>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {[15,30,60].map(m=>(
+                    <button key={m} onClick={()=>setSchedCfg(s=>({...s,reservation_slot_interval_minutes:m}))}
+                      style={{padding:'7px 14px',borderRadius:8,border:`1px solid ${schedCfg.reservation_slot_interval_minutes===m?C.teal+'66':C.border}`,
+                        background:schedCfg.reservation_slot_interval_minutes===m?C.tealDim:'transparent',
+                        color:schedCfg.reservation_slot_interval_minutes===m?C.teal:C.sub,
+                        fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'all 0.12s'}}>
+                      Cada {m} min
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Resumen */}
+          <div style={{background:C.tealDim,border:`1px solid ${C.teal}33`,borderRadius:10,padding:'10px 14px'}}>
+            <p style={{fontSize:12,color:C.teal,fontWeight:600}}>Resumen de tu configuración</p>
+            <p style={{fontSize:12,color:C.sub,marginTop:3,lineHeight:1.6}}>
+              {isHosb
+                ? <>Comidas de <strong style={{color:C.text}}>{schedCfg.service_hours?.lunch_start||'13:00'}</strong> a <strong style={{color:C.text}}>{schedCfg.service_hours?.lunch_end||'16:00'}</strong> · Cenas de <strong style={{color:C.text}}>{schedCfg.service_hours?.dinner_start||'20:00'}</strong> a <strong style={{color:C.text}}>{schedCfg.service_hours?.dinner_end||'23:30'}</strong></>
+                : <>Abierto de <strong style={{color:C.text}}>{schedCfg.service_hours?.open||'09:00'}</strong> a <strong style={{color:C.text}}>{schedCfg.service_hours?.close||'21:00'}</strong></>
+              }
+              {' · '}Hasta <strong style={{color:C.text}}>{schedCfg.max_new_reservations_per_slot}</strong> reservas y <strong style={{color:C.text}}>{schedCfg.max_new_people_per_slot}</strong> personas por franja
+              {' · '}<strong style={{color:C.text}}>{schedCfg.default_reservation_duration_minutes} min</strong> por reserva
+              {schedCfg.buffer_minutes>0 && <> · <strong style={{color:C.text}}>{schedCfg.buffer_minutes} min</strong> de descanso</>}
+            </p>
+          </div>
+        </SectionCard>
 
         <SectionCard id="automation" icon="⚡" title="¿Cuándo confirma sola?" sub={`Reservas que ${agentName} puede gestionar sin consultarte`} active={openSection==='automation'} onClick={()=>toggleSection('automation')}>
           <Toggle label="Confirmar reservas simples sola" sub={`${agentName} confirma cuando la reserva está dentro de los límites que tú marcas`} value={cfg.automation.auto_simple_reservations} onChange={v=>upCfg('automation','auto_simple_reservations',v)}/>
