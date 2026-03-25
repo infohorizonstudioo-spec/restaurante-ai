@@ -3,9 +3,11 @@ import NotifBell from '@/components/NotifBell'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
+import { useTenant } from '@/contexts/TenantContext'
 import Link from 'next/link'
 
 export default function EstadisticasPage(){
+  const { t } = useTenant()
   const [plan,setPlan]   = useState<string>('free')
   const [loading,setLoad]= useState(true)
   const [data,setData]   = useState<any>(null)
@@ -106,7 +108,7 @@ export default function EstadisticasPage(){
     <div style={{background:'#0C1018',minHeight:'100vh'}}>
       <div style={{background:'#131920',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}}>
         <div>
-          <h1 style={{fontSize:18,fontWeight:700,color:'#E8EEF6'}}>Estadísticas</h1>
+          <h1 style={{fontSize:18,fontWeight:700,color:'#E8EEF6'}}>{t.nav.stats}</h1>
           <p style={{fontSize:12,color:'#49566A',marginTop:1}}>Rendimiento de tu recepcionista y reservas</p>
         </div>
         <NotifBell/>

@@ -3,6 +3,7 @@ import NotifBell from '@/components/NotifBell'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
+import { useTenant } from '@/contexts/TenantContext'
 import Link from 'next/link'
 
 const C = {
@@ -25,6 +26,7 @@ const PLAN:Record<string,{label:string;color:string;price:number;calls:number;ra
 }
 
 export default function FacturacionPage() {
+  const { t } = useTenant()
   const [loading, setLoading] = useState(true)
   const [billing, setBilling] = useState<any>(null)
   const [history, setHistory] = useState<any[]>([])
@@ -76,7 +78,7 @@ export default function FacturacionPage() {
       {/* Header */}
       <div style={{background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 28px', position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', justifyContent:'space-between'}}>
         <div>
-          <h1 style={{fontSize:16, fontWeight:700, color:C.text, letterSpacing:'-0.02em'}}>Facturación y uso</h1>
+          <h1 style={{fontSize:16, fontWeight:700, color:C.text, letterSpacing:'-0.02em'}}>{t.nav.billing}</h1>
           <p style={{fontSize:11, color:C.text3, marginTop:2}}>Control en tiempo real de tu plan y consumo</p>
         </div>
         <NotifBell/>

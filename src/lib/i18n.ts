@@ -13,7 +13,7 @@ export interface Translations {
   common: {
     save: string; cancel: string; delete: string; edit: string; close: string
     loading: string; error: string; success: string; confirm: string
-    search: string; export: string; back: string; next: string
+    search: string; export: string; back: string; next: string; all: string
     yes: string; no: string; or: string; and: string
   }
   nav: {
@@ -53,7 +53,7 @@ const ES: Translations = {
   common: {
     save: 'Guardar', cancel: 'Cancelar', delete: 'Eliminar', edit: 'Editar', close: 'Cerrar',
     loading: 'Cargando...', error: 'Error', success: 'Hecho', confirm: 'Confirmar',
-    search: 'Buscar', export: 'Exportar', back: 'Atrás', next: 'Siguiente',
+    search: 'Buscar', export: 'Exportar', back: 'Atrás', next: 'Siguiente', all: 'Todas',
     yes: 'Sí', no: 'No', or: 'o', and: 'y',
   },
   nav: {
@@ -95,7 +95,7 @@ const EN: Translations = {
   common: {
     save: 'Save', cancel: 'Cancel', delete: 'Delete', edit: 'Edit', close: 'Close',
     loading: 'Loading...', error: 'Error', success: 'Done', confirm: 'Confirm',
-    search: 'Search', export: 'Export', back: 'Back', next: 'Next',
+    search: 'Search', export: 'Export', back: 'Back', next: 'Next', all: 'All',
     yes: 'Yes', no: 'No', or: 'or', and: 'and',
   },
   nav: {
@@ -137,7 +137,7 @@ const FR: Translations = {
   common: {
     save: 'Enregistrer', cancel: 'Annuler', delete: 'Supprimer', edit: 'Modifier', close: 'Fermer',
     loading: 'Chargement...', error: 'Erreur', success: 'Fait', confirm: 'Confirmer',
-    search: 'Rechercher', export: 'Exporter', back: 'Retour', next: 'Suivant',
+    search: 'Rechercher', export: 'Exporter', back: 'Retour', next: 'Suivant', all: 'Toutes',
     yes: 'Oui', no: 'Non', or: 'ou', and: 'et',
   },
   nav: {
@@ -179,7 +179,7 @@ const PT: Translations = {
   common: {
     save: 'Guardar', cancel: 'Cancelar', delete: 'Eliminar', edit: 'Editar', close: 'Fechar',
     loading: 'A carregar...', error: 'Erro', success: 'Feito', confirm: 'Confirmar',
-    search: 'Pesquisar', export: 'Exportar', back: 'Voltar', next: 'Seguinte',
+    search: 'Pesquisar', export: 'Exportar', back: 'Voltar', next: 'Seguinte', all: 'Todas',
     yes: 'Sim', no: 'Não', or: 'ou', and: 'e',
   },
   nav: {

@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
+import { useTenant } from '@/contexts/TenantContext'
 
 // ── Traducciones humanas de estados ──────────────────────────────────────
 const DECISION_CFG: Record<string,{label:string;color:string;bg:string;icon:string}> = {
@@ -79,6 +80,7 @@ function fmt(sec:number|null) {
 }
 
 export default function LlamadasPage() {
+  const { t } = useTenant()
   const [calls,setCalls]       = useState<any[]>([])
   const [loading,setLoading]   = useState(true)
   const [loadingMore,setLoadingMore] = useState(false)
@@ -166,15 +168,15 @@ export default function LlamadasPage() {
       {/* Header */}
       <div style={{background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10, position:'sticky', top:0, zIndex:20}}>
         <div>
-          <h1 style={{fontSize:16, fontWeight:700, color:C.text, letterSpacing:'-0.02em'}}>Llamadas recibidas</h1>
+          <h1 style={{fontSize:16, fontWeight:700, color:C.text, letterSpacing:'-0.02em'}}>{t.nav.calls}</h1>
           <p style={{fontSize:11, color:C.text3, marginTop:2}}>{calls.length} llamadas en total</p>
         </div>
         <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
           {([
-            {k:'all',        label:'Todas',       count:calls.length},
-            {k:'completada', label:'Completadas',  count:calls.filter(c=>c.status==='completada'||c.status==='completed').length},
-            {k:'perdida',    label:'Perdidas',     count:calls.filter(c=>c.status==='perdida'||c.status==='no-answer'||c.status==='busy').length},
-            {k:'fallida',    label:'Fallidas',     count:calls.filter(c=>c.status==='fallida'||c.status==='failed').length},
+            {k:'all',        label:t.common.all,              count:calls.length},
+            {k:'completada', label:t.reservations.completed,  count:calls.filter(c=>c.status==='completada'||c.status==='completed').length},
+            {k:'perdida',    label:t.agent.callMissed,        count:calls.filter(c=>c.status==='perdida'||c.status==='no-answer'||c.status==='busy').length},
+            {k:'fallida',    label:'Fallidas',                 count:calls.filter(c=>c.status==='fallida'||c.status==='failed').length},
           ] as const).map(f => (
             <button key={f.k} onClick={()=>setFilter(f.k as any)}
               style={{fontSize:11, padding:'4px 12px', borderRadius:10, border:'1px solid',
@@ -185,7 +187,7 @@ export default function LlamadasPage() {
               {f.label}{f.count>0&&<span> ({f.count})</span>}
             </button>
           ))}
-          <button onClick={async()=>{const s=await supabase.auth.getSession();if(s.data.session)window.open('/api/export?type=calls','_blank')}} style={{padding:'4px 12px',fontSize:11,fontWeight:600,borderRadius:10,border:`1px solid ${C.border}`,background:'transparent',color:C.text3,cursor:'pointer',fontFamily:'inherit'}}>📥 Exportar</button>
+          <button onClick={async()=>{const s=await supabase.auth.getSession();if(s.data.session)window.open('/api/export?type=calls','_blank')}} style={{padding:'4px 12px',fontSize:11,fontWeight:600,borderRadius:10,border:`1px solid ${C.border}`,background:'transparent',color:C.text3,cursor:'pointer',fontFamily:'inherit'}}>📥 {t.common.export}</button>
         </div>
       </div>
 

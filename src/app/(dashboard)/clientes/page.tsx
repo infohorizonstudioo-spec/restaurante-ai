@@ -52,7 +52,7 @@ function DefaultClientesView() {
   const [editNotes,setEditNotes] = useState('')
   const [editVip,setEditVip] = useState(false)
   const [scores,setScores] = useState<Record<string,any>>({})
-  const { template } = useTenant()
+  const { template, t } = useTenant()
 
   const L = template?.labels
   const clientesLabel = L?.clientes || 'Clientes'
@@ -144,7 +144,7 @@ function DefaultClientesView() {
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:'flex',alignItems:'center',gap:6}}>
                     <p style={{fontSize:13,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name}</p>
-                    {c.vip&&<span style={{fontSize:9,fontWeight:700,color:C.yellow,background:C.yellowDim,padding:'1px 5px',borderRadius:4}}>VIP</span>}
+                    {c.vip&&<span style={{fontSize:9,fontWeight:700,color:C.yellow,background:C.yellowDim,padding:'1px 5px',borderRadius:4}}>{t.clients.vip}</span>}
                     {scores[c.id]&&<span style={{fontSize:9,fontWeight:700,color:scores[c.id].color,background:scores[c.id].color+'18',padding:'1px 5px',borderRadius:4}}>{scores[c.id].score}</span>}
                   </div>
                   <p style={{fontSize:11,color:C.text3,marginTop:1}}>{c.phone||c.email||'Sin contacto'}</p>
@@ -211,10 +211,10 @@ function DefaultClientesView() {
                     style={{width:'100%',minHeight:60,resize:'vertical',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:7,padding:'8px 10px',color:C.text,fontSize:13,fontFamily:'inherit',outline:'none'}}/>
                   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:10}}>
                     <button onClick={()=>setEditVip(!editVip)} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 12px',borderRadius:7,border:`1px solid ${editVip?C.yellow:C.border}`,background:editVip?C.yellowDim:'transparent',color:editVip?C.yellow:C.text3,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'all 0.12s'}}>
-                      {editVip?'⭐ VIP':'☆ Marcar VIP'}
+                      {editVip?`⭐ ${t.clients.vip}`:`☆ ${t.clients.vip}`}
                     </button>
                     <button onClick={saveCustomerNotes} style={{padding:'6px 16px',borderRadius:7,border:'none',background:C.amber,color:'#0C1018',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
-                      Guardar
+                      {t.common.save}
                     </button>
                   </div>
                 </div>
