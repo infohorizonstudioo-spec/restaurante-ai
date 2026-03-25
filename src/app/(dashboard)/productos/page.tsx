@@ -55,8 +55,10 @@ export default function ProductosPage() {
 
   useEffect(() => {
     (async () => {
-      const sess = await getSessionTenant(); if(!sess) return
+      const sess = await getSessionTenant()
+      if(!sess) { setLoading(false); return }
       setTid(sess.tenantId)
+      await load(sess.tenantId)
     })()
   }, [load])
 

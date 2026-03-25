@@ -418,6 +418,19 @@ export default function PanelPage() {
           priority:'high' })
         setReservas(prev => [...prev, r])
       })
+      .on('postgres_changes',{ event:'UPDATE', schema:'public', table:'reservations', filter:`tenant_id=eq.${tenantId}` }, payload => {
+        const r = payload.new as any
+        setReservas(prev => prev.map(x => x.id === r.id ? r : x))
+        if (r.status === 'cancelled' || r.status === 'no_show') {
+          pushEvent({ type:'reservation' as any, icon:'❌', color:C.red,
+            title:`Reserva ${r.status==='cancelled'?'cancelada':'no presentado'} — ${r.customer_name||'Cliente'}`,
+            sub:`${(r.time||'').slice(0,5)}`.trim() })
+        }
+      })
+      .on('postgres_changes',{ event:'DELETE', schema:'public', table:'reservations', filter:`tenant_id=eq.${tenantId}` }, payload => {
+        const r = payload.old as any
+        if (r?.id) setReservas(prev => prev.filter(x => x.id !== r.id))
+      })
       .on('postgres_changes',{ event:'INSERT', schema:'public', table:'notifications', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const n = payload.new as any
         const icon = n.priority==='critical' ? '🔴' : n.priority==='warning' ? '⚠️' : '💬'

@@ -59,6 +59,7 @@ export default function PedidosPage() {
   const [tid, setTid] = useState<string | null>(null)
   const [tipoFilter, setTipoFilter] = useState<string>('todos')
   const [modal, setModal] = useState<any | null>(null)
+  const modalRef = useRef<any | null>(null)
   const [, setTick] = useState(0)
   const { template } = useTenant()
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -83,6 +84,9 @@ export default function PedidosPage() {
     })()
   }, [load])
 
+  // Keep modalRef in sync with modal state (avoids stale closure in RT handler)
+  useEffect(() => { modalRef.current = modal }, [modal])
+
   // Tick every 30s to keep "hace X min" timers fresh
   useEffect(() => {
     const iv = setInterval(() => setTick(t => t + 1), 30000)
@@ -99,15 +103,15 @@ export default function PedidosPage() {
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, (payload) => {
         load(tid)
-        // Update modal if viewing the same order
-        if (modal && payload.new && (payload.new as any).id === modal.id) {
+        // Update modal if viewing the same order (read from ref to avoid stale closure)
+        if (modalRef.current && payload.new && (payload.new as any).id === modalRef.current.id) {
           setModal(payload.new)
         }
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, () => load(tid))
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [tid, load, modal])
+  }, [tid, load])
 
   function playSound() {
     try {

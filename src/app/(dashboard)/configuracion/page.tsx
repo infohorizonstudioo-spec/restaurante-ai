@@ -450,11 +450,11 @@ export default function ConfiguracionPage() {
           </div>
         </SectionCard>
 
-        <SectionCard id="automation" icon="⚡" title="¿Cuándo confirma sola?" sub={`Reservas que ${agentName} puede gestionar sin consultarte`} active={openSection==='automation'} onClick={()=>toggleSection('automation')}>
-          <Toggle label="Confirmar reservas simples sola" sub={`${agentName} confirma cuando la reserva está dentro de los límites que tú marcas`} value={cfg.automation.auto_simple_reservations} onChange={v=>upCfg('automation','auto_simple_reservations',v)}/>
-          <Toggle label="Gestionar cancelaciones sola" sub={`Si un cliente cancela, ${agentName} lo anota sin necesidad de avisarte`} value={cfg.automation.auto_cancellations} onChange={v=>upCfg('automation','auto_cancellations',v)}/>
-          <Toggle label="Responder preguntas sola" sub={`Horario, precios, servicios — ${agentName} responde directamente sin molestarte`} value={cfg.automation.auto_info_queries} onChange={v=>upCfg('automation','auto_info_queries',v)}/>
-          <Slider label="¿Hasta cuántas personas puede confirmar sola?" sub={`Si el grupo es más grande que esto, ${agentName} te avisa para que decidas tú`} value={cfg.automation.max_auto_party} min={1} max={20} unit=" personas" onChange={v=>upCfg('automation','max_auto_party',v)}/>
+        <SectionCard id="automation" icon="⚡" title="¿Qué puede hacer sin preguntarte?" sub={`Decide en qué situaciones ${agentName} puede actuar sola`} active={openSection==='automation'} onClick={()=>toggleSection('automation')}>
+          <Toggle label="¿Puede confirmar reservas pequeñas sin avisarte?" sub={`${agentName} confirma directamente cuando la reserva entra dentro de lo normal`} value={cfg.automation.auto_simple_reservations} onChange={v=>upCfg('automation','auto_simple_reservations',v)}/>
+          <Toggle label="¿Puede gestionar cancelaciones sin consultarte?" sub={`Si un cliente cancela, ${agentName} lo anota sin necesidad de avisarte`} value={cfg.automation.auto_cancellations} onChange={v=>upCfg('automation','auto_cancellations',v)}/>
+          <Toggle label="¿Puede contestar preguntas de horarios y precios?" sub={`Horario, precios, servicios — ${agentName} responde directamente sin molestarte`} value={cfg.automation.auto_info_queries} onChange={v=>upCfg('automation','auto_info_queries',v)}/>
+          <Slider label="¿Hasta cuántas personas puede aceptar sola?" sub={`Si el grupo es más grande que esto, ${agentName} te avisa para que decidas tú`} value={cfg.automation.max_auto_party} min={1} max={20} unit=" personas" onChange={v=>upCfg('automation','max_auto_party',v)}/>
           <div style={{background:C.amberDim,border:`1px solid ${C.amber}33`,borderRadius:10,padding:'10px 14px'}}>
             <p style={{fontSize:12,color:C.amber,fontWeight:600}}>Resumen de tu configuración</p>
             <p style={{fontSize:12,color:C.sub,marginTop:3}}>
@@ -464,12 +464,12 @@ export default function ConfiguracionPage() {
           </div>
         </SectionCard>
 
-        <SectionCard id="review" icon="👁" title="¿Cuándo te avisa para que revises tú?" sub="Estas situaciones siempre te las consulta antes de confirmar" active={openSection==='review'} onClick={()=>toggleSection('review')}>
-          <Toggle label="Grupos grandes" sub={`Más de ${cfg.automation.max_auto_party} personas — te avisa siempre`} value={cfg.review.large_groups} onChange={v=>upCfg('review','large_groups',v)} color={C.amber}/>
-          <Toggle label="Peticiones especiales" sub="El cliente pide algo fuera de lo habitual" value={cfg.review.special_requests} onChange={v=>upCfg('review','special_requests',v)} color={C.amber}/>
-          <Toggle label="Alergias o intolerancias" sub="Si el cliente menciona alguna alergia, te avisa para que lo prepares" value={cfg.review.allergies_mentioned} onChange={v=>upCfg('review','allergies_mentioned',v)} color={C.amber}/>
-          <Toggle label="Horarios poco habituales" sub="Reservas muy fuera de tu hora punta" value={cfg.review.unusual_hours} onChange={v=>upCfg('review','unusual_hours',v)} color={C.amber}/>
-          <Toggle label="Clientes que llaman por primera vez" sub="Primera llamada de ese número — te avisa para que lo atiendas tú" value={cfg.review.first_time_customers} onChange={v=>upCfg('review','first_time_customers',v)} color={C.amber}/>
+        <SectionCard id="review" icon="👁" title="¿Cuándo quieres que te consulte?" sub="En estas situaciones siempre te pregunta antes de confirmar" active={openSection==='review'} onClick={()=>toggleSection('review')}>
+          <Toggle label="Si viene un grupo grande" sub={`Más de ${cfg.automation.max_auto_party} personas — te avisa siempre`} value={cfg.review.large_groups} onChange={v=>upCfg('review','large_groups',v)} color={C.amber}/>
+          <Toggle label="Si piden algo especial, ¿te avisa?" sub="El cliente pide algo fuera de lo habitual (mesa concreta, decoración, etc.)" value={cfg.review.special_requests} onChange={v=>upCfg('review','special_requests',v)} color={C.amber}/>
+          <Toggle label="Si mencionan alergias o intolerancias" sub="Te avisa para que lo tengas en cuenta y lo prepares" value={cfg.review.allergies_mentioned} onChange={v=>upCfg('review','allergies_mentioned',v)} color={C.amber}/>
+          <Toggle label="Si quieren reservar en horarios raros" sub="Reservas muy fuera de tu hora punta" value={cfg.review.unusual_hours} onChange={v=>upCfg('review','unusual_hours',v)} color={C.amber}/>
+          <Toggle label="Si es alguien que llama por primera vez" sub="Primera llamada de ese número — te avisa para que lo atiendas tú si quieres" value={cfg.review.first_time_customers} onChange={v=>upCfg('review','first_time_customers',v)} color={C.amber}/>
         </SectionCard>
 
         <SectionCard id="rejection" icon="🚫" title="¿Cuándo tiene que decir que no?" sub={`${agentName} rechazará educadamente en estas situaciones`} active={openSection==='rejection'} onClick={()=>toggleSection('rejection')}>
