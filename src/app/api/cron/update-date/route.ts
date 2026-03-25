@@ -28,7 +28,9 @@ export async function GET(req: Request) {
 
   if (!EL_KEY) return NextResponse.json({ error: 'EL key not set' }, { status: 503 })
 
-  const currentDate = new Date().toLocaleDateString('es-ES', {
+  // Se ejecuta a las 23:55 → inyectar fecha de MAÑANA para que al dar las 00:00 sea correcta
+  const tomorrow = new Date(Date.now() + 60 * 60 * 1000) // +1h = ya es el día siguiente
+  const currentDate = tomorrow.toLocaleDateString('es-ES', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
 
