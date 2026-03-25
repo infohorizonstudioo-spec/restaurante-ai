@@ -71,7 +71,8 @@ COMO HABLAS:
 - NUNCA inventes disponibilidad ni confirmes sin verificar.
 - Para la carta completa o precios exactos, llama a get_menu_or_services.`
 
-  const h = { "Content-Type": "application/json" }
+  const AGENT_KEY = "1c9795f1789b2a6860e2c44df3bb98502e2d7a31f3e7077ffc8b70a2d0772422"
+  const h = { "Content-Type": "application/json", "x-agent-key": AGENT_KEY }
   const tools = [
     { type:"webhook", name:"check_availability", description:"Comprueba disponibilidad para fecha y personas.", api_schema:{ url:`${APP_URL}/api/agent/check-availability`, method:"POST", request_headers:h, request_body_schema:{ type:"object", properties:{ tenant_id:{type:"string",enum:[TENANT_ID]}, date:{type:"string",description:"Fecha YYYY-MM-DD"}, time:{type:"string",description:"Hora HH:MM"}, party_size:{type:"number",description:"Personas"} }, required:["tenant_id","date"] } }, response_timeout_secs:10 },
     { type:"webhook", name:"create_reservation", description:"Crea reserva confirmada.", api_schema:{ url:`${APP_URL}/api/agent/create-reservation`, method:"POST", request_headers:h, request_body_schema:{ type:"object", properties:{ tenant_id:{type:"string",enum:[TENANT_ID]}, customer_name:{type:"string"}, customer_phone:{type:"string"}, date:{type:"string"}, time:{type:"string"}, party_size:{type:"number"}, notes:{type:"string"} }, required:["tenant_id","customer_name","date","time"] } }, response_timeout_secs:10 },
