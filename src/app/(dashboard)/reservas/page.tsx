@@ -126,6 +126,31 @@ export default function ReservasPage() {
             }).catch(() => {})
           }
         }
+        // Si cancelan, avisar al primer cliente en lista de espera
+        if (status === 'cancelada' && r) {
+          const resDate = r.date || r.reservation_date
+          if (resDate) {
+            const { data: waitlisted } = await supabase.from('waitlist')
+              .select('id,customer_name,customer_phone')
+              .eq('tenant_id', tid).eq('date', resDate).eq('status', 'waiting')
+              .order('created_at').limit(1).maybeSingle()
+            if (waitlisted?.customer_phone) {
+              const sess2 = await supabase.auth.getSession()
+              if (sess2.data.session) {
+                fetch('/api/sms/send', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess2.data.session.access_token },
+                  body: JSON.stringify({
+                    to: waitlisted.customer_phone,
+                    message: `🎉 ¡Buenas noticias! Ha quedado un hueco el ${resDate} en el que estabas apuntado. Llámanos para confirmar tu reserva. — ${r.customer_name ? '' : 'Tu restaurante'}`
+                  })
+                }).catch(() => {})
+                // Marcar como notificado
+                await supabase.from('waitlist').update({ status: 'notified' }).eq('id', waitlisted.id)
+              }
+            }
+          }
+        }
       }
       load(tid)
     }
