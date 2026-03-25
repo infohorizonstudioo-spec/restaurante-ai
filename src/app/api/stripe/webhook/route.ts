@@ -76,7 +76,7 @@ export async function POST(req: Request) {
           billing_cycle_start: new Date().toISOString(),
           billing_cycle_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         }).eq('id', tenantId)
-        console.log('checkout.session.completed', tenantId, plan)
+        // checkout.session.completed handled
         break
       }
 
@@ -133,7 +133,7 @@ export async function POST(req: Request) {
           plan_calls_used: 0, extra_calls: 0,
           free_calls_used: 0, free_calls_limit: 10,
         }).eq('id', tenantId)
-        console.log('subscription.deleted', tenantId)
+        // subscription.deleted handled
         break
       }
 
@@ -148,7 +148,7 @@ export async function POST(req: Request) {
         // Solo resetear en renovaciones (no en la primera factura)
         if (invoice.billing_reason === 'subscription_cycle') {
           await admin.rpc('reset_billing_cycle', { p_tenant_id: tenantId })
-          console.log('invoice.paid - cycle reset', tenantId)
+          // invoice.paid - cycle reset handled
         }
         await admin.from('billing_history').update({ stripe_invoice_id: invoice.id, status: 'paid' })
           .eq('tenant_id', tenantId).is('stripe_invoice_id', null).order('created_at', { ascending: false }).limit(1)
@@ -164,7 +164,7 @@ export async function POST(req: Request) {
         const tenantId = sub?.metadata?.tenant_id
         if (!tenantId) break
         await admin.from('tenants').update({ subscription_status: 'past_due' }).eq('id', tenantId)
-        console.log('invoice.payment_failed', tenantId)
+        // invoice.payment_failed handled
         break
       }
     }

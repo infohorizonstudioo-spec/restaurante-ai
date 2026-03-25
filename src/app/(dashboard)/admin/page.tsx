@@ -1,5 +1,6 @@
 'use client'
 import NotifBell from '@/components/NotifBell'
+import { PageLoader } from '@/components/ui'
 export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -60,12 +61,14 @@ export default function AdminPage() {
   const [saving, setSaving]         = useState(false)
   const [msg, setMsg]               = useState('')
   const [search, setSearch]         = useState('')
+  const [loading, setLoading]       = useState(true)
 
   async function loadTenants() {
     const { data } = await supabase.from('tenants')
       .select('id,name,slug,type,plan,email,phone,active,created_at,agent_name,agent_phone,plan_calls_used,plan_calls_included,free_calls_used,free_calls_limit,call_count')
       .order('created_at', { ascending: false })
     setTenants(data || [])
+    setLoading(false)
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -121,6 +124,8 @@ export default function AdminPage() {
   const inp = {width:'100%',background:C.surface3,border:`1px solid ${C.border}`,borderRadius:9,padding:'9px 12px',fontSize:13,color:C.text,fontFamily:'inherit',boxSizing:'border-box' as const}
   const sel = {...inp,cursor:'pointer'}
 
+  if (loading) return <PageLoader/>
+
   return (
     <div style={{background:C.bg,minHeight:'100vh',fontFamily:"'Sora',-apple-system,sans-serif",color:C.text}}>
       {/* HEADER */}
@@ -133,7 +138,7 @@ export default function AdminPage() {
           </div>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:16}}>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar negocio..." style={{...inp,width:200,padding:'6px 12px',fontSize:12}}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar negocio..." aria-label="Buscar negocios" style={{...inp,width:200,padding:'6px 12px',fontSize:12}}/>
           <button onClick={()=>supabase.auth.signOut().then(()=>router.push('/login'))} style={{fontSize:12,color:C.text3,background:'none',border:'none',cursor:'pointer',fontFamily:'inherit'}}>Salir →</button>
           <NotifBell/>
         </div>

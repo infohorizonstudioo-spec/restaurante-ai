@@ -97,7 +97,8 @@
       "Bash(ls \"C:/Users/krush/restaurante-ai/src/app/\\(dashboard\\)/\")",
       "Bash(npx next:*)",
       "Bash(curl -s \"https://restaurante-ai.vercel.app/api/sms/test\")",
-      "Bash(curl -s -X DELETE \"$SB_URL/reservations?tenant_id=eq.$TID&customer_name=eq.Test SMS\" -H \"apikey: $SB_KEY\" -H \"Authorization: Bearer $SB_KEY\")"
+      "Bash(curl -s -X DELETE \"$SB_URL/reservations?tenant_id=eq.$TID&customer_name=eq.Test SMS\" -H \"apikey: $SB_KEY\" -H \"Authorization: Bearer $SB_KEY\")",
+      "Bash(find \"C:\\\\Users\\\\krush\\\\restaurante-ai\\\\src\\\\app\\\\\\(dashboard\\)\" -name \"page.tsx\" -type f)"
     ]
   }
 }
