@@ -16,17 +16,52 @@ const PLANS = [
   {
     id: 'starter', label: 'Starter', price: '99', calls: 50, rate: '0.90',
     accent: C.teal, dim: 'rgba(45,212,191,0.10)', popular: false,
-    features: ['50 llamadas incluidas', 'Reservas automáticas', 'Panel de clientes', 'Soporte por email'],
+    tagline: 'Para empezar a automatizar',
+    features: [
+      '50 llamadas/mes incluidas',
+      'Recepcionista IA 24/7 con voz natural',
+      'Reservas y citas automáticas',
+      'Verificación de disponibilidad real',
+      'Panel de control en tiempo real',
+      'Gestión de clientes con historial',
+      'Mesas, zonas y plano del local',
+      'Turnos y franjas horarias',
+      'Reconocimiento de clientes habituales',
+      'Notificaciones en el panel',
+      'Soporte por email',
+    ],
   },
   {
     id: 'pro', label: 'Pro', price: '299', calls: 200, rate: '0.70',
     accent: C.amber, dim: C.amberDim, popular: true,
-    features: ['200 llamadas incluidas', 'Todo lo de Starter', 'Estadísticas avanzadas', 'Pedidos', 'Soporte prioritario'],
+    tagline: 'Para negocios que quieren crecer',
+    features: [
+      '200 llamadas/mes incluidas',
+      'Todo lo de Starter +',
+      'Pedidos en vivo por teléfono',
+      'Pedidos a domicilio con dirección',
+      'Alerta instantánea de pedidos',
+      'Estadísticas avanzadas',
+      'Tasa de conversión y hora pico',
+      'Insights inteligentes de Sofía',
+      'Aprendizaje automático por negocio',
+      'Carta y servicios consultables por voz',
+      'Soporte prioritario',
+    ],
   },
   {
     id: 'business', label: 'Business', price: '499', calls: 600, rate: '0.50',
     accent: C.violet, dim: C.violetDim, popular: false,
-    features: ['600 llamadas incluidas', 'Todo lo de Pro', 'Gestión de reparto', 'Multi-zona', 'Soporte dedicado'],
+    tagline: 'Para alta demanda',
+    features: [
+      '600 llamadas/mes incluidas',
+      'Todo lo de Pro +',
+      'Tarifa extra más baja (€0.50/llamada)',
+      'Multi-zona y gestión de reparto',
+      'Prioridad en nuevas funciones',
+      'Soporte dedicado con respuesta rápida',
+      'Configuración asistida del agente',
+    ],
   },
 ] as const
 type PlanId = 'starter' | 'pro' | 'business'
@@ -112,8 +147,11 @@ export default function PreciosPage() {
               )}
 
               {/* Plan name */}
-              <p style={{ fontSize: 11, fontWeight: 700, color: plan.accent, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: plan.accent, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
                 {plan.label}
+              </p>
+              <p style={{ fontSize: 12, color: C.sub, marginBottom: 12 }}>
+                {plan.tagline}
               </p>
 
               {/* Price */}

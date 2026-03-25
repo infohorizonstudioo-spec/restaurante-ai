@@ -18,10 +18,9 @@ const C = {
 const PLANS: Record<string,{label:string;price:number;calls:number;color:string;bg:string}> = {
   trial:    {label:'Trial',    price:0,   calls:10,  color:'rgba(255,255,255,0.35)', bg:'rgba(255,255,255,0.04)'},
   free:     {label:'Trial',    price:0,   calls:10,  color:'rgba(255,255,255,0.35)', bg:'rgba(255,255,255,0.04)'},
-  starter:  {label:'Starter',  price:149, calls:150, color:'#60A5FA', bg:'rgba(96,165,250,0.10)'},
-  pro:      {label:'Pro',      price:299, calls:600, color:C.violet, bg:C.violetDim},
+  starter:  {label:'Starter',  price:99,  calls:50,  color:'#60A5FA', bg:'rgba(96,165,250,0.10)'},
+  pro:      {label:'Pro',      price:299, calls:200, color:C.violet, bg:C.violetDim},
   business: {label:'Business', price:499, calls:600, color:C.green,  bg:C.greenDim},
-  enterprise:{label:'Business',price:499, calls:600, color:C.green,  bg:C.greenDim},
 }
 const TYPES: Record<string,string> = {
   restaurante:'🍽️ Restaurante', bar:'🍺 Bar', cafeteria:'☕ Cafetería',
