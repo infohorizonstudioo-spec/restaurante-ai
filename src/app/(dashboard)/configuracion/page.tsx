@@ -222,8 +222,13 @@ export default function ConfiguracionPage() {
     } catch { /* no crítico */ }
 
     setSaving(false); setSaved(true)
-    reloadTenant() // ← actualiza sidebar y header inmediatamente
-    setTimeout(()=>setSaved(false),3000)
+    reloadTenant()
+    // Si el idioma cambió, recargar la página para que todas las traducciones se apliquen
+    if (basicForm.language !== (tenant.language || 'es')) {
+      setTimeout(() => window.location.reload(), 500)
+    } else {
+      setTimeout(()=>setSaved(false),3000)
+    }
   },[tenant,basicForm,cfg,isHosb,schedCfg,reloadTenant])
 
   const toggleSection = (id:string) => setOpen(o=>o===id?null:id)
