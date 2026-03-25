@@ -291,6 +291,7 @@ export default function PanelPage() {
   const [events,setEvents]     = useState<LiveEvent[]>([])
   const [demoMode,setDemoMode] = useState(false)
   const [insights, setInsights] = useState<any[]>([])
+  const [orderAlert, setOrderAlert] = useState<{name:string;type:string;id:string}|null>(null)
   const demoTimer              = useRef<ReturnType<typeof setInterval>|null>(null)
   const demoIdx                = useRef(0)
   const rtChannelRef           = useRef<any>(null)
@@ -394,6 +395,10 @@ export default function PanelPage() {
         pushEvent({ type:'order' as any, icon:'🛍️', color:C.violet,
           title:`Nuevo pedido — ${o.customer_name||o.customer_phone||'Cliente'}`,
           sub:`${itemList} · ${o.order_type||'recoger'}`, priority:'high' })
+        // Alerta sonora + banner para pedidos nuevos
+        setOrderAlert({ name: o.customer_name||'Cliente', type: o.order_type||'recoger', id: o.id })
+        try { new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2JkZiYl5OSjYeFgoB/f4GDhYmNkJKUlZWUko+MiIWCf31+f4GDhYmMj5GTlJWVlJKQjYmGg4B+fX5/gYSHioyPkZOUlZWUkpCNiYaDgH5+fn+BhIeKjI+Rk5SVlZSSkI2JhoOAfn5+f4GEh4qMj5GTlJWVlJKQjYmGg4B+fn5/gYSHioyPkZOUlZWUkpCNiYaDgH5+fn+BhIeKjI+Rk5SVlQ==').play() } catch {}
+        setTimeout(() => setOrderAlert(null), 15000)
       })
       .on('postgres_changes',{ event:'UPDATE', schema:'public', table:'order_events', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const o = payload.new as any
@@ -521,6 +526,26 @@ export default function PanelPage() {
           <NotificationBell tenantId={tenant.id}/>
         </div>
       </div>
+
+      {/* ── Banner pedido en vivo ── */}
+      {orderAlert && (
+        <div onClick={() => { window.location.href = '/pedidos'; setOrderAlert(null) }} style={{
+          position:'fixed', top:0, left:0, right:0, zIndex:100,
+          background:'linear-gradient(135deg, #7c3aed, #a78bfa)',
+          padding:'14px 28px', cursor:'pointer',
+          display:'flex', alignItems:'center', justifyContent:'center', gap:12,
+          animation:'rzSlideIn 0.3s ease',
+          boxShadow:'0 4px 20px rgba(124,58,237,0.4)',
+        }}>
+          <span style={{ fontSize:22 }}>🛍️</span>
+          <div>
+            <p style={{ fontSize:15, fontWeight:700, color:'white' }}>Nuevo pedido de {orderAlert.name}</p>
+            <p style={{ fontSize:12, color:'rgba(255,255,255,0.8)' }}>Para {orderAlert.type} · Toca para ver en pedidos</p>
+          </div>
+          <span style={{ fontSize:13, color:'rgba(255,255,255,0.6)', marginLeft:'auto' }}>→ Ver pedidos</span>
+          <button onClick={e => { e.stopPropagation(); setOrderAlert(null) }} style={{ background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8, padding:'4px 10px', color:'white', cursor:'pointer', fontSize:14, marginLeft:8 }}>✕</button>
+        </div>
+      )}
 
       <div style={{ maxWidth:1200,margin:'0 auto',padding:'22px 28px',display:'flex',flexDirection:'column',gap:16 }}>
 
