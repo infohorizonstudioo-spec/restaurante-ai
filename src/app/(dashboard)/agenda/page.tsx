@@ -1,14 +1,32 @@
 'use client'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useTenant } from '@/contexts/TenantContext'
+import { parseReservationConfig, ReservationConfig } from '@/lib/scheduling-engine'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
 import Link from 'next/link'
 
-const HOURS = Array.from({length:15},(_,i)=>i+8)  // 08:00 → 22:00
+const DEFAULT_HOURS = Array.from({length:15},(_,i)=>i+8)  // 08:00 → 22:00
 const _DAY_LABELS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']  // reserved
 const DAY_SHORT  = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM']
 const MONTH_ES   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+/** Build hour range from service_hours config — covers lunch through dinner for hosteleria, or generic 8–22 */
+function buildHoursFromConfig(cfg?: ReservationConfig): number[] {
+  const sh = cfg?.service_hours
+  if (!sh) return DEFAULT_HOURS
+  const starts: number[] = []
+  const ends: number[] = []
+  if (sh.lunch_start) starts.push(parseInt(sh.lunch_start.slice(0,2)))
+  if (sh.dinner_start) starts.push(parseInt(sh.dinner_start.slice(0,2)))
+  if (sh.lunch_end) ends.push(parseInt(sh.lunch_end.slice(0,2)))
+  if (sh.dinner_end) ends.push(parseInt(sh.dinner_end.slice(0,2)))
+  if (starts.length === 0 || ends.length === 0) return DEFAULT_HOURS
+  const minH = Math.max(0, Math.min(...starts) - 1)  // 1h buffer before first service
+  const maxH = Math.min(23, Math.max(...ends))         // include last service hour
+  return Array.from({length: maxH - minH + 1}, (_, i) => i + minH)
+}
 
 const STATUS_CFG: Record<string,{color:string;bg:string;label:string}> = {
   confirmada: {color:'#34d399',bg:'rgba(52,211,153,0.12)',label:'Confirmada'},
@@ -100,36 +118,56 @@ function ResBlock({r, onHover, onLeave}: {r:any, onHover:(e:React.MouseEvent,r:a
 
 // ── Página principal ──────────────────────────────────────────────────────
 export default function AgendaPage() {
+  const { tenant, loading: tenantLoading } = useTenant()
   const [base,setBase]   = useState(new Date())
   const [res,setRes]     = useState<any[]>([])
   const [loading,setLoad]= useState(true)
-  const [,setTid]        = useState<string|null>(null)
   const [tooltip,setTooltip] = useState<{r:any,x:number,y:number}|null>(null)
+  const [isMobile,setIsMobile] = useState(false)
+  const [mobileDay,setMobileDay] = useState(() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1 })
+  const [schedCfg,setSchedCfg] = useState<ReservationConfig|null>(null)
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   const load = useCallback(async(tenantId:string)=>{
+    setLoad(true)
     const week = getWeekDays(base)
     const from = week[0].toISOString().slice(0,10)
     const to   = week[6].toISOString().slice(0,10)
-    const {data} = await supabase.from('reservations').select('*')
-      .eq('tenant_id',tenantId).gte('date',from).lte('date',to)
-      .not('status','in','("cancelada","cancelled")')
-      .order('time',{ascending:true})
-    setRes(data||[])
+    const [resResult, tenantResult] = await Promise.all([
+      supabase.from('reservations').select('*')
+        .eq('tenant_id',tenantId).gte('date',from).lte('date',to)
+        .not('status','in','("cancelada","cancelled")')
+        .order('time',{ascending:true}),
+      supabase.from('tenants').select('reservation_config,type')
+        .eq('id',tenantId).maybeSingle()
+    ])
+    setRes(resResult.data||[])
+    if (tenantResult.data?.reservation_config) {
+      setSchedCfg(parseReservationConfig(tenantResult.data.reservation_config))
+    }
     setLoad(false)
   },[base])
 
   useEffect(()=>{
-    (async()=>{
-      const {data:{user}} = await supabase.auth.getUser(); if(!user) return
-      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).maybeSingle(); if(!p?.tenant_id) return
-      setTid(p.tenant_id); await load(p.tenant_id)
-    })()
-  },[load])
+    if (tenantLoading) return
+    if (!tenant?.id) { setLoad(false); return }
+    load(tenant.id)
+  },[load, tenant?.id, tenantLoading])
 
-  if(loading) return <PageLoader/>
+  if(loading || tenantLoading) return <PageLoader/>
 
+  const HOURS  = buildHoursFromConfig(schedCfg ?? undefined)
   const week   = getWeekDays(base)
   const todayIso = new Date().toISOString().slice(0,10)
+  const visibleDays = isMobile ? [week[mobileDay]] : week
+  const colCount = visibleDays.length
   const weekFrom = week[0], weekTo = week[6]
   const weekLabel = weekFrom.getMonth()===weekTo.getMonth()
     ? `${weekFrom.getDate()} – ${weekTo.getDate()} ${MONTH_ES[weekTo.getMonth()]} ${weekTo.getFullYear()}`
@@ -175,45 +213,70 @@ export default function AgendaPage() {
       `}</style>
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-        <div style={{display:'flex',alignItems:'center',gap:20}}>
+      <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:isMobile?'10px 12px':'14px 24px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
+        <div style={{display:'flex',alignItems:'center',gap:isMobile?10:20}}>
           <div>
-            <h1 style={{fontSize:17,fontWeight:700,color:C.text,lineHeight:1.2}}>Agenda</h1>
-            <p style={{fontSize:12,color:C.muted,marginTop:2}}>{weekLabel}</p>
+            <h1 style={{fontSize:isMobile?15:17,fontWeight:700,color:C.text,lineHeight:1.2}}>Agenda</h1>
+            <p style={{fontSize:11,color:C.muted,marginTop:2}}>{weekLabel}</p>
           </div>
           <div style={{display:'flex',gap:6,alignItems:'center'}}>
             <button className="nav-btn" onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()-7);return n})}>‹</button>
-            <button className="today-btn" onClick={()=>setBase(new Date())}>Hoy</button>
+            <button className="today-btn" onClick={()=>{setBase(new Date());setMobileDay(()=>{const d=new Date().getDay();return d===0?6:d-1})}}>Hoy</button>
             <button className="nav-btn" onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n})}>›</button>
           </div>
         </div>
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
-          <div style={{display:'flex',gap:16,marginRight:8}}>
+          {!isMobile && <div style={{display:'flex',gap:16,marginRight:8}}>
             <Stat label="Esta semana" value={totalThisWeek} color={C.amber}/>
             <Stat label="Hoy" value={todayCount} color="#34d399"/>
-          </div>
+          </div>}
           <Link href="/reservas/nueva" className="new-btn">
-            <span style={{fontSize:16,lineHeight:1}}>+</span> Nueva reserva
+            <span style={{fontSize:16,lineHeight:1}}>+</span>{!isMobile&&' Nueva reserva'}
           </Link>
           <NotifBell/>
         </div>
       </div>
 
+      {/* ── Mobile day selector ──────────────────────────────────────────── */}
+      {isMobile && (
+        <div style={{display:'flex',gap:4,padding:'8px 12px',background:C.card,borderBottom:`1px solid ${C.border}`,overflowX:'auto'}}>
+          {week.map((d,i)=>{
+            const iso = d.toISOString().slice(0,10)
+            const isToday = iso===todayIso
+            const isSelected = i===mobileDay
+            const cnt = res.filter(r=>(r.date||r.reservation_date)===iso).length
+            return (
+              <button key={iso} onClick={()=>setMobileDay(i)} style={{
+                flex:'1 0 0',minWidth:42,padding:'6px 4px',borderRadius:10,border:'none',cursor:'pointer',
+                background:isSelected?(isToday?C.amber:'rgba(255,255,255,0.10)'):'transparent',
+                display:'flex',flexDirection:'column',alignItems:'center',gap:2,fontFamily:'inherit',
+              }}>
+                <span style={{fontSize:9,fontWeight:600,color:isSelected&&isToday?'#0C1018':isToday?C.amber:C.muted}}>{DAY_SHORT[i]}</span>
+                <span style={{fontSize:14,fontWeight:isSelected?700:500,color:isSelected&&isToday?'#0C1018':isSelected?C.text:C.sub}}>{d.getDate()}</span>
+                {cnt>0&&<span style={{fontSize:8,fontWeight:700,color:isToday?C.amber:'#818cf8'}}>{cnt}</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
 
       {/* ── Calendario ───────────────────────────────────────────────────── */}
       <div style={{flex:1,overflow:'auto'}}>
-        <div style={{minWidth:820}}>
+        <div style={{minWidth:isMobile?0:820}}>
 
-          {/* Cabecera días */}
-          <div style={{display:'grid',gridTemplateColumns:'64px repeat(7,1fr)',background:C.card,borderBottom:`2px solid ${C.border}`,position:'sticky',top:0,zIndex:20}}>
+          {/* Cabecera días (hidden on mobile — day selector above replaces it) */}
+          {!isMobile && (
+          <div style={{display:'grid',gridTemplateColumns:`64px repeat(${colCount},1fr)`,background:C.card,borderBottom:`2px solid ${C.border}`,position:'sticky',top:0,zIndex:20}}>
             <div style={{padding:'12px 0',borderRight:`1px solid ${C.border}`}}/>
-            {week.map((d,i)=>{
+            {visibleDays.map((d,i)=>{
               const iso = d.toISOString().slice(0,10)
               const isToday = iso===todayIso
+              const dayIdx = week.indexOf(d)
               const cnt = res.filter(r=>(r.date||r.reservation_date)===iso).length
               return (
                 <div key={iso} style={{padding:'10px 8px',textAlign:'center',borderRight:`1px solid ${C.border}`,background:isToday?C.today:'transparent'}}>
-                  <p style={{fontSize:10,fontWeight:600,letterSpacing:'0.06em',color:isToday?C.amber:C.muted,marginBottom:4}}>{DAY_SHORT[i]}</p>
+                  <p style={{fontSize:10,fontWeight:600,letterSpacing:'0.06em',color:isToday?C.amber:C.muted,marginBottom:4}}>{DAY_SHORT[dayIdx]}</p>
                   <div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:32,height:32,borderRadius:'50%',background:isToday?C.amber:'transparent',margin:'0 auto'}}>
                     <span style={{fontSize:16,fontWeight:isToday?700:500,color:isToday?'#0C1018':C.text}}>{d.getDate()}</span>
                   </div>
@@ -222,21 +285,22 @@ export default function AgendaPage() {
               )
             })}
           </div>
+          )}
 
           {/* Franjas horarias */}
           {HOURS.map(hour=>{
-            const hasAny = week.some(d=>getResForCell(d.toISOString().slice(0,10),hour).length>0)
+            const hasAny = visibleDays.some(d=>getResForCell(d.toISOString().slice(0,10),hour).length>0)
             return (
-              <div key={hour} style={{display:'grid',gridTemplateColumns:'64px repeat(7,1fr)',borderBottom:`1px solid rgba(255,255,255,0.04)`,minHeight:60,background:hasAny?'rgba(255,255,255,0.005)':'transparent'}}>
-                <div style={{padding:'10px 10px 0 0',textAlign:'right',borderRight:`1px solid ${C.border}`,flexShrink:0}}>
+              <div key={hour} style={{display:'grid',gridTemplateColumns:`${isMobile?'48px':'64px'} repeat(${colCount},1fr)`,borderBottom:`1px solid rgba(255,255,255,0.04)`,minHeight:isMobile?50:60,background:hasAny?'rgba(255,255,255,0.005)':'transparent'}}>
+                <div style={{padding:isMobile?'8px 6px 0 0':'10px 10px 0 0',textAlign:'right',borderRight:`1px solid ${C.border}`,flexShrink:0}}>
                   <span style={{fontSize:11,fontWeight:600,color:C.muted}}>{hour.toString().padStart(2,'0')}:00</span>
                 </div>
-                {week.map((d,di)=>{
+                {visibleDays.map((d,di)=>{
                   const iso = d.toISOString().slice(0,10)
                   const isToday = iso===todayIso
                   const cellRes = getResForCell(iso,hour)
                   return (
-                    <div key={di} className="res-cell" style={{borderRight:`1px solid ${C.border}`,padding:'4px 5px',background:isToday?C.today:'transparent',transition:'background 0.1s',minHeight:60}}>
+                    <div key={di} className="res-cell" style={{borderRight:`1px solid ${C.border}`,padding:'4px 5px',background:isToday?C.today:'transparent',transition:'background 0.1s',minHeight:isMobile?50:60}}>
                       {cellRes.map(r=>(
                         <ResBlock key={r.id} r={r} onHover={handleHover} onLeave={()=>setTooltip(null)}/>
                       ))}
