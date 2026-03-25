@@ -185,6 +185,8 @@ CÓMO HABLAS
 - NUNCA: "Por supuesto", "Con mucho gusto", "Entendido".
 - NUNCA digas que eres IA.
 - Una sola pregunta por turno.
+- Responde RÁPIDO. No pienses demasiado. Sé directa y breve.
+- Si una tool da error, NO lo menciones. Simplemente confirma la reserva de palabra y sigue.
 - Para la carta completa o precios exactos → llama a get_menu_or_services.`
 }
 
@@ -264,93 +266,94 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://restaurante-ai.vercel.app'
     const agentApiKey = process.env.AGENT_API_KEY || ''
 
-    const headers = agentApiKey ? { "x-agent-key": agentApiKey } : {}
-
-    function webhookTool(name: string, description: string, endpoint: string, bodySchema: Record<string, any>) {
-      return {
-        type: "webhook" as const,
-        name,
-        description,
-        api_schema: {
-          url: `${appUrl}${endpoint}`,
-          method: "POST" as const,
-          request_headers: { "Content-Type": "application/json", ...headers },
-          request_body_schema: bodySchema,
-        },
-        response_timeout_secs: 20,
-      }
-    }
+    const reqHeaders = { "Content-Type": "application/json", ...(agentApiKey ? { "x-agent-key": agentApiKey } : {}) }
 
     const tools = [
-      webhookTool(
-        "check_availability",
-        "Comprueba si hay disponibilidad para una fecha, hora y número de personas. Llámalo SIEMPRE antes de confirmar una reserva.",
-        "/api/agent/check-availability",
-        {
-          type: "object",
-          properties: {
-            tenant_id: { type: "string", description: "ID del negocio" },
-            date: { type: "string", description: "Fecha en formato YYYY-MM-DD" },
-            time: { type: "string", description: "Hora en formato HH:MM" },
-            party_size: { type: "number", description: "Número de personas" },
+      {
+        type: "webhook",
+        name: "check_availability",
+        description: "Comprueba disponibilidad para fecha y personas. Llámalo SIEMPRE antes de confirmar.",
+        api_schema: {
+          url: `${appUrl}/api/agent/check-availability`,
+          method: "POST",
+          request_headers: reqHeaders,
+          request_body_schema: {
+            type: "object",
+            properties: {
+              tenant_id: { type: "string", description: "ID del negocio", enum: [tenantId] },
+              date: { type: "string", description: "Fecha YYYY-MM-DD" },
+              time: { type: "string", description: "Hora HH:MM" },
+              party_size: { type: "number", description: "Número de personas" },
+            },
+            required: ["tenant_id", "date"],
           },
-          required: ["tenant_id", "date"],
-        }
-      ),
-      webhookTool(
-        "create_reservation",
-        "Crea una reserva confirmada. Solo llámalo después de verificar disponibilidad y confirmar con el cliente.",
-        "/api/agent/create-reservation",
-        {
-          type: "object",
-          properties: {
-            tenant_id: { type: "string", description: "ID del negocio" },
-            customer_name: { type: "string", description: "Nombre del cliente" },
-            customer_phone: { type: "string", description: "Teléfono del cliente" },
-            date: { type: "string", description: "Fecha YYYY-MM-DD" },
-            time: { type: "string", description: "Hora HH:MM" },
-            party_size: { type: "number", description: "Número de personas" },
-            notes: { type: "string", description: "Notas: alergias, preferencias, etc." },
+        },
+        response_timeout_secs: 10,
+      },
+      {
+        type: "webhook",
+        name: "create_reservation",
+        description: "Crea reserva confirmada. Solo después de verificar disponibilidad.",
+        api_schema: {
+          url: `${appUrl}/api/agent/create-reservation`,
+          method: "POST",
+          request_headers: reqHeaders,
+          request_body_schema: {
+            type: "object",
+            properties: {
+              tenant_id: { type: "string", description: "ID del negocio", enum: [tenantId] },
+              customer_name: { type: "string", description: "Nombre del cliente" },
+              customer_phone: { type: "string", description: "Teléfono del cliente" },
+              date: { type: "string", description: "Fecha YYYY-MM-DD" },
+              time: { type: "string", description: "Hora HH:MM" },
+              party_size: { type: "number", description: "Personas" },
+              notes: { type: "string", description: "Notas adicionales" },
+            },
+            required: ["tenant_id", "customer_name", "date", "time"],
           },
-          required: ["tenant_id", "customer_name", "date", "time"],
-        }
-      ),
-      webhookTool(
-        "get_menu_or_services",
-        "Obtiene la carta, servicios o precios del negocio. Llámalo cuando pregunten por menú, servicios o precios.",
-        "/api/agent/get-menu",
-        {
-          type: "object",
-          properties: {
-            tenant_id: { type: "string", description: "ID del negocio" },
+        },
+        response_timeout_secs: 10,
+      },
+      {
+        type: "webhook",
+        name: "get_menu_or_services",
+        description: "Carta, servicios o precios. Llámalo cuando pregunten.",
+        api_schema: {
+          url: `${appUrl}/api/agent/get-menu`,
+          method: "POST",
+          request_headers: reqHeaders,
+          request_body_schema: {
+            type: "object",
+            properties: {
+              tenant_id: { type: "string", description: "ID del negocio", enum: [tenantId] },
+            },
+            required: ["tenant_id"],
           },
-          required: ["tenant_id"],
-        }
-      ),
-      webhookTool(
-        "save_call_summary",
-        "Guarda un resumen de la llamada al finalizar. Llámalo siempre al despedirte del cliente.",
-        "/api/agent/save-summary",
-        {
-          type: "object",
-          properties: {
-            tenant_id: { type: "string", description: "ID del negocio" },
-            customer_name: { type: "string", description: "Nombre del cliente" },
-            intent: { type: "string", description: "Intención: reserva, cancelacion, consulta, pedido, otro" },
-            summary: { type: "string", description: "Resumen breve de la llamada" },
+        },
+        response_timeout_secs: 10,
+      },
+      {
+        type: "webhook",
+        name: "save_call_summary",
+        description: "Guarda resumen al despedirte del cliente.",
+        api_schema: {
+          url: `${appUrl}/api/agent/save-summary`,
+          method: "POST",
+          request_headers: reqHeaders,
+          request_body_schema: {
+            type: "object",
+            properties: {
+              tenant_id: { type: "string", description: "ID del negocio", enum: [tenantId] },
+              customer_name: { type: "string", description: "Nombre del cliente" },
+              intent: { type: "string", enum: ["reserva", "cancelacion", "consulta", "pedido", "otro"] },
+              summary: { type: "string", description: "Resumen breve" },
+            },
+            required: ["tenant_id", "summary"],
           },
-          required: ["tenant_id", "summary"],
-        }
-      ),
+        },
+        response_timeout_secs: 10,
+      },
     ]
-
-    // Inyectar tenant_id fijo en cada tool para que el agente no tenga que adivinarlo
-    for (const tool of tools) {
-      const props = tool.api_schema.request_body_schema.properties
-      if (props.tenant_id) {
-        props.tenant_id.default = tenantId
-      }
-    }
 
     const agentBody: Record<string, any> = {
       name: `${tenant.name} — Reservo.AI`,
@@ -361,7 +364,21 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
           prompt: { prompt },
           tools,
         },
-        tts: { voice_id: voiceConfig.voice_id, stability: voiceConfig.stability, similarity_boost: voiceConfig.similarity_boost }
+        asr: {
+          quality: "high",
+          provider: "elevenlabs",
+          keywords: [],
+        },
+        turn: {
+          mode: "turn_based",
+          turn_timeout: 8,
+        },
+        tts: {
+          voice_id: voiceConfig.voice_id,
+          stability: voiceConfig.stability,
+          similarity_boost: voiceConfig.similarity_boost,
+          optimize_streaming_latency: 3,
+        }
       }
     }
 
