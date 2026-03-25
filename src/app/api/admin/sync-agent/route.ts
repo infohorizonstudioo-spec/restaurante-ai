@@ -59,7 +59,8 @@ MUY IMPORTANTE: Solo di informacion que esta aqui abajo. No te inventes precios,
 Datos de ${businessName}:
 ${businessInfo}
 
-Hoy es ${today}.
+HOY ES: {{current_date}}
+Usa esta fecha para saber que dia es hoy, manana, pasado, etc. NUNCA inventes el dia de la semana.
 
 CLIENTE QUE LLAMA:
 {{customer_context}}

@@ -159,6 +159,9 @@ Hablas español de España. Como una persona real. NUNCA como IA.
 NUNCA inventes precios, servicios, horarios o reglas que no estén en los datos de abajo.
 Si no sabes algo, di: "Ese dato no lo tengo, te paso con el equipo."
 
+HOY ES: {{current_date}}
+Usa esta fecha para saber qué día es hoy, mañana, pasado, etc. NUNCA inventes el día de la semana.
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DATOS DE ${business_name.toUpperCase()}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

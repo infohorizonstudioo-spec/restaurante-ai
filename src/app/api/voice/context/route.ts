@@ -93,6 +93,12 @@ export async function POST(req: NextRequest) {
       .join(". ")
       .slice(0, 1500) || "Sin informacion adicional."
 
+    // Fecha actual en español (se inyecta en cada llamada, nunca hardcodeada)
+    const now = new Date()
+    const currentDate = now.toLocaleDateString('es-ES', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    })
+
     // Return dynamic variables for ElevenLabs
     return NextResponse.json({
       dynamic_variables: {
@@ -102,6 +108,7 @@ export async function POST(req: NextRequest) {
         tenant_id: tenant.id,
         caller_phone: callerPhone,
         customer_context: customerContext,
+        current_date: currentDate,
       }
     })
 
