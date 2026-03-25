@@ -189,15 +189,6 @@ export default function ConfiguracionPage() {
       ...(isHosb ? { reservation_config: schedCfg } : {}),
     }).eq('id',tenant.id)
 
-    // Reprovisionar agente ElevenLabs con datos actualizados
-    try {
-      await fetch('/api/agent/provision', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant_id: tenant.id })
-      })
-    } catch { /* no crítico */ }
-
     // Sincronizar knowledge a business_knowledge y reprovisionar agente ElevenLabs
     try {
       // Guardar knowledge actualizado
@@ -216,14 +207,10 @@ export default function ConfiguracionPage() {
           horarios: cfg.knowledge.horarios || null,
         })
       })
-      // Reprovisionar agente ElevenLabs con los nuevos datos
+      // Reprovisionar agente ElevenLabs con datos actualizados
+      // provision-agent incluye: prompt completo, tools, voz, webhook post-call
+      // NO llamar a sync-agent porque sobreescribe el prompt con una versión vieja
       await fetch('/api/agent/provision', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant_id: tenant.id })
-      })
-      // Sincronizar prompt del agente ElevenLabs con datos actualizados de Supabase
-      await fetch('/api/admin/sync-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenant_id: tenant.id })
