@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
+import { getCommonStrings } from '@/lib/i18n'
 
 // ── Traducciones humanas de estados ──────────────────────────────────────
 const DECISION_CFG: Record<string,{label:string;color:string;bg:string;icon:string}> = {
@@ -81,6 +82,7 @@ function fmt(sec:number|null) {
 
 export default function LlamadasPage() {
   const { t } = useTenant()
+  const cs = getCommonStrings(t.locale)
   const [calls,setCalls]       = useState<any[]>([])
   const [loading,setLoading]   = useState(true)
   const [loadingMore,setLoadingMore] = useState(false)
@@ -169,7 +171,7 @@ export default function LlamadasPage() {
       <div style={{background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10, position:'sticky', top:0, zIndex:20}}>
         <div>
           <h1 style={{fontSize:16, fontWeight:700, color:C.text, letterSpacing:'-0.02em'}}>{t.nav.calls}</h1>
-          <p style={{fontSize:11, color:C.text3, marginTop:2}}>{calls.length} llamadas en total</p>
+          <p style={{fontSize:11, color:C.text3, marginTop:2}}>{calls.length} {cs.callsTotal}</p>
         </div>
         <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
           {([
@@ -211,17 +213,17 @@ export default function LlamadasPage() {
         {groups.length===0 ? (
           <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'60px 24px', textAlign:'center'}}>
             <div style={{width:56, height:56, borderRadius:'50%', background:C.amberDim, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 14px', fontSize:24}}>📞</div>
-            <p style={{fontSize:15, fontWeight:600, color:C.text, marginBottom:6}}>Sin llamadas aún</p>
+            <p style={{fontSize:15, fontWeight:600, color:C.text, marginBottom:6}}>{cs.noCalls}</p>
             <p style={{fontSize:13, color:C.text3, lineHeight:1.6}}>Las llamadas recibidas aparecerán aquí.</p>
           </div>
-        ) : groups.map(([date,cs]) => (
+        ) : groups.map(([date,dayCalls]) => (
           <div key={date} style={{marginBottom:20}}>
             <p style={{fontSize:10, fontWeight:700, color:C.text3, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:10}}>
               {date===today ? 'HOY' : new Date(date+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'}).toUpperCase()}
-              <span style={{marginLeft:8, fontWeight:400}}>({cs.length})</span>
+              <span style={{marginLeft:8, fontWeight:400}}>({dayCalls.length})</span>
             </p>
             <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden'}}>
-              {cs.map((call,i) => {
+              {dayCalls.map((call,i) => {
                 const expanded = open.has(call.id)
                 const phone = call.caller_phone||call.from_number||'Número oculto'
                 const status = call.status||'completed'
@@ -347,7 +349,7 @@ export default function LlamadasPage() {
                                   })
                                 }}
                                 style={{fontSize:11, padding:'5px 12px', borderRadius:7, border:`1px solid ${C.teal}40`, background:C.tealDim, color:C.teal, cursor:'pointer', fontFamily:'inherit', fontWeight:500, marginRight:8}}>
-                                  📞 Llamar de vuelta
+                                  📞 {cs.callBack}
                                 </button>
                               )}
                               <button onClick={()=>{setCorrecting(call.call_sid);setFeedbackNote('')}}

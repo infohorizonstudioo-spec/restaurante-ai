@@ -222,6 +222,39 @@ export function getTranslations(locale: string): Translations {
   return TRANSLATIONS[locale as Locale] || ES
 }
 
+/** Status labels for reservations — used across 16+ files */
+export function getStatusLabel(status: string, locale: string = 'es'): string {
+  const t = getTranslations(locale)
+  const map: Record<string, string> = {
+    confirmada: t.reservations.confirmed, confirmed: t.reservations.confirmed,
+    pendiente: t.reservations.pending, pending: t.reservations.pending,
+    cancelada: t.reservations.cancelled, cancelled: t.reservations.cancelled,
+    completada: t.reservations.completed, completed: t.reservations.completed,
+    no_show: t.reservations.noShow,
+  }
+  return map[status] || status
+}
+
+/** Common UI strings that are scattered everywhere */
+export function getCommonStrings(locale: string = 'es') {
+  const t = getTranslations(locale)
+  return {
+    today: locale === 'es' ? 'Hoy' : locale === 'en' ? 'Today' : locale === 'fr' ? "Aujourd'hui" : locale === 'pt' ? 'Hoje' : 'Avui',
+    people: locale === 'es' ? 'personas' : locale === 'en' ? 'people' : locale === 'fr' ? 'personnes' : locale === 'pt' ? 'pessoas' : 'persones',
+    noData: locale === 'es' ? 'Sin datos' : locale === 'en' ? 'No data' : locale === 'fr' ? 'Pas de données' : locale === 'pt' ? 'Sem dados' : 'Sense dades',
+    recentCalls: locale === 'es' ? 'Llamadas recientes' : locale === 'en' ? 'Recent calls' : locale === 'fr' ? 'Appels récents' : locale === 'pt' ? 'Chamadas recentes' : 'Trucades recents',
+    viewAll: locale === 'es' ? 'Ver todas →' : locale === 'en' ? 'View all →' : locale === 'fr' ? 'Voir tout →' : locale === 'pt' ? 'Ver todas →' : 'Veure totes →',
+    manage: locale === 'es' ? 'Gestionar →' : locale === 'en' ? 'Manage →' : locale === 'fr' ? 'Gérer →' : locale === 'pt' ? 'Gerir →' : 'Gestionar →',
+    saveChanges: locale === 'es' ? 'Guardar cambios' : locale === 'en' ? 'Save changes' : locale === 'fr' ? 'Enregistrer' : locale === 'pt' ? 'Guardar alterações' : 'Desar canvis',
+    callBack: locale === 'es' ? 'Llamar de vuelta' : locale === 'en' ? 'Call back' : locale === 'fr' ? 'Rappeler' : locale === 'pt' ? 'Ligar de volta' : 'Tornar a trucar',
+    noCalls: locale === 'es' ? 'Sin llamadas aún' : locale === 'en' ? 'No calls yet' : locale === 'fr' ? "Pas d'appels" : locale === 'pt' ? 'Sem chamadas' : 'Sense trucades',
+    noClients: locale === 'es' ? 'Sin clientes' : locale === 'en' ? 'No clients' : locale === 'fr' ? 'Pas de clients' : locale === 'pt' ? 'Sem clientes' : 'Sense clients',
+    noActivity: locale === 'es' ? 'Sin actividad registrada' : locale === 'en' ? 'No activity recorded' : locale === 'fr' ? 'Aucune activité' : locale === 'pt' ? 'Sem atividade' : 'Sense activitat',
+    forecast: locale === 'es' ? 'Así pinta hoy' : locale === 'en' ? "Today's forecast" : locale === 'fr' ? "Prévision du jour" : locale === 'pt' ? 'Previsão de hoje' : 'Previsió avui',
+    callsTotal: locale === 'es' ? 'llamadas en total' : locale === 'en' ? 'total calls' : locale === 'fr' ? 'appels au total' : locale === 'pt' ? 'chamadas no total' : 'trucades en total',
+  }
+}
+
 export const SUPPORTED_LOCALES: { code: Locale; name: string; flag: string }[] = [
   { code: 'es', name: 'Español', flag: '🇪🇸' },
   { code: 'en', name: 'English', flag: '🇬🇧' },

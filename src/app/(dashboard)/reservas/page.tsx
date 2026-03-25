@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
+import { getStatusLabel } from '@/lib/i18n'
 import EcomReservasView from './EcomReservasView'
 
 const C = {
@@ -219,7 +220,7 @@ export default function ReservasPage() {
                 </p>
               </div>
               <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
-                <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,border:`1px solid ${ss.color}25`,flexShrink:0}}>{ss.label}</span>
+                <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,border:`1px solid ${ss.color}25`,flexShrink:0}}>{getStatusLabel(r.status, t.locale)}</span>
                 {r.customer_phone&&<p style={{fontSize:11,color:C.text3}}>{r.customer_phone}</p>}
               </div>
             </div>
@@ -249,7 +250,7 @@ export default function ReservasPage() {
                   style={{padding:'7px 14px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${STATUS_STYLES[s]?.color||C.border}40`,
                     background: modal.status===s ? STATUS_STYLES[s]?.bg||C.surface2 : 'transparent',
                     color: STATUS_STYLES[s]?.color||C.text2,cursor:'pointer',fontFamily:'inherit'}}>
-                  {STATUS_STYLES[s]?.label||s}
+                  {getStatusLabel(s, t.locale)}
                 </button>
               ))}
             </div>

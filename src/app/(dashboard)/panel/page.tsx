@@ -7,7 +7,7 @@ import Link from 'next/link'
 import NotificationBell from '@/components/NotificationBell'
 import { resolveTemplate } from '@/lib/templates'
 import { getEventConfig, type BusinessEventConfig } from '@/lib/event-schemas'
-import { getTranslations } from '@/lib/i18n'
+import { getTranslations, getCommonStrings } from '@/lib/i18n'
 
 const C = {
   amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)', amberGlow:'rgba(240,168,78,0.20)',
@@ -277,7 +277,7 @@ function InsightsPanel({ insights, headerLabel }: { insights: any[]; headerLabel
 }
 
 // ── Forecast Chart — previsión de demanda por hora
-function ForecastChart({ data }: { data: { hour: string; predicted: number; actual: number; level: string; color: string }[] }) {
+function ForecastChart({ data, forecastLabel }: { data: { hour: string; predicted: number; actual: number; level: string; color: string }[]; forecastLabel?: string }) {
   if (!data || data.length === 0) return null
   const max = Math.max(...data.map(d => d.predicted), 1)
   const nowHour = new Date().getHours()
@@ -285,7 +285,7 @@ function ForecastChart({ data }: { data: { hour: string; predicted: number; actu
     <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:'18px 20px', overflow:'hidden' }}>
       <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
         <span style={{ fontSize:15 }}>📊</span>
-        <span style={{ fontSize:14, fontWeight:700, color:C.text }}>Así pinta hoy</span>
+        <span style={{ fontSize:14, fontWeight:700, color:C.text }}>{forecastLabel || 'Así pinta hoy'}</span>
       </div>
       <div style={{ display:'flex', gap:3, alignItems:'flex-end', height:80 }}>
         {data.map(d => {
@@ -541,6 +541,7 @@ export default function PanelPage() {
   const tmpl      = resolveTemplate(tenant.type||'otro')
   const L         = tmpl.labels
   const panelT    = getTranslations(tenant.language || 'es')
+  const cs        = getCommonStrings(tenant.language || 'es')
   const hour      = new Date().getHours()
   const greeting  = hour<13?'Buenos días':hour<20?'Buenas tardes':'Buenas noches'
   const todayCalls= calls.filter(c=>c.started_at?.slice(0,10)===new Date().toISOString().split('T')[0])
@@ -717,7 +718,7 @@ export default function PanelPage() {
         </div>
 
         {/* ── Previsión de hoy ── */}
-        {forecast.length > 0 && <ForecastChart data={forecast}/>}
+        {forecast.length > 0 && <ForecastChart data={forecast} forecastLabel={cs.forecast}/>}
 
         {/* ── Main grid: Live feed + Llamadas ── */}
         <div className="rz-grid-2col" style={{ gap:16 }}>
@@ -725,8 +726,8 @@ export default function PanelPage() {
           {/* Llamadas recientes */}
           <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,overflow:'hidden' }}>
             <div style={{ padding:'14px 20px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between' }}>
-              <h2 style={{ fontSize:14,fontWeight:700,color:C.text }}>Llamadas recientes</h2>
-              <Link href="/llamadas" style={{ fontSize:12,color:C.amber,fontWeight:600,textDecoration:'none' }}>Ver todas →</Link>
+              <h2 style={{ fontSize:14,fontWeight:700,color:C.text }}>{cs.recentCalls}</h2>
+              <Link href="/llamadas" style={{ fontSize:12,color:C.amber,fontWeight:600,textDecoration:'none' }}>{cs.viewAll}</Link>
             </div>
             {calls.length===0 ? (
               <div style={{ padding:'52px 20px',textAlign:'center' }}>
@@ -759,7 +760,7 @@ export default function PanelPage() {
             <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,overflow:'hidden' }}>
               <div style={{ padding:'14px 18px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between' }}>
                 <h2 style={{ fontSize:14,fontWeight:700,color:C.text }}>{L.reservas} hoy</h2>
-                <Link href="/reservas" style={{ fontSize:12,color:C.amber,fontWeight:600,textDecoration:'none' }}>Gestionar →</Link>
+                <Link href="/reservas" style={{ fontSize:12,color:C.amber,fontWeight:600,textDecoration:'none' }}>{cs.manage}</Link>
               </div>
               {reservas.length===0 ? (
                 <div style={{ padding:'32px 16px',textAlign:'center' }}>

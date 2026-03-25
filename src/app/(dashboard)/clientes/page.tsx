@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
+import { getCommonStrings } from '@/lib/i18n'
 import VetClientesView from './VetClientesView'
 import FisioClientesView from './FisioClientesView'
 import PsicoClientesView from './PsicoClientesView'
@@ -53,6 +54,7 @@ function DefaultClientesView() {
   const [editVip,setEditVip] = useState(false)
   const [scores,setScores] = useState<Record<string,any>>({})
   const { template, t } = useTenant()
+  const cs = getCommonStrings(t.locale)
 
   const L = template?.labels
   const clientesLabel = L?.clientes || 'Clientes'
@@ -130,7 +132,7 @@ function DefaultClientesView() {
           {filtered.length===0 ? (
             <div style={{padding:'60px 24px',textAlign:'center'}}>
               <div style={{fontSize:36,marginBottom:10}}>👥</div>
-              <p style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>Sin clientes</p>
+              <p style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>{cs.noClients}</p>
               <p style={{fontSize:13,color:C.text3}}>{clientesLabel} que contacten al agente aparecerán aquí.</p>
             </div>
           ) : filtered.map(c => (
@@ -221,7 +223,7 @@ function DefaultClientesView() {
               </div>
               <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:10}}>Historial</p>
               {loadingH ? <div style={{textAlign:'center' as const,padding:20,color:C.text3}}>Cargando...</div>
-              : historial.length===0 ? <p style={{fontSize:13,color:C.text3,padding:'20px 0'}}>Sin actividad registrada.</p>
+              : historial.length===0 ? <p style={{fontSize:13,color:C.text3,padding:'20px 0'}}>{cs.noActivity}</p>
               : historial.map((h,i)=>(
                 <div key={i} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:'12px 14px',marginBottom:8,display:'flex',gap:10,transition:'background 0.12s'}}
                   onMouseEnter={e=>(e.currentTarget.style.background=C.surface2)}
