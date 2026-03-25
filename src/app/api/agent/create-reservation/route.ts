@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── PASO 2: Crear o recuperar cliente ─────────────────────────────────
+    // Siempre crear cliente si tenemos nombre — phone es opcional
     let customerId: string | null = null
     if (customer_phone) {
       const { data: existing } = await supabase.from("customers")
@@ -79,6 +80,12 @@ export async function POST(req: NextRequest) {
           .select("id").maybeSingle()
         customerId = newC?.id || null
       }
+    } else if (customer_name) {
+      // Sin teléfono pero con nombre → crear cliente igualmente
+      const { data: newC } = await supabase.from("customers")
+        .insert({ tenant_id, name: customer_name })
+        .select("id").maybeSingle()
+      customerId = newC?.id || null
     }
 
     // ── PASO 3: Asignar mesa (la mejor disponible) ───────────────────────

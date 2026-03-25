@@ -32,10 +32,11 @@ const PROMPT_BASE: Record<string, string> = {
 1. Pide nombre del cliente
 2. Pide fecha y hora deseada
 3. Pide número de personas
-4. Llama a check_availability SIEMPRE antes de confirmar
-5. Si hay hueco → llama a create_reservation
+4. Llama a check_availability SIEMPRE antes de confirmar. Si no hay sitio, ofrece las alternativas que devuelve.
+5. Si hay hueco → llama a create_reservation con customer_phone={{caller_phone}}
 6. Confirma: "Perfecto, [nombre] el [dia] a las [hora] para [X] personas."
-7. Al cerrar → llama a save_call_summary`,
+7. Al cerrar → llama a save_call_summary
+IMPORTANTE: Siempre pasa customer_phone={{caller_phone}} cuando llames a create_reservation.`,
 
   bar: `FLUJO PARA RESERVAS:
 1. Pide nombre del cliente
@@ -384,7 +385,14 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
           similarity_boost: voiceConfig.similarity_boost,
           optimize_streaming_latency: 3,
         }
-      }
+      },
+      // Webhook post-call: ElevenLabs llama a nuestro endpoint al terminar cada conversación
+      platform_settings: {
+        webhooks: {
+          post_call_webhook_url: `${appUrl}/api/voice/post-call`,
+          post_call_webhook_events: ["transcript"],
+        },
+      },
     }
 
     let agentId = tenant.el_agent_id
