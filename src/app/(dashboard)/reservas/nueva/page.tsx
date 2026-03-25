@@ -72,6 +72,23 @@ export default function NuevaReservaPage() {
         source:        'manual',
       })
       if(err) throw err
+
+      // Send SMS confirmation
+      if (form.customer_phone) {
+        const sess = await supabase.auth.getSession()
+        if (sess.data.session) {
+          const dateStr = new Date(form.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+          fetch('/api/sms/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
+            body: JSON.stringify({
+              to: form.customer_phone,
+              message: `✅ Reserva confirmada: ${form.customer_name}, ${dateStr} a las ${form.time}, ${form.people} personas. ¡Te esperamos!`
+            })
+          }).catch(() => {})
+        }
+      }
+
       router.push('/reservas')
     } catch(e:any) {
       setError(e.message||'Error al guardar')

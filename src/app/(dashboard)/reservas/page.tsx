@@ -27,6 +27,7 @@ const STATUS_STYLES:Record<string,{bg:string;color:string;label:string}> = {
   cancelled:  {bg:C.redDim,    color:C.red,    label:'Cancelada'},
   completada: {bg:C.amberDim,  color:C.amber,  label:'Completada'},
   completed:  {bg:C.amberDim,  color:C.amber,  label:'Completada'},
+  no_show:    {bg:'rgba(251,146,63,0.10)',color:'#FB923C',label:'No presentado'},
 }
 
 function getWeek(base: Date) {
@@ -218,7 +219,7 @@ export default function ReservasPage() {
             {modal.notes&&<p style={{fontSize:13,color:C.text2,marginBottom:16}}>📝 {modal.notes}</p>}
             {modal.source==='voice_agent'&&<p style={{fontSize:12,color:C.violet,marginBottom:16,background:C.violetDim,padding:'6px 10px',borderRadius:8}}>📞 Reserva creada por el agente de voz</p>}
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>
-              {['confirmada','pendiente','cancelada','completada'].map(s=>(
+              {['confirmada','pendiente','cancelada','completada','no_show'].map(s=>(
                 <button key={s} onClick={()=>updateStatus(modal.id,s)}
                   style={{padding:'7px 14px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${STATUS_STYLES[s]?.color||C.border}40`,
                     background: modal.status===s ? STATUS_STYLES[s]?.bg||C.surface2 : 'transparent',

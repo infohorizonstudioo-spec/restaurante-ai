@@ -49,6 +49,8 @@ function DefaultClientesView() {
   const [selected,setSelected] = useState<any|null>(null)
   const [historial,setHistorial] = useState<any[]>([])
   const [loadingH,setLoadingH] = useState(false)
+  const [editNotes,setEditNotes] = useState('')
+  const [editVip,setEditVip] = useState(false)
   const { template } = useTenant()
 
   const L = template?.labels
@@ -71,8 +73,16 @@ function DefaultClientesView() {
     })()
   },[load])
 
+  async function saveCustomerNotes() {
+    if (!selected) return
+    await supabase.from('customers').update({ notes: editNotes, vip: editVip }).eq('id', selected.id)
+    setSelected((prev: any) => prev ? { ...prev, notes: editNotes, vip: editVip } : null)
+    setClientes(prev => prev.map(c => c.id === selected.id ? { ...c, notes: editNotes, vip: editVip } : c))
+  }
+
   async function openClient(c:any) {
     setSelected(c); setLoadingH(true); setHistorial([])
+    setEditNotes(c.notes || ''); setEditVip(c.vip || false)
     const [resR, callR] = await Promise.all([
       supabase.from('reservations').select('*').eq('tenant_id',c.tenant_id).eq('customer_id',c.id).order('date',{ascending:false}).limit(10),
       supabase.from('calls').select('*').eq('tenant_id',c.tenant_id).eq('caller_phone',c.phone).order('started_at',{ascending:false}).limit(5),
@@ -187,6 +197,19 @@ function DefaultClientesView() {
                   ))}
                 </div>
                 {selected.notes&&<p style={{marginTop:12,fontSize:13,color:C.text2,background:C.surface2,padding:'8px 12px',borderRadius:9}}>📝 {selected.notes}</p>}
+                <div style={{marginTop:14,background:C.surface2,borderRadius:9,padding:14}}>
+                  <label style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase' as const,letterSpacing:'0.06em',display:'block',marginBottom:6}}>Notas</label>
+                  <textarea value={editNotes} onChange={e=>setEditNotes(e.target.value)} placeholder="Añadir notas sobre este cliente…"
+                    style={{width:'100%',minHeight:60,resize:'vertical',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:7,padding:'8px 10px',color:C.text,fontSize:13,fontFamily:'inherit',outline:'none'}}/>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:10}}>
+                    <button onClick={()=>setEditVip(!editVip)} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 12px',borderRadius:7,border:`1px solid ${editVip?C.yellow:C.border}`,background:editVip?C.yellowDim:'transparent',color:editVip?C.yellow:C.text3,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'all 0.12s'}}>
+                      {editVip?'⭐ VIP':'☆ Marcar VIP'}
+                    </button>
+                    <button onClick={saveCustomerNotes} style={{padding:'6px 16px',borderRadius:7,border:'none',background:C.amber,color:'#0C1018',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                      Guardar
+                    </button>
+                  </div>
+                </div>
               </div>
               <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:10}}>Historial</p>
               {loadingH ? <div style={{textAlign:'center' as const,padding:20,color:C.text3}}>Cargando...</div>
