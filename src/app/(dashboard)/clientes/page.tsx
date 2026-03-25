@@ -51,6 +51,7 @@ function DefaultClientesView() {
   const [loadingH,setLoadingH] = useState(false)
   const [editNotes,setEditNotes] = useState('')
   const [editVip,setEditVip] = useState(false)
+  const [scores,setScores] = useState<Record<string,any>>({})
   const { template } = useTenant()
 
   const L = template?.labels
@@ -70,6 +71,12 @@ function DefaultClientesView() {
       const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).maybeSingle()
       if (!p?.tenant_id) return
       await load(p.tenant_id)
+      // Cargar customer scores
+      const sess = await supabase.auth.getSession()
+      if (sess.data.session) {
+        fetch('/api/customer-scores', { headers: { 'Authorization': 'Bearer ' + sess.data.session.access_token } })
+          .then(r => r.json()).then(d => setScores(d.scores || {})).catch(() => {})
+      }
     })()
   },[load])
 
@@ -138,11 +145,12 @@ function DefaultClientesView() {
                   <div style={{display:'flex',alignItems:'center',gap:6}}>
                     <p style={{fontSize:13,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name}</p>
                     {c.vip&&<span style={{fontSize:9,fontWeight:700,color:C.yellow,background:C.yellowDim,padding:'1px 5px',borderRadius:4}}>VIP</span>}
+                    {scores[c.id]&&<span style={{fontSize:9,fontWeight:700,color:scores[c.id].color,background:scores[c.id].color+'18',padding:'1px 5px',borderRadius:4}}>{scores[c.id].score}</span>}
                   </div>
                   <p style={{fontSize:11,color:C.text3,marginTop:1}}>{c.phone||c.email||'Sin contacto'}</p>
                 </div>
                 <div style={{textAlign:'right' as const,flexShrink:0}}>
-                  <p style={{fontFamily:'var(--rz-mono)',fontSize:11,fontWeight:600,color:C.text2}}>{c.total_reservations||c.total_visits||0}</p>
+                  <p style={{fontFamily:'var(--rz-mono)',fontSize:11,fontWeight:600,color:scores[c.id]?.color||C.text2}}>{c.total_reservations||c.total_visits||0}</p>
                   {c.last_visit&&<p style={{fontSize:10,color:C.text3,marginTop:1}}>{new Date(c.last_visit).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</p>}
                 </div>
               </div>
