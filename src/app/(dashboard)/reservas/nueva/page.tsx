@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { PageLoader } from '@/components/ui'
 
 const HOURS = Array.from({length:30},(_,i)=>{
   const h = Math.floor(i/2)+8
@@ -13,6 +14,7 @@ const HOURS = Array.from({length:30},(_,i)=>{
 export default function NuevaReservaPage() {
   const router = useRouter()
   const [tid, setTid]       = useState<string|null>(null)
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
   const [form, setForm]     = useState({
@@ -23,9 +25,9 @@ export default function NuevaReservaPage() {
 
   useEffect(()=>{
     supabase.auth.getUser().then(({data:{user}})=>{
-      if(!user) return
+      if(!user) { setLoading(false); return }
       supabase.from('profiles').select('tenant_id').eq('id',user.id).maybeSingle()
-        .then(({data:p})=>{ if(p?.tenant_id) setTid(p.tenant_id) })
+        .then(({data:p})=>{ if(p?.tenant_id) setTid(p.tenant_id); setLoading(false) })
     })
   },[])
 
@@ -87,6 +89,8 @@ export default function NuevaReservaPage() {
     outline:'none', fontFamily:'inherit', transition:'border-color 0.15s'
   } as React.CSSProperties
   const label = { fontSize:12, fontWeight:600, color:C.sub, letterSpacing:'0.03em', display:'block', marginBottom:6 }
+
+  if (loading) return <PageLoader/>
 
   return (
     <div style={{background:C.bg, minHeight:'100vh', fontFamily:"'Sora',-apple-system,sans-serif"}}>

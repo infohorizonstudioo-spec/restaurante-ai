@@ -155,7 +155,7 @@ export default function ConfiguracionPage() {
   const [saved, setSaved]     = useState(false)
   const [openSection, setOpen]= useState<string|null>('automation')
   const [cfg, setCfg]         = useState<AgentConfig>(DEFAULT)
-  const [basicForm, setBasic] = useState({agent_name:'',business_name:'',agent_phone:''})
+  const [basicForm, setBasic] = useState({agent_name:'',business_name:'',agent_phone:'',transfer_phone:''})
   const [schedCfg, setSchedCfg] = useState<ReservationConfig>({...DEFAULT_SCHED})
   const [isHosb, setIsHosb]   = useState(false)
 
@@ -166,7 +166,7 @@ export default function ConfiguracionPage() {
       const {data:t} = await supabase.from('tenants').select('*').eq('id',p.tenant_id).maybeSingle()
       if(!t) return
       setTenant(t)
-      setBasic({agent_name:t.agent_name||'Sofía', business_name:t.name||'', agent_phone:t.agent_phone||''})
+      setBasic({agent_name:t.agent_name||'Sofía', business_name:t.name||'', agent_phone:t.agent_phone||'', transfer_phone:t.transfer_phone||''})
       setIsHosb(isHosteleria(t.type||'otro'))
       setSchedCfg(parseReservationConfig(t.reservation_config))
       const saved = t.agent_config && Object.keys(t.agent_config).length > 0 ? t.agent_config : DEFAULT
@@ -187,6 +187,7 @@ export default function ConfiguracionPage() {
       agent_name:  newAgent,
       name:        newName,
       agent_phone: basicForm.agent_phone.trim()||null,
+      transfer_phone: basicForm.transfer_phone.trim()||null,
       agent_config: cfg,
       ...(isHosb ? { reservation_config: schedCfg } : {}),
     }).eq('id',tenant.id)
@@ -276,6 +277,11 @@ export default function ConfiguracionPage() {
             <div style={{gridColumn:'1/-1'}}>
               <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>NÚMERO DE TELÉFONO DEL AGENTE</label>
               <input className="rz-inp" value={basicForm.agent_phone} onChange={e=>setBasic(f=>({...f,agent_phone:e.target.value}))} placeholder="+34 600 000 000"/>
+            </div>
+            <div style={{gridColumn:'1/-1'}}>
+              <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>NÚMERO DE TRANSFERENCIA</label>
+              <input className="rz-inp" value={basicForm.transfer_phone} onChange={e=>setBasic(f=>({...f,transfer_phone:e.target.value}))} placeholder="+34 600 000 000"/>
+              <p style={{fontSize:11,color:C.muted,marginTop:4}}>Cuando tu recepcionista no pueda resolver, transferirá la llamada a este número</p>
             </div>
           </div>
         </div>
