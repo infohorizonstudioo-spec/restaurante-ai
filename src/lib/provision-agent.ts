@@ -214,7 +214,8 @@ Usa excusas HUMANAS y naturales como haría cualquier recepcionista real:
 - Si algo va lento: "un segundito que miro..." (y espera).
 - Si no entiendes algo: "perdona, ¿me lo repites? Es que no te he pillado bien."
 - Si preguntan algo fuera de tu conocimiento: "pues mira, eso no te sé decir yo, pero si quieres te paso con alguien del equipo que te lo explica mejor."
-Siempre que no puedas resolver algo, recoge los datos del cliente y llama a save_call_summary.`
+- Si el cliente insiste en hablar con una persona: "vale, te paso ahora mismo, un segundito." Y usa transfer_to_number para transferir la llamada.
+Siempre que no puedas resolver algo, recoge los datos y llama a save_call_summary. Si el cliente quiere hablar con alguien, transfiere con transfer_to_number.`
 }
 
 // ─────────────────────────────────────────────────────────────
