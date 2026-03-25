@@ -45,6 +45,7 @@ const DEFAULT: AgentConfig = {
   knowledge: { services:'', menu:'', conditions:'', faqs:'', horarios:'' },
   conversation_flow: ['nombre','personas','fecha','hora','confirmar'],
   special_cases: { allergies:'review', birthdays:'confirm', events:'review', vip:'confirm' },
+  order_alert_mode: 'banner' as 'none' | 'banner' | 'redirect',
 }
 
 interface AgentConfig {
@@ -55,6 +56,7 @@ interface AgentConfig {
   knowledge: { services:string; menu:string; conditions:string; faqs:string; horarios:string }
   conversation_flow: string[]
   special_cases: { allergies:string; birthdays:string; events:string; vip:string }
+  order_alert_mode?: 'none' | 'banner' | 'redirect'
 }
 
 
@@ -372,6 +374,31 @@ export default function ConfiguracionPage() {
             </div>
           </div>
         </SectionCard>
+
+        {/* Solo para hostelería */}
+        {isHosb && (
+        <SectionCard id="orders" icon="🛍️" title="Alertas de pedidos" sub="Cómo te avisa cuando entra un pedido por teléfono" active={openSection==='orders'} onClick={()=>toggleSection('orders')}>
+          <p style={{fontSize:12,color:C.muted,marginBottom:14}}>Cuando un cliente hace un pedido por teléfono, ¿cómo quieres enterarte?</p>
+          {([
+            { value:'banner', label:'Banner + sonido', desc:'Aparece un aviso arriba de la pantalla con sonido. Toca para ir a pedidos.', icon:'🔔' },
+            { value:'redirect', label:'Ir a pedidos automáticamente', desc:'Te cambia directamente a la pantalla de pedidos cuando entra uno nuevo.', icon:'📲' },
+            { value:'none', label:'Sin alerta', desc:'Solo aparece en el panel como actividad. Sin aviso especial.', icon:'🔕' },
+          ] as const).map(opt => (
+            <div key={opt.value} onClick={()=>setCfg(c=>({...c,order_alert_mode:opt.value}))}
+              style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',borderRadius:10,cursor:'pointer',
+                border:`1px solid ${cfg.order_alert_mode===opt.value?C.amber+'44':C.border}`,
+                background:cfg.order_alert_mode===opt.value?C.amberDim:'transparent',
+                transition:'all 0.15s',marginBottom:8}}>
+              <span style={{fontSize:20}}>{opt.icon}</span>
+              <div style={{flex:1}}>
+                <p style={{fontSize:13,fontWeight:600,color:cfg.order_alert_mode===opt.value?C.amber:C.text}}>{opt.label}</p>
+                <p style={{fontSize:11,color:C.muted,marginTop:2}}>{opt.desc}</p>
+              </div>
+              {cfg.order_alert_mode===opt.value && <span style={{fontSize:16,color:C.amber}}>✓</span>}
+            </div>
+          ))}
+        </SectionCard>
+        )}
 
         <div style={{height:40}}/>
       </div>

@@ -395,10 +395,19 @@ export default function PanelPage() {
         pushEvent({ type:'order' as any, icon:'🛍️', color:C.violet,
           title:`Nuevo pedido — ${o.customer_name||o.customer_phone||'Cliente'}`,
           sub:`${itemList} · ${o.order_type||'recoger'}`, priority:'high' })
-        // Alerta sonora + banner para pedidos nuevos
-        setOrderAlert({ name: o.customer_name||'Cliente', type: o.order_type||'recoger', id: o.id })
-        try { new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2JkZiYl5OSjYeFgoB/f4GDhYmNkJKUlZWUko+MiIWCf31+f4GDhYmMj5GTlJWVlJKQjYmGg4B+fX5/gYSHioyPkZOUlZWUkpCNiYaDgH5+fn+BhIeKjI+Rk5SVlZSSkI2JhoOAfn5+f4GEh4qMj5GTlJWVlJKQjYmGg4B+fn5/gYSHioyPkZOUlZWUkpCNiYaDgH5+fn+BhIeKjI+Rk5SVlQ==').play() } catch {}
-        setTimeout(() => setOrderAlert(null), 15000)
+        // Alerta de pedido según configuración del negocio
+        const alertMode = tenant?.agent_config?.order_alert_mode || 'banner'
+        if (alertMode !== 'none') {
+          try { new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2JkZiYl5OSjYeFgoB/f4GDhYmNkJKUlZWUko+MiIWCf31+f4GDhYmMj5GTlJWVlJKQjYmGg4B+fX5/gYSHioyPkZOUlZWUkpCNiYaDgH5+fn+BhIeKjI+Rk5SVlZSSkI2JhoOAfn5+f4GEh4qMj5GTlJWVlJKQjYmGg4B+fn5/gYSHioyPkZOUlZWUkpCNiYaDgH5+fn+BhIeKjI+Rk5SVlQ==').play() } catch {}
+          if (alertMode === 'redirect') {
+            // Ir directamente a pedidos
+            window.location.href = '/pedidos'
+          } else {
+            // Mostrar banner
+            setOrderAlert({ name: o.customer_name||'Cliente', type: o.order_type||'recoger', id: o.id })
+            setTimeout(() => setOrderAlert(null), 15000)
+          }
+        }
       })
       .on('postgres_changes',{ event:'UPDATE', schema:'public', table:'order_events', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const o = payload.new as any
