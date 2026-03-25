@@ -110,6 +110,32 @@ function CallSim() {
   )
 }
 
+/* ─── DEMO WIDGET — ElevenLabs embed ─── */
+function DemoWidget() {
+  const widgetRef = useRef<HTMLDivElement>(null)
+  const [loaded, setLoaded] = useState(false)
+  useEffect(() => {
+    if (loaded) return
+    const script = document.createElement('script')
+    script.src = 'https://elevenlabs.io/convai-widget/index.js'
+    script.async = true
+    script.onload = () => setLoaded(true)
+    document.body.appendChild(script)
+    return () => { try { document.body.removeChild(script) } catch {} }
+  }, [loaded])
+  return (
+    <div style={{maxWidth:480,margin:'0 auto 48px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(240,168,78,0.25)',borderRadius:20,padding:24,textAlign:'center'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:16}}>
+        <div style={{width:10,height:10,borderRadius:'50%',background:'#4ADE80',animation:'pulse 2s ease-in-out infinite'}}/>
+        <span style={{fontSize:14,fontWeight:600,color:'#E8EEF6'}}>Prueba ahora — habla con nuestra IA</span>
+      </div>
+      <p style={{fontSize:13,color:'rgba(255,255,255,0.45)',marginBottom:20}}>Pulsa el botón y habla como si llamaras a un negocio. Pide una reserva, pregunta precios, o lo que quieras.</p>
+      <div ref={widgetRef} dangerouslySetInnerHTML={{__html:'<elevenlabs-convai agent-id="agent_0701kkw2sdx5fp685xp6ckngf6zj"></elevenlabs-convai>'}}/>
+      <p style={{fontSize:11,color:'rgba(255,255,255,0.2)',marginTop:12}}>Conversación real con IA · Sin registro · Gratis</p>
+    </div>
+  )
+}
+
 /* ─── MAIN PAGE ─── */
 export default function HomePage() {
   const C = {
@@ -298,6 +324,9 @@ export default function HomePage() {
             Mira lo que pasa cuando un cliente llama. No repite respuestas. Escucha lo que necesita y actúa como alguien de tu equipo.
           </p>
         </div>
+
+        {/* Live demo widget — habla con el agente real */}
+        <DemoWidget />
 
         {/* Demo scenarios */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="prob-grid">
