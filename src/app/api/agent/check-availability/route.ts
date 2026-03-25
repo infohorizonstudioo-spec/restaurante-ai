@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { validateAgentKey } from "@/lib/agent-auth"
 import { parseReservationConfig, checkSlotAvailability, generateSlots } from "@/lib/scheduling-engine"
+import { resolveTemplate } from "@/lib/templates"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,8 +30,12 @@ export async function POST(req: NextRequest) {
     ])
 
     const cfg = parseReservationConfig(tenantRes.data?.reservation_config)
+    const tenantType = tenantRes.data?.type || 'otro'
+    const tmpl = resolveTemplate(tenantType)
     const zones = zonesRes.data || []
-    const tables = tablesRes.data || []
+    // Solo usar mesas para negocios que las tengan (restaurantes, bares, etc.)
+    // Servicios (clínicas, peluquerías, etc.) no usan mesas → pasar array vacío
+    const tables = tmpl.hasSpaces ? (tablesRes.data || []) : []
     const existing = (reservasRes.data || []).map(r => ({
       time: r.time || '',
       people: r.people || r.party_size || 1,

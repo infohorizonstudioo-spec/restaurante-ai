@@ -226,27 +226,59 @@ export function checkSlotAvailability(input: SlotCheckInput, _depth = 0): SlotCh
   }
 
   // PASO 5 — Mesa disponible con capacidad suficiente
-  const reservedTableIds = new Set(slotRes.map(r => r.table_id).filter(Boolean))
-  let freeTables = tables.filter(t =>
-    !reservedTableIds.has(t.id) &&
-    (t.capacity == null || t.capacity === 0 || t.capacity >= party_size) &&
-    t.status !== 'bloqueada'
-  )
-  if (resolvedZoneId) freeTables = freeTables.filter(t => t.zone_id === resolvedZoneId)
+  // Si no hay mesas configuradas (servicios, o negocio sin plano) → saltar este paso
+  if (tables.length === 0) {
+    trace.push(`[5] Sin mesas configuradas — sin restricción de espacio ✓`)
+  } else {
+    const reservedTableIds = new Set(slotRes.map(r => r.table_id).filter(Boolean))
+    const allFree = tables.filter(t => !reservedTableIds.has(t.id) && t.status !== 'bloqueada')
+    let zoneFree = resolvedZoneId ? allFree.filter(t => t.zone_id === resolvedZoneId) : allFree
 
-  if (!freeTables.length && tables.length > 0) {
-    trace.push(`[5] Sin mesa disponible para ${party_size} personas`)
-    return {
-      available: false, reason: 'no_table_available',
-      alternatives: _depth === 0 ? findAlternatives(input, 3) : [],
-      slot_reservations: slotsUsed, slot_people: slotPeople,
-      slots_remaining: slotsRemaining, people_remaining: peopleRemaining,
-      zone_remaining: zoneRemaining,
-      message: `No hay mesa disponible para ${party_size} personas a las ${time}`,
-      trace,
+    // Buscar mesa individual con capacidad suficiente
+    let freeTables = zoneFree.filter(t => t.capacity == null || t.capacity === 0 || t.capacity >= party_size)
+
+    if (!freeTables.length) {
+      // No hay mesa individual → buscar combinación de mesas combinables
+      const combinables = zoneFree.filter(t => (t as any).combinable)
+      if (combinables.length >= 2) {
+        const totalCapacity = combinables.reduce((s, t) => s + (t.capacity || 2), 0)
+        if (totalCapacity >= party_size) {
+          trace.push(`[5] Sin mesa individual para ${party_size}p, pero ${combinables.length} mesas combinables (capacidad total: ${totalCapacity}) ✓`)
+        } else {
+          trace.push(`[5] Mesas combinables insuficientes: ${totalCapacity} < ${party_size}`)
+          return {
+            available: false, reason: 'no_table_available' as any,
+            alternatives: _depth === 0 ? findAlternatives(input, 3) : [],
+            slot_reservations: slotsUsed, slot_people: slotPeople,
+            slots_remaining: slotsRemaining, people_remaining: peopleRemaining,
+            zone_remaining: zoneRemaining,
+            message: `No hay mesa con capacidad para ${party_size} personas a las ${time}`,
+            trace,
+          }
+        }
+      } else {
+        // Sin mesa individual ni combinables
+        // Comprobar si la capacidad total del local cubre → permitir sin mesa asignada
+        const totalFreeCapacity = zoneFree.reduce((s, t) => s + (t.capacity || 2), 0)
+        if (totalFreeCapacity >= party_size) {
+          trace.push(`[5] Sin mesa individual para ${party_size}p, pero capacidad total libre suficiente (${totalFreeCapacity}) — se asignará manualmente ✓`)
+        } else {
+          trace.push(`[5] Sin mesa para ${party_size} personas (capacidad libre: ${totalFreeCapacity})`)
+          return {
+            available: false, reason: 'no_table_available' as any,
+            alternatives: _depth === 0 ? findAlternatives(input, 3) : [],
+            slot_reservations: slotsUsed, slot_people: slotPeople,
+            slots_remaining: slotsRemaining, people_remaining: peopleRemaining,
+            zone_remaining: zoneRemaining,
+            message: `No hay mesa con capacidad para ${party_size} personas a las ${time}. La capacidad libre es de ${totalFreeCapacity} personas.`,
+            trace,
+          }
+        }
+      }
+    } else {
+      trace.push(`[5] ${freeTables.length} mesa(s) disponible(s) con capacidad para ${party_size}p ✓`)
     }
   }
-  trace.push(`[5] ${freeTables.length > 0 ? freeTables.length + ' mesas' : 'Sin restricción de mesas'} disponibles ✓`)
 
   // PASO 6 — Conflicto de buffer (reservas previas cercanas)
   const allRes = existing_reservations

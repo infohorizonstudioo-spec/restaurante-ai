@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { validateAgentKey } from "@/lib/agent-auth"
 import { parseReservationConfig, checkSlotAvailability } from "@/lib/scheduling-engine"
+import { resolveTemplate } from "@/lib/templates"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,8 +37,10 @@ export async function POST(req: NextRequest) {
     ])
 
     const cfg = parseReservationConfig(tenantRes.data?.reservation_config)
+    const tenantType = tenantRes.data?.type || 'otro'
+    const tmpl = resolveTemplate(tenantType)
     const zones = zonesRes.data || []
-    const tables = tablesRes.data || []
+    const tables = tmpl.hasSpaces ? (tablesRes.data || []) : []
     const existing = (reservasRes.data || []).map(r => ({
       time: r.time || '', people: r.people || r.party_size || 1,
       zone_id: r.zone_id, table_id: r.table_id,
