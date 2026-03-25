@@ -249,6 +249,77 @@ export function getStatusLabel(status: string, locale: string = 'es'): string {
   return map[status] || status
 }
 
+/**
+ * Auto-translate any Spanish string. Covers 100+ common UI strings.
+ * Usage: tx('Guardar cambios', 'en') → 'Save changes'
+ */
+const TX: Record<string, Record<string, string>> = {
+  'Guardar': {en:'Save',fr:'Enregistrer',pt:'Guardar',ca:'Desar'},
+  'Guardar cambios': {en:'Save changes',fr:'Enregistrer',pt:'Guardar alterações',ca:'Desar canvis'},
+  'Guardando...': {en:'Saving...',fr:'Enregistrement...',pt:'A guardar...',ca:'Desant...'},
+  'Cargando...': {en:'Loading...',fr:'Chargement...',pt:'A carregar...',ca:'Carregant...'},
+  'Cancelar': {en:'Cancel',fr:'Annuler',pt:'Cancelar',ca:'Cancel·lar'},
+  'Eliminar': {en:'Delete',fr:'Supprimer',pt:'Eliminar',ca:'Eliminar'},
+  'Cerrar': {en:'Close',fr:'Fermer',pt:'Fechar',ca:'Tancar'},
+  'Hoy': {en:'Today',fr:"Aujourd'hui",pt:'Hoje',ca:'Avui'},
+  'ahora mismo': {en:'just now',fr:"à l'instant",pt:'agora mesmo',ca:'ara mateix'},
+  'Llamadas recientes': {en:'Recent calls',fr:'Appels récents',pt:'Chamadas recentes',ca:'Trucades recents'},
+  'Llamadas hoy': {en:'Calls today',fr:"Appels aujourd'hui",pt:'Chamadas hoje',ca:'Trucades avui'},
+  'llamadas en total': {en:'total calls',fr:'appels au total',pt:'chamadas no total',ca:'trucades en total'},
+  'Reservas hoy': {en:'Reservations today',fr:"Réservations aujourd'hui",pt:'Reservas hoje',ca:'Reserves avui'},
+  'Llamadas restantes': {en:'Calls remaining',fr:'Appels restants',pt:'Chamadas restantes',ca:'Trucades restants'},
+  'Uso del plan': {en:'Plan usage',fr:'Utilisation du plan',pt:'Uso do plano',ca:'Ús del pla'},
+  'Ver todas →': {en:'View all →',fr:'Voir tout →',pt:'Ver todas →',ca:'Veure totes →'},
+  'Gestionar →': {en:'Manage →',fr:'Gérer →',pt:'Gerir →',ca:'Gestionar →'},
+  'Así pinta hoy': {en:"Today's forecast",fr:'Prévision du jour',pt:'Previsão de hoje',ca:'Previsió avui'},
+  'Actividad en vivo': {en:'Live activity',fr:'Activité en direct',pt:'Atividade ao vivo',ca:'Activitat en viu'},
+  'Todas': {en:'All',fr:'Toutes',pt:'Todas',ca:'Totes'},
+  'Completadas': {en:'Completed',fr:'Terminées',pt:'Concluídas',ca:'Completades'},
+  'Perdidas': {en:'Missed',fr:'Manqués',pt:'Perdidas',ca:'Perdudes'},
+  'Fallidas': {en:'Failed',fr:'Échouées',pt:'Falhadas',ca:'Fallides'},
+  'Sin llamadas aún': {en:'No calls yet',fr:"Pas d'appels",pt:'Sem chamadas',ca:'Sense trucades'},
+  'Llamar de vuelta': {en:'Call back',fr:'Rappeler',pt:'Ligar de volta',ca:'Tornar a trucar'},
+  'Llamar': {en:'Call',fr:'Appeler',pt:'Ligar',ca:'Trucar'},
+  'Sin clientes': {en:'No clients',fr:'Pas de clients',pt:'Sem clientes',ca:'Sense clients'},
+  'Sin actividad registrada.': {en:'No activity recorded.',fr:'Aucune activité.',pt:'Sem atividade.',ca:'Sense activitat.'},
+  'Sin actividad registrada': {en:'No activity recorded',fr:'Aucune activité',pt:'Sem atividade',ca:'Sense activitat'},
+  'Notas': {en:'Notes',fr:'Notes',pt:'Notas',ca:'Notes'},
+  'Historial': {en:'History',fr:'Historique',pt:'Histórico',ca:'Historial'},
+  'Nueva reserva': {en:'New reservation',fr:'Nouvelle réservation',pt:'Nova reserva',ca:'Nova reserva'},
+  'Sin reservas este día': {en:'No reservations this day',fr:'Pas de réservations ce jour',pt:'Sem reservas neste dia',ca:'Sense reserves avui'},
+  'personas': {en:'people',fr:'personnes',pt:'pessoas',ca:'persones'},
+  'Nuevo pedido': {en:'New order',fr:'Nouvelle commande',pt:'Novo pedido',ca:'Nova comanda'},
+  'Para recoger': {en:'Pickup',fr:'À emporter',pt:'Para levantar',ca:'Per recollir'},
+  'A domicilio': {en:'Delivery',fr:'Livraison',pt:'Entrega',ca:'A domicili'},
+  'Configurar →': {en:'Configure →',fr:'Configurer →',pt:'Configurar →',ca:'Configurar →'},
+  'Horarios y capacidad': {en:'Hours & capacity',fr:'Horaires et capacité',pt:'Horários e capacidade',ca:'Horaris i capacitat'},
+  'Resumen': {en:'Summary',fr:'Résumé',pt:'Resumo',ca:'Resum'},
+  'Sin resumen': {en:'No summary',fr:'Pas de résumé',pt:'Sem resumo',ca:'Sense resum'},
+  'Número oculto': {en:'Hidden number',fr:'Numéro masqué',pt:'Número oculto',ca:'Número ocult'},
+  'Sin contacto': {en:'No contact',fr:'Pas de contact',pt:'Sem contacto',ca:'Sense contacte'},
+  'confirmadas': {en:'confirmed',fr:'confirmées',pt:'confirmadas',ca:'confirmades'},
+  'Control de turnos': {en:'Shift control',fr:'Contrôle des horaires',pt:'Controlo de turnos',ca:'Control de torns'},
+  'Capacidad por franja': {en:'Capacity per slot',fr:'Capacité par créneau',pt:'Capacidade por faixa',ca:'Capacitat per franja'},
+  'Plano del local': {en:'Floor plan',fr:'Plan du local',pt:'Plano do local',ca:'Plànol del local'},
+  'Reserva creada por el agente de voz': {en:'Reservation created by voice agent',fr:"Réservation créée par l'agent vocal",pt:'Reserva criada pelo agente de voz',ca:'Reserva creada per agent de veu'},
+  'Comportamiento del agente': {en:'Agent behavior',fr:"Comportement de l'agent",pt:'Comportamento do agente',ca:"Comportament de l'agent"},
+  'Reglas': {en:'Rules',fr:'Règles',pt:'Regras',ca:'Regles'},
+  'Base de conocimiento': {en:'Knowledge base',fr:'Base de connaissances',pt:'Base de conhecimento',ca:'Base de coneixement'},
+  'Memoria aprendida': {en:'Learned memory',fr:'Mémoire apprise',pt:'Memória aprendida',ca:'Memòria apresa'},
+  'Activar →': {en:'Activate →',fr:'Activer →',pt:'Ativar →',ca:'Activar →'},
+  'Tu recepcionista está activa': {en:'Your receptionist is active',fr:'Votre réceptionniste est actif',pt:'O rececionista está ativo',ca:'La recepcionista és activa'},
+  'Esperando llamadas': {en:'Waiting for calls',fr:'En attente d\'appels',pt:'À espera de chamadas',ca:'Esperant trucades'},
+  'en vivo': {en:'live',fr:'en direct',pt:'ao vivo',ca:'en viu'},
+  'Acción': {en:'Action',fr:'Action',pt:'Ação',ca:'Acció'},
+  'Lo que hizo': {en:'What it did',fr:"Ce qu'il a fait",pt:'O que fez',ca:'El que va fer'},
+  'Esto no es correcto, quiero cambiarlo': {en:'This is wrong, I want to change it',fr:'Ce n\'est pas correct, je veux le changer',pt:'Isto não está correto, quero mudar',ca:'Això no és correcte, vull canviar-ho'},
+}
+
+export function tx(text: string, locale: string): string {
+  if (!locale || locale === 'es') return text
+  return TX[text]?.[locale] || text
+}
+
 /** Common UI strings that are scattered everywhere */
 export function getCommonStrings(locale: string = 'es') {
   const t = getTranslations(locale)

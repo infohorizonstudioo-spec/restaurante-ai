@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { resolveTemplate, TemplateConfig } from '@/lib/templates'
-import { getTranslations, Translations } from '@/lib/i18n'
+import { getTranslations, tx as txFn, Translations } from '@/lib/i18n'
 
 interface TenantData {
   id: string; name: string; type: string; plan: string
@@ -16,13 +16,14 @@ interface TenantContextValue {
   tenant: TenantData | null
   template: TemplateConfig | null
   t: Translations
+  tx: (text: string) => string
   userId: string | null
   loading: boolean
   reload: () => void
 }
 
 const TenantContext = createContext<TenantContextValue>({
-  tenant: null, template: null, t: getTranslations('es'), userId: null, loading: true, reload: () => {}
+  tenant: null, template: null, t: getTranslations('es'), tx: (s: string) => s, userId: null, loading: true, reload: () => {}
 })
 
 export function TenantProvider({ children }: { children: ReactNode }) {
@@ -54,7 +55,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   }, [tick])
 
   return (
-    <TenantContext.Provider value={{ tenant, template, t, userId, loading, reload: () => setTick(n => n + 1) }}>
+    <TenantContext.Provider value={{ tenant, template, t, tx: (s: string) => txFn(s, tenant?.language || 'es'), userId, loading, reload: () => setTick(n => n + 1) }}>
       {children}
     </TenantContext.Provider>
   )
