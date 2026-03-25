@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
+import { getStatusLabel } from '@/lib/i18n'
 
 const C = {
   amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
@@ -209,7 +210,7 @@ export default function PsicoReservasView() {
               </div>
               <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
                 <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:session.bg,color:session.color,fontWeight:700,border:`1px solid ${session.color}25`,flexShrink:0}}>{session.label}</span>
-                <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,border:`1px solid ${ss.color}25`,flexShrink:0}}>{ss.label}</span>
+                <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,border:`1px solid ${ss.color}25`,flexShrink:0}}>{getStatusLabel(r.status, 'es')}</span>
               </div>
             </div>
           )
@@ -240,7 +241,7 @@ export default function PsicoReservasView() {
                   style={{padding:'7px 14px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${STATUS_STYLES[s]?.color||C.border}40`,
                     background: modal.status===s ? STATUS_STYLES[s]?.bg||C.surface2 : 'transparent',
                     color: STATUS_STYLES[s]?.color||C.text2,cursor:'pointer',fontFamily:'inherit'}}>
-                  {STATUS_STYLES[s]?.label||s}
+                  {getStatusLabel(s, 'es')}
                 </button>
               ))}
             </div>

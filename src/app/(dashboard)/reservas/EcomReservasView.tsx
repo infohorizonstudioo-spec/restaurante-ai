@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
+import { getStatusLabel } from '@/lib/i18n'
 
 const C = {
   amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
@@ -107,7 +108,7 @@ export default function EcomReservasView() {
               return (
                 <div key={s} style={{ background: C.surface, border: `1px solid ${ss.color}33`, borderRadius: 12, padding: '12px 16px' }}>
                   <p style={{ fontSize: 22, fontWeight: 700, color: ss.color }}>{cnt}</p>
-                  <p style={{ fontSize: 12, color: ss.color, fontWeight: 600 }}>{ss.label}</p>
+                  <p style={{ fontSize: 12, color: ss.color, fontWeight: 600 }}>{getStatusLabel(s, 'es')}</p>
                 </div>
               )
             })}
@@ -135,7 +136,7 @@ export default function EcomReservasView() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                   <p style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{p.customer_name || 'Sin nombre'}</p>
-                  <span style={{ fontSize: 10, padding: '3px 9px', borderRadius: 8, background: ss.bg, color: ss.color, fontWeight: 700, border: `1px solid ${ss.color}25`, flexShrink: 0 }}>{ss.label}</span>
+                  <span style={{ fontSize: 10, padding: '3px 9px', borderRadius: 8, background: ss.bg, color: ss.color, fontWeight: 700, border: `1px solid ${ss.color}25`, flexShrink: 0 }}>{getStatusLabel(p.status, 'es')}</span>
                 </div>
                 {p.notes && <p style={{ fontSize: 12, color: C.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.notes}</p>}
                 {p.customer_phone && <p style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>📞 {p.customer_phone}</p>}
@@ -176,7 +177,7 @@ export default function EcomReservasView() {
                       style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: `1px solid ${ss.color}40`,
                         background: modal.status === s ? ss.bg : 'transparent',
                         color: ss.color, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      {ss.label}
+                      {getStatusLabel(s, 'es')}
                     </button>
                   )
                 })}

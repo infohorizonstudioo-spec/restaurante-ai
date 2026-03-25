@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
+import { getStatusLabel } from '@/lib/i18n'
 
 const C = {
   amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
@@ -198,7 +199,7 @@ export default function FisioClientesView() {
                         {h.notes ? h.notes.slice(0,60)+(h.notes.length>60?'...':'') : 'Sesión'}
                       </p>
                     </div>
-                    <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,alignSelf:'center'}}>{ss.label}</span>
+                    <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,alignSelf:'center'}}>{getStatusLabel(st, 'es')}</span>
                   </div>
                 )
               })}

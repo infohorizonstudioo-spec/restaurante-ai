@@ -1,0 +1,17 @@
+COMPLETADO
+
+Centralized hardcoded Spanish status labels to use getStatusLabel() from src/lib/i18n.ts.
+
+Modified files:
+- src/lib/i18n.ts (added ecom-specific statuses to getStatusLabel mapping)
+- src/app/(dashboard)/reservas/BarbeReservasView.tsx
+- src/app/(dashboard)/reservas/VetReservasView.tsx
+- src/app/(dashboard)/reservas/FisioReservasView.tsx
+- src/app/(dashboard)/reservas/PeluReservasView.tsx
+- src/app/(dashboard)/reservas/PsicoReservasView.tsx
+- src/app/(dashboard)/reservas/AsesorReservasView.tsx
+- src/app/(dashboard)/reservas/SegurosReservasView.tsx
+- src/app/(dashboard)/reservas/InmoReservasView.tsx
+- src/app/(dashboard)/reservas/EcomReservasView.tsx
+- src/app/(dashboard)/reservas/AcademiaClasesView.tsx
+- src/app/(dashboard)/clientes/FisioClientesView.tsx

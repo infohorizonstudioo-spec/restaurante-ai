@@ -231,6 +231,12 @@ export function getStatusLabel(status: string, locale: string = 'es'): string {
     cancelada: t.reservations.cancelled, cancelled: t.reservations.cancelled,
     completada: t.reservations.completed, completed: t.reservations.completed,
     no_show: t.reservations.noShow,
+    // ecom / order statuses
+    nuevo: locale === 'es' ? 'Nuevo' : locale === 'en' ? 'New' : locale === 'fr' ? 'Nouveau' : locale === 'pt' ? 'Novo' : 'Nuevo',
+    confirmado: t.orders.confirmed,
+    enviado: locale === 'es' ? 'Enviado' : locale === 'en' ? 'Shipped' : locale === 'fr' ? 'Expédié' : locale === 'pt' ? 'Enviado' : 'Enviado',
+    entregado: t.orders.delivered,
+    cancelado: locale === 'es' ? 'Cancelado' : locale === 'en' ? 'Cancelled' : locale === 'fr' ? 'Annulé' : locale === 'pt' ? 'Cancelado' : 'Cancelado',
   }
   return map[status] || status
 }
