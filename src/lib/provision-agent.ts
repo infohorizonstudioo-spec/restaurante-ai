@@ -436,14 +436,19 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
           keywords: [],
         },
         turn: {
-          mode: "turn_based",
-          turn_timeout: 8,
+          mode: "turn",
+          turn_timeout: 1.5,
+          turn_eagerness: "eager",
+          speculative_turn: true,
         },
         tts: {
+          model_id: "eleven_v3_conversational",
           voice_id: voiceConfig.voice_id,
           stability: voiceConfig.stability,
           similarity_boost: voiceConfig.similarity_boost,
-          optimize_streaming_latency: 3,
+          optimize_streaming_latency: 4,
+          speed: 1.12,
+          expressive_mode: true,
         }
       },
       // Webhook post-call: ElevenLabs llama a nuestro endpoint al terminar cada conversación
