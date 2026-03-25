@@ -155,7 +155,7 @@ export default function FacturacionPage() {
         </div>
 
         {/* KPIs */}
-        <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:14}}>
+        <div className="rz-grid-3col" style={{gap:12, marginBottom:14}}>
           {[
             {label:'Llamadas usadas', value:billing.used_calls, sub:'este ciclo', color:pi.color},
             {label:'Llamadas restantes', value:Math.max(0,billing.remaining_calls), sub:'antes de extras', color:billing.remaining_calls<=10?C.red:C.green},
@@ -173,7 +173,7 @@ export default function FacturacionPage() {
         {isTrial && (
           <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:'20px 24px', marginBottom:14}}>
             <p style={{fontSize:15, fontWeight:700, color:C.text, marginBottom:16, letterSpacing:'-0.01em'}}>Elige tu plan</p>
-            <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12}}>
+            <div className="rz-grid-3col" style={{gap:12}}>
               {(['starter','pro','business'] as const).map(p=>{
                 const pp=PLAN[p]; return(
                   <div key={p} style={{background:C.surface2, border:`1px solid ${C.border}`, borderRadius:14, padding:'18px', textAlign:'center'}}>

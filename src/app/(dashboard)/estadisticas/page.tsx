@@ -114,7 +114,7 @@ export default function EstadisticasPage(){
       <div style={{maxWidth:1000,margin:'0 auto',padding:'24px'}}>
 
         {/* KPIs */}
-        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
+        <div className="rz-grid-4col" style={{gap:12,marginBottom:20}}>
           {[
             {label:'Llamadas este mes',value:d.callsMonth,sub:'Completadas: '+d.callsMonthCompleted,color:'#F0A84E'},
             {label:'Reservas este mes', value:d.resMonth,  sub:'Via agente: '+d.resVoiceMonth,   color:'#34D399'},
@@ -129,7 +129,7 @@ export default function EstadisticasPage(){
           ))}
         </div>
 
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
+        <div className="rz-grid-2col-equal" style={{gap:16,marginBottom:16}}>
           {/* Reservas por día */}
           <div style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'18px 20px'}}>
             <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:14}}>Reservas por día de la semana</p>

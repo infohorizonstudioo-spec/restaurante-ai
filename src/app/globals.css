@@ -231,13 +231,64 @@ input, textarea, select { font-family: var(--rz-font); }
   border-radius: var(--rz-r-sm);
 }
 
-/* ── Responsive ── */
+/* ── Responsive Layout Classes ── */
+
+/* Grid layouts that stack on mobile */
+.rz-grid-2col { display: grid; grid-template-columns: 1fr 380px; gap: 16px; }
+.rz-grid-4col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.rz-grid-3col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.rz-grid-2col-equal { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* Two-panel layout (list + detail) */
+.rz-panel-split { display: flex; }
+.rz-panel-list { width: 320px; flex-shrink: 0; }
+.rz-panel-detail { flex: 1; min-width: 0; }
+
+/* Content containers */
+.rz-content { max-width: 1200px; margin: 0 auto; padding: 22px 28px; }
+.rz-content-narrow { max-width: 860px; margin: 0 auto; padding: 20px 24px; }
+
+/* Header bar */
+.rz-header { padding: 14px 28px; }
+
 @media (max-width: 768px) {
   body { overflow-x: hidden; }
-}
-@media (max-width: 900px) {
+
+  /* Grids stack to 1 or 2 columns */
+  .rz-grid-2col { grid-template-columns: 1fr !important; }
+  .rz-grid-4col { grid-template-columns: repeat(2, 1fr) !important; }
+  .rz-grid-3col { grid-template-columns: 1fr !important; }
+  .rz-grid-2col-equal { grid-template-columns: 1fr !important; }
+
+  /* Two-panel stacks vertically */
+  .rz-panel-split { flex-direction: column !important; }
+  .rz-panel-list { width: 100% !important; max-height: 40vh; overflow-y: auto; }
+  .rz-panel-detail { width: 100% !important; }
+
+  /* Content padding reduced */
+  .rz-content { padding: 14px 16px !important; }
+  .rz-content-narrow { padding: 14px 16px !important; }
+  .rz-header { padding: 12px 16px !important; }
+
+  /* Hide non-essential elements */
   .rz-hide-mobile { display: none !important; }
+
+  /* Fix fixed-width inputs */
+  input[style*="width:200"], input[style*="width:220"], input[style*="width: 200"], input[style*="width: 220"] {
+    width: 100% !important;
+  }
 }
+
+@media (max-width: 480px) {
+  .rz-grid-4col { grid-template-columns: 1fr !important; }
+  .rz-content { padding: 10px 12px !important; }
+  .rz-header { padding: 10px 12px !important; }
+}
+
+@media (max-width: 900px) {
+  .rz-hide-tablet { display: none !important; }
+}
+
 @media (max-width: 1100px) {
   .rz-sidebar-collapsed-auto { width: var(--rz-sidebar-collapsed) !important; min-width: var(--rz-sidebar-collapsed) !important; }
 }

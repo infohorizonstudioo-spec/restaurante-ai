@@ -100,7 +100,7 @@ export default function TurnosPage() {
       <div style={{ maxWidth:1000, margin:'0 auto', padding:'20px 24px' }}>
 
         {/* KPIs */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:20 }}>
+        <div className="rz-grid-4col" style={{ gap:10, marginBottom:20 }}>
           {[
             { label:'Reservas hoy', value:totalReservas, color:C.amber },
             { label:'Personas hoy', value:totalPersonas, color:C.teal },

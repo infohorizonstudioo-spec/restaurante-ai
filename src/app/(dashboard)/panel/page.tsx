@@ -707,7 +707,7 @@ export default function PanelPage() {
         )}
 
         {/* ── KPIs ── */}
-        <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12 }}>
+        <div className="rz-grid-4col" style={{ gap:12 }}>
           <KpiCard value={todayCalls.length} label="Llamadas hoy" icon="📞" color={C.amber} accent href="/llamadas"/>
           <KpiCard value={reservas.length} label={`${L.reservas} hoy`} sub={`${reservas.filter(r=>r.status==='confirmada').length} confirmadas`} icon="📅" color={C.teal} accent href="/reservas"/>
           <KpiCard value={clientes.length} label={L.clientes} icon="👥" color={C.violet} href="/clientes"/>
@@ -718,7 +718,7 @@ export default function PanelPage() {
         {forecast.length > 0 && <ForecastChart data={forecast}/>}
 
         {/* ── Main grid: Live feed + Llamadas ── */}
-        <div style={{ display:'grid',gridTemplateColumns:'1fr 380px',gap:16 }}>
+        <div className="rz-grid-2col" style={{ gap:16 }}>
 
           {/* Llamadas recientes */}
           <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,overflow:'hidden' }}>
