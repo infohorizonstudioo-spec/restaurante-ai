@@ -23,6 +23,33 @@ export async function POST(req: NextRequest) {
     const name = customer_name || null
     const callIntent = intent || 'consulta'
 
+    // Determinar estado de decisión según intent
+    const decisionMap: Record<string, string> = {
+      reserva: 'confirmed',
+      pedido: 'confirmed',
+      cancelacion: 'cancelled',
+      consulta: 'pending_review',
+      otro: 'pending_review',
+    }
+    const decisionStatus = decisionMap[callIntent] || 'pending_review'
+
+    // Generar flags basados en el contenido
+    const flags: string[] = []
+    const lowerSummary = summary.toLowerCase()
+    if (/alergi|intoleranci|celiac|vegetarian|vegan/i.test(lowerSummary)) flags.push('allergy_note')
+    if (/cumpleaños|aniversario|celebraci/i.test(lowerSummary)) flags.push('special_occasion')
+    if (/cancel/i.test(lowerSummary)) flags.push('cancellation_request')
+    if (/grupo|personas|comensales/.test(lowerSummary)) {
+      const match = lowerSummary.match(/(\d+)\s*(?:persona|comensal)/i)
+      if (match && parseInt(match[1]) >= 8) flags.push('large_group')
+    }
+
+    // Generar reasoning legible
+    const reasoningLabel = callIntent === 'reserva' ? `Reserva gestionada correctamente`
+      : callIntent === 'pedido' ? `Pedido procesado por teléfono`
+      : callIntent === 'cancelacion' ? `Cliente solicitó cancelación`
+      : `Consulta atendida — ${name || 'cliente'}`
+
     // ── 1. Guardar llamada en tabla calls ─────────────────────────────────
     const { data: call } = await supabase.from("calls").insert({
       tenant_id,
@@ -34,8 +61,14 @@ export async function POST(req: NextRequest) {
       started_at: new Date().toISOString(),
       duration_seconds: 0,
       source: "twilio",
-      decision_status: callIntent === 'reserva' ? 'confirmed' : 'completed',
-      decision_confidence: 0.85,
+      decision_status: decisionStatus,
+      decision_confidence: callIntent === 'reserva' || callIntent === 'pedido' ? 0.9 : 0.75,
+      decision_flags: flags.length > 0 ? flags : null,
+      reasoning_label: reasoningLabel,
+      action_required: callIntent === 'reserva' ? 'Reserva confirmada por el agente'
+        : callIntent === 'pedido' ? 'Pedido en proceso'
+        : callIntent === 'cancelacion' ? 'Revisar cancelación'
+        : null,
       conversation_id: conversation_id || null,
     }).select("id").maybeSingle()
 
