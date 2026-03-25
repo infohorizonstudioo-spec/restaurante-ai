@@ -61,21 +61,64 @@ export async function POST(req: NextRequest) {
 
         if (customer?.[0]) {
           const c = customer[0]
-          // Get last reservation
-          const { data: lastRes } = await supabase
+          // Get last 3 reservations for pattern detection
+          const { data: recentRes } = await supabase
             .from('reservations')
-            .select('date, time, people, status')
+            .select('date, time, people, status, notes')
             .eq('tenant_id', tenant.id)
             .eq('customer_phone', cleanPhone)
             .order('date', { ascending: false })
-            .limit(1)
+            .limit(3)
 
-          const parts = [`Cliente conocido: ${c.name || 'sin nombre'}`]
-          if (c.total_reservations) parts.push(`${c.total_reservations} reservas previas`)
-          if (lastRes?.[0]) {
-            const lr = lastRes[0]
-            parts.push(`Última reserva: ${lr.date} a las ${(lr.time||'').slice(0,5)} para ${lr.people} personas (${lr.status})`)
+          // Get learned preferences from memory
+          const { data: memories } = await supabase
+            .from('business_memory')
+            .select('content, memory_type')
+            .eq('tenant_id', tenant.id)
+            .eq('memory_type', 'preference')
+            .ilike('content', `%${c.name || ''}%`)
+            .limit(5)
+
+          const parts = [`Este cliente se llama ${c.name || 'desconocido'}`]
+
+          if (c.total_reservations && c.total_reservations >= 3) {
+            parts.push(`Es habitual — ha venido ${c.total_reservations} veces`)
+          } else if (c.total_reservations === 1) {
+            parts.push('Ha venido una vez antes')
           }
+
+          if (recentRes && recentRes.length > 0) {
+            const lr = recentRes[0]
+            parts.push(`La última vez vino el ${lr.date} a las ${(lr.time||'').slice(0,5)} para ${lr.people} personas`)
+
+            // Detect patterns
+            if (recentRes.length >= 2) {
+              const samePeople = recentRes.every(r => r.people === recentRes[0].people)
+              if (samePeople) parts.push(`Siempre reserva para ${recentRes[0].people}`)
+
+              const sameTime = recentRes.filter(r => (r.time||'').slice(0,2) === (recentRes[0].time||'').slice(0,2)).length >= 2
+              if (sameTime) parts.push(`Suele venir a las ${(recentRes[0].time||'').slice(0,5)}`)
+            }
+
+            // Check for allergies or special notes
+            const allNotes = recentRes.map(r => r.notes || '').join(' ').toLowerCase()
+            if (allNotes.includes('alergi') || allNotes.includes('celiac') || allNotes.includes('vegeta') || allNotes.includes('vegan')) {
+              parts.push('IMPORTANTE: tiene restricciones alimentarias — revisa notas de sus reservas anteriores')
+            }
+
+            // No-show history
+            const noShows = recentRes.filter(r => r.status === 'no_show').length
+            if (noShows > 0) parts.push(`Ojo: no se presentó ${noShows} vez/veces antes`)
+          }
+
+          // Add learned preferences
+          if (memories && memories.length > 0) {
+            const prefs = memories.map(m => m.content).join('. ')
+            parts.push(`Preferencias detectadas: ${prefs}`)
+          }
+
+          if ((c as any).vip) parts.push('Es cliente VIP — trátalo especialmente bien')
+
           customerContext = parts.join('. ') + '.'
         }
       }
