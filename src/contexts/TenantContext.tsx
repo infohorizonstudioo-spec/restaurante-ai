@@ -2,10 +2,11 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { resolveTemplate, TemplateConfig } from '@/lib/templates'
+import { getTranslations, Translations } from '@/lib/i18n'
 
 interface TenantData {
   id: string; name: string; type: string; plan: string
-  agent_name?: string; agent_phone?: string
+  agent_name?: string; agent_phone?: string; language?: string
   free_calls_used?: number; free_calls_limit?: number
   plan_calls_used?: number; plan_calls_included?: number
   [key: string]: any
@@ -14,18 +15,20 @@ interface TenantData {
 interface TenantContextValue {
   tenant: TenantData | null
   template: TemplateConfig | null
+  t: Translations
   userId: string | null
   loading: boolean
   reload: () => void
 }
 
 const TenantContext = createContext<TenantContextValue>({
-  tenant: null, template: null, userId: null, loading: true, reload: () => {}
+  tenant: null, template: null, t: getTranslations('es'), userId: null, loading: true, reload: () => {}
 })
 
 export function TenantProvider({ children }: { children: ReactNode }) {
   const [tenant,   setTenant]   = useState<TenantData | null>(null)
   const [template, setTemplate] = useState<TemplateConfig | null>(null)
+  const [t,        setT]        = useState<Translations>(getTranslations('es'))
   const [userId,   setUserId]   = useState<string | null>(null)
   const [loading,  setLoading]  = useState(true)
   const [tick,     setTick]     = useState(0)
@@ -44,12 +47,13 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       if (!t) { setLoading(false); return }
       setTenant(t as TenantData)
       setTemplate(resolveTemplate((t as any).type || 'otro'))
+      setT(getTranslations((t as any).language || 'es'))
       setLoading(false)
     })()
   }, [tick])
 
   return (
-    <TenantContext.Provider value={{ tenant, template, userId, loading, reload: () => setTick(n => n + 1) }}>
+    <TenantContext.Provider value={{ tenant, template, t, userId, loading, reload: () => setTick(n => n + 1) }}>
       {children}
     </TenantContext.Provider>
   )
