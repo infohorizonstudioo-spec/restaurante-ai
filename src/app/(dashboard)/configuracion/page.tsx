@@ -183,15 +183,20 @@ export default function ConfiguracionPage() {
     setSaving(true); setSaved(false)
     const newName = basicForm.business_name.trim()
     const newAgent = basicForm.agent_name.trim()
-    await supabase.from('tenants').update({
-      agent_name:  newAgent,
-      name:        newName,
-      agent_phone: basicForm.agent_phone.trim()||null,
-      transfer_phone: basicForm.transfer_phone.trim()||null,
-      language: basicForm.language || 'es',
-      agent_config: cfg,
-      reservation_config: schedCfg,
-    }).eq('id',tenant.id)
+    const sess = await supabase.auth.getSession()
+    await fetch('/api/tenant/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (sess.data.session?.access_token || '') },
+      body: JSON.stringify({
+        agent_name: newAgent,
+        name: newName,
+        agent_phone: basicForm.agent_phone.trim() || null,
+        transfer_phone: basicForm.transfer_phone.trim() || null,
+        language: basicForm.language || 'es',
+        agent_config: cfg,
+        reservation_config: schedCfg,
+      })
+    })
 
     // Sincronizar knowledge a business_knowledge y reprovisionar agente ElevenLabs
     try {
