@@ -99,6 +99,7 @@ export default function ReservasPage() {
     if (!error && tid) {
       const r = reservas.find(x => x.id === id)
       if (r) {
+        // Notificación en el panel
         await supabase.from('notifications').insert({
           tenant_id: tid,
           type: status === 'confirmada' ? 'reservation_confirmed' : status === 'cancelada' ? 'reservation_cancelled' : 'reservation_updated',
@@ -106,6 +107,24 @@ export default function ReservasPage() {
           body: `${r.customer_name || 'Sin nombre'} · ${r.date || r.reservation_date || ''} a las ${(r.time || r.reservation_time || '').slice(0,5)} · ${r.people || r.party_size || 1}p`,
           read: false,
         })
+        // SMS al cliente si tiene teléfono
+        const phone = r.customer_phone
+        if (phone && (status === 'confirmada' || status === 'cancelada')) {
+          const sess = await supabase.auth.getSession()
+          if (sess.data.session) {
+            fetch('/api/sms/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
+              body: JSON.stringify({
+                to: phone,
+                type: status === 'confirmada' ? 'reservation_confirmed' : 'reservation_cancelled',
+                message: status === 'confirmada'
+                  ? `✅ ${r.customer_name}, tu reserva está confirmada: ${r.date || r.reservation_date} a las ${(r.time || r.reservation_time || '').slice(0,5)}, ${r.people || r.party_size || 1} personas. ¡Te esperamos!`
+                  : `❌ ${r.customer_name}, tu reserva del ${r.date || r.reservation_date} a las ${(r.time || r.reservation_time || '').slice(0,5)} ha sido cancelada. Si necesitas algo, llámanos.`
+              })
+            }).catch(() => {})
+          }
+        }
       }
       load(tid)
     }
