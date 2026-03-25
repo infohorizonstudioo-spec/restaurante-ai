@@ -213,5 +213,40 @@ export async function generateInsights(tenantId: string): Promise<Insight[]> {
     }
   }
 
-  return insights.slice(0, 6) // Max 6 insights to avoid overwhelming
+  // ── 9. No-Show Risk Warning ──────────────────────────────────────
+  const todayReservasActive = reservas.filter(r => r.date === today && (r.status === 'confirmada' || r.status === 'confirmed'))
+  if (todayReservasActive.length > 0) {
+    // Simple no-show risk based on historical data
+    const historicalNoShows = reservas.filter(r => r.status === 'no_show').length
+    const totalHistorical = reservas.length || 1
+    const noShowRate = historicalNoShows / totalHistorical
+    if (noShowRate > 0.1) {
+      const atRisk = Math.round(todayReservasActive.length * noShowRate)
+      if (atRisk >= 1) {
+        insights.push({
+          id: 'noshow-risk', type: 'warning', icon: '⚠️', priority: 'high',
+          title: `${atRisk} reserva${atRisk > 1 ? 's' : ''} con riesgo de no-show`,
+          body: `Tu tasa de no-show es del ${(noShowRate * 100).toFixed(0)}%. Confirma por teléfono las reservas de hoy.`,
+          action: 'Ver predicciones', actionHref: '/reservas',
+        })
+      }
+    }
+  }
+
+  // ── 10. Customer Score Alert ───────────────────────────────────────
+  const newCustomers = customers.filter(c => {
+    if (!c.created_at) return false
+    const daysAgo = (Date.now() - new Date(c.created_at).getTime()) / (24 * 60 * 60 * 1000)
+    return daysAgo <= 7
+  })
+  if (newCustomers.length > 0) {
+    insights.push({
+      id: 'new-customers', type: 'opportunity', icon: '👤', priority: 'normal',
+      title: `${newCustomers.length} cliente${newCustomers.length > 1 ? 's' : ''} nuevo${newCustomers.length > 1 ? 's' : ''} esta semana`,
+      body: 'Revisa sus datos y márcalos como VIP si son importantes.',
+      action: 'Ver clientes', actionHref: '/clientes',
+    })
+  }
+
+  return insights.slice(0, 8) // Max 8 insights
 }
