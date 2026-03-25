@@ -121,7 +121,8 @@
       "Bash(__NEW_LINE_eb8d41e4c3f6f545__ echo:*)",
       "Bash(curl -s -X PATCH \"$SB_URL/tenants?id=eq.$TID\" -H \"apikey: $SB_KEY\" -H \"Authorization: Bearer $SB_KEY\" -H \"Content-Type: application/json\" -d '{\"\"language\"\":\"\"en\"\"}')",
       "Bash(curl:*)",
-      "Bash(__NEW_LINE_1eb37309713964af__ echo:*)"
+      "Bash(__NEW_LINE_1eb37309713964af__ echo:*)",
+      "Bash(__NEW_LINE_5dab42ab723cc954__ echo:*)"
     ]
   }
 }

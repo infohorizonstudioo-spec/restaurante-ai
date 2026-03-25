@@ -308,11 +308,19 @@ export default function ConfiguracionPage() {
               <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>{tx('IDIOMA DEL PANEL')}</label>
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 {[{code:'es',flag:'🇪🇸',name:'Español'},{code:'en',flag:'🇬🇧',name:'English'},{code:'fr',flag:'🇫🇷',name:'Français'},{code:'pt',flag:'🇵🇹',name:'Português'},{code:'ca',flag:'🏴',name:'Català'}].map(lang=>(
-                  <button key={lang.code} onClick={()=>setBasic(f=>({...f,language:lang.code}))}
+                  <button key={lang.code} onClick={async()=>{
+                    if(!tenant || lang.code === basicForm.language) return
+                    setBasic(f=>({...f,language:lang.code}))
+                    await fetch('/api/tenant/set-language', {
+                      method:'POST', headers:{'Content-Type':'application/json'},
+                      body: JSON.stringify({ tenant_id: tenant.id, language: lang.code })
+                    })
+                    window.location.href = '/configuracion?t=' + Date.now()
+                  }}
                     style={{padding:'6px 14px',fontSize:12,fontWeight:600,borderRadius:8,cursor:'pointer',fontFamily:'inherit',
-                      border:`1px solid ${(basicForm as any).language===lang.code?C.amber+'44':C.border}`,
-                      background:(basicForm as any).language===lang.code?C.amberDim:'transparent',
-                      color:(basicForm as any).language===lang.code?C.amber:C.sub}}>
+                      border:`1px solid ${basicForm.language===lang.code?C.amber+'44':C.border}`,
+                      background:basicForm.language===lang.code?C.amberDim:'transparent',
+                      color:basicForm.language===lang.code?C.amber:C.sub}}>
                     {lang.flag} {lang.name}
                   </button>
                 ))}
