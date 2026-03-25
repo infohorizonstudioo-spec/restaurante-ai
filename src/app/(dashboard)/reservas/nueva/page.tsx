@@ -36,6 +36,28 @@ export default function NuevaReservaPage() {
     if(!tid) { setError('Sesión no válida'); return }
     setSaving(true); setError('')
     try {
+      // Check availability first
+      const checkRes = await fetch('/api/agent/check-availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: tid,
+          date: form.date,
+          time: form.time,
+          party_size: parseInt(form.people) || 2,
+        })
+      })
+      const availability = await checkRes.json()
+      if (!availability.available) {
+        if (availability.alternatives?.length) {
+          setError(`No hay hueco a las ${form.time}. Alternativas: ${availability.alternatives.join(', ')}`)
+        } else {
+          setError(availability.message || 'No hay disponibilidad para esa fecha y hora')
+        }
+        setSaving(false)
+        return
+      }
+
       const { error: err } = await supabase.from('reservations').insert({
         tenant_id:     tid,
         customer_name: form.customer_name.trim(),

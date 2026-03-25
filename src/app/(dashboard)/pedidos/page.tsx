@@ -222,7 +222,21 @@ export default function PedidosPage(){
               <p style={{fontSize:17,fontWeight:700,color:'#E8EEF6'}}>{modal.customer_name}</p>
               <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:'#49566A'}}>×</button>
             </div>
-            {modal.customer_phone&&<p style={{fontSize:13,color:'#C4CDD8',marginBottom:6}}>📞 {modal.customer_phone}</p>}
+            {modal.customer_phone&&<div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+              <p style={{fontSize:13,color:'#C4CDD8'}}>📞 {modal.customer_phone}</p>
+              <button onClick={async () => {
+                const sess = await supabase.auth.getSession()
+                if (!sess.data.session) return
+                await fetch('/api/voice/outbound', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
+                  body: JSON.stringify({ phone_number: modal.customer_phone, reason: 'general', customer_name: modal.customer_name })
+                })
+              }}
+              style={{fontSize:11, padding:'5px 12px', borderRadius:7, border:'1px solid rgba(45,212,191,0.3)', background:'rgba(45,212,191,0.08)', color:'#2DD4BF', cursor:'pointer', fontFamily:'inherit', fontWeight:500}}>
+                📞 Llamar
+              </button>
+            </div>}
             {modal.customer_address&&<p style={{fontSize:13,color:'#C4CDD8',marginBottom:6}}>📍 {modal.customer_address}</p>}
             {modal.notes&&<p style={{fontSize:13,color:'#C4CDD8',marginBottom:12}}>📝 {modal.notes}</p>}
             <div style={{marginBottom:16}}>
