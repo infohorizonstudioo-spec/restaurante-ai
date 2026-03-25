@@ -64,6 +64,30 @@ export async function POST(req: NextRequest) {
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+      // SMS al cliente cuando el pedido se confirma
+      if (action === 'confirm' && customer_phone) {
+        const { data: tenantInfo } = await supabase.from("tenants")
+          .select("name").eq("id", tenant_id).maybeSingle()
+        const bizName = tenantInfo?.name || 'Tu negocio'
+        const total = data?.total_estimate || 0
+        const orderT = order_type || 'recoger'
+        const smsBody = orderT === 'domicilio'
+          ? `✅ ${bizName}: Hola ${customer_name}, tu pedido (${total.toFixed(2)}€) para envío a domicilio está confirmado. ¡Lo preparamos ya!`
+          : `✅ ${bizName}: Hola ${customer_name}, tu pedido (${total.toFixed(2)}€) está confirmado. Te avisamos cuando esté listo para recoger.`
+
+        const accountSid = process.env.TWILIO_ACCOUNT_SID
+        const authToken = process.env.TWILIO_AUTH_TOKEN
+        const fromNumber = process.env.TWILIO_SMS_NUMBER || process.env.TWILIO_PHONE_NUMBER
+        if (accountSid && authToken && fromNumber) {
+          const twilioAuth = Buffer.from(`${accountSid}:${authToken}`).toString('base64')
+          fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+            method: 'POST',
+            headers: { 'Authorization': `Basic ${twilioAuth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ From: fromNumber, To: customer_phone, Body: smsBody }).toString(),
+          }).catch(() => {})
+        }
+      }
+
       return NextResponse.json({
         success: true,
         order_id: data?.id,

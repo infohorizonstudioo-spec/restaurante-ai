@@ -140,6 +140,27 @@ export async function POST(req: NextRequest) {
       await supabase.from("tables").update({ status: "reservada" }).eq("id", assignedTableId)
     }
 
+    // ── PASO 6: SMS de confirmación al cliente ──────────────────────────
+    if (customer_phone) {
+      const { data: tenantInfo } = await supabase.from("tenants")
+        .select("name").eq("id", tenant_id).maybeSingle()
+      const bizName = tenantInfo?.name || 'Tu negocio'
+      const dateStr = new Date(finalDate + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+      const smsBody = `✅ ${bizName}: Hola ${customer_name}, tu reserva está confirmada para el ${dateStr} a las ${finalTime}, ${finalPartySize} persona${finalPartySize !== 1 ? 's' : ''}. ¡Te esperamos!`
+
+      const accountSid = process.env.TWILIO_ACCOUNT_SID
+      const authToken = process.env.TWILIO_AUTH_TOKEN
+      const fromNumber = process.env.TWILIO_SMS_NUMBER || process.env.TWILIO_PHONE_NUMBER
+      if (accountSid && authToken && fromNumber) {
+        const twilioAuth = Buffer.from(`${accountSid}:${authToken}`).toString('base64')
+        fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+          method: 'POST',
+          headers: { 'Authorization': `Basic ${twilioAuth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ From: fromNumber, To: customer_phone, Body: smsBody }).toString(),
+        }).catch(() => {})
+      }
+    }
+
     return NextResponse.json({
       success: true,
       reservation_id: reservation?.id || null,
