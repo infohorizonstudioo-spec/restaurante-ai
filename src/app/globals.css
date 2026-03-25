@@ -232,6 +232,9 @@ input, textarea, select { font-family: var(--rz-font); }
 }
 
 /* ── Responsive ── */
+@media (max-width: 768px) {
+  body { overflow-x: hidden; }
+}
 @media (max-width: 900px) {
   .rz-hide-mobile { display: none !important; }
 }

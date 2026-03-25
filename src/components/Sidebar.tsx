@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useTenant } from '@/contexts/TenantContext'
 
@@ -53,6 +53,18 @@ export default function Sidebar() {
   const path   = usePathname()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
+
+  // Auto-collapse on mobile
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      if (e.matches) setCollapsed(true)
+    }
+    handler(mq)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
   const { tenant, template } = useTenant()
 
   const plan      = tenant?.plan || 'trial'
