@@ -39,6 +39,14 @@ Si no hay hueco y el cliente quiere esperar, llama a add_to_waitlist. Di: "te ap
 7. Al cerrar → llama a save_call_summary con customer_name, intent, caller_phone={{caller_phone}}
 IMPORTANTE: Siempre pasa customer_phone={{caller_phone}} en create_reservation y save_call_summary.
 
+FLUJO PARA CANCELACIONES:
+1. El cliente dice que quiere cancelar
+2. Pregunta: "vale, ¿a nombre de quién estaba la reserva?"
+3. Si tiene el nombre o el teléfono, llama a cancel_reservation con customer_name o customer_phone={{caller_phone}}
+4. Si encuentra la reserva, confirma: "hecho, te cancelo la del [fecha] a las [hora]. Sin problema."
+5. Si no encuentra nada: "mmm pues no me aparece ninguna reserva con esos datos. ¿Puede ser a otro nombre?"
+6. Al cerrar llama a save_call_summary con intent=cancelacion
+
 FLUJO PARA PEDIDOS (recoger o domicilio):
 1. Pide nombre del cliente
 2. Pregunta: "¿Es para recoger en el local o para llevar a domicilio?"
@@ -379,6 +387,27 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
               summary: { type: "string", description: "Resumen breve" },
             },
             required: ["tenant_id", "summary"],
+          },
+        },
+        response_timeout_secs: 10,
+      },
+      {
+        type: "webhook",
+        name: "cancel_reservation",
+        description: "Busca y cancela la reserva de un cliente. Busca por teléfono o nombre. Envía SMS de confirmación automáticamente.",
+        api_schema: {
+          url: `${appUrl}/api/agent/cancel-reservation`,
+          method: "POST",
+          request_headers: reqHeaders,
+          request_body_schema: {
+            type: "object",
+            properties: {
+              tenant_id: { type: "string", description: "ID del negocio", enum: [tenantId] },
+              customer_name: { type: "string", description: "Nombre del cliente" },
+              customer_phone: { type: "string", description: "Teléfono del cliente" },
+              date: { type: "string", description: "Fecha de la reserva YYYY-MM-DD (opcional)" },
+            },
+            required: ["tenant_id"],
           },
         },
         response_timeout_secs: 10,
