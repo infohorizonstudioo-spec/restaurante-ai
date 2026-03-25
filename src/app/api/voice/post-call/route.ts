@@ -476,6 +476,7 @@ export async function POST(req: Request) {
             applied_rule:        decision.applied_rule,
             knowledge_source:    decision.knowledge_source,
             decision_trace:      decision.decision_trace,
+            ...(callerPhone ? { caller_phone: callerPhone, from_number: callerPhone } : {}),
           })
           .eq('call_sid', key)
           .eq('tenant_id', tenantId)

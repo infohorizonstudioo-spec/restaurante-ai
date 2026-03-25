@@ -119,6 +119,7 @@ export default function LlamadasPage() {
 
   useEffect(() => {
     if (!tid) { setLoading(false); return }
+    load(tid, true)
     const ch = supabase.channel('calls-rt-' + tid)
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},()=>load(tid,true))
       .on('postgres_changes',{event:'UPDATE',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},()=>load(tid,true))

@@ -1,91 +1,138 @@
 'use client'
 import NotifBell from '@/components/NotifBell'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import Link from 'next/link'
 
-const TIPOS = ['todos','local','delivery','takeaway'] as const
-const ESTADOS = ['nuevo','preparacion','listo','reparto','entregado'] as const
-const ESTADO_COL:Record<string,{bg:string;color:string;label:string}> = {
-  nuevo:       {bg:'#eff6ff',color:'#F0A84E',label:'Nuevo'},
-  preparacion: {bg:'#fffbeb',color:'#FBB53F',label:'Preparando'},
-  listo:       {bg:'#f0fdf4',color:'#34D399',label:'Listo'},
-  reparto:     {bg:'#f5f3ff',color:'#A78BFA',label:'En reparto'},
-  entregado:   {bg:'#f1f5f9',color:'#8895A7',label:'Entregado'},
+/* ── Status flow (matches agent update-order) ──────────────────────── */
+const STATUS_FLOW = ['collecting','confirmed','preparing','ready','delivered'] as const
+type OrderStatus = typeof STATUS_FLOW[number] | 'cancelled'
+
+const STATUS_META: Record<string, { color: string; label: string; icon: string }> = {
+  collecting:  { color: '#F0A84E', label: 'Recogiendo',  icon: '📝' },
+  confirmed:   { color: '#60A5FA', label: 'Confirmado',  icon: '✅' },
+  preparing:   { color: '#FBB53F', label: 'Preparando',  icon: '🍳' },
+  ready:       { color: '#34D399', label: 'Listo',       icon: '🔔' },
+  delivered:   { color: '#8895A7', label: 'Entregado',   icon: '✔️' },
+  cancelled:   { color: '#F87171', label: 'Cancelado',   icon: '✖️' },
 }
 
-function timeAgo(dateStr:string):string{
-  const diff = Math.floor((Date.now()-new Date(dateStr).getTime())/1000)
-  if(diff<60) return 'hace <1 min'
-  if(diff<3600){ const m=Math.floor(diff/60); return `hace ${m} min` }
-  if(diff<86400){ const h=Math.floor(diff/3600); return `hace ${h}h` }
-  const d=Math.floor(diff/86400); return `hace ${d}d`
+const ORDER_TYPES = ['todos','recoger','domicilio','mesa'] as const
+const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
+  recoger:   { label: 'Recoger',   icon: '🥡' },
+  domicilio: { label: 'Domicilio', icon: '🛵' },
+  mesa:      { label: 'Mesa',      icon: '🍽️' },
 }
 
-export default function PedidosPage(){
-  const [plan,setPlan]       = useState<string>('free')
-  const [loading,setLoading] = useState(true)
-  const [orders,setOrders]   = useState<any[]>([])
-  const [tid,setTid]         = useState<string|null>(null)
-  const [tipo,setTipo]       = useState<string>('todos')
-  const [modal,setModal]     = useState<any|null>(null)
-  const [,setTick]           = useState(0)
+function timeAgo(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
+  if (diff < 60) return 'hace <1 min'
+  if (diff < 3600) { const m = Math.floor(diff / 60); return `hace ${m} min` }
+  if (diff < 86400) { const h = Math.floor(diff / 3600); return `hace ${h}h` }
+  const d = Math.floor(diff / 86400); return `hace ${d}d`
+}
+
+function nextStatus(current: string): string | null {
+  const idx = STATUS_FLOW.indexOf(current as any)
+  if (idx === -1 || idx >= STATUS_FLOW.length - 1) return null
+  return STATUS_FLOW[idx + 1]
+}
+
+function nextLabel(current: string): string {
+  const ns = nextStatus(current)
+  if (!ns) return ''
+  const map: Record<string, string> = {
+    confirmed: 'Confirmar',
+    preparing: 'Preparar',
+    ready: 'Marcar listo',
+    delivered: 'Entregado',
+  }
+  return map[ns] || STATUS_META[ns]?.label || ''
+}
+
+export default function PedidosPage() {
+  const [plan, setPlan] = useState<string>('free')
+  const [loading, setLoading] = useState(true)
+  const [orders, setOrders] = useState<any[]>([])
+  const [tid, setTid] = useState<string | null>(null)
+  const [tipoFilter, setTipoFilter] = useState<string>('todos')
+  const [modal, setModal] = useState<any | null>(null)
+  const [, setTick] = useState(0)
   const { template } = useTenant()
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  const load = useCallback(async(tenantId:string)=>{
-    const r = await fetch('/api/orders?tenant_id='+tenantId+'&limit=100')
+  const load = useCallback(async (tenantId: string) => {
+    const r = await fetch('/api/orders?tenant_id=' + tenantId + '&limit=100')
     const d = await r.json()
-    setOrders(d.orders||[])
-  },[])
+    setOrders(d.orders || [])
+  }, [])
 
-  useEffect(()=>{
-    (async()=>{
-      const {data:{user}} = await supabase.auth.getUser(); if(!user) return
-      const {data:p} = await supabase.from('profiles').select('tenant_id').eq('id',user.id).maybeSingle(); if(!p?.tenant_id) return
-      const {data:t} = await supabase.from('tenants').select('plan').eq('id',p.tenant_id).maybeSingle()
-      setPlan(t?.plan||'free')
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: p } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle()
+      if (!p?.tenant_id) return
+      const { data: t } = await supabase.from('tenants').select('plan').eq('id', p.tenant_id).maybeSingle()
+      setPlan(t?.plan || 'free')
       setTid(p.tenant_id)
       await load(p.tenant_id)
       setLoading(false)
     })()
-  },[load])
+  }, [load])
 
   // Tick every 30s to keep "hace X min" timers fresh
-  useEffect(()=>{
-    const iv = setInterval(()=>setTick(t=>t+1),30000)
-    return ()=>clearInterval(iv)
-  },[])
+  useEffect(() => {
+    const iv = setInterval(() => setTick(t => t + 1), 30000)
+    return () => clearInterval(iv)
+  }, [])
 
-  useEffect(()=>{
-    if(!tid) return
-    const ch = supabase.channel('orders-rt-' + tid)
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'tenant_id=eq.'+tid},()=>{
-        try { new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2JkZiYl5OSjYeFgoB/f4GDhYmNkJKUlZWUko+MiIWCf31+f4GDhYmMj5GTlJWVlJKQjYmGg4B+fX5/gYSHioyPkZOUlZWUkpCNiYaDgH5+fn+BhIeKjI+Rk5SVlZSSkI2JhoOAfn5+f4GEh4qMj5GTlJWVlJKQjYmGg4B+fn5/gYSHioyPkZOUlZWUkpCNiYaDgH5+fn+BhIeKjI+Rk5SVlQ==').play() } catch {}
+  // Realtime subscription on order_events
+  useEffect(() => {
+    if (!tid) return
+    const ch = supabase.channel('order-events-rt-' + tid)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, () => {
+        playSound()
         load(tid)
       })
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'tenant_id=eq.'+tid},()=>load(tid))
-      .on('postgres_changes',{event:'DELETE',schema:'public',table:'orders',filter:'tenant_id=eq.'+tid},()=>load(tid))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, (payload) => {
+        load(tid)
+        // Update modal if viewing the same order
+        if (modal && payload.new && (payload.new as any).id === modal.id) {
+          setModal(payload.new)
+        }
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, () => load(tid))
       .subscribe()
-    return ()=>{ supabase.removeChannel(ch) }
-  },[tid,load])
+    return () => { supabase.removeChannel(ch) }
+  }, [tid, load, modal])
 
-  if(loading) return <PageLoader/>
+  function playSound() {
+    try {
+      if (!audioRef.current) {
+        audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2JkZiYl5OSjYeFgoB/f4GDhYmNkJKUlZWUko+MiIWCf31+f4GDhYmMj5GTlJWVlJKQjYmGg4B+fX5/gYSHioyPkZOUlZWUkpCNiYaDgH5+fn+BhIeKjI+Rk5SVlZSSkI2JhoOAfn5+f4GEh4qMj5GTlJWVlJKQjYmGg4B+fn5/gYSHioyPkZOUlZWUkpCNiYaDgH5+fn+BhIeKjI+Rk5SVlQ==')
+      }
+      audioRef.current.currentTime = 0
+      audioRef.current.play()
+    } catch { /* ignore audio errors */ }
+  }
+
+  if (loading) return <PageLoader />
 
   // GUARDIA: pedidos solo disponible para hostelería
-  if(template && !template.hasOrders){
-    return(
-      <div style={{background:'#0C1018',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
-        <div style={{textAlign:'center',maxWidth:400}}>
-          <div style={{fontSize:48,marginBottom:16}}>🚫</div>
-          <h2 style={{fontSize:20,fontWeight:700,color:'#E8EEF6',marginBottom:8}}>Módulo no disponible</h2>
-          <p style={{fontSize:14,color:'#8895A7',lineHeight:1.6,marginBottom:24}}>
-            El módulo de pedidos no aplica para <strong>{template.label}</strong>.<br/>
-            Este módulo está diseñado para negocios de hostelería.
+  if (template && !template.hasOrders) {
+    return (
+      <div style={{ background: '#0C1018', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ textAlign: 'center', maxWidth: 400 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🚫</div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#E8EEF6', marginBottom: 8 }}>Modulo no disponible</h2>
+          <p style={{ fontSize: 14, color: '#8895A7', lineHeight: 1.6, marginBottom: 24 }}>
+            El modulo de pedidos no aplica para <strong>{template.label}</strong>.<br />
+            Este modulo esta disenado para negocios de hosteleria.
           </p>
-          <Link href="/panel" style={{padding:'10px 24px',fontSize:14,fontWeight:600,color:'white',background:'linear-gradient(135deg,#F0A84E,#E8923A)',borderRadius:9,textDecoration:'none'}}>
+          <Link href="/panel" style={{ padding: '10px 24px', fontSize: 14, fontWeight: 600, color: 'white', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', borderRadius: 9, textDecoration: 'none' }}>
             Volver al panel
           </Link>
         </div>
@@ -93,168 +140,334 @@ export default function PedidosPage(){
     )
   }
 
-  const isPro = plan==='pro'||plan==='business'||plan==='enterprise'
+  const isPro = plan === 'pro' || plan === 'business' || plan === 'enterprise'
 
-  if(!isPro) return (
-    <div style={{background:'#0C1018',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
-      <div style={{maxWidth:440,textAlign:'center'}}>
-        <div style={{width:64,height:64,borderRadius:16,background:'linear-gradient(135deg,#7c3aed,#a78bfa)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',boxShadow:'0 8px 24px rgba(124,58,237,0.25)'}}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+  if (!isPro) return (
+    <div style={{ background: '#0C1018', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ maxWidth: 440, textAlign: 'center' }}>
+        <div style={{ width: 64, height: 64, borderRadius: 16, background: 'linear-gradient(135deg,#7c3aed,#a78bfa)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 24px rgba(124,58,237,0.25)' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
         </div>
-        <h2 style={{fontSize:22,fontWeight:700,color:'#E8EEF6',marginBottom:10}}>Gestión de pedidos</h2>
-        <p style={{fontSize:14,color:'#8895A7',lineHeight:1.6,marginBottom:24}}>Gestiona pedidos locales, para llevar y delivery desde tu panel. Disponible en el plan Pro y Business.</p>
-        <Link href="/precios" style={{display:'inline-block',padding:'12px 28px',fontSize:14,fontWeight:600,color:'white',background:'linear-gradient(135deg,#7c3aed,#a78bfa)',borderRadius:10,textDecoration:'none',boxShadow:'0 4px 16px rgba(124,58,237,0.3)'}}>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#E8EEF6', marginBottom: 10 }}>Gestion de pedidos</h2>
+        <p style={{ fontSize: 14, color: '#8895A7', lineHeight: 1.6, marginBottom: 24 }}>Gestiona pedidos locales, para llevar y delivery desde tu panel. Disponible en el plan Pro y Business.</p>
+        <Link href="/precios" style={{ display: 'inline-block', padding: '12px 28px', fontSize: 14, fontWeight: 600, color: 'white', background: 'linear-gradient(135deg,#7c3aed,#a78bfa)', borderRadius: 10, textDecoration: 'none', boxShadow: '0 4px 16px rgba(124,58,237,0.3)' }}>
           Ver planes →
         </Link>
       </div>
     </div>
   )
 
-  const filtered = tipo==='todos' ? orders : orders.filter(o=>o.type===tipo)
-  const activos  = orders.filter(o=>!['entregado','cancelado'].includes(o.status))
+  const filtered = tipoFilter === 'todos' ? orders : orders.filter(o => o.order_type === tipoFilter)
+  const activos = orders.filter(o => !['delivered', 'cancelled'].includes(o.status))
 
-  async function cambiarEstado(id:string, status:string) {
+  async function cambiarEstado(id: string, status: string) {
     await fetch('/api/orders', {
-      method:'PATCH', headers:{'Content-Type':'application/json'},
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, tenant_id: tid, status })
     })
     setModal(null)
-    if(tid) load(tid)
+    if (tid) load(tid)
+  }
+
+  async function avanzarEstado(id: string, currentStatus: string) {
+    const ns = nextStatus(currentStatus)
+    if (!ns) return
+    await cambiarEstado(id, ns)
   }
 
   async function nuevoOrder() {
-    if(!tid) return
+    if (!tid) return
     const r = await fetch('/api/orders', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ tenant_id: tid, customer_name: 'Nuevo pedido', type: 'local' })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenant_id: tid, customer_name: 'Nuevo pedido', order_type: 'mesa' })
     })
     const d = await r.json()
-    if(d.order) setModal(d.order)
-    if(tid) load(tid)
+    if (d.order) setModal(d.order)
+    if (tid) load(tid)
   }
 
   return (
-    <div style={{background:'#0C1018',minHeight:'100vh'}}>
-      <div style={{background:'#131920',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}}>
+    <div style={{ background: '#0C1018', minHeight: '100vh' }}>
+      {/* ── Header ────────────────────────────────────────────── */}
+      <div style={{ background: '#131920', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20 }}>
         <div>
-          <h1 style={{fontSize:18,fontWeight:700,color:'#E8EEF6'}}>Pedidos</h1>
-          <p style={{fontSize:12,color:'#49566A',marginTop:1}}>{activos.length} activos · {orders.length} total</p>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: '#E8EEF6' }}>Pedidos</h1>
+          <p style={{ fontSize: 12, color: '#49566A', marginTop: 1 }}>{activos.length} activos · {orders.length} total</p>
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
-        <button onClick={nuevoOrder} style={{padding:'8px 18px',fontSize:13,fontWeight:600,color:'white',background:'linear-gradient(135deg,#F0A84E,#E8923A)',border:'none',borderRadius:9,cursor:'pointer'}}>
-          + Nuevo pedido
-        </button>
-          <NotifBell/>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={nuevoOrder} style={{ padding: '8px 18px', fontSize: 13, fontWeight: 600, color: 'white', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', border: 'none', borderRadius: 9, cursor: 'pointer' }}>
+            + Nuevo pedido
+          </button>
+          <NotifBell />
         </div>
       </div>
 
-      {/* Filtros tipo */}
-      <div style={{background:'#131920',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'0 24px',display:'flex',gap:0}}>
-        {TIPOS.map(t=>(
-          <button key={t} onClick={()=>setTipo(t)} style={{padding:'10px 16px',fontSize:13,background:'none',border:'none',cursor:'pointer',borderBottom:tipo===t?'2px solid #1d4ed8':'2px solid transparent',color:tipo===t?'#1d4ed8':'#64748b',fontWeight:tipo===t?600:400,fontFamily:'inherit',textTransform:'capitalize'}}>
-            {t==='todos'?'Todos ('+orders.length+')':t+' ('+orders.filter(o=>o.type===t).length+')'}
+      {/* ── Filter bar ────────────────────────────────────────── */}
+      <div style={{ background: '#131920', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '0 24px', display: 'flex', gap: 0 }}>
+        {ORDER_TYPES.map(t => (
+          <button key={t} onClick={() => setTipoFilter(t)} style={{
+            padding: '10px 16px', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer',
+            borderBottom: tipoFilter === t ? '2px solid #F0A84E' : '2px solid transparent',
+            color: tipoFilter === t ? '#F0A84E' : '#8895A7',
+            fontWeight: tipoFilter === t ? 600 : 400, fontFamily: 'inherit', textTransform: 'capitalize'
+          }}>
+            {t === 'todos'
+              ? 'Todos (' + orders.length + ')'
+              : (TYPE_LABELS[t]?.icon || '') + ' ' + (TYPE_LABELS[t]?.label || t) + ' (' + orders.filter(o => o.order_type === t).length + ')'
+            }
           </button>
         ))}
       </div>
 
-      <div style={{maxWidth:900,margin:'0 auto',padding:'20px 24px'}}>
-        {/* Activos por estado */}
-        {activos.length>0&&(
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:10,marginBottom:20}}>
-            {(['nuevo','preparacion','listo','reparto'] as const).map(s=>{
-              const cnt = orders.filter(o=>o.status===s).length
-              const ss  = ESTADO_COL[s]
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '20px 24px' }}>
+        {/* ── Status summary cards ────────────────────────────── */}
+        {activos.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 10, marginBottom: 20 }}>
+            {(['collecting', 'confirmed', 'preparing', 'ready'] as const).map(s => {
+              const cnt = orders.filter(o => o.status === s).length
+              const sm = STATUS_META[s]
               return (
-                <div key={s} style={{background:ss.bg,border:'1px solid '+ss.color+'33',borderRadius:12,padding:'12px 16px'}}>
-                  <p style={{fontSize:22,fontWeight:700,color:ss.color}}>{cnt}</p>
-                  <p style={{fontSize:12,color:ss.color,fontWeight:600}}>{ss.label}</p>
+                <div key={s} style={{ background: '#1A2230', border: '1px solid ' + sm.color + '33', borderRadius: 12, padding: '12px 16px' }}>
+                  <p style={{ fontSize: 22, fontWeight: 700, color: sm.color }}>{cnt}</p>
+                  <p style={{ fontSize: 12, color: sm.color, fontWeight: 600 }}>{sm.icon} {sm.label}</p>
                 </div>
               )
             })}
           </div>
         )}
 
-        {filtered.length===0 ? (
-          <div style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'60px 24px',textAlign:'center'}}>
-            <div style={{fontSize:40,marginBottom:10}}>🛍️</div>
-            <p style={{fontSize:15,fontWeight:600,color:'#C4CDD8',marginBottom:4}}>Sin pedidos</p>
-            <p style={{fontSize:13,color:'#49566A'}}>Los pedidos aparecerán aquí en tiempo real.</p>
+        {/* ── Order cards ─────────────────────────────────────── */}
+        {filtered.length === 0 ? (
+          <div style={{ background: '#131920', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '60px 24px', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 10 }}>🛍️</div>
+            <p style={{ fontSize: 15, fontWeight: 600, color: '#C4CDD8', marginBottom: 4 }}>Sin pedidos</p>
+            <p style={{ fontSize: 13, color: '#49566A' }}>Los pedidos apareceran aqui en tiempo real.</p>
           </div>
-        ) : filtered.map((o,i)=>{
-          const ss = ESTADO_COL[o.status]||ESTADO_COL.nuevo
-          const items = Array.isArray(o.items)?o.items:[]
+        ) : filtered.map(o => {
+          const sm = STATUS_META[o.status] || STATUS_META.collecting
+          const items = Array.isArray(o.items) ? o.items : []
+          const typeInfo = TYPE_LABELS[o.order_type] || { label: o.order_type || 'Otro', icon: '📦' }
+          const total = o.total_estimate || 0
+          const ns = nextStatus(o.status)
+          const address = extractAddress(o)
+
           return (
-            <div key={o.id} onClick={()=>setModal(o)} style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:12,padding:'14px 16px',marginBottom:10,cursor:'pointer',display:'flex',gap:12,alignItems:'flex-start',transition:'all 0.1s',boxShadow:'none'}}
-              onMouseEnter={e=>(e.currentTarget as HTMLElement).style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'}
-              onMouseLeave={e=>(e.currentTarget as HTMLElement).style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'}>
-              <div style={{width:36,height:36,borderRadius:10,background:ss.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:14}}>
-                {o.type==='delivery'?'🛵':o.type==='takeaway'?'🥡':'🍽️'}
-              </div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
-                  <p style={{fontSize:14,fontWeight:600,color:'#E8EEF6'}}>{o.customer_name}</p>
-                  <span style={{fontSize:10,padding:'2px 7px',borderRadius:6,background:ss.bg,color:ss.color,fontWeight:700,flexShrink:0}}>{ss.label}</span>
-                  <span style={{fontSize:10,color:'#49566A',textTransform:'capitalize'}}>{o.type}</span>
-                  <span style={{fontSize:10,color:o.status==='nuevo'?'#F0A84E':'#49566A',fontWeight:o.status==='nuevo'?600:400}}>{timeAgo(o.created_at)}</span>
+            <div key={o.id} onClick={() => setModal(o)} style={{
+              background: '#131920', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12,
+              padding: '14px 16px', marginBottom: 10, cursor: 'pointer',
+              borderLeft: '3px solid ' + sm.color,
+              transition: 'box-shadow 0.15s'
+            }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.3)'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = 'none'}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                {/* Icon */}
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: sm.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>
+                  {typeInfo.icon}
                 </div>
-                {items.length>0&&<p style={{fontSize:12,color:'#8895A7',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{items.map((it:any)=>(it.name||it.toString())).join(', ')}</p>}
-                {o.notes&&typeof o.notes==='string'&&o.notes.startsWith('DIRECCIÓN:')?(
-                  <p style={{fontSize:11,color:'#2DD4BF',marginTop:2,fontWeight:600}}>{'📍 '+o.notes}</p>
-                ):o.notes?(
-                  <p style={{fontSize:11,color:'#49566A',marginTop:2,fontStyle:'italic'}}>{o.notes.slice(0,60)}</p>
-                ):null}
-                {o.customer_address&&<p style={{fontSize:11,color:'#2DD4BF',marginTop:2,fontWeight:600}}>{'📍 '+o.customer_address}</p>}
-              </div>
-              <div style={{textAlign:'right',flexShrink:0}}>
-                {(o.total_estimate||o.total)>0&&<p style={{fontSize:15,fontWeight:700,color:'#34D399'}}>{(o.total_estimate||o.total).toFixed(2)}€</p>}
-                <p style={{fontSize:11,color:'#49566A',marginTop:2}}>{new Date(o.created_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</p>
+                {/* Content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: '#E8EEF6' }}>{o.customer_name}</p>
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, background: sm.color + '18', color: sm.color, fontWeight: 700 }}>{sm.label}</span>
+                    <span style={{ fontSize: 10, color: '#49566A' }}>{typeInfo.label}</span>
+                    {o.table_id && <span style={{ fontSize: 10, color: '#60A5FA', fontWeight: 600 }}>Mesa {o.table_id}</span>}
+                  </div>
+                  {/* Items preview */}
+                  {items.length > 0 && (
+                    <p style={{ fontSize: 12, color: '#8895A7', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
+                      {items.map((it: any) => {
+                        const qty = it.quantity && it.quantity > 1 ? it.quantity + 'x ' : ''
+                        return qty + (it.name || it.toString())
+                      }).join(', ')}
+                    </p>
+                  )}
+                  {/* Delivery address */}
+                  {address && (
+                    <p style={{ fontSize: 11, color: '#2DD4BF', marginTop: 2, fontWeight: 600 }}>📍 {address}</p>
+                  )}
+                  {/* Notes (non-address) */}
+                  {o.notes && !o.notes.startsWith('DIRECCION:') && !o.notes.startsWith('DIRECCIÓN:') && (
+                    <p style={{ fontSize: 11, color: '#49566A', marginTop: 2, fontStyle: 'italic' }}>{o.notes.length > 80 ? o.notes.slice(0, 80) + '...' : o.notes}</p>
+                  )}
+                  {/* Time */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                    <span style={{ fontSize: 11, color: o.status === 'collecting' || o.status === 'confirmed' ? '#F0A84E' : '#49566A', fontWeight: o.status === 'collecting' ? 600 : 400 }}>
+                      {timeAgo(o.created_at)}
+                    </span>
+                    <span style={{ fontSize: 11, color: '#49566A' }}>
+                      {new Date(o.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    {o.pickup_time && (
+                      <span style={{ fontSize: 11, color: '#A78BFA', fontWeight: 600 }}>Recogida: {o.pickup_time}</span>
+                    )}
+                  </div>
+                </div>
+                {/* Right side: total + quick action */}
+                <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                  {total > 0 && <p style={{ fontSize: 16, fontWeight: 700, color: '#34D399' }}>{total.toFixed(2)}€</p>}
+                  {ns && o.status !== 'delivered' && o.status !== 'cancelled' && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); avanzarEstado(o.id, o.status) }}
+                      style={{
+                        padding: '5px 12px', fontSize: 11, fontWeight: 600, borderRadius: 7,
+                        border: '1px solid ' + (STATUS_META[ns]?.color || '#F0A84E') + '44',
+                        background: (STATUS_META[ns]?.color || '#F0A84E') + '18',
+                        color: STATUS_META[ns]?.color || '#F0A84E',
+                        cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap'
+                      }}>
+                      {nextLabel(o.status)} →
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )
         })}
       </div>
 
-      {/* Modal */}
-      {modal&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16}} onClick={()=>setModal(null)}>
-          <div style={{background:'#131920',borderRadius:16,padding:24,width:'100%',maxWidth:440,boxShadow:'0 20px 60px rgba(0,0,0,0.7)'}} onClick={e=>e.stopPropagation()}>
-            <div style={{display:'flex',justifyContent:'space-between',marginBottom:16}}>
-              <p style={{fontSize:17,fontWeight:700,color:'#E8EEF6'}}>{modal.customer_name}</p>
-              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:'#49566A'}}>×</button>
+      {/* ── Order detail modal ────────────────────────────────── */}
+      {modal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }} onClick={() => setModal(null)}>
+          <div style={{ background: '#131920', borderRadius: 16, padding: 24, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.7)' }} onClick={e => e.stopPropagation()}>
+            {/* Modal header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+              <div>
+                <p style={{ fontSize: 18, fontWeight: 700, color: '#E8EEF6' }}>{modal.customer_name}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: (STATUS_META[modal.status]?.color || '#8895A7') + '18', color: STATUS_META[modal.status]?.color || '#8895A7', fontWeight: 700 }}>
+                    {STATUS_META[modal.status]?.icon} {STATUS_META[modal.status]?.label || modal.status}
+                  </span>
+                  <span style={{ fontSize: 11, color: '#49566A' }}>
+                    {(TYPE_LABELS[modal.order_type]?.icon || '📦') + ' ' + (TYPE_LABELS[modal.order_type]?.label || modal.order_type)}
+                  </span>
+                  {modal.table_id && <span style={{ fontSize: 11, color: '#60A5FA', fontWeight: 600 }}>Mesa {modal.table_id}</span>}
+                </div>
+              </div>
+              <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#49566A', padding: 4 }}>×</button>
             </div>
-            {modal.customer_phone&&<div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
-              <p style={{fontSize:13,color:'#C4CDD8'}}>📞 {modal.customer_phone}</p>
-              <button onClick={async () => {
-                const sess = await supabase.auth.getSession()
-                if (!sess.data.session) return
-                await fetch('/api/voice/outbound', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
-                  body: JSON.stringify({ phone_number: modal.customer_phone, reason: 'general', customer_name: modal.customer_name })
-                })
-              }}
-              style={{fontSize:11, padding:'5px 12px', borderRadius:7, border:'1px solid rgba(45,212,191,0.3)', background:'rgba(45,212,191,0.08)', color:'#2DD4BF', cursor:'pointer', fontFamily:'inherit', fontWeight:500}}>
-                📞 Llamar
-              </button>
-            </div>}
-            {modal.customer_address&&<p style={{fontSize:13,color:'#C4CDD8',marginBottom:6}}>📍 {modal.customer_address}</p>}
-            {modal.notes&&<p style={{fontSize:13,color:'#C4CDD8',marginBottom:12}}>📝 {modal.notes}</p>}
-            <div style={{marginBottom:16}}>
-              <p style={{fontSize:11,fontWeight:700,color:'#49566A',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:8}}>Cambiar estado</p>
-              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                {ESTADOS.map(s=>{
-                  const ss=ESTADO_COL[s]; if(!ss) return null
-                  return(
-                    <button key={s} onClick={()=>cambiarEstado(modal.id,s)} style={{padding:'6px 12px',fontSize:12,fontWeight:600,borderRadius:8,border:'1px solid',borderColor:ss.color+'44',background:modal.status===s?ss.bg:'white',color:ss.color,cursor:'pointer',fontFamily:'inherit'}}>
-                      {ss.label}
+
+            {/* Customer info */}
+            <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {modal.customer_phone && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <p style={{ fontSize: 13, color: '#C4CDD8' }}>📞 {modal.customer_phone}</p>
+                  <button onClick={async () => {
+                    const sess = await supabase.auth.getSession()
+                    if (!sess.data.session) return
+                    await fetch('/api/voice/outbound', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
+                      body: JSON.stringify({ phone_number: modal.customer_phone, reason: 'general', customer_name: modal.customer_name })
+                    })
+                  }}
+                    style={{ fontSize: 11, padding: '4px 10px', borderRadius: 7, border: '1px solid rgba(45,212,191,0.3)', background: 'rgba(45,212,191,0.08)', color: '#2DD4BF', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
+                    Llamar
+                  </button>
+                </div>
+              )}
+              {extractAddress(modal) && (
+                <p style={{ fontSize: 13, color: '#2DD4BF' }}>📍 {extractAddress(modal)}</p>
+              )}
+              {modal.pickup_time && (
+                <p style={{ fontSize: 13, color: '#A78BFA' }}>🕐 Recogida: {modal.pickup_time}</p>
+              )}
+              {modal.notes && (
+                <p style={{ fontSize: 13, color: '#C4CDD8' }}>📝 {modal.notes}</p>
+              )}
+            </div>
+
+            {/* Items list */}
+            {Array.isArray(modal.items) && modal.items.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: '#49566A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Productos</p>
+                <div style={{ background: '#1A2230', borderRadius: 10, overflow: 'hidden' }}>
+                  {modal.items.map((item: any, idx: number) => (
+                    <div key={idx} style={{
+                      padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      borderBottom: idx < modal.items.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none'
+                    }}>
+                      <div>
+                        <p style={{ fontSize: 13, color: '#E8EEF6', fontWeight: 500 }}>{item.name || item.toString()}</p>
+                        {item.quantity && item.quantity > 1 && (
+                          <p style={{ fontSize: 11, color: '#49566A' }}>x{item.quantity}</p>
+                        )}
+                      </div>
+                      {item.price != null && (
+                        <p style={{ fontSize: 13, color: '#34D399', fontWeight: 600 }}>{(item.price * (item.quantity || 1)).toFixed(2)}€</p>
+                      )}
+                    </div>
+                  ))}
+                  {/* Total row */}
+                  {(modal.total_estimate || 0) > 0 && (
+                    <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', background: '#0C1018', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                      <p style={{ fontSize: 13, color: '#E8EEF6', fontWeight: 700 }}>Total</p>
+                      <p style={{ fontSize: 15, color: '#34D399', fontWeight: 700 }}>{(modal.total_estimate || 0).toFixed(2)}€</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Status flow buttons */}
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#49566A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Cambiar estado</p>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {STATUS_FLOW.map(s => {
+                  const sm = STATUS_META[s]
+                  if (!sm) return null
+                  const isActive = modal.status === s
+                  const idx = STATUS_FLOW.indexOf(s)
+                  const currentIdx = STATUS_FLOW.indexOf(modal.status as any)
+                  const isPast = currentIdx >= 0 && idx < currentIdx
+                  return (
+                    <button key={s} onClick={() => cambiarEstado(modal.id, s)} style={{
+                      padding: '7px 14px', fontSize: 12, fontWeight: 600, borderRadius: 8,
+                      border: '1px solid ' + sm.color + '44',
+                      background: isActive ? sm.color + '30' : '#1A2230',
+                      color: isActive ? sm.color : isPast ? '#49566A' : sm.color + 'aa',
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      opacity: isPast ? 0.5 : 1,
+                    }}>
+                      {sm.icon} {sm.label}
                     </button>
                   )
                 })}
               </div>
+              {/* Cancel button */}
+              {modal.status !== 'delivered' && modal.status !== 'cancelled' && (
+                <button onClick={() => cambiarEstado(modal.id, 'cancelled')} style={{
+                  marginTop: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, borderRadius: 8,
+                  border: '1px solid #F8717144', background: '#F8717118', color: '#F87171',
+                  cursor: 'pointer', fontFamily: 'inherit'
+                }}>
+                  ✖️ Cancelar pedido
+                </button>
+              )}
+            </div>
+
+            {/* Timestamps */}
+            <div style={{ fontSize: 11, color: '#49566A', display: 'flex', gap: 16 }}>
+              <span>Creado: {new Date(modal.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+              {modal.updated_at && modal.updated_at !== modal.created_at && (
+                <span>Actualizado: {new Date(modal.updated_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+              )}
             </div>
           </div>
         </div>
       )}
     </div>
   )
+}
+
+/** Extract delivery address from notes or dedicated field */
+function extractAddress(order: any): string | null {
+  if (order.customer_address) return order.customer_address
+  if (order.delivery_address) return order.delivery_address
+  if (order.notes && (order.notes.startsWith('DIRECCION:') || order.notes.startsWith('DIRECCIÓN:'))) {
+    const parts = order.notes.split(' | ')
+    const addrPart = parts.find((p: string) => p.startsWith('DIRECCION:') || p.startsWith('DIRECCIÓN:'))
+    if (addrPart) return addrPart.replace(/^DIRECCI[OÓ]N:\s*/, '')
+  }
+  return null
 }
