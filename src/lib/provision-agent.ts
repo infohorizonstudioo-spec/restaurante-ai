@@ -373,6 +373,7 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
             properties: {
               tenant_id: { type: "string", description: "ID del negocio", enum: [tenantId] },
               customer_name: { type: "string", description: "Nombre del cliente" },
+              caller_phone: { type: "string", description: "Teléfono del cliente" },
               intent: { type: "string", enum: ["reserva", "cancelacion", "consulta", "pedido", "otro"] },
               summary: { type: "string", description: "Resumen breve" },
             },

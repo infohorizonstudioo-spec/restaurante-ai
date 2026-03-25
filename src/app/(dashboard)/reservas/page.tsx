@@ -95,8 +95,20 @@ export default function ReservasPage() {
   const today = new Date().toISOString().slice(0,10)
 
   async function updateStatus(id:string, status:string) {
-    await supabase.from('reservations').update({status}).eq('id',id).eq('tenant_id',tid)
-    if (tid) load(tid)
+    const { error } = await supabase.from('reservations').update({status}).eq('id',id).eq('tenant_id',tid)
+    if (!error && tid) {
+      const r = reservas.find(x => x.id === id)
+      if (r) {
+        await supabase.from('notifications').insert({
+          tenant_id: tid,
+          type: status === 'confirmada' ? 'reservation_confirmed' : status === 'cancelada' ? 'reservation_cancelled' : 'reservation_updated',
+          title: `Reserva ${status} — ${r.customer_name || 'Sin nombre'}`,
+          body: `${r.customer_name || 'Sin nombre'} · ${r.date || r.reservation_date || ''} a las ${(r.time || r.reservation_time || '').slice(0,5)} · ${r.people || r.party_size || 1}p`,
+          read: false,
+        })
+      }
+      load(tid)
+    }
     setModal(null)
   }
 

@@ -332,10 +332,26 @@ export default function LlamadasPage() {
                           ) : feedbackDone.has(call.call_sid) ? (
                             <p style={{fontSize:11, color:C.green}}>✓ Listo — Sofía tendrá esto en cuenta la próxima vez</p>
                           ) : (
-                            <button onClick={()=>{setCorrecting(call.call_sid);setFeedbackNote('')}}
-                              style={{fontSize:11, padding:'5px 12px', borderRadius:7, border:`1px solid ${C.border}`, background:'transparent', color:C.text3, cursor:'pointer', fontFamily:'inherit', fontWeight:500}}>
-                              Esto no es correcto, quiero cambiarlo
-                            </button>
+                            <div style={{display:'flex',alignItems:'center',gap:0}}>
+                              {call.caller_phone && call.caller_phone !== 'Número oculto' && (
+                                <button onClick={async () => {
+                                  const sess = await supabase.auth.getSession()
+                                  if (!sess.data.session) return
+                                  await fetch('/api/voice/outbound', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
+                                    body: JSON.stringify({ phone_number: call.caller_phone, reason: 'callback', customer_name: call.customer_name })
+                                  })
+                                }}
+                                style={{fontSize:11, padding:'5px 12px', borderRadius:7, border:`1px solid ${C.teal}40`, background:C.tealDim, color:C.teal, cursor:'pointer', fontFamily:'inherit', fontWeight:500, marginRight:8}}>
+                                  📞 Llamar de vuelta
+                                </button>
+                              )}
+                              <button onClick={()=>{setCorrecting(call.call_sid);setFeedbackNote('')}}
+                                style={{fontSize:11, padding:'5px 12px', borderRadius:7, border:`1px solid ${C.border}`, background:'transparent', color:C.text3, cursor:'pointer', fontFamily:'inherit', fontWeight:500}}>
+                                Esto no es correcto, quiero cambiarlo
+                              </button>
+                            </div>
                           )}
                         </div>
 

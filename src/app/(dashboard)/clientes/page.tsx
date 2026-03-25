@@ -155,7 +155,23 @@ function DefaultClientesView() {
                   </div>
                   <div>
                     <p style={{fontSize:17,fontWeight:700,color:C.text}}>{selected.name}</p>
-                    <p style={{fontSize:13,color:C.text2,marginTop:1}}>{selected.phone}{selected.email?' · '+selected.email:''}</p>
+                    <div style={{display:'flex',alignItems:'center',gap:8,marginTop:1}}>
+                      <p style={{fontSize:13,color:C.text2}}>{selected.phone}{selected.email?' · '+selected.email:''}</p>
+                      {selected.phone && (
+                        <button onClick={async () => {
+                          const sess = await supabase.auth.getSession()
+                          if (!sess.data.session) return
+                          await fetch('/api/voice/outbound', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
+                            body: JSON.stringify({ phone_number: selected.phone, reason: 'callback', customer_name: selected.name })
+                          })
+                        }}
+                        style={{fontSize:11, padding:'3px 10px', borderRadius:7, border:`1px solid rgba(45,212,191,0.25)`, background:'rgba(45,212,191,0.10)', color:'#2DD4BF', cursor:'pointer', fontFamily:'inherit', fontWeight:500, flexShrink:0}}>
+                          📞 Llamar
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
