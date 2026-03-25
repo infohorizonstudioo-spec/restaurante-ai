@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { resolveTemplate } from '@/lib/templates'
+import { requireAuth } from '@/lib/api-auth'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,14 +9,15 @@ const admin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
-// GET /api/orders?tenant_id=xxx&limit=50&page=0
+// GET /api/orders?limit=50&page=0
 export async function GET(req: Request) {
   try {
+    const auth = await requireAuth(req)
+    if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    const tenantId = auth.tenantId
     const url = new URL(req.url)
-    const tenantId = url.searchParams.get('tenant_id')
     const limit = parseInt(url.searchParams.get('limit') || '50')
     const page  = parseInt(url.searchParams.get('page')  || '0')
-    if (!tenantId) return NextResponse.json({ error: 'tenant_id required' }, { status: 400 })
 
     const { data, error, count } = await admin.from('orders')
       .select('*', { count: 'exact' })
@@ -26,7 +28,7 @@ export async function GET(req: Request) {
     if (error) throw error
     return NextResponse.json({ orders: data || [], total: count || 0, page, limit })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -62,7 +64,7 @@ export async function POST(req: Request) {
     if (error) throw error
     return NextResponse.json({ success: true, order })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -89,6 +91,6 @@ export async function PATCH(req: Request) {
     if (error) throw error
     return NextResponse.json({ success: true, order: data })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

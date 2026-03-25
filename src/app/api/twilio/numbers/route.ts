@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/api-auth'
 
 const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID
 const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN
@@ -20,13 +21,16 @@ export async function GET(req: Request) {
     const d = await r.json()
     return NextResponse.json({ numbers: d.available_phone_numbers || [] })
   } catch(e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function POST(req: Request) {
+  const auth = await requireAuth(req)
+  if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
   const { phoneNumber, tenantId } = await req.json()
-  
+
   if (!TWILIO_SID || !TWILIO_TOKEN) {
     return NextResponse.json({ error: 'Twilio not configured' }, { status: 503 })
   }
@@ -53,6 +57,6 @@ export async function POST(req: Request) {
     const d = await r.json()
     return NextResponse.json({ success: true, number: d.phone_number, sid: d.sid })
   } catch(e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

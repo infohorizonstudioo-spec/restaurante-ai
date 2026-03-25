@@ -22,7 +22,8 @@ export async function GET(req: Request) {
   // Verificar que viene de Vercel Cron (o de nosotros)
   const authHeader = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) return NextResponse.json({ error: 'not configured' }, { status: 503 })
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 

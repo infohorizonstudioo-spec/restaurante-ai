@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     if (!r.ok) return new Response('error', { status: 500 })
     const audio = await r.arrayBuffer()
     return new Response(audio, {
-      headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=3600', 'Access-Control-Allow-Origin': '*' }
+      headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=3600' }
     })
   } catch(e) {
     return new Response('error', { status: 500 })
