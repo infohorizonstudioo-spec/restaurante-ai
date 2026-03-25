@@ -313,6 +313,45 @@ const TX: Record<string, Record<string, string>> = {
   'Acción': {en:'Action',fr:'Action',pt:'Ação',ca:'Acció'},
   'Lo que hizo': {en:'What it did',fr:"Ce qu'il a fait",pt:'O que fez',ca:'El que va fer'},
   'Esto no es correcto, quiero cambiarlo': {en:'This is wrong, I want to change it',fr:'Ce n\'est pas correct, je veux le changer',pt:'Isto não está correto, quero mudar',ca:'Això no és correcte, vull canviar-ho'},
+  // Sidebar
+  'Cerrar sesión': {en:'Sign out',fr:'Déconnexion',pt:'Terminar sessão',ca:'Tancar sessió'},
+  'Llamadas este mes': {en:'Calls this month',fr:'Appels ce mois',pt:'Chamadas este mês',ca:'Trucades aquest mes'},
+  'Prueba': {en:'Trial',fr:'Essai',pt:'Teste',ca:'Prova'},
+  'Básico': {en:'Basic',fr:'Basique',pt:'Básico',ca:'Bàsic'},
+  'Profesional': {en:'Professional',fr:'Professionnel',pt:'Profissional',ca:'Professional'},
+  'Completo': {en:'Complete',fr:'Complet',pt:'Completo',ca:'Complet'},
+  // Estadisticas
+  'Reservas este mes': {en:'Reservations this month',fr:'Réservations ce mois',pt:'Reservas este mês',ca:'Reserves aquest mes'},
+  'Tasa conversión': {en:'Conversion rate',fr:'Taux de conversion',pt:'Taxa de conversão',ca:'Taxa de conversió'},
+  'Clientes': {en:'Clients',fr:'Clients',pt:'Clientes',ca:'Clients'},
+  'Reservas por día de la semana': {en:'Reservations by day of week',fr:'Réservations par jour',pt:'Reservas por dia da semana',ca:'Reserves per dia'},
+  'Hora pico': {en:'Peak hour',fr:'Heure de pointe',pt:'Hora de pico',ca:'Hora punta'},
+  'Origen reservas': {en:'Reservation source',fr:'Source des réservations',pt:'Origem das reservas',ca:'Origen reserves'},
+  'Via agente voz': {en:'Via voice agent',fr:'Via agent vocal',pt:'Via agente de voz',ca:'Via agent de veu'},
+  'Manuales': {en:'Manual',fr:'Manuelles',pt:'Manuais',ca:'Manuals'},
+  'Intenciones detectadas': {en:'Detected intents',fr:'Intentions détectées',pt:'Intenções detetadas',ca:'Intencions detectades'},
+  'Rendimiento de tu recepcionista y reservas': {en:'Your receptionist performance and reservations',fr:'Performance de votre réceptionniste',pt:'Desempenho do rececionista e reservas',ca:'Rendiment de la recepcionista'},
+  // Facturacion
+  'Control en tiempo real de tu plan y consumo': {en:'Real-time plan and usage control',fr:'Contrôle en temps réel',pt:'Controlo em tempo real do plano',ca:'Control en temps real del pla'},
+  'Plan actual': {en:'Current plan',fr:'Plan actuel',pt:'Plano atual',ca:'Pla actual'},
+  'Llamadas usadas': {en:'Calls used',fr:'Appels utilisés',pt:'Chamadas usadas',ca:'Trucades usades'},
+  'Incluidas': {en:'Included',fr:'Incluses',pt:'Incluídas',ca:'Incloses'},
+  'Extra': {en:'Extra',fr:'Extra',pt:'Extra',ca:'Extra'},
+  'Coste extra estimado': {en:'Estimated extra cost',fr:'Coût supplémentaire estimé',pt:'Custo extra estimado',ca:'Cost extra estimat'},
+  'Total estimado': {en:'Estimated total',fr:'Total estimé',pt:'Total estimado',ca:'Total estimat'},
+  'Renovación': {en:'Renewal',fr:'Renouvellement',pt:'Renovação',ca:'Renovació'},
+  'Elige tu plan': {en:'Choose your plan',fr:'Choisissez votre plan',pt:'Escolha o seu plano',ca:'Tria el teu pla'},
+  'Pagado': {en:'Paid',fr:'Payé',pt:'Pago',ca:'Pagat'},
+  'Historial de facturación': {en:'Billing history',fr:'Historique de facturation',pt:'Histórico de faturação',ca:'Historial de facturació'},
+  // Config
+  'Cómo trabaja tu recepcionista': {en:'How your receptionist works',fr:'Comment fonctionne votre réceptionniste',pt:'Como funciona o rececionista',ca:'Com treballa la recepcionista'},
+  'Aquí decides todo': {en:'You decide everything here',fr:'Vous décidez de tout ici',pt:'Aqui decides tudo',ca:'Aquí ho decideixes tot'},
+  // Common
+  'Buenos días': {en:'Good morning',fr:'Bonjour',pt:'Bom dia',ca:'Bon dia'},
+  'Buenas tardes': {en:'Good afternoon',fr:'Bon après-midi',pt:'Boa tarde',ca:'Bona tarda'},
+  'Buenas noches': {en:'Good evening',fr:'Bonsoir',pt:'Boa noite',ca:'Bona nit'},
+  'confirmada': {en:'confirmed',fr:'confirmée',pt:'confirmada',ca:'confirmada'},
+  'Cargar más llamadas': {en:'Load more calls',fr:'Charger plus',pt:'Carregar mais',ca:'Carregar més'},
 }
 
 export function tx(text: string, locale: string): string {

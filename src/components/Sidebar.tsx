@@ -65,7 +65,7 @@ export default function Sidebar() {
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  const { tenant, template, t } = useTenant()
+  const { tenant, template, t, tx } = useTenant()
 
   // Map module IDs to translated labels
   const navLabel = (mod: any) => {
@@ -85,7 +85,7 @@ export default function Sidebar() {
   const included  = isTrial ? 10 : (tenant?.plan_calls_included||50)
   const pct       = included > 0 ? Math.min(100, Math.round((used/included)*100)) : 0
   const planColor = PLAN_COL[plan] || '#F0A84E'
-  const planLabel = PLAN_LBL[plan] || 'Trial'
+  const planLabel = tx(PLAN_LBL[plan] || 'Trial')
   const agentOn   = !!(tenant?.agent_phone)
   const agentName = tenant?.agent_name || 'Sofía'
   // Usar template si existe, pero asegurar que /agente siempre aparece
@@ -202,8 +202,8 @@ export default function Sidebar() {
             <div style={{ height:'100%', width:pct+'%', background: pct>=100 ? 'var(--rz-red)' : pct>=80 ? 'var(--rz-yellow)' : planColor, borderRadius:2, transition:'width 0.6s ease', transformOrigin:'left' }}/>
           </div>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <span style={{ fontSize:10, color:'var(--rz-text-3)', textTransform:'uppercase', letterSpacing:'0.05em' }}>Llamadas este mes</span>
-            {isTrial && <Link href="/precios" style={{ fontSize:10, color:'var(--rz-amber)', fontWeight:700, textDecoration:'none', letterSpacing:'-0.01em' }}>Activar →</Link>}
+            <span style={{ fontSize:10, color:'var(--rz-text-3)', textTransform:'uppercase', letterSpacing:'0.05em' }}>{tx('Llamadas este mes')}</span>
+            {isTrial && <Link href="/precios" style={{ fontSize:10, color:'var(--rz-amber)', fontWeight:700, textDecoration:'none', letterSpacing:'-0.01em' }}>{tx('Activar →')}</Link>}
           </div>
         </div>
       )}
@@ -215,7 +215,7 @@ export default function Sidebar() {
           onMouseEnter={e=>{ e.currentTarget.style.background='rgba(248,113,113,0.07)'; e.currentTarget.style.color='var(--rz-red)' }}
           onMouseLeave={e=>{ e.currentTarget.style.background='none'; e.currentTarget.style.color='var(--rz-text-3)' }}>
           <Icon id="exit" size={16}/>
-          {!collapsed && <span style={{ fontSize:13, fontWeight:500 }}>Cerrar sesión</span>}
+          {!collapsed && <span style={{ fontSize:13, fontWeight:500 }}>{tx('Cerrar sesión')}</span>}
         </button>
       </div>
     </nav>

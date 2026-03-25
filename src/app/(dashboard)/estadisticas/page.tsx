@@ -7,7 +7,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import Link from 'next/link'
 
 export default function EstadisticasPage(){
-  const { t } = useTenant()
+  const { t, tx } = useTenant()
   const [plan,setPlan]   = useState<string>('free')
   const [loading,setLoad]= useState(true)
   const [data,setData]   = useState<any>(null)
@@ -109,7 +109,7 @@ export default function EstadisticasPage(){
       <div style={{background:'#131920',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}}>
         <div>
           <h1 style={{fontSize:18,fontWeight:700,color:'#E8EEF6'}}>{t.nav.stats}</h1>
-          <p style={{fontSize:12,color:'#49566A',marginTop:1}}>Rendimiento de tu recepcionista y reservas</p>
+          <p style={{fontSize:12,color:'#49566A',marginTop:1}}>{tx('Rendimiento de tu recepcionista y reservas')}</p>
         </div>
         <NotifBell/>
       </div>
@@ -118,9 +118,9 @@ export default function EstadisticasPage(){
         {/* KPIs */}
         <div className="rz-grid-4col" style={{gap:12,marginBottom:20}}>
           {[
-            {label:'Llamadas este mes',value:d.callsMonth,sub:'Completadas: '+d.callsMonthCompleted,color:'#F0A84E'},
-            {label:'Reservas este mes', value:d.resMonth,  sub:'Via agente: '+d.resVoiceMonth,   color:'#34D399'},
-            {label:'Tasa conversión',   value:d.convRate+'%',sub:'Reservas voz / llamadas completadas', color:d.convRate>=30?'#059669':d.convRate>=15?'#d97706':'#dc2626'},
+            {label:tx('Llamadas este mes'),value:d.callsMonth,sub:tx('Completadas')+': '+d.callsMonthCompleted,color:'#F0A84E'},
+            {label:tx('Reservas este mes'), value:d.resMonth,  sub:tx('Via agente')+': '+d.resVoiceMonth,   color:'#34D399'},
+            {label:tx('Tasa conversión'),   value:d.convRate+'%',sub:tx('Reservas voz / llamadas completadas'), color:d.convRate>=30?'#059669':d.convRate>=15?'#d97706':'#dc2626'},
             {label:'Clientes',          value:d.custs,    sub:'Personas/reserva: '+d.avgPeople, color:'#A78BFA'},
           ].map(k=>(
             <div key={k.label} style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'18px 20px'}}>
@@ -154,7 +154,7 @@ export default function EstadisticasPage(){
           {/* Hora pico + fuente */}
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
             <div style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'16px 20px',flex:1}}>
-              <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:8}}>Hora pico</p>
+              <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:8}}>{tx('Hora pico')}</p>
               {d.peakHour ? (
                 <div style={{display:'flex',alignItems:'center',gap:12}}>
                   <div style={{fontSize:32,fontWeight:800,color:'#F0A84E'}}>{d.peakHour[0]}h</div>
@@ -166,15 +166,15 @@ export default function EstadisticasPage(){
               ) : <p style={{fontSize:13,color:'#49566A'}}>Sin datos de llamadas</p>}
             </div>
             <div style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'16px 20px',flex:1}}>
-              <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:8}}>Origen reservas</p>
+              <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:8}}>{tx('Origen reservas')}</p>
               <div style={{display:'flex',gap:16}}>
                 <div>
                   <p style={{fontSize:22,fontWeight:700,color:'#A78BFA'}}>{d.srcVoice}</p>
-                  <p style={{fontSize:11,color:'#49566A'}}>Via agente voz</p>
+                  <p style={{fontSize:11,color:'#49566A'}}>{tx('Via agente voz')}</p>
                 </div>
                 <div>
                   <p style={{fontSize:22,fontWeight:700,color:'#8895A7'}}>{d.srcManual}</p>
-                  <p style={{fontSize:11,color:'#49566A'}}>Manuales</p>
+                  <p style={{fontSize:11,color:'#49566A'}}>{tx('Manuales')}</p>
                 </div>
               </div>
             </div>
@@ -184,7 +184,7 @@ export default function EstadisticasPage(){
         {/* Intenciones */}
         {d.topIntents.length>0&&(
           <div style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'18px 20px'}}>
-            <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:14}}>Intenciones detectadas</p>
+            <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:14}}>{tx('Intenciones detectadas')}</p>
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
               {d.topIntents.map(([intent,cnt]:any)=>{
                 const pct = Math.round((cnt/d.callsTotal)*100)

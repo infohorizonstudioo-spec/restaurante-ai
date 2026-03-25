@@ -27,7 +27,7 @@ const PLAN:Record<string,{label:string;color:string;price:number;calls:number;ra
 }
 
 export default function FacturacionPage() {
-  const { t } = useTenant()
+  const { t, tx } = useTenant()
   const [loading, setLoading] = useState(true)
   const [billing, setBilling] = useState<any>(null)
   const [history, setHistory] = useState<any[]>([])
@@ -80,7 +80,7 @@ export default function FacturacionPage() {
       <div style={{background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 28px', position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', justifyContent:'space-between'}}>
         <div>
           <h1 style={{fontSize:16, fontWeight:700, color:C.text, letterSpacing:'-0.02em'}}>{t.nav.billing}</h1>
-          <p style={{fontSize:11, color:C.text3, marginTop:2}}>Control en tiempo real de tu plan y consumo</p>
+          <p style={{fontSize:11, color:C.text3, marginTop:2}}>{tx('Control en tiempo real de tu plan y consumo')}</p>
         </div>
         <NotifBell/>
       </div>
@@ -175,7 +175,7 @@ export default function FacturacionPage() {
         {/* Upgrade plans (trial only) */}
         {isTrial && (
           <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:'20px 24px', marginBottom:14}}>
-            <p style={{fontSize:15, fontWeight:700, color:C.text, marginBottom:16, letterSpacing:'-0.01em'}}>Elige tu plan</p>
+            <p style={{fontSize:15, fontWeight:700, color:C.text, marginBottom:16, letterSpacing:'-0.01em'}}>{tx('Elige tu plan')}</p>
             <div className="rz-grid-3col" style={{gap:12}}>
               {(['starter','pro','business'] as const).map(p=>{
                 const pp=PLAN[p]; return(
@@ -197,7 +197,7 @@ export default function FacturacionPage() {
         {/* Historial */}
         <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, overflow:'hidden'}}>
           <div style={{padding:'14px 20px', borderBottom:`1px solid ${C.border}`}}>
-            <p style={{fontSize:14, fontWeight:700, color:C.text}}>Historial de facturación</p>
+            <p style={{fontSize:14, fontWeight:700, color:C.text}}>{tx('Historial de facturación')}</p>
           </div>
           {history.length===0 ? (
             <div style={{padding:'36px 20px', textAlign:'center'}}>
