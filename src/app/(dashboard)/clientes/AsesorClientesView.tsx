@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
+import { getCommonStrings } from '@/lib/i18n'
 
 const C = {
   amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
@@ -45,6 +46,7 @@ export default function AsesorClientesView() {
   const { template } = useTenant()
   const L = template?.labels
   const clientesLabel = L?.clientes || 'Clientes'
+  const cs = getCommonStrings('es')
 
   const load = useCallback(async (tenantId:string) => {
     const {data} = await supabase.from('customers').select('*')
@@ -114,7 +116,7 @@ export default function AsesorClientesView() {
           {filtered.length===0 ? (
             <div style={{padding:'60px 24px',textAlign:'center'}}>
               <div style={{fontSize:36,marginBottom:10}}>👥</div>
-              <p style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>Sin clientes</p>
+              <p style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>{cs.noClients}</p>
               <p style={{fontSize:13,color:C.text3}}>{clientesLabel} que contacten al agente aparecerán aquí.</p>
             </div>
           ) : filtered.map(c => {
@@ -188,7 +190,7 @@ export default function AsesorClientesView() {
 
               <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Historial</p>
               {loadingH ? <div style={{textAlign:'center',padding:20,color:C.text3}}>Cargando...</div>
-              : historial.length===0 ? <p style={{fontSize:13,color:C.text3,padding:'20px 0'}}>Sin actividad registrada.</p>
+              : historial.length===0 ? <p style={{fontSize:13,color:C.text3,padding:'20px 0'}}>{cs.noActivity}</p>
               : historial.map((h,i)=>(
                 <div key={i} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:'12px 14px',marginBottom:8,display:'flex',gap:10,transition:'background 0.12s'}}
                   onMouseEnter={e=>(e.currentTarget.style.background=C.surface2)}

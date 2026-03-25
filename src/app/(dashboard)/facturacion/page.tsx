@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
+import { getStatusLabel } from '@/lib/i18n'
 import Link from 'next/link'
 
 const C = {
@@ -214,7 +215,7 @@ export default function FacturacionPage() {
               </div>
               <div style={{textAlign:'right'}}>
                 <p style={{fontFamily:'var(--rz-mono)', fontSize:16, fontWeight:700, color:C.text, marginBottom:4}}>{h.total_amount}€</p>
-                <span style={{fontSize:10, padding:'2px 8px', borderRadius:8, background:h.status==='paid'?C.greenDim:C.surface3, color:h.status==='paid'?C.green:C.text3, fontWeight:600, border:`1px solid ${h.status==='paid'?C.green+'25':C.border}`}}>{h.status==='paid'?'Pagado':'Pendiente'}</span>
+                <span style={{fontSize:10, padding:'2px 8px', borderRadius:8, background:h.status==='paid'?C.greenDim:C.surface3, color:h.status==='paid'?C.green:C.text3, fontWeight:600, border:`1px solid ${h.status==='paid'?C.green+'25':C.border}`}}>{getStatusLabel(h.status==='paid'?'paid':'unpaid', t.locale)}</span>
               </div>
             </div>
           ))}

@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useTenant } from '@/contexts/TenantContext'
+import { getCommonStrings } from '@/lib/i18n'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
 
@@ -16,6 +17,7 @@ const C = {
 
 export default function BarbeClientesView() {
   const { tenant } = useTenant()
+  const cs = getCommonStrings('es')
   const [clientes, setClientes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -82,7 +84,7 @@ export default function BarbeClientesView() {
           {filtered.length === 0 ? (
             <div style={{ padding: '60px 24px', textAlign: 'center' }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>✂️</div>
-              <p style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Sin clientes</p>
+              <p style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{cs.noClients}</p>
               <p style={{ fontSize: 13, color: C.text3, marginTop: 4 }}>Los clientes que llamen al agente aparecerán aquí.</p>
             </div>
           ) : filtered.map(c => (
@@ -129,7 +131,7 @@ export default function BarbeClientesView() {
 
               <p style={{ fontSize: 10, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Historial de citas</p>
               {loadingH ? <p style={{ color: C.text3 }}>Cargando...</p>
-                : historial.length === 0 ? <p style={{ fontSize: 13, color: C.text3 }}>Sin actividad registrada.</p>
+                : historial.length === 0 ? <p style={{ fontSize: 13, color: C.text3 }}>{cs.noActivity}</p>
                 : historial.map((h, i) => (
                   <div key={i} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', marginBottom: 8, display: 'flex', gap: 10 }}>
                     <span style={{ fontSize: 16 }}>{h._type === 'cita' ? '✂️' : '📞'}</span>

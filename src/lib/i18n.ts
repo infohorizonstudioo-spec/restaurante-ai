@@ -231,6 +231,14 @@ export function getStatusLabel(status: string, locale: string = 'es'): string {
     cancelada: t.reservations.cancelled, cancelled: t.reservations.cancelled,
     completada: t.reservations.completed, completed: t.reservations.completed,
     no_show: t.reservations.noShow,
+    // call statuses
+    activa: t.agent.callInProgress, 'in-progress': t.agent.callInProgress,
+    fallida: locale === 'es' ? 'Fallida' : locale === 'en' ? 'Failed' : locale === 'fr' ? 'Échoué' : locale === 'pt' ? 'Falhada' : 'Fallida',
+    failed: locale === 'es' ? 'Fallida' : locale === 'en' ? 'Failed' : locale === 'fr' ? 'Échoué' : locale === 'pt' ? 'Falhada' : 'Fallida',
+    'no-answer': t.agent.callMissed, perdida: t.agent.callMissed,
+    // billing statuses
+    paid: locale === 'es' ? 'Pagado' : locale === 'en' ? 'Paid' : locale === 'fr' ? 'Payé' : locale === 'pt' ? 'Pago' : 'Pagat',
+    unpaid: locale === 'es' ? 'Pendiente' : locale === 'en' ? 'Unpaid' : locale === 'fr' ? 'Impayé' : locale === 'pt' ? 'Pendente' : 'Pendent',
     // ecom / order statuses
     nuevo: locale === 'es' ? 'Nuevo' : locale === 'en' ? 'New' : locale === 'fr' ? 'Nouveau' : locale === 'pt' ? 'Novo' : 'Nuevo',
     confirmado: t.orders.confirmed,

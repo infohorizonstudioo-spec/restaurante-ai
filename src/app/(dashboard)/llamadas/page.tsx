@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
-import { getCommonStrings } from '@/lib/i18n'
+import { getCommonStrings, getStatusLabel } from '@/lib/i18n'
 
 // ── Traducciones humanas de estados ──────────────────────────────────────
 const DECISION_CFG: Record<string,{label:string;color:string;bg:string;icon:string}> = {
@@ -239,7 +239,7 @@ export default function LlamadasPage() {
                       <div style={{flex:1, minWidth:0}}>
                         <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:3}}>
                           <p style={{fontSize:13, fontWeight:600, color:C.text}}>{phone}</p>
-                          <span style={{fontSize:10, padding:'2px 8px', borderRadius:8, background:SB[status], color:SC[status], fontWeight:700, flexShrink:0}}>{SL[status]||status}</span>
+                          <span style={{fontSize:10, padding:'2px 8px', borderRadius:8, background:SB[status], color:SC[status], fontWeight:700, flexShrink:0}}>{getStatusLabel(status, t.locale)}</span>
                           {call.intent&&call.intent!=='consulta'&&<span style={{fontSize:10, padding:'2px 8px', borderRadius:8, background:C.violetDim, color:C.violet, fontWeight:600, textTransform:'capitalize'}}>{call.intent}</span>}
                         </div>
                         {call.summary ? <p style={{fontSize:12, color:C.text2, lineHeight:1.5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{call.summary}</p> : <p style={{fontSize:12, color:C.text3}}>Sin resumen</p>}

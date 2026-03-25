@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useTenant } from '@/contexts/TenantContext'
+import { getCommonStrings } from '@/lib/i18n'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
 
@@ -16,6 +17,7 @@ const C = {
 
 export default function EcomClientesView() {
   const { tenant } = useTenant()
+  const cs = getCommonStrings('es')
   const [clientes, setClientes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -68,7 +70,7 @@ export default function EcomClientesView() {
           {filtered.length === 0 ? (
             <div style={{ padding: '60px 24px', textAlign: 'center' }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>🛍️</div>
-              <p style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Sin clientes</p>
+              <p style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{cs.noClients}</p>
             </div>
           ) : filtered.map(c => (
             <div key={c.id} onClick={() => openClient(c)} style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: `1px solid ${C.border}`, background: selected?.id === c.id ? C.surface2 : 'transparent', transition: 'background 0.1s' }}
