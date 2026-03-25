@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 
-// Ã¢ÂÂÃ¢ÂÂ Paleta Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ââ Paleta âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const C = {
   bg:'#0C1018', card:'#131920', card2:'#161D2A', border:'rgba(255,255,255,0.08)',
   text:'#E8EEF6', sub:'#8895A7', muted:'#49566A', amber:'#F0A84E',
@@ -10,8 +10,8 @@ const C = {
   amberDim:'rgba(240,168,78,0.12)', greenDim:'rgba(52,211,153,0.10)',
 }
 
-// Ã¢ÂÂÃ¢ÂÂ DefiniciÃÂ³n de flujos por tipo de negocio Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-const DAYS = ['Lunes','Martes','MiÃÂ©rcoles','Jueves','Viernes','SÃÂ¡bado','Domingo']
+// ââ Definición de flujos por tipo de negocio âââââââââââââââââââââââââââââââââ
+const DAYS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
 
 interface FlowConfig {
   emoji: string
@@ -38,15 +38,15 @@ interface FieldConfig {
 
 const FLOWS: Record<string, FlowConfig> = {
   restaurante: {
-    emoji:'Ã°ÂÂÂ½Ã¯Â¸Â', label:'Restaurante / Bar', agentDefaultName:'SofÃÂ­a',
+    emoji:'½️', label:'Restaurante / Bar', agentDefaultName:'Sofía',
     steps: [
       {
-        id:'agent', title:'ÃÂ¿CÃÂ³mo se llamarÃÂ¡ tu recepcionista?',
-        subtitle:'Es el nombre que escucharÃÂ¡n tus clientes al llamar',
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?',
+        subtitle:'Es el nombre que escucharán tus clientes al llamar',
         fields: [
-          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: SofÃÂ­a, Carmen, LucÃÂ­aÃ¢ÂÂ¦', defaultValue:'SofÃÂ­a'},
-          {key:'language', type:'select', label:'ÃÂ¿En quÃÂ© idioma habla?', defaultValue:'es',
-            options:[{value:'es',label:'EspaÃÂ±ol'},{value:'ca',label:'CatalÃÂ '},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Sofía, Carmen, Lucíaâ¦', defaultValue:'Sofía'},
+          {key:'language', type:'select', label:'¿En qué idioma habla?', defaultValue:'es',
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
         ]
       },
       {
@@ -57,31 +57,31 @@ const FLOWS: Record<string, FlowConfig> = {
         ]
       },
       {
-        id:'hours', title:'ÃÂ¿CuÃÂ¡ndo estÃÂ¡is abiertos?',
-        subtitle:'Tu recepcionista avisarÃÂ¡ a los clientes si llaman fuera de horario',
+        id:'hours', title:'¿Cuándo estáis abiertos?',
+        subtitle:'Tu recepcionista avisará a los clientes si llaman fuera de horario',
         fields: [{key:'business_hours', type:'hours', label:'Horario semanal', defaultValue:null}]
       },
       {
-        id:'capacity', title:'ÃÂ¿CuÃÂ¡ntas mesas tenÃÂ©is?',
-        subtitle:'AsÃÂ­ sabrÃÂ¡ cuÃÂ¡ndo hay sitio disponible',
+        id:'capacity', title:'¿Cuántas mesas tenéis?',
+        subtitle:'Así sabrá cuándo hay sitio disponible',
         fields: [
-          {key:'total_tables', type:'number', label:'NÃÂºmero de mesas', placeholder:'Ej: 15', defaultValue:10, min:1, max:200},
-          {key:'table_capacity', type:'number', label:'ÃÂ¿CuÃÂ¡ntas personas caben por mesa de media?', placeholder:'Ej: 4', defaultValue:4, min:2, max:20},
-          {key:'max_group', type:'number', label:'ÃÂ¿CuÃÂ¡l es el grupo mÃÂ¡s grande que podÃÂ©is atender?', placeholder:'Ej: 20', defaultValue:12, min:2, max:100},
-          {key:'reservation_duration', type:'duration', label:'ÃÂ¿CuÃÂ¡nto dura de media una comida o cena?', defaultValue:90,
+          {key:'total_tables', type:'number', label:'Número de mesas', placeholder:'Ej: 15', defaultValue:10, min:1, max:200},
+          {key:'table_capacity', type:'number', label:'¿Cuántas personas caben por mesa de media?', placeholder:'Ej: 4', defaultValue:4, min:2, max:20},
+          {key:'max_group', type:'number', label:'¿Cuál es el grupo más grande que podéis atender?', placeholder:'Ej: 20', defaultValue:12, min:2, max:100},
+          {key:'reservation_duration', type:'duration', label:'¿Cuánto dura de media una comida o cena?', defaultValue:90,
             options:[{value:'60',label:'1 hora'},{value:'90',label:'1h 30min'},{value:'120',label:'2 horas'},{value:'150',label:'2h 30min'},{value:'180',label:'3 horas'}]},
         ]
       },
       {
-        id:'services', title:'ÃÂ¿QuÃÂ© servicios querÃÂ©is gestionar por telÃÂ©fono?',
+        id:'services', title:'¿Qué servicios queréis gestionar por teléfono?',
         subtitle:'Marca todo lo que tu recepcionista debe ser capaz de gestionar',
         fields: [
           {key:'services', type:'multiselect', label:'Servicios', defaultValue:['reservas'],
             options:[
-              {value:'reservas',label:'Reservas de mesa',emoji:'Ã°ÂÂÂ'},
-              {value:'pedidos',label:'Pedidos para llevar',emoji:'Ã°ÂÂÂ¦'},
-              {value:'informacion',label:'Preguntas sobre el menÃÂº y horario',emoji:'Ã¢ÂÂ'},
-              {value:'cancelaciones',label:'Cancelaciones de reserva',emoji:'Ã¢ÂÂ'},
+              {value:'reservas',label:'Reservas de mesa',emoji:''},
+              {value:'pedidos',label:'Pedidos para llevar',emoji:'¦'},
+              {value:'informacion',label:'Preguntas sobre el menú y horario',emoji:'â'},
+              {value:'cancelaciones',label:'Cancelaciones de reserva',emoji:'â'},
             ]
           },
         ]
@@ -90,15 +90,15 @@ const FLOWS: Record<string, FlowConfig> = {
   },
 
   bar: {
-    emoji:'Ã°ÂÂÂº', label:'Bar / CafeterÃÂ­a', agentDefaultName:'SofÃÂ­a',
+    emoji:'º', label:'Bar / Cafetería', agentDefaultName:'Sofía',
     steps: [
       {
-        id:'agent', title:'ÃÂ¿CÃÂ³mo se llamarÃÂ¡ tu recepcionista?',
-        subtitle:'Es el nombre que escucharÃÂ¡n tus clientes al llamar',
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?',
+        subtitle:'Es el nombre que escucharán tus clientes al llamar',
         fields: [
-          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: SofÃÂ­a, CarmenÃ¢ÂÂ¦', defaultValue:'SofÃÂ­a'},
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Sofía, Carmenâ¦', defaultValue:'Sofía'},
           {key:'language', type:'select', label:'Idioma', defaultValue:'es',
-            options:[{value:'es',label:'EspaÃÂ±ol'},{value:'ca',label:'CatalÃÂ '},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
         ]
       },
       {
@@ -109,19 +109,19 @@ const FLOWS: Record<string, FlowConfig> = {
         ]
       },
       {
-        id:'hours', title:'ÃÂ¿CuÃÂ¡ndo estÃÂ¡is abiertos?', subtitle:'Horario de atenciÃÂ³n al cliente',
+        id:'hours', title:'¿Cuándo estáis abiertos?', subtitle:'Horario de atención al cliente',
         fields: [{key:'business_hours', type:'hours', label:'Horario semanal', defaultValue:null}]
       },
       {
-        id:'services', title:'ÃÂ¿QuÃÂ© gestionÃÂ¡is por telÃÂ©fono?',
-        subtitle:'Tu recepcionista se centrarÃÂ¡ en esto',
+        id:'services', title:'¿Qué gestionáis por teléfono?',
+        subtitle:'Tu recepcionista se centrará en esto',
         fields: [
           {key:'services', type:'multiselect', label:'Servicios', defaultValue:['informacion'],
             options:[
-              {value:'reservas',label:'Reservar mesas o reservados',emoji:'Ã°ÂÂÂ'},
-              {value:'pedidos',label:'Pedidos para llevar',emoji:'Ã°ÂÂÂ¦'},
-              {value:'informacion',label:'Preguntas sobre carta y horario',emoji:'Ã¢ÂÂ'},
-              {value:'eventos',label:'Reservar para eventos privados',emoji:'Ã°ÂÂÂ'},
+              {value:'reservas',label:'Reservar mesas o reservados',emoji:''},
+              {value:'pedidos',label:'Pedidos para llevar',emoji:'¦'},
+              {value:'informacion',label:'Preguntas sobre carta y horario',emoji:'â'},
+              {value:'eventos',label:'Reservar para eventos privados',emoji:''},
             ]
           }
         ]
@@ -130,15 +130,15 @@ const FLOWS: Record<string, FlowConfig> = {
   },
 
   clinica_dental: {
-    emoji:'Ã°ÂÂ¦Â·', label:'ClÃÂ­nica Dental', agentDefaultName:'Sara',
+    emoji:'¦·', label:'Clínica Dental', agentDefaultName:'Sara',
     steps: [
       {
-        id:'agent', title:'ÃÂ¿CÃÂ³mo se llamarÃÂ¡ tu recepcionista?',
-        subtitle:'Es quien atenderÃÂ¡ las llamadas de tus pacientes',
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?',
+        subtitle:'Es quien atenderá las llamadas de tus pacientes',
         fields: [
-          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Sara, Ana, LauraÃ¢ÂÂ¦', defaultValue:'Sara'},
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Sara, Ana, Lauraâ¦', defaultValue:'Sara'},
           {key:'language', type:'select', label:'Idioma', defaultValue:'es',
-            options:[{value:'es',label:'EspaÃÂ±ol'},{value:'ca',label:'CatalÃÂ '},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
         ]
       },
       {
@@ -149,50 +149,50 @@ const FLOWS: Record<string, FlowConfig> = {
         ]
       },
       {
-        id:'hours', title:'ÃÂ¿CuÃÂ¡ndo atiende la clÃÂ­nica?', subtitle:'La recepcionista informarÃÂ¡ a los pacientes que llamen fuera de horario',
-        fields: [{key:'business_hours', type:'hours', label:'Horario de la clÃÂ­nica', defaultValue:null}]
+        id:'hours', title:'¿Cuándo atiende la clínica?', subtitle:'La recepcionista informará a los pacientes que llamen fuera de horario',
+        fields: [{key:'business_hours', type:'hours', label:'Horario de la clínica', defaultValue:null}]
       },
       {
-        id:'consultations', title:'ÃÂ¿QuÃÂ© tipo de tratamientos ofrecÃÂ©is?',
-        subtitle:'Solo marcad los principales Ã¢ÂÂ el paciente podrÃÂ¡ preguntar por cualquier cosa',
+        id:'consultations', title:'¿Qué tipo de tratamientos ofrecéis?',
+        subtitle:'Solo marcad los principales â el paciente podrá preguntar por cualquier cosa',
         fields: [
           {key:'services', type:'multiselect', label:'Tratamientos principales', defaultValue:['limpieza','empaste'],
             options:[
-              {value:'revision',label:'RevisiÃÂ³n y diagnÃÂ³stico',emoji:'Ã°ÂÂÂ'},
-              {value:'limpieza',label:'Limpieza dental',emoji:'Ã¢ÂÂ¨'},
-              {value:'empaste',label:'Empastes y obturaciones',emoji:'Ã°ÂÂ¦Â·'},
-              {value:'extraccion',label:'Extracciones',emoji:'Ã¢ÂÂÃ¯Â¸Â'},
-              {value:'ortodoncia',label:'Ortodoncia / Brackets',emoji:'Ã°ÂÂÂ'},
-              {value:'implantes',label:'Implantes',emoji:'Ã°ÂÂÂ©'},
-              {value:'estetica',label:'EstÃÂ©tica dental / Blanqueamiento',emoji:'Ã¢Â­Â'},
-              {value:'endodoncia',label:'Endodoncia / Nervio',emoji:'Ã°ÂÂÂ'},
+              {value:'revision',label:'Revisión y diagnóstico',emoji:''},
+              {value:'limpieza',label:'Limpieza dental',emoji:'â¨'},
+              {value:'empaste',label:'Empastes y obturaciones',emoji:'¦·'},
+              {value:'extraccion',label:'Extracciones',emoji:'â️'},
+              {value:'ortodoncia',label:'Ortodoncia / Brackets',emoji:''},
+              {value:'implantes',label:'Implantes',emoji:'©'},
+              {value:'estetica',label:'Estética dental / Blanqueamiento',emoji:'â­'},
+              {value:'endodoncia',label:'Endodoncia / Nervio',emoji:''},
             ]
           }
         ]
       },
       {
-        id:'appointments', title:'ÃÂ¿CÃÂ³mo son las citas?',
+        id:'appointments', title:'¿Cómo son las citas?',
         subtitle:'Esto ayuda a la recepcionista a gestionar mejor los tiempos',
         fields: [
-          {key:'appointment_duration', type:'duration', label:'ÃÂ¿CuÃÂ¡nto dura una visita normal?', defaultValue:30,
+          {key:'appointment_duration', type:'duration', label:'¿Cuánto dura una visita normal?', defaultValue:30,
             options:[{value:'15',label:'15 minutos'},{value:'30',label:'30 minutos'},{value:'45',label:'45 minutos'},{value:'60',label:'1 hora'},{value:'90',label:'1h 30min'}]},
-          {key:'has_urgencias', type:'toggle', label:'ÃÂ¿AtendÃÂ©is urgencias dentales?',
-            hint:'Si es asÃÂ­, la recepcionista darÃÂ¡ prioridad a los pacientes con dolor', defaultValue:false},
-          {key:'num_dentists', type:'number', label:'ÃÂ¿CuÃÂ¡ntos dentistas trabajan en la clÃÂ­nica?', placeholder:'Ej: 3', defaultValue:2, min:1, max:50},
+          {key:'has_urgencias', type:'toggle', label:'¿Atendéis urgencias dentales?',
+            hint:'Si es así, la recepcionista dará prioridad a los pacientes con dolor', defaultValue:false},
+          {key:'num_dentists', type:'number', label:'¿Cuántos dentistas trabajan en la clínica?', placeholder:'Ej: 3', defaultValue:2, min:1, max:50},
         ]
       }
     ]
   },
 
   clinica_medica: {
-    emoji:'Ã°ÂÂÂ¥', label:'ClÃÂ­nica MÃÂ©dica', agentDefaultName:'Elena',
+    emoji:'¥', label:'Clínica Médica', agentDefaultName:'Elena',
     steps: [
       {
-        id:'agent', title:'ÃÂ¿CÃÂ³mo se llamarÃÂ¡ tu recepcionista?', subtitle:'El nombre que oirÃÂ¡n tus pacientes al llamar',
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que oirán tus pacientes al llamar',
         fields: [
-          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Elena, MartaÃ¢ÂÂ¦', defaultValue:'Elena'},
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Elena, Martaâ¦', defaultValue:'Elena'},
           {key:'language', type:'select', label:'Idioma', defaultValue:'es',
-            options:[{value:'es',label:'EspaÃÂ±ol'},{value:'ca',label:'CatalÃÂ '},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
         ]
       },
       {
@@ -203,63 +203,63 @@ const FLOWS: Record<string, FlowConfig> = {
         ]
       },
       {
-        id:'hours', title:'ÃÂ¿CuÃÂ¡ndo atiende la clÃÂ­nica?', subtitle:'Horario de atenciÃÂ³n',
+        id:'hours', title:'¿Cuándo atiende la clínica?', subtitle:'Horario de atención',
         fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
       },
       {
-        id:'specialties', title:'ÃÂ¿QuÃÂ© especialidades tenÃÂ©is?',
-        subtitle:'Marca las que ofrece vuestra clÃÂ­nica',
+        id:'specialties', title:'¿Qué especialidades tenéis?',
+        subtitle:'Marca las que ofrece vuestra clínica',
         fields: [
           {key:'services', type:'multiselect', label:'Especialidades', defaultValue:['medicina_general'],
             options:[
-              {value:'medicina_general',label:'Medicina general / MÃÂ©dico de cabecera',emoji:'Ã°ÂÂÂ¨Ã¢ÂÂÃ¢ÂÂÃ¯Â¸Â'},
-              {value:'pediatria',label:'PediatrÃÂ­a',emoji:'Ã°ÂÂÂ¶'},
-              {value:'ginecologia',label:'GinecologÃÂ­a',emoji:'Ã¢ÂÂÃ¯Â¸Â'},
-              {value:'traumatologia',label:'TraumatologÃÂ­a / Huesos',emoji:'Ã°ÂÂ¦Â´'},
-              {value:'cardiologia',label:'CardiologÃÂ­a',emoji:'Ã¢ÂÂ¤Ã¯Â¸Â'},
-              {value:'dermatologia',label:'DermatologÃÂ­a',emoji:'Ã°ÂÂÂ¬'},
-              {value:'nutricion',label:'NutriciÃÂ³n y dietÃÂ©tica',emoji:'Ã°ÂÂ¥Â'},
-              {value:'psicologia',label:'PsicologÃÂ­a',emoji:'Ã°ÂÂ§Â '},
+              {value:'medicina_general',label:'Medicina general / Médico de cabecera',emoji:'¨ââ️'},
+              {value:'pediatria',label:'Pediatría',emoji:'¶'},
+              {value:'ginecologia',label:'Ginecología',emoji:'â️'},
+              {value:'traumatologia',label:'Traumatología / Huesos',emoji:'¦´'},
+              {value:'cardiologia',label:'Cardiología',emoji:'â¤️'},
+              {value:'dermatologia',label:'Dermatología',emoji:'¬'},
+              {value:'nutricion',label:'Nutrición y dietética',emoji:'¥'},
+              {value:'psicologia',label:'Psicología',emoji:'§ '},
             ]
           }
         ]
       },
       {
-        id:'appointments', title:'ÃÂ¿CÃÂ³mo son las consultas?',
+        id:'appointments', title:'¿Cómo son las consultas?',
         subtitle:'Para gestionar bien los tiempos',
         fields: [
-          {key:'appointment_duration', type:'duration', label:'DuraciÃÂ³n media de una consulta', defaultValue:20,
+          {key:'appointment_duration', type:'duration', label:'Duración media de una consulta', defaultValue:20,
             options:[{value:'10',label:'10 minutos'},{value:'15',label:'15 minutos'},{value:'20',label:'20 minutos'},{value:'30',label:'30 minutos'},{value:'45',label:'45 minutos'}]},
-          {key:'has_urgencias', type:'toggle', label:'ÃÂ¿AtendÃÂ©is urgencias?',
-            hint:'La recepcionista priorizarÃÂ¡ los casos urgentes', defaultValue:false},
-          {key:'num_professionals', type:'number', label:'ÃÂ¿CuÃÂ¡ntos mÃÂ©dicos o especialistas hay?', placeholder:'Ej: 4', defaultValue:2, min:1, max:100},
+          {key:'has_urgencias', type:'toggle', label:'¿Atendéis urgencias?',
+            hint:'La recepcionista priorizará los casos urgentes', defaultValue:false},
+          {key:'num_professionals', type:'number', label:'¿Cuántos médicos o especialistas hay?', placeholder:'Ej: 4', defaultValue:2, min:1, max:100},
         ]
       }
     ]
   },
 
   peluqueria: {
-    emoji:'Ã¢ÂÂÃ¯Â¸Â', label:'PeluquerÃÂ­a / BarberÃÂ­a', agentDefaultName:'Marta',
+    emoji:'â️', label:'Peluquería / Barbería', agentDefaultName:'Marta',
     steps: [
       {
-        id:'salon_tipo', title:'ÃÂ¿QuÃÂ© tipo de salÃÂ³n tenÃÂ©is?',
-        subtitle:'Los servicios que verÃÂ¡s a continuaciÃÂ³n dependen de esto',
+        id:'salon_tipo', title:'¿Qué tipo de salón tenéis?',
+        subtitle:'Los servicios que verás a continuación dependen de esto',
         fields: [
-          {key:'salon_tipo', type:'select', label:'Tipo de salÃÂ³n', defaultValue:'peluqueria',
+          {key:'salon_tipo', type:'select', label:'Tipo de salón', defaultValue:'peluqueria',
             options:[
-              {value:'peluqueria', label:'Ã¢ÂÂÃ¯Â¸Â PeluquerÃÂ­a'},
-              {value:'barberia',   label:'Ã°ÂÂªÂ BarberÃÂ­a'},
-              {value:'ambos',      label:'Ã¢ÂÂÃ¯Â¸ÂÃ°ÂÂªÂ PeluquerÃÂ­a y BarberÃÂ­a'},
+              {value:'peluqueria', label:'â️ Peluquería'},
+              {value:'barberia',   label:'ª Barbería'},
+              {value:'ambos',      label:'â️ª Peluquería y Barbería'},
             ]
           }
         ]
       },
       {
-        id:'agent', title:'ÃÂ¿CÃÂ³mo se llamarÃÂ¡ tu recepcionista?', subtitle:'El nombre que escucharÃÂ¡n tus clientes',
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que escucharán tus clientes',
         fields: [
-          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Marta, Carlos, PaulaÃ¢ÂÂ¦', defaultValue:'Marta'},
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Marta, Carlos, Paulaâ¦', defaultValue:'Marta'},
           {key:'language', type:'select', label:'Idioma', defaultValue:'es',
-            options:[{value:'es',label:'EspaÃÂ±ol'},{value:'ca',label:'CatalÃÂ '},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
         ]
       },
       {
@@ -270,25 +270,25 @@ const FLOWS: Record<string, FlowConfig> = {
         ]
       },
       {
-        id:'hours', title:'ÃÂ¿CuÃÂ¡ndo abrÃÂ­s?', subtitle:'Horario del salÃÂ³n',
+        id:'hours', title:'¿Cuándo abrís?', subtitle:'Horario del salón',
         fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
       },
       {
-        // Opciones dinÃÂ¡micas Ã¢ÂÂ se calculan en runtime segÃÂºn answers.salon_tipo
-        id:'services', title:'ÃÂ¿QuÃÂ© servicios ofrecÃÂ©is?',
-        subtitle:'Marca los que hacÃÂ©is Ã¢ÂÂ la recepcionista los conocerÃÂ¡ todos',
+        // Opciones dinámicas â se calculan en runtime según answers.salon_tipo
+        id:'services', title:'¿Qué servicios ofrecéis?',
+        subtitle:'Marca los que hacéis â la recepcionista los conocerá todos',
         fields: [
           {key:'services', type:'multiselect', label:'Servicios', defaultValue:['corte'],
-            options:[] // placeholder Ã¢ÂÂ se sobrescribe dinÃÂ¡micamente en el render
+            options:[] // placeholder â se sobrescribe dinámicamente en el render
           }
         ]
       },
       {
-        id:'staff', title:'ÃÂ¿CuÃÂ¡ntos profesionales tenÃÂ©is?',
-        subtitle:'La recepcionista distribuirÃÂ¡ las citas entre ellos',
+        id:'staff', title:'¿Cuántos profesionales tenéis?',
+        subtitle:'La recepcionista distribuirá las citas entre ellos',
         fields: [
-          {key:'num_professionals', type:'number', label:'NÃÂºmero de profesionales con agenda propia', placeholder:'Ej: 3', defaultValue:2, min:1, max:50},
-          {key:'appointment_duration', type:'duration', label:'ÃÂ¿CuÃÂ¡nto dura de media una cita?', defaultValue:60,
+          {key:'num_professionals', type:'number', label:'Número de profesionales con agenda propia', placeholder:'Ej: 3', defaultValue:2, min:1, max:50},
+          {key:'appointment_duration', type:'duration', label:'¿Cuánto dura de media una cita?', defaultValue:60,
             options:[{value:'30',label:'30 minutos'},{value:'45',label:'45 minutos'},{value:'60',label:'1 hora'},{value:'90',label:'1h 30min'},{value:'120',label:'2 horas'}]},
         ]
       }
@@ -296,14 +296,14 @@ const FLOWS: Record<string, FlowConfig> = {
   },
 
   veterinaria: {
-    emoji:'Ã°ÂÂÂ¾', label:'ClÃÂ­nica Veterinaria', agentDefaultName:'Nuria',
+    emoji:'¾', label:'Clínica Veterinaria', agentDefaultName:'Nuria',
     steps: [
       {
-        id:'agent', title:'ÃÂ¿CÃÂ³mo se llamarÃÂ¡ tu recepcionista?', subtitle:'El nombre que oirÃÂ¡n los dueÃÂ±os de mascotas',
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que oirán los dueños de mascotas',
         fields: [
-          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Nuria, ClaraÃ¢ÂÂ¦', defaultValue:'Nuria'},
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Nuria, Claraâ¦', defaultValue:'Nuria'},
           {key:'language', type:'select', label:'Idioma', defaultValue:'es',
-            options:[{value:'es',label:'EspaÃÂ±ol'},{value:'ca',label:'CatalÃÂ '},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
         ]
       },
       {
@@ -314,43 +314,43 @@ const FLOWS: Record<string, FlowConfig> = {
         ]
       },
       {
-        id:'hours', title:'ÃÂ¿CuÃÂ¡ndo estÃÂ¡is abiertos?', subtitle:'Horario de la clÃÂ­nica',
+        id:'hours', title:'¿Cuándo estáis abiertos?', subtitle:'Horario de la clínica',
         fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
       },
       {
-        id:'services', title:'ÃÂ¿QuÃÂ© servicios ofrecÃÂ©is?',
-        subtitle:'La recepcionista sabrÃÂ¡ quÃÂ© puede y quÃÂ© no puede gestionar',
+        id:'services', title:'¿Qué servicios ofrecéis?',
+        subtitle:'La recepcionista sabrá qué puede y qué no puede gestionar',
         fields: [
           {key:'services', type:'multiselect', label:'Servicios', defaultValue:['consulta','vacunas'],
             options:[
-              {value:'consulta',label:'Consulta general',emoji:'Ã°ÂÂ©Âº'},
-              {value:'vacunas',label:'Vacunas y desparasitaciÃÂ³n',emoji:'Ã°ÂÂÂ'},
-              {value:'cirugia',label:'CirugÃÂ­a',emoji:'Ã¢ÂÂÃ¯Â¸Â'},
-              {value:'peluqueria',label:'PeluquerÃÂ­a canina / felina',emoji:'Ã¢ÂÂÃ¯Â¸Â'},
-              {value:'radiografia',label:'RadiografÃÂ­as / EcografÃÂ­as',emoji:'Ã°ÂÂÂ¬'},
-              {value:'dentadura',label:'Limpieza dental veterinaria',emoji:'Ã°ÂÂ¦Â·'},
-              {value:'hospitalizacion',label:'HospitalizaciÃÂ³n',emoji:'Ã°ÂÂÂ¥'},
+              {value:'consulta',label:'Consulta general',emoji:'©º'},
+              {value:'vacunas',label:'Vacunas y desparasitación',emoji:''},
+              {value:'cirugia',label:'Cirugía',emoji:'â️'},
+              {value:'peluqueria',label:'Peluquería canina / felina',emoji:'â️'},
+              {value:'radiografia',label:'Radiografías / Ecografías',emoji:'¬'},
+              {value:'dentadura',label:'Limpieza dental veterinaria',emoji:'¦·'},
+              {value:'hospitalizacion',label:'Hospitalización',emoji:'¥'},
             ]
           }
         ]
       },
       {
-        id:'details', title:'Un par de preguntas mÃÂ¡s',
+        id:'details', title:'Un par de preguntas más',
         subtitle:'Para que la recepcionista pueda atender mejor',
         fields: [
-          {key:'has_urgencias', type:'toggle', label:'ÃÂ¿AtendÃÂ©is urgencias veterinarias?',
-            hint:'La recepcionista darÃÂ¡ instrucciones especÃÂ­ficas en casos de emergencia', defaultValue:true},
-          {key:'animal_types', type:'multiselect', label:'ÃÂ¿QuÃÂ© animales atendÃÂ©is?', defaultValue:['perros','gatos'],
+          {key:'has_urgencias', type:'toggle', label:'¿Atendéis urgencias veterinarias?',
+            hint:'La recepcionista dará instrucciones específicas en casos de emergencia', defaultValue:true},
+          {key:'animal_types', type:'multiselect', label:'¿Qué animales atendéis?', defaultValue:['perros','gatos'],
             options:[
-              {value:'perros',label:'Perros',emoji:'Ã°ÂÂÂ'},
-              {value:'gatos',label:'Gatos',emoji:'Ã°ÂÂÂ'},
-              {value:'aves',label:'Aves / PÃÂ¡jaros',emoji:'Ã°ÂÂ¦Â'},
-              {value:'roedores',label:'Conejos y roedores',emoji:'Ã°ÂÂÂ°'},
-              {value:'reptiles',label:'Reptiles',emoji:'Ã°ÂÂ¦Â'},
-              {value:'exoticos',label:'Animales exÃÂ³ticos',emoji:'Ã°ÂÂ¦Â'},
+              {value:'perros',label:'Perros',emoji:''},
+              {value:'gatos',label:'Gatos',emoji:''},
+              {value:'aves',label:'Aves / Pájaros',emoji:'¦'},
+              {value:'roedores',label:'Conejos y roedores',emoji:'°'},
+              {value:'reptiles',label:'Reptiles',emoji:'¦'},
+              {value:'exoticos',label:'Animales exóticos',emoji:'¦'},
             ]
           },
-          {key:'appointment_duration', type:'duration', label:'ÃÂ¿CuÃÂ¡nto dura una consulta normal?', defaultValue:20,
+          {key:'appointment_duration', type:'duration', label:'¿Cuánto dura una consulta normal?', defaultValue:20,
             options:[{value:'15',label:'15 minutos'},{value:'20',label:'20 minutos'},{value:'30',label:'30 minutos'},{value:'45',label:'45 minutos'}]},
         ]
       }
@@ -358,14 +358,14 @@ const FLOWS: Record<string, FlowConfig> = {
   },
 
   asesoria: {
-    emoji:'Ã°ÂÂÂ¼', label:'AsesorÃÂ­a / ConsultorÃÂ­a', agentDefaultName:'Isabel',
+    emoji:'¼', label:'Asesoría / Consultoría', agentDefaultName:'Isabel',
     steps: [
       {
-        id:'agent', title:'ÃÂ¿CÃÂ³mo se llamarÃÂ¡ tu recepcionista?', subtitle:'El nombre que oirÃÂ¡n tus clientes',
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que oirán tus clientes',
         fields: [
-          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Isabel, CarmenÃ¢ÂÂ¦', defaultValue:'Isabel'},
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Isabel, Carmenâ¦', defaultValue:'Isabel'},
           {key:'language', type:'select', label:'Idioma', defaultValue:'es',
-            options:[{value:'es',label:'EspaÃÂ±ol'},{value:'ca',label:'CatalÃÂ '},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
         ]
       },
       {
@@ -376,37 +376,37 @@ const FLOWS: Record<string, FlowConfig> = {
         ]
       },
       {
-        id:'hours', title:'ÃÂ¿CuÃÂ¡ndo atendÃÂ©is?', subtitle:'Horario de la asesorÃÂ­a',
+        id:'hours', title:'¿Cuándo atendéis?', subtitle:'Horario de la asesoría',
         fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
       },
       {
-        id:'services', title:'ÃÂ¿En quÃÂ© especialidades trabajÃÂ¡is?',
-        subtitle:'La recepcionista informarÃÂ¡ a los clientes sobre lo que podÃÂ©is ayudarles',
+        id:'services', title:'¿En qué especialidades trabajáis?',
+        subtitle:'La recepcionista informará a los clientes sobre lo que podéis ayudarles',
         fields: [
           {key:'services', type:'multiselect', label:'Especialidades', defaultValue:['fiscal'],
             options:[
-              {value:'fiscal',label:'Fiscal y tributario (IRPF, IVAÃ¢ÂÂ¦)',emoji:'Ã°ÂÂÂ'},
-              {value:'laboral',label:'Laboral (nÃÂ³minas, contratosÃ¢ÂÂ¦)',emoji:'Ã°ÂÂÂ·'},
-              {value:'contabilidad',label:'Contabilidad y balances',emoji:'Ã°ÂÂÂ'},
-              {value:'juridico',label:'AsesorÃÂ­a jurÃÂ­dica / Legal',emoji:'Ã¢ÂÂÃ¯Â¸Â'},
-              {value:'mercantil',label:'ConstituciÃÂ³n de empresas',emoji:'Ã°ÂÂÂ¢'},
-              {value:'extranjeria',label:'ExtranjerÃÂ­a y visados',emoji:'Ã°ÂÂÂ'},
-              {value:'herencias',label:'Herencias y sucesiones',emoji:'Ã°ÂÂÂ'},
+              {value:'fiscal',label:'Fiscal y tributario (IRPF, IVAâ¦)',emoji:''},
+              {value:'laboral',label:'Laboral (nóminas, contratosâ¦)',emoji:'·'},
+              {value:'contabilidad',label:'Contabilidad y balances',emoji:''},
+              {value:'juridico',label:'Asesoría jurídica / Legal',emoji:'â️'},
+              {value:'mercantil',label:'Constitución de empresas',emoji:'¢'},
+              {value:'extranjeria',label:'Extranjería y visados',emoji:''},
+              {value:'herencias',label:'Herencias y sucesiones',emoji:''},
             ]
           }
         ]
       },
       {
-        id:'meetings', title:'ÃÂ¿CÃÂ³mo son las reuniones con clientes?',
+        id:'meetings', title:'¿Cómo son las reuniones con clientes?',
         subtitle:'Para gestionar bien la agenda',
         fields: [
-          {key:'appointment_duration', type:'duration', label:'ÃÂ¿CuÃÂ¡nto dura de media una primera consulta?', defaultValue:60,
+          {key:'appointment_duration', type:'duration', label:'¿Cuánto dura de media una primera consulta?', defaultValue:60,
             options:[{value:'30',label:'30 minutos'},{value:'45',label:'45 minutos'},{value:'60',label:'1 hora'},{value:'90',label:'1h 30min'},{value:'120',label:'2 horas'}]},
-          {key:'meeting_types', type:'multiselect', label:'ÃÂ¿CÃÂ³mo podÃÂ©is reuniros?', defaultValue:['presencial','videollamada'],
+          {key:'meeting_types', type:'multiselect', label:'¿Cómo podéis reuniros?', defaultValue:['presencial','videollamada'],
             options:[
-              {value:'presencial',label:'En la oficina',emoji:'Ã°ÂÂÂ¢'},
-              {value:'videollamada',label:'Por videollamada',emoji:'Ã°ÂÂÂ»'},
-              {value:'telefono',label:'Por telÃÂ©fono',emoji:'Ã°ÂÂÂ'},
+              {value:'presencial',label:'En la oficina',emoji:'¢'},
+              {value:'videollamada',label:'Por videollamada',emoji:'»'},
+              {value:'telefono',label:'Por teléfono',emoji:''},
             ]
           },
         ]
@@ -417,14 +417,14 @@ const FLOWS: Record<string, FlowConfig> = {
 
 // Fallback para tipos no reconocidos
 const FALLBACK_FLOW: FlowConfig = {
-  emoji:'Ã°ÂÂÂª', label:'Negocio', agentDefaultName:'SofÃÂ­a',
+  emoji:'ª', label:'Negocio', agentDefaultName:'Sofía',
   steps: [
     {
-      id:'agent', title:'ÃÂ¿CÃÂ³mo se llamarÃÂ¡ tu recepcionista?', subtitle:'El nombre que escucharÃÂ¡n tus clientes',
+      id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que escucharán tus clientes',
       fields: [
-        {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: SofÃÂ­a', defaultValue:'SofÃÂ­a'},
+        {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Sofía', defaultValue:'Sofía'},
         {key:'language', type:'select', label:'Idioma', defaultValue:'es',
-          options:[{value:'es',label:'EspaÃÂ±ol'},{value:'ca',label:'CatalÃÂ '},{value:'en',label:'English'}]},
+          options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'en',label:'English'}]},
       ]
     },
     {
@@ -435,18 +435,18 @@ const FALLBACK_FLOW: FlowConfig = {
         ]
       },
       {
-        id:'hours', title:'ÃÂ¿CuÃÂ¡ndo estÃÂ¡is abiertos?', subtitle:'Horario de atenciÃÂ³n',
+        id:'hours', title:'¿Cuándo estáis abiertos?', subtitle:'Horario de atención',
       fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
     },
     {
-      id:'services', title:'ÃÂ¿QuÃÂ© gestiona la recepcionista?',
-      subtitle:'Lo bÃÂ¡sico para empezar',
+      id:'services', title:'¿Qué gestiona la recepcionista?',
+      subtitle:'Lo básico para empezar',
       fields: [
-        {key:'services', type:'multiselect', label:'GestiÃÂ³n', defaultValue:['citas','informacion'],
+        {key:'services', type:'multiselect', label:'Gestión', defaultValue:['citas','informacion'],
           options:[
-            {value:'citas',label:'Citas y reservas',emoji:'Ã°ÂÂÂ'},
-            {value:'informacion',label:'Preguntas e informaciÃÂ³n',emoji:'Ã¢ÂÂ'},
-            {value:'cancelaciones',label:'Cancelaciones',emoji:'Ã¢ÂÂ'},
+            {value:'citas',label:'Citas y reservas',emoji:''},
+            {value:'informacion',label:'Preguntas e información',emoji:'â'},
+            {value:'cancelaciones',label:'Cancelaciones',emoji:'â'},
           ]
         }
       ]
@@ -454,42 +454,42 @@ const FALLBACK_FLOW: FlowConfig = {
   ]
 }
 
-// Ã¢ÂÂÃ¢ÂÂ Servicios dinÃÂ¡micos segÃÂºn tipo de salÃÂ³n Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ââ Servicios dinámicos según tipo de salón ââââââââââââââââââââââââââââââââââ
 const SERVICIOS_PELUQUERIA = [
-  {value:'corte_mujer',  label:'Corte de pelo (mujer)',    emoji:'Ã¢ÂÂÃ¯Â¸Â'},
-  {value:'corte_hombre', label:'Corte de pelo (hombre)',   emoji:'Ã°ÂÂÂ'},
-  {value:'tinte',        label:'Tinte y coloraciÃÂ³n',       emoji:'Ã°ÂÂÂ¨'},
-  {value:'mechas',       label:'Mechas / Balayage',        emoji:'Ã¢ÂÂ¨'},
-  {value:'alisado',      label:'Alisado / Keratina',       emoji:'Ã°ÂÂÂ'},
-  {value:'peinado',      label:'Recogidos y peinados',     emoji:'Ã°ÂÂÂ°'},
-  {value:'manicura',     label:'Manicura / Pedicura',      emoji:'Ã°ÂÂÂ'},
-  {value:'depilacion',   label:'DepilaciÃÂ³n',               emoji:'Ã°ÂÂÂ¸'},
-  {value:'facial',       label:'Tratamientos faciales',    emoji:'Ã°ÂÂ§Â´'},
+  {value:'corte_mujer',  label:'Corte de pelo (mujer)',    emoji:'â️'},
+  {value:'corte_hombre', label:'Corte de pelo (hombre)',   emoji:''},
+  {value:'tinte',        label:'Tinte y coloración',       emoji:'¨'},
+  {value:'mechas',       label:'Mechas / Balayage',        emoji:'â¨'},
+  {value:'alisado',      label:'Alisado / Keratina',       emoji:''},
+  {value:'peinado',      label:'Recogidos y peinados',     emoji:'°'},
+  {value:'manicura',     label:'Manicura / Pedicura',      emoji:''},
+  {value:'depilacion',   label:'Depilación',               emoji:'¸'},
+  {value:'facial',       label:'Tratamientos faciales',    emoji:'§´'},
 ]
 const SERVICIOS_BARBERIA = [
-  {value:'corte_hombre',   label:'Corte de pelo (hombre)',    emoji:'Ã°ÂÂÂ'},
-  {value:'tinte_pelo',     label:'Tinte y coloraciÃÂ³n de pelo',emoji:'Ã°ÂÂÂ¨'},
-  {value:'barba_perfilado',label:'Barba y perfilado',          emoji:'Ã°ÂÂªÂ'},
-  {value:'afeitado',       label:'Afeitado clÃÂ¡sico',           emoji:'Ã°ÂÂªÂ'},
-  {value:'barba_color',    label:'Tinte de barba',             emoji:'Ã°ÂÂÂÃ¯Â¸Â'},
-  {value:'diseÃÂ±o_barba',   label:'DiseÃÂ±o y arreglo de barba',  emoji:'Ã¢ÂÂÃ¯Â¸Â'},
-  {value:'tratamiento',    label:'Tratamiento capilar',        emoji:'Ã°ÂÂÂ'},
-  {value:'cejas',          label:'DepilaciÃÂ³n de cejas',        emoji:'Ã¢ÂÂ¨'},
+  {value:'corte_hombre',   label:'Corte de pelo (hombre)',    emoji:''},
+  {value:'tinte_pelo',     label:'Tinte y coloración de pelo',emoji:'¨'},
+  {value:'barba_perfilado',label:'Barba y perfilado',          emoji:'ª'},
+  {value:'afeitado',       label:'Afeitado clásico',           emoji:'ª'},
+  {value:'barba_color',    label:'Tinte de barba',             emoji:'️'},
+  {value:'diseño_barba',   label:'Diseño y arreglo de barba',  emoji:'â️'},
+  {value:'tratamiento',    label:'Tratamiento capilar',        emoji:''},
+  {value:'cejas',          label:'Depilación de cejas',        emoji:'â¨'},
 ]
 const SERVICIOS_AMBOS = [
-  {value:'corte_mujer',     label:'Corte de pelo (mujer)',       emoji:'Ã¢ÂÂÃ¯Â¸Â'},
-  {value:'corte_hombre',    label:'Corte de pelo (hombre)',      emoji:'Ã°ÂÂÂ'},
-  {value:'tinte_pelo',      label:'Tinte y coloraciÃÂ³n de pelo',  emoji:'Ã°ÂÂÂ¨'},
-  {value:'mechas',          label:'Mechas / Balayage',           emoji:'Ã¢ÂÂ¨'},
-  {value:'alisado',         label:'Alisado / Keratina',          emoji:'Ã°ÂÂÂ'},
-  {value:'peinado',         label:'Recogidos y peinados',        emoji:'Ã°ÂÂÂ°'},
-  {value:'barba_perfilado', label:'Barba y perfilado',           emoji:'Ã°ÂÂªÂ'},
-  {value:'afeitado',        label:'Afeitado clÃÂ¡sico',            emoji:'Ã°ÂÂªÂ'},
-  {value:'barba_color',     label:'Tinte de barba',              emoji:'Ã°ÂÂÂÃ¯Â¸Â'},
-  {value:'diseÃÂ±o_barba',    label:'DiseÃÂ±o y arreglo de barba',   emoji:'Ã¢ÂÂÃ¯Â¸Â'},
-  {value:'manicura',        label:'Manicura / Pedicura',         emoji:'Ã°ÂÂÂ'},
-  {value:'depilacion',      label:'DepilaciÃÂ³n',                  emoji:'Ã°ÂÂÂ¸'},
-  {value:'facial',          label:'Tratamientos faciales',       emoji:'Ã°ÂÂ§Â´'},
+  {value:'corte_mujer',     label:'Corte de pelo (mujer)',       emoji:'â️'},
+  {value:'corte_hombre',    label:'Corte de pelo (hombre)',      emoji:''},
+  {value:'tinte_pelo',      label:'Tinte y coloración de pelo',  emoji:'¨'},
+  {value:'mechas',          label:'Mechas / Balayage',           emoji:'â¨'},
+  {value:'alisado',         label:'Alisado / Keratina',          emoji:''},
+  {value:'peinado',         label:'Recogidos y peinados',        emoji:'°'},
+  {value:'barba_perfilado', label:'Barba y perfilado',           emoji:'ª'},
+  {value:'afeitado',        label:'Afeitado clásico',            emoji:'ª'},
+  {value:'barba_color',     label:'Tinte de barba',              emoji:'️'},
+  {value:'diseño_barba',    label:'Diseño y arreglo de barba',   emoji:'â️'},
+  {value:'manicura',        label:'Manicura / Pedicura',         emoji:''},
+  {value:'depilacion',      label:'Depilación',                  emoji:'¸'},
+  {value:'facial',          label:'Tratamientos faciales',       emoji:'§´'},
 ]
 function getSalonServices(salonTipo: string) {
   if (salonTipo === 'barberia') return SERVICIOS_BARBERIA
@@ -497,12 +497,12 @@ function getSalonServices(salonTipo: string) {
   return SERVICIOS_PELUQUERIA // default
 }
 
-// Ã¢ÂÂÃ¢ÂÂ Defaults de horario Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ââ Defaults de horario âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function defaultHours() {
   return Object.fromEntries(DAYS.map((d,i) => [d, { open:'09:00', close:'19:00', closed: i>=5 }]))
 }
 
-// Ã¢ÂÂÃ¢ÂÂ Componente campo Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ââ Componente campo âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function Field({ config, value, onChange }: { config: FieldConfig; value: any; onChange: (v:any)=>void }) {
   const inp = {
     width:'100%', background:'rgba(255,255,255,0.04)', border:`1px solid ${C.border}`,
@@ -524,7 +524,7 @@ function Field({ config, value, onChange }: { config: FieldConfig; value: any; o
       <label style={{display:'block',fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase' as const,letterSpacing:'0.05em',marginBottom:6}}>{config.label}</label>
       <div style={{display:'flex',alignItems:'center',gap:10}}>
         <button onClick={()=>onChange(Math.max(config.min||1,(value||config.defaultValue||1)-1))}
-          style={{width:36,height:36,borderRadius:9,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:18,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>Ã¢ÂÂ</button>
+          style={{width:36,height:36,borderRadius:9,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:18,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>â</button>
         <input type="number" style={{...inp,textAlign:'center' as const,width:80,flexShrink:0}} min={config.min||1} max={config.max||999}
           value={value||config.defaultValue||1} onChange={e=>onChange(parseInt(e.target.value)||1)}/>
         <button onClick={()=>onChange(Math.min(config.max||999,(value||config.defaultValue||1)+1))}
@@ -590,7 +590,7 @@ function Field({ config, value, onChange }: { config: FieldConfig; value: any; o
               style={{padding:'10px 12px',borderRadius:10,border:`1px solid ${selected?C.amber+'44':C.border}`,background:selected?C.amberDim:'rgba(255,255,255,0.02)',cursor:'pointer',fontFamily:'inherit',textAlign:'left' as const,transition:'all 0.12s',display:'flex',alignItems:'center',gap:8}}>
               {o.emoji && <span style={{fontSize:18}}>{o.emoji}</span>}
               <span style={{fontSize:12,fontWeight:selected?700:500,color:selected?C.amber:C.sub,lineHeight:1.3}}>{o.label}</span>
-              {selected && <span style={{marginLeft:'auto',color:C.amber,fontSize:14}}>Ã¢ÂÂ</span>}
+              {selected && <span style={{marginLeft:'auto',color:C.amber,fontSize:14}}>â</span>}
             </button>
           )
         })}
@@ -619,7 +619,7 @@ function Field({ config, value, onChange }: { config: FieldConfig; value: any; o
                   <input type="time" value={h[day]?.open||'09:00'}
                     onChange={e=>onChange({...h,[day]:{...h[day],open:e.target.value}})}
                     style={{background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:8,padding:'5px 8px',color:C.text,fontSize:12,outline:'none',fontFamily:'inherit'}}/>
-                  <span style={{color:C.muted,fontSize:11}}>Ã¢ÂÂ</span>
+                  <span style={{color:C.muted,fontSize:11}}>â</span>
                   <input type="time" value={h[day]?.close||'19:00'}
                     onChange={e=>onChange({...h,[day]:{...h[day],close:e.target.value}})}
                     style={{background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:8,padding:'5px 8px',color:C.text,fontSize:12,outline:'none',fontFamily:'inherit'}}/>
@@ -635,26 +635,26 @@ function Field({ config, value, onChange }: { config: FieldConfig; value: any; o
   return null
 }
 
-// Ã¢ÂÂÃ¢ÂÂ SimulaciÃÂ³n por tipo de negocio Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ââ Simulación por tipo de negocio âââââââââââââââââââââââââââââââââââââââââââ
 function SimulationStep({ tenant, answers, flow }: { tenant:any; answers:Record<string,any>; flow:FlowConfig }) {
   const agentName = answers.agent_name || flow.agentDefaultName
   const businessName = tenant?.name || 'tu negocio'
   const [simStep, setSimStep] = useState(0)
   const type = tenant?.type || 'otro'
 
-  // DiÃÂ¡logos adaptados por tipo de negocio
+  // Diálogos adaptados por tipo de negocio
   const getConversation = () => {
     const services = answers.services || []
     if (type.includes('clinica') || type.includes('veterinaria')) {
       return [
-        {from:'cliente', text:'Hola, querÃÂ­a pedir cita para esta semana.'},
-        {from:'agent', text:`${businessName}, buenos dÃÂ­as. Soy ${agentName}, ÃÂ¿para quÃÂ© tipo de consulta necesita cita?`},
-        {from:'cliente', text:'Para una revisiÃÂ³n general.'},
-        {from:'agent', text:`Perfecto. ÃÂ¿QuÃÂ© dÃÂ­a le va mejor? Tengo disponibilidad el martes a las 10:00 o el jueves a las 11:30.`},
+        {from:'cliente', text:'Hola, quería pedir cita para esta semana.'},
+        {from:'agent', text:`${businessName}, buenos días. Soy ${agentName}, ¿para qué tipo de consulta necesita cita?`},
+        {from:'cliente', text:'Para una revisión general.'},
+        {from:'agent', text:`Perfecto. ¿Qué día le va mejor? Tengo disponibilidad el martes a las 10:00 o el jueves a las 11:30.`},
         {from:'cliente', text:'El jueves me va bien.'},
-        {from:'agent', text:`Anotado. Cita confirmada el jueves a las 11:30. Le llegarÃÂ¡ una confirmaciÃÂ³n. ÃÂ¿Necesita algo mÃÂ¡s?`},
+        {from:'agent', text:`Anotado. Cita confirmada el jueves a las 11:30. Le llegará una confirmación. ¿Necesita algo más?`},
         {from:'cliente', text:'No, muchas gracias.'},
-        {from:'agent', text:`Hasta el jueves. ÃÂ¡Que tenga un buen dÃÂ­a!`},
+        {from:'agent', text:`Hasta el jueves. ¡Que tenga un buen día!`},
       ]
     }
     if (type === 'peluqueria') {
@@ -662,67 +662,67 @@ function SimulationStep({ tenant, answers, flow }: { tenant:any; answers:Record<
       const isBarberia = salonTipo === 'barberia'
       const isAmbos = salonTipo === 'ambos'
       if (isBarberia) return [
-        {from:'cliente', text:'Hola, querÃÂ­a pedir cita para un corte y arreglo de barba.'},
-        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. Claro, ÃÂ¿tienes alguna preferencia de dÃÂ­a o barbero?`},
-        {from:'cliente', text:'El sÃÂ¡bado por la maÃÂ±ana si puede ser.'},
-        {from:'agent', text:`El sÃÂ¡bado tengo disponibilidad a las 10:00 y a las 11:30. ÃÂ¿CuÃÂ¡l te va mejor?`},
+        {from:'cliente', text:'Hola, quería pedir cita para un corte y arreglo de barba.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. Claro, ¿tienes alguna preferencia de día o barbero?`},
+        {from:'cliente', text:'El sábado por la mañana si puede ser.'},
+        {from:'agent', text:`El sábado tengo disponibilidad a las 10:00 y a las 11:30. ¿Cuál te va mejor?`},
         {from:'cliente', text:'A las 10 perfecto.'},
-        {from:'agent', text:`Apuntado. Cita el sÃÂ¡bado a las 10:00 para corte y barba. ÃÂ¿A nombre de quiÃÂ©n?`},
+        {from:'agent', text:`Apuntado. Cita el sábado a las 10:00 para corte y barba. ¿A nombre de quién?`},
         {from:'cliente', text:'A nombre de Javier.'},
-        {from:'agent', text:`Perfecto Javier, hasta el sÃÂ¡bado. ÃÂ¡Nos vemos!`},
+        {from:'agent', text:`Perfecto Javier, hasta el sábado. ¡Nos vemos!`},
       ]
       if (isAmbos) return [
-        {from:'cliente', text:'Buenas, querÃÂ­a reservar para un corte de pelo y tambiÃÂ©n arreglar la barba.'},
-        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ÃÂ¿Es para mujer o para hombre?`},
+        {from:'cliente', text:'Buenas, quería reservar para un corte de pelo y también arreglar la barba.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Es para mujer o para hombre?`},
         {from:'cliente', text:'Para hombre, corte y barba.'},
-        {from:'agent', text:`Perfecto. ÃÂ¿Tienes preferencia de dÃÂ­a? Tengo disponible el jueves a las 17:00 o el viernes a las 10:00.`},
+        {from:'agent', text:`Perfecto. ¿Tienes preferencia de día? Tengo disponible el jueves a las 17:00 o el viernes a las 10:00.`},
         {from:'cliente', text:'El viernes a las 10.'},
-        {from:'agent', text:`Anotado. Viernes a las 10:00, corte y barba. ÃÂ¿A nombre de quiÃÂ©n?`},
-        {from:'cliente', text:'Miguel SÃÂ¡nchez.'},
-        {from:'agent', text:`Perfecto Miguel. Hasta el viernes. ÃÂ¡Nos vemos!`},
+        {from:'agent', text:`Anotado. Viernes a las 10:00, corte y barba. ¿A nombre de quién?`},
+        {from:'cliente', text:'Miguel Sánchez.'},
+        {from:'agent', text:`Perfecto Miguel. Hasta el viernes. ¡Nos vemos!`},
       ]
       return [
-        {from:'cliente', text:'Buenas, querÃÂ­a reservar cita para un corte.'},
-        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ÃÂ¿Corte de pelo para mujer?`},
-        {from:'cliente', text:'SÃÂ­, con lavado tambiÃÂ©n.'},
-        {from:'agent', text:`Claro. ÃÂ¿Tienes algÃÂºn dÃÂ­a preferido? Puedo darte el miÃÂ©rcoles a las 16:00 o el viernes por la maÃÂ±ana.`},
+        {from:'cliente', text:'Buenas, quería reservar cita para un corte.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Corte de pelo para mujer?`},
+        {from:'cliente', text:'Sí, con lavado también.'},
+        {from:'agent', text:`Claro. ¿Tienes algún día preferido? Puedo darte el miércoles a las 16:00 o el viernes por la mañana.`},
         {from:'cliente', text:'El viernes perfecto.'},
-        {from:'agent', text:`Apuntado. Cita el viernes a primera hora. ÃÂ¿A nombre de quiÃÂ©n?`},
-        {from:'cliente', text:'Laura GarcÃÂ­a.'},
-        {from:'agent', text:`Perfecto Laura. Hasta el viernes. ÃÂ¡Nos vemos!`},
+        {from:'agent', text:`Apuntado. Cita el viernes a primera hora. ¿A nombre de quién?`},
+        {from:'cliente', text:'Laura García.'},
+        {from:'agent', text:`Perfecto Laura. Hasta el viernes. ¡Nos vemos!`},
       ]
     }
     if (type === 'asesoria') {
       return [
-        {from:'cliente', text:'Hola, llamo porque tengo una duda sobre la declaraciÃÂ³n de la renta.'},
-        {from:'agent', text:`${businessName}, buenos dÃÂ­as. Soy ${agentName}. ÃÂ¿Prefiere que le concierte una cita con un asesor o tiene una pregunta rÃÂ¡pida?`},
+        {from:'cliente', text:'Hola, llamo porque tengo una duda sobre la declaración de la renta.'},
+        {from:'agent', text:`${businessName}, buenos días. Soy ${agentName}. ¿Prefiere que le concierte una cita con un asesor o tiene una pregunta rápida?`},
         {from:'cliente', text:'Mejor una cita, es algo complicado.'},
-        {from:'agent', text:`Por supuesto. Tengo disponibilidad el lunes a las 10:00 o el miÃÂ©rcoles a las 17:00. ÃÂ¿QuÃÂ© le va mejor?`},
+        {from:'agent', text:`Por supuesto. Tengo disponibilidad el lunes a las 10:00 o el miércoles a las 17:00. ¿Qué le va mejor?`},
         {from:'cliente', text:'El lunes.'},
-        {from:'agent', text:`Cita anotada para el lunes a las 10:00. ÃÂ¿Me da su nombre y nÃÂºmero de telÃÂ©fono por si hay algÃÂºn cambio?`},
+        {from:'agent', text:`Cita anotada para el lunes a las 10:00. ¿Me da su nombre y número de teléfono por si hay algún cambio?`},
         {from:'cliente', text:'Claro, soy Carlos Ruiz, 666 123 456.'},
-        {from:'agent', text:`Perfecto Carlos. Hasta el lunes. ÃÂ¡Que tenga buen dÃÂ­a!`},
+        {from:'agent', text:`Perfecto Carlos. Hasta el lunes. ¡Que tenga buen día!`},
       ]
     }
     // Restaurante / Bar por defecto
     const hasOrders = services.includes('pedidos')
     if (hasOrders) {
       return [
-        {from:'cliente', text:'Hola, ÃÂ¿podrÃÂ­a reservar mesa para esta noche?'},
-        {from:'agent', text:`${businessName}, buenas tardes. Soy ${agentName}. ÃÂ¿Para cuÃÂ¡ntas personas?`},
+        {from:'cliente', text:'Hola, ¿podría reservar mesa para esta noche?'},
+        {from:'agent', text:`${businessName}, buenas tardes. Soy ${agentName}. ¿Para cuántas personas?`},
         {from:'cliente', text:'Para 4 personas, a las 21:00.'},
-        {from:'agent', text:`Perfecto, tengo disponibilidad para 4 personas a las 21:00. ÃÂ¿A nombre de quiÃÂ©n hago la reserva?`},
-        {from:'cliente', text:'A nombre de MartÃÂ­nez.'},
-        {from:'agent', text:`Reserva confirmada: 4 personas, esta noche a las 21:00, a nombre de MartÃÂ­nez. ÃÂ¡Hasta esta noche!`},
+        {from:'agent', text:`Perfecto, tengo disponibilidad para 4 personas a las 21:00. ¿A nombre de quién hago la reserva?`},
+        {from:'cliente', text:'A nombre de Martínez.'},
+        {from:'agent', text:`Reserva confirmada: 4 personas, esta noche a las 21:00, a nombre de Martínez. ¡Hasta esta noche!`},
       ]
     }
     return [
-      {from:'cliente', text:'Hola, querÃÂ­a reservar mesa para maÃÂ±ana.'},
-      {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ÃÂ¿Para cuÃÂ¡ntas personas y a quÃÂ© hora?`},
+      {from:'cliente', text:'Hola, quería reservar mesa para mañana.'},
+      {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Para cuántas personas y a qué hora?`},
       {from:'cliente', text:'Somos 3, sobre las 14:00.'},
-      {from:'agent', text:`Tengo mesa disponible para 3 a las 14:00. ÃÂ¿A nombre de quiÃÂ©n?`},
-      {from:'cliente', text:'A nombre de LÃÂ³pez.'},
-      {from:'agent', text:`Perfecto. Reserva confirmada maÃÂ±ana a las 14:00 para 3 personas, a nombre de LÃÂ³pez. ÃÂ¡Hasta maÃÂ±ana!`},
+      {from:'agent', text:`Tengo mesa disponible para 3 a las 14:00. ¿A nombre de quién?`},
+      {from:'cliente', text:'A nombre de López.'},
+      {from:'agent', text:`Perfecto. Reserva confirmada mañana a las 14:00 para 3 personas, a nombre de López. ¡Hasta mañana!`},
     ]
   }
 
@@ -757,11 +757,11 @@ function SimulationStep({ tenant, answers, flow }: { tenant:any; answers:Record<
         {simStep < conversation.length - 1 ? (
           <button onClick={()=>setSimStep(s=>s+1)}
             style={{flex:1,padding:'11px',background:`linear-gradient(135deg,${C.amber},#E8923A)`,border:'none',borderRadius:10,cursor:'pointer',color:'#0C1018',fontSize:14,fontWeight:700,fontFamily:'inherit'}}>
-            Siguiente mensaje Ã¢ÂÂ
+            Siguiente mensaje â
           </button>
         ) : (
           <div style={{flex:1,padding:'11px 14px',background:C.greenDim,border:`1px solid ${C.green}33`,borderRadius:10,textAlign:'center' as const}}>
-            <p style={{fontSize:13,color:C.green,fontWeight:700}}>Ã¢ÂÂ ÃÂ¡AsÃÂ­ de fÃÂ¡cil! Tu recepcionista ya sabe cÃÂ³mo gestionar esto.</p>
+            <p style={{fontSize:13,color:C.green,fontWeight:700}}>â ¡Así de fácil! Tu recepcionista ya sabe cómo gestionar esto.</p>
           </div>
         )}
       </div>
@@ -769,7 +769,7 @@ function SimulationStep({ tenant, answers, flow }: { tenant:any; answers:Record<
   )
 }
 
-// Ã¢ÂÂÃ¢ÂÂ PÃÂ¡gina principal Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ââ Página principal ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export default function OnboardingPage() {
   const [tenant, setTenant] = useState<any>(null)
   const [step, setStep] = useState(0) // 0-based sobre los steps del flow
@@ -797,7 +797,7 @@ export default function OnboardingPage() {
   },[])
 
   const flow = tenant ? (FLOWS[tenant.type] || FALLBACK_FLOW) : FALLBACK_FLOW
-  const totalSteps = flow.steps.length + 2 // +1 simulaciÃÂ³n +1 final
+  const totalSteps = flow.steps.length + 2 // +1 simulación +1 final
   const currentStep = flow.steps[step]
 
   function getFieldValue(key: string, defaultValue: any) {
@@ -890,7 +890,7 @@ export default function OnboardingPage() {
     </div>
   )
 
-  const progressSteps = [...flow.steps.map(s=>s.title.split('?')[0].replace('ÃÂ¿','')), 'Prueba en vivo', 'ÃÂ¡Listo!']
+  const progressSteps = [...flow.steps.map(s=>s.title.split('?')[0].replace('¿','')), 'Prueba en vivo', '¡Listo!']
   const currentProgressStep = showSim ? flow.steps.length : done ? flow.steps.length+1 : step
 
   return (
@@ -905,7 +905,7 @@ export default function OnboardingPage() {
         .rz-ob-card{animation:rz-fade-up 0.35s ease}
       `}</style>
 
-      {/* Header mÃÂ­nimo */}
+      {/* Header mínimo */}
       <div style={{marginBottom:28,textAlign:'center' as const}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:4}}>
           <div style={{width:30,height:30,borderRadius:9,background:`linear-gradient(135deg,${C.amber},#E8923A)`,display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -928,10 +928,10 @@ export default function OnboardingPage() {
               <div key={i} style={{display:'flex',alignItems:'center'}}>
                 <div style={{display:'flex',flexDirection:'column' as const,alignItems:'center',gap:5}}>
                   <div style={{width:26,height:26,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,background:isDone?C.green:isActive?C.amber:'rgba(255,255,255,0.06)',color:isDone||isActive?'#0C1018':C.muted,transition:'all 0.25s',flexShrink:0}}>
-                    {isDone?'Ã¢ÂÂ':i+1}
+                    {isDone?'â':i+1}
                   </div>
                   <span style={{fontSize:9,color:isActive?C.amber:isDone?C.green:C.muted,fontWeight:isActive?700:400,whiteSpace:'nowrap' as const,maxWidth:70,textAlign:'center' as const,lineHeight:1.2}}>
-                    {label.slice(0,18)}{label.length>18?'Ã¢ÂÂ¦':''}
+                    {label.slice(0,18)}{label.length>18?'â¦':''}
                   </span>
                 </div>
                 {i<progressSteps.length-1 && <div style={{width:28,height:2,background:isDone?C.green:'rgba(255,255,255,0.06)',margin:'0 3px',marginBottom:18,flexShrink:0,transition:'background 0.3s'}}/>}
@@ -954,7 +954,7 @@ export default function OnboardingPage() {
 
             <div style={{display:'flex',flexDirection:'column' as const,gap:20}}>
               {currentStep.fields.map(f=>{
-                // Inyectar opciones dinÃÂ¡micas para servicios de peluquerÃÂ­a
+                // Inyectar opciones dinámicas para servicios de peluquería
                 const fieldConfig = (tenant?.type === 'peluqueria' && f.key === 'services')
                   ? { ...f, options: getSalonServices(answers.salon_tipo || 'peluqueria') }
                   : f
@@ -970,18 +970,18 @@ export default function OnboardingPage() {
               {step > 0 && (
                 <button onClick={()=>setStep(s=>s-1)}
                   style={{padding:'11px 20px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:10,cursor:'pointer',color:C.sub,fontSize:13,fontWeight:600,fontFamily:'inherit'}}>
-                  Ã¢ÂÂ AtrÃÂ¡s
+                  â Atrás
                 </button>
               )}
               <button onClick={saveAndNext} disabled={saving||!canContinue()}
                 style={{flex:1,padding:'12px',background:canContinue()?`linear-gradient(135deg,${C.amber},#E8923A)`:'rgba(255,255,255,0.06)',border:'none',borderRadius:10,cursor:canContinue()?'pointer':'not-allowed',color:canContinue()?'#0C1018':C.muted,fontSize:14,fontWeight:700,fontFamily:'inherit',transition:'all 0.15s',opacity:saving?0.7:1}}>
-                {saving ? 'GuardandoÃ¢ÂÂ¦' : step >= flow.steps.length-1 ? 'Ver demostraciÃÂ³n Ã¢ÂÂ' : 'Continuar Ã¢ÂÂ'}
+                {saving ? 'Guardandoâ¦' : step >= flow.steps.length-1 ? 'Ver demostración â' : 'Continuar â'}
               </button>
             </div>
           </div>
         )}
 
-        {/* SIMULACIÃÂN */}
+        {/* SIMULACIÓN */}
         {showSim && !done && (
           <div className="rz-ob-card" style={{background:C.card,border:`1px solid ${C.amber}22`,borderRadius:18,padding:28}}>
             <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:6}}>
@@ -989,7 +989,7 @@ export default function OnboardingPage() {
                 {flow.emoji}
               </div>
               <div>
-                <h2 style={{fontSize:18,fontWeight:800,color:C.text,letterSpacing:'-0.02em'}}>AsÃÂ­ suena tu recepcionista</h2>
+                <h2 style={{fontSize:18,fontWeight:800,color:C.text,letterSpacing:'-0.02em'}}>Así suena tu recepcionista</h2>
                 <p style={{fontSize:12,color:C.muted}}>Ejemplo real de una llamada en {flow.label}</p>
               </div>
             </div>
@@ -997,11 +997,11 @@ export default function OnboardingPage() {
             <SimulationStep tenant={tenant} answers={answers} flow={flow}/>
             <button onClick={()=>setDone(true)}
               style={{width:'100%',marginTop:16,padding:'12px',background:`linear-gradient(135deg,${C.green},#16a34a)`,border:'none',borderRadius:10,cursor:'pointer',color:'white',fontSize:14,fontWeight:700,fontFamily:'inherit'}}>
-              Ir al panel Ã¢ÂÂ
+              Ir al panel â
             </button>
             <button onClick={()=>setStep(flow.steps.length-1)}
               style={{width:'100%',marginTop:8,padding:'8px',background:'none',border:'none',cursor:'pointer',color:C.muted,fontSize:12,fontFamily:'inherit'}}>
-              Ã¢ÂÂ Volver a configurar
+              â Volver a configurar
             </button>
           </div>
         )}
@@ -1009,19 +1009,19 @@ export default function OnboardingPage() {
         {/* PANTALLA FINAL */}
         {done && (
           <div className="rz-ob-card" style={{background:C.card,border:`1px solid ${C.green}22`,borderRadius:18,padding:28,textAlign:'center' as const}}>
-            <div style={{width:72,height:72,background:C.greenDim,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',fontSize:36}}>Ã°ÂÂÂ</div>
-            <h2 style={{fontSize:24,fontWeight:800,color:C.text,letterSpacing:'-0.02em',marginBottom:8}}>ÃÂ¡Todo listo!</h2>
+            <div style={{width:72,height:72,background:C.greenDim,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',fontSize:36}}></div>
+            <h2 style={{fontSize:24,fontWeight:800,color:C.text,letterSpacing:'-0.02em',marginBottom:8}}>¡Todo listo!</h2>
             <p style={{fontSize:14,color:C.muted,marginBottom:24,lineHeight:1.6}}>
-              <strong style={{color:C.text}}>{answers.agent_name || flow.agentDefaultName}</strong> estÃÂ¡ lista para atender las llamadas de <strong style={{color:C.text}}>{tenant.name}</strong>.
+              <strong style={{color:C.text}}>{answers.agent_name || flow.agentDefaultName}</strong> está lista para atender las llamadas de <strong style={{color:C.text}}>{tenant.name}</strong>.
             </p>
 
             <div style={{background:'rgba(255,255,255,0.02)',border:`1px solid ${C.border}`,borderRadius:12,padding:16,marginBottom:20,textAlign:'left' as const}}>
               {[
-                {icon:'Ã¢ÂÂ',color:C.green,text:`Recepcionista configurada: ${answers.agent_name || flow.agentDefaultName}`},
-                {icon:'Ã¢ÂÂ',color:C.green,text:'Horario de atenciÃÂ³n guardado'},
-                {icon:'Ã¢ÂÂ',color:C.green,text:`Tipo de negocio: ${flow.label}`},
-                {icon:'Ã¢ÂÂ',color:C.green,text:`Servicios activados: ${(answers.services||[]).length > 0 ? (answers.services||[]).length+' seleccionados' : 'configurados'}`},
-                {icon:'Ã°ÂÂÂ',color:C.amber,text:'10 llamadas gratuitas disponibles para probar'},
+                {icon:'â',color:C.green,text:`Recepcionista configurada: ${answers.agent_name || flow.agentDefaultName}`},
+                {icon:'â',color:C.green,text:'Horario de atención guardado'},
+                {icon:'â',color:C.green,text:`Tipo de negocio: ${flow.label}`},
+                {icon:'â',color:C.green,text:`Servicios activados: ${(answers.services||[]).length > 0 ? (answers.services||[]).length+' seleccionados' : 'configurados'}`},
+                {icon:'',color:C.amber,text:'10 llamadas gratuitas disponibles para probar'},
               ].map((item,i)=>(
                 <div key={i} style={{display:'flex',gap:10,alignItems:'flex-start',marginBottom:i<4?8:0}}>
                   <span style={{color:item.color,fontWeight:700,fontSize:14,flexShrink:0}}>{item.icon}</span>
@@ -1031,11 +1031,11 @@ export default function OnboardingPage() {
             </div>
 
             <div style={{background:C.amberDim,border:`1px solid ${C.amber}33`,borderRadius:10,padding:'12px 16px',marginBottom:20,textAlign:'left' as const}}>
-              <p style={{fontSize:12,fontWeight:700,color:C.amber,marginBottom:6}}>PrÃÂ³ximos pasos recomendados:</p>
+              <p style={{fontSize:12,fontWeight:700,color:C.amber,marginBottom:6}}>Próximos pasos recomendados:</p>
               {[
-                'Ã°ÂÂÂ Configura el nÃÂºmero de telÃÂ©fono en ConfiguraciÃÂ³n',
-                'Ã°ÂÂÂ AÃÂ±ade tu carta o servicios en "Carta y productos"',
-                'Ã¢ÂÂÃ¯Â¸Â Ajusta cÃÂ³mo gestiona reservas especiales',
+                ' Configura el número de teléfono en Configuración',
+                ' Añade tu carta o servicios en "Carta y productos"',
+                'â️ Ajusta cómo gestiona reservas especiales',
               ].map((t,i)=>(
                 <div key={i} style={{display:'flex',gap:8,alignItems:'center',marginBottom:i<2?6:0}}>
                   <span style={{fontSize:12,color:C.sub}}>{t}</span>
@@ -1045,7 +1045,7 @@ export default function OnboardingPage() {
 
             <button onClick={completeOnboarding} disabled={saving}
               style={{width:'100%',padding:'14px',background:`linear-gradient(135deg,${C.amber},#E8923A)`,border:'none',borderRadius:12,cursor:'pointer',color:'#0C1018',fontSize:15,fontWeight:800,fontFamily:'inherit',transition:'all 0.15s',opacity:saving?0.7:1}}>
-              {saving ? 'ActivandoÃ¢ÂÂ¦' : 'Ir al centro de control Ã¢ÂÂ'}
+              {saving ? 'Activandoâ¦' : 'Ir al centro de control â'}
             </button>
           </div>
         )}
