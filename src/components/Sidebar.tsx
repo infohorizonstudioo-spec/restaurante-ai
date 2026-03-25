@@ -65,7 +65,19 @@ export default function Sidebar() {
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  const { tenant, template } = useTenant()
+  const { tenant, template, t } = useTenant()
+
+  // Map module IDs to translated labels
+  const navLabel = (mod: any) => {
+    const map: Record<string, string> = {
+      panel: t.nav.panel, reservas: t.nav.reservations, agenda: t.nav.agenda,
+      llamadas: t.nav.calls, clientes: t.nav.clients, mesas: t.nav.spaces,
+      turnos: t.nav.shifts, productos: t.nav.products, pedidos: t.nav.orders,
+      estadisticas: t.nav.stats, facturacion: t.nav.billing,
+      agente: t.nav.agent, configuracion: t.nav.settings,
+    }
+    return map[mod.id] || mod.label
+  }
 
   const plan      = tenant?.plan || 'trial'
   const isTrial   = plan === 'trial' || plan === 'free'
@@ -137,7 +149,7 @@ export default function Sidebar() {
           <div style={{ display:'flex', alignItems:'center', gap:7, padding:'7px 10px', background: agentOn ? 'var(--rz-teal-dim)' : 'var(--rz-red-dim)', borderRadius:'var(--rz-r-sm)', border:`1px solid ${agentOn ? 'rgba(45,212,191,0.15)' : 'rgba(248,113,113,0.15)'}` }}>
             <div style={{ width:7, height:7, borderRadius:'50%', background: agentOn ? 'var(--rz-teal)' : 'var(--rz-red)', flexShrink:0, animation: agentOn ? 'rz-pulse 2s ease-in-out infinite' : 'none' }}/>
             <span style={{ fontSize:11, fontWeight:600, color: agentOn ? 'var(--rz-teal)' : 'var(--rz-red)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-              {agentOn ? agentName + ' — en línea' : 'Sin número configurado'}
+              {agentOn ? agentName + ' — ' + t.agent.agentActive : t.agent.agentInactive}
             </span>
           </div>
         </div>
@@ -159,7 +171,7 @@ export default function Sidebar() {
           const href    = locked ? '/precios' : item.href
           return (
             <Link key={item.href} href={href}
-              title={collapsed ? item.label : undefined}
+              title={collapsed ? navLabel(item) : undefined}
               className={`rz-nav-item${active ? ' active' : ''}`}
               style={collapsed ? { justifyContent:'center', padding:'10px 0', margin:'1px 8px' } : {}}>
               <div className="rz-nav-indicator"/>
@@ -168,7 +180,7 @@ export default function Sidebar() {
               </span>
               {!collapsed && (
                 <>
-                  <span className="rz-nav-label">{item.label}</span>
+                  <span className="rz-nav-label">{navLabel(item)}</span>
                   {item.pro && (
                     <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:5, background:'var(--rz-violet-dim)', color:'var(--rz-violet)', flexShrink:0, letterSpacing:'0.04em' }}>PRO</span>
                   )}

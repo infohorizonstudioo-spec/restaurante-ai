@@ -7,6 +7,7 @@ import Link from 'next/link'
 import NotificationBell from '@/components/NotificationBell'
 import { resolveTemplate } from '@/lib/templates'
 import { getEventConfig, type BusinessEventConfig } from '@/lib/event-schemas'
+import { getTranslations } from '@/lib/i18n'
 
 const C = {
   amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)', amberGlow:'rgba(240,168,78,0.20)',
@@ -239,7 +240,7 @@ function AgentBar({ agentOn, agentName }:{ agentOn:boolean; agentName:string }) 
 }
 
 // ── Insights Panel — AI thoughts
-function InsightsPanel({ insights }: { insights: any[] }) {
+function InsightsPanel({ insights, headerLabel }: { insights: any[]; headerLabel?: string }) {
   if (insights.length === 0) return null
   const priorityOrder = { high: 0, normal: 1, low: 2 }
   const sorted = [...insights].sort((a, b) => (priorityOrder[a.priority as keyof typeof priorityOrder] || 1) - (priorityOrder[b.priority as keyof typeof priorityOrder] || 1))
@@ -248,7 +249,7 @@ function InsightsPanel({ insights }: { insights: any[] }) {
     <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
       <div style={{ padding: '14px 18px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.violet, animation: 'rz-pulse 2s ease-in-out infinite' }}/>
-        <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Sofía ha detectado</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{headerLabel || 'Sofía ha detectado'}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {sorted.map((insight, i) => (
@@ -539,6 +540,7 @@ export default function PanelPage() {
   const agentOn   = !!tenant.agent_phone
   const tmpl      = resolveTemplate(tenant.type||'otro')
   const L         = tmpl.labels
+  const panelT    = getTranslations(tenant.language || 'es')
   const hour      = new Date().getHours()
   const greeting  = hour<13?'Buenos días':hour<20?'Buenas tardes':'Buenas noches'
   const todayCalls= calls.filter(c=>c.started_at?.slice(0,10)===new Date().toISOString().split('T')[0])
@@ -751,7 +753,7 @@ export default function PanelPage() {
             {/* Live feed */}
             <LiveFeed events={events} demoMode={demoMode} onToggleDemo={toggleDemo}/>
 
-            <InsightsPanel insights={insights}/>
+            <InsightsPanel insights={insights} headerLabel={panelT.insights.detected}/>
 
             {/* Reservas hoy */}
             <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,overflow:'hidden' }}>
