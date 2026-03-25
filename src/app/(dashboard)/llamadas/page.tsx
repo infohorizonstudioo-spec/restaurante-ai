@@ -7,18 +7,48 @@ import { useTenant } from '@/contexts/TenantContext'
 import { getCommonStrings, getStatusLabel } from '@/lib/i18n'
 
 // ── Traducciones humanas de estados ──────────────────────────────────────
-const DECISION_CFG: Record<string,{label:string;color:string;bg:string;icon:string}> = {
-  confirmed:             {label:'Sofía lo confirmó',         color:'#4ADE80', bg:'rgba(74,222,128,0.10)',  icon:'✅'},
-  pending_review:        {label:'Revísalo tú',               color:'#FBB53F', bg:'rgba(251,181,63,0.10)',  icon:'👁'},
-  modified:              {label:'Modificada',                color:'#60A5FA', bg:'rgba(96,165,250,0.10)',  icon:'✏️'},
-  cancelled:             {label:'Cancelada',                 color:'#F87171', bg:'rgba(248,113,113,0.10)', icon:'✕'},
-  rejected:              {label:'No podía atenderse',        color:'#F87171', bg:'rgba(248,113,113,0.10)', icon:'✕'},
-  needs_human_attention: {label:'Necesita tu atención',      color:'#F0A84E', bg:'rgba(240,168,78,0.12)',  icon:'⚠️'},
-  incomplete:            {label:'Sin información suficiente', color:'#8895A7', bg:'rgba(136,149,167,0.10)', icon:'❓'},
+function getDecisionLabel(status: string, name: string, txFn: (s:string)=>string): string {
+  const map: Record<string,string> = {
+    confirmed: name + ' ' + txFn('lo confirmó'),
+    pending_review: txFn('Revísalo tú'),
+    modified: txFn('Modificada'),
+    cancelled: txFn('Cancelada'),
+    rejected: txFn('No podía atenderse'),
+    needs_human_attention: txFn('Necesita tu atención'),
+    incomplete: txFn('Sin información suficiente'),
+  }
+  return map[status] || status
+}
+const DECISION_CFG: Record<string,{color:string;bg:string;icon:string}> = {
+  confirmed:             {color:'#4ADE80', bg:'rgba(74,222,128,0.10)',  icon:'✅'},
+  pending_review:        {color:'#FBB53F', bg:'rgba(251,181,63,0.10)',  icon:'👁'},
+  modified:              {color:'#60A5FA', bg:'rgba(96,165,250,0.10)',  icon:'✏️'},
+  cancelled:             {color:'#F87171', bg:'rgba(248,113,113,0.10)', icon:'✕'},
+  rejected:              {color:'#F87171', bg:'rgba(248,113,113,0.10)', icon:'✕'},
+  needs_human_attention: {color:'#F0A84E', bg:'rgba(240,168,78,0.12)',  icon:'⚠️'},
+  incomplete:            {color:'#8895A7', bg:'rgba(136,149,167,0.10)', icon:'❓'},
+}
+function getFlagLabel(flag: string, name: string, txFn: (s:string)=>string): string {
+  const map: Record<string,string> = {
+    large_group: txFn('Grupo grande'),
+    allergy_note: txFn('Mencionó alergias'),
+    specific_table_request: txFn('Pidió mesa concreta'),
+    low_confidence: name + ' ' + txFn('tuvo dudas'),
+    no_availability: txFn('No había hueco'),
+    modification_request: txFn('Quería cambiar algo'),
+    cancellation_request: txFn('Quería cancelar'),
+    special_occasion: txFn('Ocasión especial'),
+    accessibility_need: txFn('Necesidades especiales'),
+    late_arrival_notice: txFn('Avisó que llega tarde'),
+    out_of_policy: txFn('Pedía algo que no ofrecemos'),
+    confused_customer: txFn('Cliente con dudas'),
+    repeat_pattern: txFn('Patrón repetido'),
+  }
+  return map[flag] || flag
 }
 const FLAG_LABELS: Record<string,string> = {
   large_group:'Grupo grande', allergy_note:'Mencionó alergias', specific_table_request:'Pidió mesa concreta',
-  low_confidence:'Sofía tuvo dudas', no_availability:'No había hueco',
+  low_confidence:'Tuvo dudas', no_availability:'No había hueco',
   modification_request:'Quería cambiar algo', cancellation_request:'Quería cancelar',
   special_occasion:'Ocasión especial', accessibility_need:'Necesidades especiales',
   late_arrival_notice:'Avisó que llega tarde', out_of_policy:'Pedía algo que no ofrecemos',
@@ -81,8 +111,9 @@ function fmt(sec:number|null) {
 }
 
 export default function LlamadasPage() {
-  const { t, tx } = useTenant()
+  const { t, tx, tenant: tenantCtx } = useTenant()
   const cs = getCommonStrings(t.locale)
+  const agentName = tenantCtx?.agent_name || 'Sofía'
   const [calls,setCalls]       = useState<any[]>([])
   const [loading,setLoading]   = useState(true)
   const [loadingMore,setLoadingMore] = useState(false)
@@ -201,7 +232,7 @@ export default function LlamadasPage() {
           <div style={{background:'rgba(240,168,78,0.08)',border:'1px solid rgba(240,168,78,0.25)',borderRadius:12,padding:'12px 16px',marginBottom:16,display:'flex',alignItems:'flex-start',gap:10}}>
             <span style={{fontSize:18,flexShrink:0}}>🧠</span>
             <div style={{flex:1}}>
-              <p style={{fontSize:11, fontWeight:700, color:C.amber, marginBottom:4}}>{tx('Sofía ha aprendido algo nuevo')}</p>
+              <p style={{fontSize:11, fontWeight:700, color:C.amber, marginBottom:4}}>{agentName + ' ' + tx('ha aprendido algo nuevo')}</p>
               {suggestions.map((s,i)=>(
                 <p key={i} style={{fontSize:12,color:C.text2}}>
                   {tx('Ha corregido')} {s.count} {tx('veces llamadas similares')} → {tx('ahora sabrá manejarlas mejor')}
@@ -261,13 +292,13 @@ export default function LlamadasPage() {
                         {/* Estado de decisión + flags — en lenguaje humano */}
                         {(call.decision_status||call.decision_flags?.length>0) && (
                           <div style={{background:C.surface3, borderRadius:9, padding:'10px 14px', marginBottom:10}}>
-                            <p style={{fontSize:10, fontWeight:700, color:C.text3, marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em'}}>{tx('Lo que hizo')} {tx('Sofía')}</p>
+                            <p style={{fontSize:10, fontWeight:700, color:C.text3, marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em'}}>{tx('Lo que hizo')} {agentName}</p>
                             <div style={{display:'flex', flexWrap:'wrap', gap:6, alignItems:'center'}}>
                               {call.decision_status&&(()=>{
                                 const dcfg = DECISION_CFG[call.decision_status]
                                 return dcfg ? (
                                   <span style={{fontSize:12, padding:'4px 12px', borderRadius:8, background:dcfg.bg, color:dcfg.color, fontWeight:700}}>
-                                    {dcfg.icon} {dcfg.label}
+                                    {dcfg.icon} {getDecisionLabel(call.decision_status, agentName, tx)}
                                   </span>
                                 ) : null
                               })()}
@@ -284,7 +315,7 @@ export default function LlamadasPage() {
                               {/* Flags en lenguaje humano */}
                               {(call.decision_flags||[]).map((f:string)=>(
                                 <span key={f} style={{fontSize:10, padding:'2px 8px', borderRadius:6, background:'rgba(167,139,250,0.12)', color:'#A78BFA', fontWeight:600}}>
-                                  {FLAG_LABELS[f]||f}
+                                  {getFlagLabel(f, agentName, tx)}
                                 </span>
                               ))}
                             </div>
@@ -317,7 +348,7 @@ export default function LlamadasPage() {
                           {correcting===call.call_sid ? (
                             <div style={{background:'rgba(240,168,78,0.05)', border:'1px solid rgba(240,168,78,0.2)', borderRadius:10, padding:'12px 14px'}}>
                               <p style={{fontSize:12, fontWeight:700, color:C.amber, marginBottom:6}}>{tx('¿Qué pasó realmente con esta llamada?')}</p>
-                              <p style={{fontSize:11, color:C.text3, marginBottom:10}}>{tx('Elige la opción correcta y Sofía aprenderá para la próxima vez.')}</p>
+                              <p style={{fontSize:11, color:C.text3, marginBottom:10}}>{tx('Elige la opción correcta y') + ' ' + agentName + ' ' + tx('aprenderá para la próxima vez.')}</p>
                               <div style={{display:'flex', flexWrap:'wrap', gap:6, marginBottom:10}}>
                                 {CORRECTION_OPTIONS.map(opt=>(
                                   <button key={opt.value} onClick={()=>sendFeedback(call.call_sid, opt.value)}
@@ -336,7 +367,7 @@ export default function LlamadasPage() {
                               </button>
                             </div>
                           ) : feedbackDone.has(call.call_sid) ? (
-                            <p style={{fontSize:11, color:C.green}}>✓ {tx('Listo — Sofía tendrá esto en cuenta la próxima vez')}</p>
+                            <p style={{fontSize:11, color:C.green}}>✓ {tx('Listo') + ' — ' + agentName + ' ' + tx('tendrá esto en cuenta la próxima vez')}</p>
                           ) : (
                             <div style={{display:'flex',alignItems:'center',gap:0}}>
                               {call.caller_phone && call.caller_phone !== 'Número oculto' && (

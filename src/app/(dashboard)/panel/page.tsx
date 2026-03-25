@@ -244,7 +244,7 @@ function AgentBar({ agentOn, agentName, lang='es' }:{ agentOn:boolean; agentName
 }
 
 // ── Insights Panel — AI thoughts
-function InsightsPanel({ insights, headerLabel, lang='es' }: { insights: any[]; headerLabel?: string; lang?:string }) {
+function InsightsPanel({ insights, headerLabel, lang='es', agentName='Sofía' }: { insights: any[]; headerLabel?: string; lang?:string; agentName?:string }) {
   const _tx = (s:string) => tx(s, lang)
   if (insights.length === 0) return null
   const priorityOrder = { high: 0, normal: 1, low: 2 }
@@ -254,7 +254,7 @@ function InsightsPanel({ insights, headerLabel, lang='es' }: { insights: any[]; 
     <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
       <div style={{ padding: '14px 18px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.violet, animation: 'rz-pulse 2s ease-in-out infinite' }}/>
-        <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{headerLabel || _tx('Sofía ha detectado')}</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{headerLabel || (agentName + ' ' + _tx('ha detectado'))}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {sorted.map((insight, i) => (
@@ -775,7 +775,7 @@ export default function PanelPage() {
             {/* Live feed */}
             <LiveFeed events={events} demoMode={demoMode} onToggleDemo={toggleDemo} lang={lang}/>
 
-            <InsightsPanel insights={insights} headerLabel={panelT.insights.detected} lang={lang}/>
+            <InsightsPanel insights={insights} headerLabel={panelT.insights.detected} lang={lang} agentName={tenant.agent_name||'Sofía'}/>
 
             {/* Reservas hoy */}
             <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,overflow:'hidden' }}>
