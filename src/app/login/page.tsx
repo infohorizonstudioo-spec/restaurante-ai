@@ -65,7 +65,7 @@ function CallDemo() {
             <div style={{ position:'absolute', bottom:-1, right:-1, width:10, height:10, borderRadius:'50%', background:'#2DD4BF', border:'2px solid #0C1018' }}/>
           </div>
           <div>
-            <p style={{ color:'#E8EEF6', fontWeight:600, fontSize:13, letterSpacing:'-0.01em' }}>Sofía · Recepcionista virtual</p>
+            <p style={{ color:'#E8EEF6', fontWeight:600, fontSize:13, letterSpacing:'-0.01em' }}>Reservo.AI · Recepcionista virtual</p>
             <p style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:1 }}>Atendiendo llamadas ahora mismo</p>
           </div>
         </div>

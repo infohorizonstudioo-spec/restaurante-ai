@@ -78,7 +78,7 @@ const ES: Translations = {
     delivering: 'En reparto', delivered: 'Entregado', pickup: 'Recoger', delivery: 'Domicilio',
   },
   insights: {
-    detected: 'Sofía ha detectado', conversionUp: 'Oye, vas para arriba', conversionDown: 'Ojo, la conversión ha bajado',
+    detected: 'Tu recepcionista ha detectado', conversionUp: 'Oye, vas para arriba', conversionDown: 'Ojo, la conversión ha bajado',
     peakHour: 'Ahora es cuando más te llaman', repeatCustomer: 'es de los que siempre vuelve',
     learning: 'Tu recepcionista está aprendiendo', capacityHigh: 'Hoy viene gente, ¿eh?',
     noShowRisk: 'reservas podrían no presentarse', newCustomers: 'caras nuevas esta semana',

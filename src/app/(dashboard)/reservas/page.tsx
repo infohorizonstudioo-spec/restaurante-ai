@@ -143,7 +143,7 @@ export default function ReservasPage() {
                   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess2.data.session.access_token },
                   body: JSON.stringify({
                     to: waitlisted.customer_phone,
-                    message: `🎉 ¡Buenas noticias! Ha quedado un hueco el ${resDate} en el que estabas apuntado. Llámanos para confirmar tu reserva. — ${r.customer_name ? '' : 'Tu restaurante'}`
+                    message: `🎉 Ha quedado un hueco el ${resDate}. Llámanos para confirmar tu reserva.`
                   })
                 }).catch(() => {})
                 // Marcar como notificado

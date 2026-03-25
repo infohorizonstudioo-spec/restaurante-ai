@@ -11,7 +11,7 @@ const supabase = createClient(
 // Default response when no tenant found
 const DEFAULTS = {
   business_name: "Restaurante",
-  agent_name: "Sofia",
+  agent_name: "Recepcionista",
   business_info: "Sin informacion disponible.",
   tenant_id: "",
 }
