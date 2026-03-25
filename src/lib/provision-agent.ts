@@ -226,7 +226,7 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
     // 1. Leer tenant
     const { data: tenant, error: tenantErr } = await supabase
       .from("tenants")
-      .select("id,name,type,agent_name,el_agent_id")
+      .select("id,name,type,agent_name,el_agent_id,transfer_phone,agent_phone")
       .eq("id", tenantId)
       .single()
 
@@ -427,7 +427,26 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
         agent: {
           first_message: `${tenant.name}, buenas, dígame.`,
           language: "es",
-          prompt: { prompt },
+          prompt: {
+            prompt,
+            ...(tenant.transfer_phone ? {
+              built_in_tools: {
+                transfer_to_number: {
+                  name: 'transfer_to_number',
+                  description: 'Transfiere la llamada al encargado del negocio.',
+                  condition: 'El cliente pide hablar con una persona o no puedes resolver.',
+                  params: {
+                    system_tool_type: 'transfer_to_number',
+                    transfers: [{
+                      phone_number: tenant.transfer_phone,
+                      label: 'Encargado',
+                      condition: 'Cuando el cliente pida hablar con alguien o no puedas resolver.'
+                    }]
+                  }
+                }
+              }
+            } : {}),
+          },
           tools,
           dynamic_variables: {
             dynamic_variable_placeholders: {
