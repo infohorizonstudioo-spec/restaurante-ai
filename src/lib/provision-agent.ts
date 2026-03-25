@@ -138,6 +138,101 @@ FLUJO PARA PEDIDOS (recoger o domicilio):
 5. Si confirma → llama a create_reservation con event_type="appointment"
 6. Al cerrar → llama a save_call_summary`,
 
+  barberia: `FLUJO PARA CITAS:
+1. Pide nombre del cliente
+2. Pregunta qué servicio quiere: corte, barba, afeitado, tinte, tratamiento...
+3. Pregunta si tiene barbero preferido
+4. Pide día y hora
+5. Llama a check_availability
+6. Si hay hueco llama a create_reservation con customer_phone={{caller_phone}}
+7. Confirma: "hecho, [nombre] el [dia] a las [hora] para [servicio]."
+8. Al cerrar llama a save_call_summary
+
+FLUJO PARA CANCELACIONES:
+1. Pregunta nombre o teléfono
+2. Llama a cancel_reservation con customer_phone={{caller_phone}}
+3. Confirma cancelación
+4. Al cerrar llama a save_call_summary con intent=cancelacion
+
+FLUJO PARA MODIFICACIONES:
+1. Pregunta qué quiere cambiar
+2. Llama a modify_reservation
+3. Confirma cambio
+4. Al cerrar llama a save_call_summary con intent=modificacion`,
+
+  cafeteria: `FLUJO PARA RESERVAS:
+1. Pide nombre del cliente
+2. Pide fecha y hora
+3. Pide número de personas
+4. Llama a check_availability SIEMPRE
+5. Si hay hueco llama a create_reservation con customer_phone={{caller_phone}}
+6. Confirma reserva
+7. Al cerrar llama a save_call_summary
+
+FLUJO PARA PEDIDOS:
+1. Pide nombre
+2. Para recoger o para llevar?
+3. Cada producto: llama a update_order
+4. Al final: update_order action=confirm
+5. Al cerrar llama a save_call_summary`,
+
+  asesoria: `FLUJO PARA CITAS:
+1. Pide nombre del cliente
+2. Pregunta tipo de consulta: laboral, fiscal, jurídica, mercantil, contable...
+3. Pregunta si prefiere presencial, por teléfono o videollamada
+4. Pide día y hora preferidos
+5. Llama a check_availability
+6. Si hay hueco llama a create_reservation con customer_phone={{caller_phone}}
+7. Confirma: "hecho, [nombre] cita de [tipo] el [dia] a las [hora]."
+8. Al cerrar llama a save_call_summary
+
+FLUJO PARA CANCELACIONES:
+1. Pregunta nombre o teléfono
+2. Llama a cancel_reservation
+3. Al cerrar llama a save_call_summary con intent=cancelacion`,
+
+  seguros: `FLUJO PARA CONSULTAS Y CITAS:
+1. Pide nombre del cliente
+2. Pregunta qué tipo de seguro le interesa: auto, hogar, salud, vida, negocio...
+3. Si quiere contratar o tiene siniestro: apunta datos y pasa a un agente con transfer_to_number
+4. Si quiere cita para hablar con un asesor: pide día y hora
+5. Llama a check_availability
+6. Si hay hueco llama a create_reservation con customer_phone={{caller_phone}}
+7. Confirma cita
+8. Al cerrar llama a save_call_summary
+
+Si el cliente tiene urgencia por siniestro: "tranquilo, te paso ahora mismo con un compañero que te ayuda." Y usa transfer_to_number.`,
+
+  ecommerce: `FLUJO PARA CONSULTAS DE PRODUCTO:
+1. Pregunta qué producto o servicio busca
+2. Llama a get_menu_or_services para consultar el catálogo
+3. Responde con la información disponible
+
+FLUJO PARA PEDIDOS:
+1. Pide nombre del cliente
+2. Pregunta qué quiere pedir
+3. Cada producto: llama a update_order
+4. Pregunta dirección de envío (apunta en notes)
+5. Al final: update_order action=confirm
+6. Confirma con total y dirección
+7. Al cerrar llama a save_call_summary con intent=pedido
+
+FLUJO PARA ESTADO DE PEDIDO:
+1. Pregunta nombre o número de pedido
+2. Si no puede consultar el estado: "dame tu nombre y te llamamos en un ratillo con la info."
+3. Al cerrar llama a save_call_summary`,
+
+  gimnasio: `FLUJO PARA CONSULTAS Y CITAS:
+1. Pregunta si quiere información, inscribirse, o reservar clase
+2. Si quiere info: llama a get_menu_or_services (actividades, horarios, precios)
+3. Si quiere reservar clase: pide nombre, tipo de clase, día y hora
+4. Llama a check_availability
+5. Si hay hueco llama a create_reservation con customer_phone={{caller_phone}}
+6. Confirma: "apuntado a [clase] el [dia] a las [hora]."
+7. Al cerrar llama a save_call_summary
+
+Si pregunta por precios de matrícula o abonos: responde con lo que hay en los datos. Si no lo sabes: "eso mejor que te lo expliquen en recepción, pásate cuando quieras."`,
+
   otro: `FLUJO GENERAL:
 1. Escucha lo que necesita el cliente
 2. Responde con la información del negocio

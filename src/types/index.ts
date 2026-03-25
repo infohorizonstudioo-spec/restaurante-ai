@@ -8,6 +8,7 @@ export type BusinessType =
   | 'clinica_dental' | 'clinica_medica' | 'asesoria'
   | 'peluqueria' | 'barberia' | 'seguros' | 'inmobiliaria'
   | 'veterinaria' | 'fisioterapia' | 'psicologia'
+  | 'gimnasio' | 'academia' | 'spa' | 'taller'
   | 'ecommerce' | 'otro'
 
 export type TableStatus      = 'libre' | 'reservada' | 'ocupada' | 'bloqueada'

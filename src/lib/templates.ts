@@ -136,6 +136,7 @@ export type BusinessType =
   | 'clinica_dental' | 'clinica_medica' | 'asesoria'
   | 'peluqueria' | 'barberia' | 'seguros' | 'inmobiliaria'
   | 'veterinaria' | 'fisioterapia' | 'psicologia'
+  | 'gimnasio' | 'academia' | 'spa' | 'taller'
   | 'ecommerce' | 'otro'
 
 interface TypeOverride {
@@ -207,6 +208,35 @@ const TYPE_MAP: Record<string, TypeOverride> = {
   inmobiliaria: { template: 'servicios',
     reservaLabel: 'Visita', reservasLabel: 'Visitas',
     agentContext: 'Eres la recepcionista de una inmobiliaria. Gestiona llamadas y visitas. Pregunta: si el cliente busca comprar, vender o alquilar, zona de interés y datos de contacto.' },
+
+  gimnasio: {
+    template: 'servicios', hasSpaces: false,
+    reservaLabel: 'Clase', reservasLabel: 'Clases',
+    clienteLabel: 'Socio', clientesLabel: 'Socios',
+    agentContext: 'Eres la recepcionista de un gimnasio. Gestiona reservas de clases, consultas sobre horarios y actividades. Pregunta: nombre del socio, tipo de clase, día y hora preferida.',
+  },
+
+  academia: {
+    template: 'servicios', hasSpaces: true,
+    reservaLabel: 'Clase', reservasLabel: 'Clases',
+    clienteLabel: 'Alumno', clientesLabel: 'Alumnos',
+    unitLabels: { singular: 'Aula', plural: 'Aulas', icon: '📚', zoneLabel: 'Planta', zonesLabel: 'Plantas' },
+    agentContext: 'Eres la recepcionista de una academia. Gestiona inscripciones y reservas de clases. Pregunta: nombre del alumno, curso o materia, nivel, horario preferido.',
+  },
+
+  spa: {
+    template: 'servicios', hasSpaces: true,
+    reservaLabel: 'Cita', reservasLabel: 'Citas',
+    unitLabels: { singular: 'Cabina', plural: 'Cabinas', icon: '💆', zoneLabel: 'Zona', zonesLabel: 'Zonas' },
+    agentContext: 'Eres la recepcionista de un spa. Gestiona citas para tratamientos. Pregunta: nombre del cliente, tipo de tratamiento (masaje, facial, corporal...), terapeuta preferido y horario.',
+  },
+
+  taller: {
+    template: 'servicios', hasSpaces: false,
+    reservaLabel: 'Cita', reservasLabel: 'Citas',
+    clienteLabel: 'Cliente', clientesLabel: 'Clientes',
+    agentContext: 'Eres la recepcionista de un taller mecánico. Gestiona citas para reparaciones y revisiones. Pregunta: nombre del cliente, marca y modelo del vehículo, tipo de servicio (revisión, ITV, reparación, neumáticos...) y día preferido.',
+  },
 
   ecommerce: {
     template: 'servicios',
