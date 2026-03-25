@@ -5,11 +5,23 @@ import Link from 'next/link'
 
 const TIPOS = [
   { key:'restaurante',    label:'🍽️', name:'Restaurante' },
-  { key:'bar',            label:'🍺', name:'Bar' },
+  { key:'bar',            label:'🍺', name:'Bar / Cafetería' },
   { key:'clinica_dental', label:'🦷', name:'Clínica Dental' },
   { key:'clinica_medica', label:'🏥', name:'Clínica Médica' },
-  { key:'asesoria',       label:'💼', name:'Asesoría' },
+  { key:'veterinaria',    label:'🐾', name:'Veterinaria' },
   { key:'peluqueria',     label:'✂️', name:'Peluquería' },
+  { key:'barberia',       label:'🪒', name:'Barbería' },
+  { key:'fisioterapia',   label:'💆', name:'Fisioterapia' },
+  { key:'psicologia',     label:'🧠', name:'Psicología' },
+  { key:'asesoria',       label:'💼', name:'Asesoría' },
+  { key:'seguros',        label:'🛡️', name:'Seguros' },
+  { key:'inmobiliaria',   label:'🏠', name:'Inmobiliaria' },
+  { key:'gimnasio',       label:'🏋️', name:'Gimnasio' },
+  { key:'academia',       label:'📚', name:'Academia' },
+  { key:'spa',            label:'💆', name:'Spa / Centro wellness' },
+  { key:'taller',         label:'🔧', name:'Taller mecánico' },
+  { key:'ecommerce',      label:'🛒', name:'Tienda online' },
+  { key:'otro',           label:'📋', name:'Otro negocio' },
 ]
 
 export default function RegistroPage() {
