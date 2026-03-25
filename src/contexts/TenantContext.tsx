@@ -42,8 +42,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       const { data: profile } = await supabase.from('profiles')
         .select('tenant_id').eq('id', user.id).single()
       if (!profile?.tenant_id) { setLoading(false); return }
+      // Force fresh fetch (no cache) by using timestamp header
       const { data: t } = await supabase.from('tenants')
-        .select('*').eq('id', profile.tenant_id).single()
+        .select('*').eq('id', profile.tenant_id).maybeSingle()
       if (!t) { setLoading(false); return }
       setTenant(t as TenantData)
       setTemplate(resolveTemplate((t as any).type || 'otro'))

@@ -227,11 +227,12 @@ export default function ConfiguracionPage() {
     } catch { /* no crítico */ }
 
     setSaving(false); setSaved(true)
-    reloadTenant()
-    // Si el idioma cambió, recargar la página para que todas las traducciones se apliquen
     if (basicForm.language !== (tenant.language || 'es')) {
-      setTimeout(() => window.location.reload(), 500)
+      setTimeout(() => {
+        window.location.href = '/panel?t=' + Date.now()
+      }, 800)
     } else {
+      reloadTenant()
       setTimeout(()=>setSaved(false),3000)
     }
   },[tenant,basicForm,cfg,isHosb,schedCfg,reloadTenant])
