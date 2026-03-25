@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       customer_name, customer_phone,
       items, // Array de { name, quantity, price }
       order_type, // "recoger" | "domicilio" | "mesa"
-      pickup_time, notes, table_id
+      pickup_time, delivery_address, notes, table_id
     } = await req.json()
 
     if (!tenant_id) return NextResponse.json({ error: "tenant_id required" }, { status: 400 })
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
       customer_name,
       customer_phone: customer_phone || null,
       items: orderItems,
-      notes: notes || null,
+      notes: [delivery_address ? `DIRECCIÓN: ${delivery_address}` : null, notes].filter(Boolean).join(' | ') || null,
       pickup_time: pickup_time || null,
       total_estimate: total,
       table_id: table_id || null,

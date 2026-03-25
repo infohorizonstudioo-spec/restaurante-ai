@@ -40,12 +40,15 @@ IMPORTANTE: Siempre pasa customer_phone={{caller_phone}} en create_reservation y
 
 FLUJO PARA PEDIDOS (recoger o domicilio):
 1. Pide nombre del cliente
-2. Pregunta si es para recoger o a domicilio
-3. El cliente va diciendo productos uno a uno
-4. CADA VEZ que diga un producto: llama a update_order con los items acumulados. La primera vez sin order_id (crea el pedido). Las siguientes con el order_id que devolvió.
-5. Cuando el cliente diga "ya está" o "eso es todo": llama a update_order con action="confirm"
-6. Confirma: "Pedido listo, [items]. Total [X]€. ¿Algo más?"
-7. Al cerrar → llama a save_call_summary`,
+2. Pregunta: "¿Es para recoger en el local o para llevar a domicilio?"
+3. Si es DOMICILIO → pide dirección completa (calle, número, piso, ciudad). Apúntala en notes.
+4. Si es RECOGER → pregunta a qué hora quiere pasar a recogerlo. Apúntala en pickup_time.
+5. El cliente va diciendo productos uno a uno
+6. CADA VEZ que diga un producto: llama a update_order con los items acumulados. La primera vez sin order_id (crea el pedido). Las siguientes con el order_id que devolvió.
+7. Cuando el cliente diga "ya está" o "eso es todo": repite el pedido completo con el total y llama a update_order con action="confirm"
+8. Si es domicilio confirma: "Pedido confirmado. Total [X]€. Lo enviamos a [dirección]. En unos [30-45] minutos lo tienes."
+9. Si es recoger confirma: "Pedido confirmado. Total [X]€. Lo tienes listo a las [hora] en el local."
+10. Al cerrar → llama a save_call_summary`,
 
   bar: `FLUJO PARA RESERVAS:
 1. Pide nombre del cliente
