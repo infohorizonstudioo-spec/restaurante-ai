@@ -184,19 +184,28 @@ export default function ConfiguracionPage() {
     const newName = basicForm.business_name.trim()
     const newAgent = basicForm.agent_name.trim()
     const sess = await supabase.auth.getSession()
-    await fetch('/api/tenant/update', {
+    const token = sess.data.session?.access_token || ''
+    const updateData = {
+      agent_name: newAgent,
+      name: newName,
+      agent_phone: basicForm.agent_phone.trim() || null,
+      transfer_phone: basicForm.transfer_phone.trim() || null,
+      language: basicForm.language || 'es',
+      agent_config: cfg,
+      reservation_config: schedCfg,
+    }
+
+    // Intentar via API (bypasses RLS)
+    const apiRes = await fetch('/api/tenant/update', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (sess.data.session?.access_token || '') },
-      body: JSON.stringify({
-        agent_name: newAgent,
-        name: newName,
-        agent_phone: basicForm.agent_phone.trim() || null,
-        transfer_phone: basicForm.transfer_phone.trim() || null,
-        language: basicForm.language || 'es',
-        agent_config: cfg,
-        reservation_config: schedCfg,
-      })
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(updateData)
     })
+
+    // Si API falla, intentar directo con Supabase
+    if (!apiRes.ok) {
+      await supabase.from('tenants').update(updateData).eq('id', tenant.id)
+    }
 
     // Sincronizar knowledge a business_knowledge y reprovisionar agente ElevenLabs
     try {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { requireAuth } from '@/lib/api-auth'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,21 +9,36 @@ const admin = createClient(
 
 export const dynamic = 'force-dynamic'
 
-/**
- * POST /api/tenant/update
- * Updates tenant configuration using service role key (bypasses RLS).
- * Only allows the tenant owner to update their own tenant.
- */
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAuth(req)
-    if (!auth.ok || !auth.tenantId) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    // Auth: verify the token and get tenant_id
+    const authHeader = req.headers.get('authorization') || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+
+    if (!token) {
+      return NextResponse.json({ error: 'no token' }, { status: 401 })
+    }
+
+    // Verify token with Supabase
+    const supabaseAuth = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'invalid token' }, { status: 401 })
+    }
+
+    // Get tenant_id from profile
+    const { data: profile } = await admin.from('profiles')
+      .select('tenant_id').eq('id', user.id).maybeSingle()
+    if (!profile?.tenant_id) {
+      return NextResponse.json({ error: 'no tenant' }, { status: 403 })
     }
 
     const updates = await req.json()
 
-    // Whitelist allowed fields — don't allow arbitrary updates
+    // Whitelist fields
     const allowed: Record<string, any> = {}
     const SAFE_FIELDS = [
       'name', 'agent_name', 'agent_phone', 'transfer_phone', 'language',
@@ -40,14 +54,14 @@ export async function POST(req: NextRequest) {
 
     const { error } = await admin.from('tenants')
       .update(allowed)
-      .eq('id', auth.tenantId)
+      .eq('id', profile.tenant_id)
 
     if (error) {
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      return NextResponse.json({ error: 'update failed', detail: error.code }, { status: 500 })
     }
 
     return NextResponse.json({ ok: true, updated: Object.keys(allowed) })
-  } catch {
+  } catch (e: any) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
