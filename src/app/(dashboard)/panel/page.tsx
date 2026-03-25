@@ -275,6 +275,41 @@ function InsightsPanel({ insights }: { insights: any[] }) {
   )
 }
 
+// ── Forecast Chart — previsión de demanda por hora
+function ForecastChart({ data }: { data: { hour: string; predicted: number; actual: number; level: string; color: string }[] }) {
+  if (!data || data.length === 0) return null
+  const max = Math.max(...data.map(d => d.predicted), 1)
+  const nowHour = new Date().getHours()
+  return (
+    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:'18px 20px', overflow:'hidden' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+        <span style={{ fontSize:15 }}>📊</span>
+        <span style={{ fontSize:14, fontWeight:700, color:C.text }}>Así pinta hoy</span>
+      </div>
+      <div style={{ display:'flex', gap:3, alignItems:'flex-end', height:80 }}>
+        {data.map(d => {
+          const h = Math.max(4, Math.round((d.predicted / max) * 80))
+          const isNow = parseInt(d.hour) === nowHour
+          return (
+            <div key={d.hour} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+              <div style={{ width:'100%', height:h, background:d.color, borderRadius:3, opacity: isNow ? 1 : 0.7, border: isNow ? '2px solid #E8EEF6' : 'none', transition:'height 0.3s' }}/>
+              <span style={{ fontSize:9, color: isNow ? C.text : C.text3, fontWeight: isNow ? 700 : 400 }}>{d.hour.slice(0,2)}</span>
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ display:'flex', gap:12, marginTop:12, flexWrap:'wrap' }}>
+        {[{l:'Tranquilo',c:'#34D399'},{l:'Normal',c:'#F0A84E'},{l:'Fuerte',c:'#FB923C'},{l:'A tope',c:'#F87171'}].map(x => (
+          <div key={x.l} style={{ display:'flex', alignItems:'center', gap:4 }}>
+            <div style={{ width:8, height:8, borderRadius:2, background:x.c }}/>
+            <span style={{ fontSize:10, color:C.text3 }}>{x.l}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ══════════════════════════════════════════════════
 // MAIN PAGE
 // ══════════════════════════════════════════════════
@@ -290,6 +325,7 @@ export default function PanelPage() {
   const [activeConsultations,setActiveConsultations] = useState<any[]>([])
   const [events,setEvents]     = useState<LiveEvent[]>([])
   const [demoMode,setDemoMode] = useState(false)
+  const [forecast, setForecast] = useState<any[]>([])
   const [insights, setInsights] = useState<any[]>([])
   const [orderAlert, setOrderAlert] = useState<{name:string;type:string;id:string}|null>(null)
   const demoTimer              = useRef<ReturnType<typeof setInterval>|null>(null)
@@ -324,10 +360,11 @@ export default function PanelPage() {
     setActiveOrders(ao||[]); setActiveConsultations(ac2||[])
     setLoading(false)
 
-    // Load insights after main data
-    fetch('/api/insights', {
-      headers: { 'Authorization': 'Bearer ' + (await supabase.auth.getSession()).data.session?.access_token }
-    }).then(r => r.json()).then(d => setInsights(d.insights || [])).catch(() => {})
+    // Load insights + forecast after main data
+    const token = (await supabase.auth.getSession()).data.session?.access_token
+    const headers = { 'Authorization': 'Bearer ' + token }
+    fetch('/api/insights', { headers }).then(r => r.json()).then(d => setInsights(d.insights || [])).catch(() => {})
+    fetch('/api/peak-prediction', { headers }).then(r => r.json()).then(d => setForecast(d.forecast || [])).catch(() => {})
   }, [router])
 
   useEffect(() => { load() }, [load])
@@ -676,6 +713,9 @@ export default function PanelPage() {
           <KpiCard value={clientes.length} label={L.clientes} icon="👥" color={C.violet} href="/clientes"/>
           <KpiCard value={isTrial?callsLeft:`${callsUsed}/${callsLimit}`} label={isTrial?'Llamadas restantes':'Uso del plan'} sub={planLabel} icon={isTrial?'⚡':'📊'} color={callsLeft<=3?C.red:planColor} accent={isTrial} href="/facturacion"/>
         </div>
+
+        {/* ── Previsión de hoy ── */}
+        {forecast.length > 0 && <ForecastChart data={forecast}/>}
 
         {/* ── Main grid: Live feed + Llamadas ── */}
         <div style={{ display:'grid',gridTemplateColumns:'1fr 380px',gap:16 }}>
