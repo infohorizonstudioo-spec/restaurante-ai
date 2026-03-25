@@ -183,6 +183,154 @@ const BUSINESS_TYPE_LOGIC: Record<string, object> = {
     catalog_instruction: "Para catalogo llama a get_menu_or_services.",
     closing: "Gestion registrada. Te contactamos en breve."
   },
+  barberia: {
+    sector: "barberia",
+    action_name: "cita de barbería",
+    required_fields: ["nombre", "servicio", "disponibilidad"],
+    optional_fields: ["barbero_preferido"],
+    flow: [
+      "Pregunta nombre del cliente",
+      "Pregunta servicio: corte, barba, afeitado, tinte...",
+      "Pregunta si tiene barbero preferido",
+      "Llama a check_availability",
+      "Si hay hueco confirma cita",
+      "Al cerrar llama a save_call_summary"
+    ],
+    catalog_label: "servicios y precios",
+    catalog_instruction: "Para servicios y precios llama a get_menu_or_services.",
+    closing: "Cita confirmada para [nombre] el [fecha] a las [hora]."
+  },
+
+  cafeteria: {
+    sector: "cafeteria",
+    action_name: "reserva o pedido",
+    required_fields: ["nombre", "fecha", "hora", "numero_de_personas"],
+    optional_fields: ["pedido_para_llevar"],
+    flow: [
+      "Pregunta nombre",
+      "Pregunta si quiere reservar mesa o hacer pedido para llevar",
+      "Si reserva: pide fecha, hora, personas",
+      "Si pedido: sigue flujo de pedidos",
+      "Llama a check_availability si es reserva",
+      "Confirma"
+    ],
+    catalog_label: "carta",
+    catalog_instruction: "Para carta llama a get_menu_or_services.",
+    closing: "Reserva confirmada. Hasta el [fecha]."
+  },
+
+  asesoria: {
+    sector: "asesoria",
+    action_name: "cita de asesoría",
+    required_fields: ["nombre", "tipo_consulta", "disponibilidad"],
+    optional_fields: ["modalidad", "urgencia"],
+    flow: [
+      "Pregunta nombre del cliente",
+      "Pregunta tipo: laboral, fiscal, jurídica, mercantil, contable",
+      "Pregunta modalidad: presencial, teléfono, videollamada",
+      "Pide día y hora preferidos",
+      "Llama a check_availability",
+      "Confirma cita"
+    ],
+    catalog_label: "servicios",
+    catalog_instruction: "Para servicios y tarifas llama a get_menu_or_services.",
+    closing: "Cita confirmada."
+  },
+
+  seguros: {
+    sector: "seguros",
+    action_name: "consulta o cita de seguros",
+    required_fields: ["nombre", "tipo_seguro"],
+    optional_fields: ["numero_poliza", "urgencia_siniestro"],
+    flow: [
+      "Pregunta nombre del cliente",
+      "Pregunta qué tipo de seguro: auto, hogar, salud, vida, negocio",
+      "Si es siniestro urgente: transfiere a un agente",
+      "Si quiere cita: pide día y hora",
+      "Llama a check_availability",
+      "Confirma cita"
+    ],
+    catalog_label: "seguros",
+    catalog_instruction: "Para info de seguros llama a get_menu_or_services.",
+    closing: "Cita confirmada. Un asesor te atenderá.",
+    urgency_keywords: ["siniestro", "accidente", "robo", "urgente"],
+    urgency_action: "Transfiere al departamento de siniestros inmediatamente."
+  },
+
+  gimnasio: {
+    sector: "gimnasio",
+    action_name: "reserva de clase o consulta",
+    required_fields: ["nombre", "tipo_clase"],
+    optional_fields: ["nivel", "horario_preferido"],
+    flow: [
+      "Pregunta si quiere info, reservar clase o inscribirse",
+      "Si info: responde con datos del negocio",
+      "Si clase: pregunta nombre, tipo de clase y horario",
+      "Llama a check_availability",
+      "Confirma reserva de clase"
+    ],
+    catalog_label: "actividades y horarios",
+    catalog_instruction: "Para actividades y precios llama a get_menu_or_services.",
+    closing: "Apuntado a [clase] el [fecha] a las [hora]."
+  },
+
+  academia: {
+    sector: "academia",
+    action_name: "inscripción o reserva de clase",
+    required_fields: ["nombre_alumno", "curso_o_materia"],
+    optional_fields: ["nivel", "horario_preferido"],
+    flow: [
+      "Pregunta nombre del alumno",
+      "Pregunta qué curso o materia le interesa",
+      "Pregunta nivel si aplica",
+      "Pide horario preferido",
+      "Llama a check_availability",
+      "Confirma inscripción o reserva"
+    ],
+    catalog_label: "cursos y horarios",
+    catalog_instruction: "Para cursos disponibles llama a get_menu_or_services.",
+    closing: "Inscripción confirmada."
+  },
+
+  spa: {
+    sector: "spa",
+    action_name: "cita de tratamiento",
+    required_fields: ["nombre", "tipo_tratamiento", "disponibilidad"],
+    optional_fields: ["terapeuta_preferido"],
+    flow: [
+      "Pregunta nombre del cliente",
+      "Pregunta qué tratamiento quiere: masaje, facial, corporal, circuito...",
+      "Pregunta si tiene terapeuta preferido",
+      "Pide día y hora",
+      "Llama a check_availability",
+      "Confirma cita"
+    ],
+    catalog_label: "tratamientos y precios",
+    catalog_instruction: "Para tratamientos y precios llama a get_menu_or_services.",
+    closing: "Cita confirmada para [nombre] el [fecha] a las [hora]."
+  },
+
+  taller: {
+    sector: "taller",
+    action_name: "cita de taller",
+    required_fields: ["nombre", "vehiculo", "tipo_servicio"],
+    optional_fields: ["matricula", "urgencia"],
+    flow: [
+      "Pregunta nombre del cliente",
+      "Pregunta marca y modelo del vehículo",
+      "Pregunta tipo de servicio: revisión, ITV, reparación, neumáticos, aceite...",
+      "Si es urgencia (avería en carretera): anota datos y ofrece grúa o cita urgente",
+      "Pide día preferido",
+      "Llama a check_availability",
+      "Confirma cita"
+    ],
+    catalog_label: "servicios y tarifas",
+    catalog_instruction: "Para servicios y precios llama a get_menu_or_services.",
+    closing: "Cita confirmada. Tráenos el coche el [fecha].",
+    urgency_keywords: ["avería", "no arranca", "humo", "ruido raro", "urgente"],
+    urgency_action: "Ofrece cita urgente para el mismo día o envío de grúa."
+  },
+
   otro: {
     sector: "otro",
     action_name: "gestion general",

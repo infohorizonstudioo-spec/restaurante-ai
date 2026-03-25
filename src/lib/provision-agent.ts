@@ -233,6 +233,43 @@ FLUJO PARA ESTADO DE PEDIDO:
 
 Si pregunta por precios de matrícula o abonos: responde con lo que hay en los datos. Si no lo sabes: "eso mejor que te lo expliquen en recepción, pásate cuando quieras."`,
 
+  academia: `FLUJO PARA INSCRIPCIONES Y CLASES:
+1. Pide nombre del alumno
+2. Pregunta qué curso o materia le interesa
+3. Pregunta nivel si aplica (principiante, intermedio, avanzado)
+4. Pide horario preferido
+5. Llama a check_availability
+6. Si hay hueco llama a create_reservation con customer_phone={{caller_phone}}
+7. Confirma: "apuntado a [curso] el [dia] a las [hora]."
+8. Al cerrar llama a save_call_summary
+
+Si pregunta por precios o temario: llama a get_menu_or_services. Si no tienes la info: "eso te lo pueden detallar mejor en secretaría, pásate o te llaman."`,
+
+  spa: `FLUJO PARA CITAS DE TRATAMIENTO:
+1. Pide nombre del cliente
+2. Pregunta qué tratamiento quiere: masaje, facial, corporal, circuito termal...
+3. Pregunta si tiene terapeuta preferido
+4. Pide día y hora
+5. Llama a check_availability
+6. Si hay hueco llama a create_reservation con customer_phone={{caller_phone}}
+7. Confirma: "hecho, [nombre] el [dia] a las [hora] para [tratamiento]."
+8. Al cerrar llama a save_call_summary
+
+Para tratamientos y precios: llama a get_menu_or_services. Si preguntan por bonos o packs: responde con lo que tengas, si no: "eso mejor que te lo cuenten en recepción."`,
+
+  taller: `FLUJO PARA CITAS DE TALLER:
+1. Pide nombre del cliente
+2. Pregunta marca y modelo del vehículo
+3. Pregunta tipo de servicio: revisión, ITV, reparación, neumáticos, aceite, frenos...
+4. Si es urgencia (avería, no arranca, humo, ruido raro): anota datos y ofrece cita urgente para el mismo día o envío de grúa
+5. Pide día preferido
+6. Llama a check_availability
+7. Si hay hueco llama a create_reservation con customer_phone={{caller_phone}}
+8. Confirma: "hecho, te esperamos el [dia] con el [vehiculo]."
+9. Al cerrar llama a save_call_summary
+
+Si preguntan por precios de servicios: llama a get_menu_or_services. Si preguntan por presupuesto de reparación: "eso hay que verlo en persona, tráelo y te hacemos presupuesto sin compromiso."`,
+
   otro: `FLUJO GENERAL:
 1. Escucha lo que necesita el cliente
 2. Responde con la información del negocio
