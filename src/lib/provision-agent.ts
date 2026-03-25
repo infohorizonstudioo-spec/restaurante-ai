@@ -33,6 +33,7 @@ const PROMPT_BASE: Record<string, string> = {
 2. Pide fecha y hora deseada
 3. Pide número de personas
 4. Llama a check_availability SIEMPRE antes de confirmar. Si no hay sitio, ofrece las alternativas que devuelve.
+Si no hay hueco y el cliente quiere esperar, llama a add_to_waitlist. Di: "te apunto en la lista de espera y si queda algún hueco te aviso, vale?"
 5. Si hay hueco → llama a create_reservation con customer_phone={{caller_phone}}
 6. Confirma: "Perfecto, [nombre] el [dia] a las [hora] para [X] personas."
 7. Al cerrar → llama a save_call_summary con customer_name, intent, caller_phone={{caller_phone}}
@@ -378,6 +379,29 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
               summary: { type: "string", description: "Resumen breve" },
             },
             required: ["tenant_id", "summary"],
+          },
+        },
+        response_timeout_secs: 10,
+      },
+      {
+        type: "webhook",
+        name: "add_to_waitlist",
+        description: "Añade al cliente a la lista de espera cuando no hay disponibilidad.",
+        api_schema: {
+          url: `${appUrl}/api/agent/add-to-waitlist`,
+          method: "POST",
+          request_headers: reqHeaders,
+          request_body_schema: {
+            type: "object",
+            properties: {
+              tenant_id: { type: "string", description: "ID del negocio", enum: [tenantId] },
+              customer_name: { type: "string", description: "Nombre" },
+              customer_phone: { type: "string", description: "Teléfono" },
+              date: { type: "string", description: "Fecha YYYY-MM-DD" },
+              time: { type: "string", description: "Hora preferida HH:MM" },
+              party_size: { type: "number", description: "Personas" },
+            },
+            required: ["tenant_id", "customer_name", "date"],
           },
         },
         response_timeout_secs: 10,

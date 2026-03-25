@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         available: false,
+        waitlist_available: true,
         reason: result.reason,
         message: result.message,
         alternatives,
@@ -112,6 +113,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         available: false,
+        waitlist_available: true,
         message: `No queda disponibilidad para ${size} personas el ${formatDateES(date)}.`,
         available_slots: [],
         best_slots: [],
