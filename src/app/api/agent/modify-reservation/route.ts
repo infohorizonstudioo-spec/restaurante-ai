@@ -64,8 +64,9 @@ export async function POST(req: NextRequest) {
         .neq("id", original.id), // Exclude the reservation being modified
     ])
 
-    const cfg = parseReservationConfig(tenantRes.data?.reservation_config)
-    const tmpl = resolveTemplate(tenantRes.data?.type || 'otro')
+    const tenantType = tenantRes.data?.type || 'otro'
+    const cfg = parseReservationConfig(tenantRes.data?.reservation_config, tenantType)
+    const tmpl = resolveTemplate(tenantType)
     const zones = zonesRes.data || []
     const tables = tmpl.hasSpaces ? (tablesRes.data || []) : []
     const existing = (reservasRes.data || []).map(r => ({

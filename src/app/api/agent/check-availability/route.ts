@@ -29,8 +29,8 @@ export async function POST(req: NextRequest) {
         .in("status", ["confirmada", "confirmed", "pendiente", "pending"]),
     ])
 
-    const cfg = parseReservationConfig(tenantRes.data?.reservation_config)
     const tenantType = tenantRes.data?.type || 'otro'
+    const cfg = parseReservationConfig(tenantRes.data?.reservation_config, tenantType)
     const tmpl = resolveTemplate(tenantType)
     const zones = zonesRes.data || []
     // Solo usar mesas para negocios que las tengan (restaurantes, bares, etc.)

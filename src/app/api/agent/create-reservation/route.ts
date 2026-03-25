@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
         .in("status", ["confirmada", "confirmed", "pendiente", "pending"]),
     ])
 
-    const cfg = parseReservationConfig(tenantRes.data?.reservation_config)
+    const cfg = parseReservationConfig(tenantRes.data?.reservation_config, tenantRes.data?.type)
     const tenantType = tenantRes.data?.type || 'otro'
     const tmpl = resolveTemplate(tenantType)
     const zones = zonesRes.data || []
@@ -63,6 +63,22 @@ export async function POST(req: NextRequest) {
           ? `No hay sitio a las ${finalTime}. Alternativas: ${availability.alternatives.join(', ')}.`
           : `No hay disponibilidad el ${finalDate} a las ${finalTime} para ${finalPartySize} personas.`,
       })
+    }
+
+    // ── PASO 1b: Prevenir reserva duplicada del mismo cliente ──────────────
+    if (customer_phone) {
+      const { data: dup } = await supabase.from("reservations")
+        .select("id").eq("tenant_id", tenant_id).eq("customer_phone", customer_phone)
+        .eq("date", finalDate).eq("time", finalTime)
+        .in("status", ["confirmada", "confirmed", "pendiente", "pending"])
+        .maybeSingle()
+      if (dup) {
+        return NextResponse.json({
+          success: true, already_exists: true,
+          reservation_id: dup.id,
+          message: `Ya tienes una reserva para el ${finalDate} a las ${finalTime}. No hace falta otra.`,
+        })
+      }
     }
 
     // ── PASO 2: Crear o recuperar cliente ─────────────────────────────────

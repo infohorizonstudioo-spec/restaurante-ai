@@ -1,8 +1,10 @@
 /**
  * RESERVO.AI — Scheduling Engine
- * Motor de decisión de franjas horarias para plantilla hostelería.
- * SOLO se usa cuando el tenant es restaurante/bar/cafetería.
- * Para otros tipos de negocio, usar el flujo estándar de disponibilidad.
+ * Motor de decisión de franjas horarias para TODOS los tipos de negocio.
+ * Restaurantes: mesas + zonas + comidas/cenas
+ * Clínicas: consultas + doctores + horario continuo
+ * Peluquerías: sillones + servicios + duración variable
+ * Gimnasios: clases + capacidad + instructores
  */
 
 export interface ReservationConfig {
@@ -13,19 +15,53 @@ export interface ReservationConfig {
   max_new_people_per_slot: number               // máximo personas por franja
   zone_slot_limits: Record<string, number>      // { "terraza": 2, "interior": 4 }
   service_hours?: {
+    // Formato clásico (hostelería): lunch + dinner
     lunch_start?: string; lunch_end?: string
     dinner_start?: string; dinner_end?: string
+    // Formato continuo (servicios): open + close (9:00-18:00)
+    open?: string; close?: string
+    // Días cerrados (0=domingo, 1=lunes, ..., 6=sábado)
+    closed_days?: number[]
   }
+}
+
+// Defaults por tipo de negocio
+const DEFAULTS_BY_TYPE: Record<string, Partial<ReservationConfig>> = {
+  restaurante: { reservation_slot_interval_minutes: 30, default_reservation_duration_minutes: 90, buffer_minutes: 15, max_new_reservations_per_slot: 4, max_new_people_per_slot: 16, service_hours: { lunch_start: '13:00', lunch_end: '16:00', dinner_start: '20:00', dinner_end: '23:30' } },
+  bar: { reservation_slot_interval_minutes: 30, default_reservation_duration_minutes: 90, buffer_minutes: 10, max_new_reservations_per_slot: 6, max_new_people_per_slot: 20, service_hours: { dinner_start: '18:00', dinner_end: '02:00' } },
+  cafeteria: { reservation_slot_interval_minutes: 30, default_reservation_duration_minutes: 60, buffer_minutes: 10, max_new_reservations_per_slot: 6, max_new_people_per_slot: 20, service_hours: { lunch_start: '08:00', lunch_end: '20:00' } },
+  clinica_dental: { reservation_slot_interval_minutes: 15, default_reservation_duration_minutes: 30, buffer_minutes: 10, max_new_reservations_per_slot: 1, max_new_people_per_slot: 1, service_hours: { open: '09:00', close: '20:00' } },
+  clinica_medica: { reservation_slot_interval_minutes: 15, default_reservation_duration_minutes: 20, buffer_minutes: 5, max_new_reservations_per_slot: 1, max_new_people_per_slot: 1, service_hours: { open: '08:00', close: '20:00' } },
+  veterinaria: { reservation_slot_interval_minutes: 15, default_reservation_duration_minutes: 30, buffer_minutes: 10, max_new_reservations_per_slot: 1, max_new_people_per_slot: 1, service_hours: { open: '09:00', close: '20:00' } },
+  peluqueria: { reservation_slot_interval_minutes: 15, default_reservation_duration_minutes: 45, buffer_minutes: 5, max_new_reservations_per_slot: 3, max_new_people_per_slot: 3, service_hours: { open: '10:00', close: '20:00' } },
+  barberia: { reservation_slot_interval_minutes: 15, default_reservation_duration_minutes: 30, buffer_minutes: 5, max_new_reservations_per_slot: 3, max_new_people_per_slot: 3, service_hours: { open: '10:00', close: '21:00' } },
+  fisioterapia: { reservation_slot_interval_minutes: 30, default_reservation_duration_minutes: 45, buffer_minutes: 10, max_new_reservations_per_slot: 1, max_new_people_per_slot: 1, service_hours: { open: '09:00', close: '20:00' } },
+  psicologia: { reservation_slot_interval_minutes: 60, default_reservation_duration_minutes: 50, buffer_minutes: 10, max_new_reservations_per_slot: 1, max_new_people_per_slot: 1, service_hours: { open: '09:00', close: '21:00' } },
+  asesoria: { reservation_slot_interval_minutes: 30, default_reservation_duration_minutes: 60, buffer_minutes: 10, max_new_reservations_per_slot: 1, max_new_people_per_slot: 1, service_hours: { open: '09:00', close: '19:00' } },
+  gimnasio: { reservation_slot_interval_minutes: 60, default_reservation_duration_minutes: 60, buffer_minutes: 0, max_new_reservations_per_slot: 20, max_new_people_per_slot: 25, service_hours: { open: '07:00', close: '22:00' } },
+  academia: { reservation_slot_interval_minutes: 60, default_reservation_duration_minutes: 60, buffer_minutes: 10, max_new_reservations_per_slot: 15, max_new_people_per_slot: 20, service_hours: { open: '09:00', close: '21:00' } },
+  spa: { reservation_slot_interval_minutes: 30, default_reservation_duration_minutes: 60, buffer_minutes: 15, max_new_reservations_per_slot: 2, max_new_people_per_slot: 2, service_hours: { open: '10:00', close: '21:00' } },
+  taller: { reservation_slot_interval_minutes: 60, default_reservation_duration_minutes: 120, buffer_minutes: 0, max_new_reservations_per_slot: 3, max_new_people_per_slot: 3, service_hours: { open: '08:00', close: '19:00', closed_days: [0] } },
+  inmobiliaria: { reservation_slot_interval_minutes: 30, default_reservation_duration_minutes: 60, buffer_minutes: 10, max_new_reservations_per_slot: 1, max_new_people_per_slot: 2, service_hours: { open: '09:00', close: '19:00' } },
+  seguros: { reservation_slot_interval_minutes: 30, default_reservation_duration_minutes: 30, buffer_minutes: 5, max_new_reservations_per_slot: 1, max_new_people_per_slot: 1, service_hours: { open: '09:00', close: '18:00' } },
+  ecommerce: { reservation_slot_interval_minutes: 60, default_reservation_duration_minutes: 30, buffer_minutes: 0, max_new_reservations_per_slot: 50, max_new_people_per_slot: 50, service_hours: { open: '00:00', close: '23:59' } },
 }
 
 export const DEFAULT_CONFIG: ReservationConfig = {
   reservation_slot_interval_minutes: 30,
-  default_reservation_duration_minutes: 90,
-  buffer_minutes: 15,
+  default_reservation_duration_minutes: 60,
+  buffer_minutes: 10,
   max_new_reservations_per_slot: 4,
   max_new_people_per_slot: 16,
   zone_slot_limits: {},
-  service_hours: { lunch_start:'13:00', lunch_end:'16:00', dinner_start:'20:00', dinner_end:'23:30' }
+  service_hours: { open: '09:00', close: '21:00' }
+}
+
+/** Obtiene defaults inteligentes según tipo de negocio */
+export function getDefaultsForType(businessType: string): ReservationConfig {
+  const typeDefaults = DEFAULTS_BY_TYPE[businessType]
+  if (!typeDefaults) return { ...DEFAULT_CONFIG }
+  return { ...DEFAULT_CONFIG, ...typeDefaults } as ReservationConfig
 }
 
 export interface SlotCheckResult {
@@ -73,30 +109,46 @@ export function minutesToTime(m: number): string {
 }
 
 /** Verifica si una hora pertenece a un intervalo válido */
+/** Extrae periodos de servicio de la config (soporta lunch/dinner Y open/close) */
+function getServicePeriods(cfg: ReservationConfig): { s: string; e: string }[] {
+  const sh = cfg.service_hours || {}
+  const periods: { s: string; e: string }[] = []
+
+  // Formato continuo: open/close (servicios, clínicas, peluquerías)
+  if (sh.open && sh.close) {
+    periods.push({ s: sh.open, e: sh.close })
+  }
+
+  // Formato hostelería: lunch + dinner
+  if (sh.lunch_start && sh.lunch_end) periods.push({ s: sh.lunch_start, e: sh.lunch_end })
+  if (sh.dinner_start && sh.dinner_end) periods.push({ s: sh.dinner_start, e: sh.dinner_end })
+
+  // Fallback: horario genérico
+  if (periods.length === 0) periods.push({ s: '09:00', e: '21:00' })
+
+  return periods
+}
+
 export function isValidSlot(time: string, cfg: ReservationConfig): boolean {
   const mins = timeToMinutes(time)
   const interval = cfg.reservation_slot_interval_minutes
   if (mins % interval !== 0) return false
 
-  // Verificar que cae dentro de horario de servicio
-  if (cfg.service_hours) {
-    const sh = cfg.service_hours
-    const inLunch  = sh.lunch_start  && sh.lunch_end  && mins >= timeToMinutes(sh.lunch_start) && mins < timeToMinutes(sh.lunch_end)
-    const inDinner = sh.dinner_start && sh.dinner_end && mins >= timeToMinutes(sh.dinner_start) && mins < timeToMinutes(sh.dinner_end)
-    if (!inLunch && !inDinner) return false
-  }
-  return true
+  const periods = getServicePeriods(cfg)
+  return periods.some(p => mins >= timeToMinutes(p.s) && mins < timeToMinutes(p.e))
 }
 
 /** Genera todas las franjas válidas para una fecha */
-export function generateSlots(cfg: ReservationConfig): string[] {
+export function generateSlots(cfg: ReservationConfig, date?: string): string[] {
+  // Check closed days
+  if (date && cfg.service_hours?.closed_days?.length) {
+    const dayOfWeek = new Date(date + 'T12:00:00').getDay()
+    if (cfg.service_hours.closed_days.includes(dayOfWeek)) return []
+  }
+
   const slots: string[] = []
   const interval = cfg.reservation_slot_interval_minutes
-  const sh = cfg.service_hours || {}
-  const periods = [
-    sh.lunch_start && sh.lunch_end   ? { s: sh.lunch_start,  e: sh.lunch_end }  : null,
-    sh.dinner_start && sh.dinner_end ? { s: sh.dinner_start, e: sh.dinner_end } : null,
-  ].filter(Boolean) as { s: string; e: string }[]
+  const periods = getServicePeriods(cfg)
 
   for (const period of periods) {
     let cur = timeToMinutes(period.s)
@@ -109,7 +161,10 @@ export function generateSlots(cfg: ReservationConfig): string[] {
   return slots
 }
 
-/** Calcula si hay conflicto de buffer con una reserva existente */
+/** Calcula si hay conflicto de buffer con una reserva existente.
+ * Comprueba AMBOS sentidos: si la nueva solapa con la existente Y si la existente solapa con la nueva.
+ * Cada reserva ocupa: [start, start + duration + buffer]
+ */
 export function hasBufferConflict(
   newTime: string,
   existingTime: string,
@@ -117,11 +172,19 @@ export function hasBufferConflict(
 ): boolean {
   const newMins = timeToMinutes(newTime)
   const exMins  = timeToMinutes(existingTime)
-  const dur     = cfg.default_reservation_duration_minutes
-  const buf     = cfg.buffer_minutes
-  // La nueva reserva entra dentro del período ocupado + buffer de la existente
-  const exEnd   = exMins + dur + buf
-  return newMins < exEnd && newMins >= exMins
+  if (newMins === exMins) return true // Mismo slot exacto = siempre conflicto
+
+  const dur = cfg.default_reservation_duration_minutes
+  const buf = cfg.buffer_minutes
+
+  // Rango ocupado por la reserva existente: [exMins, exMins + dur + buf)
+  const exEnd = exMins + dur + buf
+  // Rango ocupado por la nueva reserva: [newMins, newMins + dur + buf)
+  const newEnd = newMins + dur + buf
+
+  // Dos rangos se solapan si: !(uno termina antes de que empiece el otro)
+  const overlap = !(newEnd <= exMins || newMins >= exEnd)
+  return overlap
 }
 
 // ── Motor principal de verificación de franja ───────────────────────────────
@@ -365,15 +428,16 @@ export function calculateDayStats(
 
 // ── Parser de config desde JSONB de la DB ──────────────────────────────────
 
-export function parseReservationConfig(raw: any): ReservationConfig {
-  if (!raw || typeof raw !== 'object') return { ...DEFAULT_CONFIG }
+export function parseReservationConfig(raw: any, businessType?: string): ReservationConfig {
+  const defaults = businessType ? getDefaultsForType(businessType) : DEFAULT_CONFIG
+  if (!raw || typeof raw !== 'object') return { ...defaults }
   return {
-    reservation_slot_interval_minutes:   raw.reservation_slot_interval_minutes   ?? DEFAULT_CONFIG.reservation_slot_interval_minutes,
-    default_reservation_duration_minutes: raw.default_reservation_duration_minutes ?? DEFAULT_CONFIG.default_reservation_duration_minutes,
-    buffer_minutes:                       raw.buffer_minutes                       ?? DEFAULT_CONFIG.buffer_minutes,
-    max_new_reservations_per_slot:        raw.max_new_reservations_per_slot        ?? DEFAULT_CONFIG.max_new_reservations_per_slot,
-    max_new_people_per_slot:              raw.max_new_people_per_slot              ?? DEFAULT_CONFIG.max_new_people_per_slot,
-    zone_slot_limits:                     raw.zone_slot_limits                     ?? DEFAULT_CONFIG.zone_slot_limits,
-    service_hours:                        raw.service_hours                        ?? DEFAULT_CONFIG.service_hours,
+    reservation_slot_interval_minutes:   raw.reservation_slot_interval_minutes   ?? defaults.reservation_slot_interval_minutes,
+    default_reservation_duration_minutes: raw.default_reservation_duration_minutes ?? defaults.default_reservation_duration_minutes,
+    buffer_minutes:                       raw.buffer_minutes                       ?? defaults.buffer_minutes,
+    max_new_reservations_per_slot:        raw.max_new_reservations_per_slot        ?? defaults.max_new_reservations_per_slot,
+    max_new_people_per_slot:              raw.max_new_people_per_slot              ?? defaults.max_new_people_per_slot,
+    zone_slot_limits:                     raw.zone_slot_limits                     ?? defaults.zone_slot_limits,
+    service_hours:                        raw.service_hours                        ?? defaults.service_hours,
   }
 }
