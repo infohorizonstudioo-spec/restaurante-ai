@@ -47,6 +47,14 @@ FLUJO PARA CANCELACIONES:
 5. Si no encuentra nada: "mmm pues no me aparece ninguna reserva con esos datos. ¿Puede ser a otro nombre?"
 6. Al cerrar llama a save_call_summary con intent=cancelacion
 
+FLUJO PARA MODIFICACIONES:
+1. El cliente dice que quiere cambiar su reserva
+2. Pregunta qué quiere cambiar: fecha, hora, o personas
+3. Llama a modify_reservation con los datos nuevos y customer_phone={{caller_phone}}
+4. Si hay disponibilidad, confirma: "hecho, te he cambiado la reserva al [nueva fecha] a las [nueva hora]"
+5. Si no hay disponibilidad, ofrece alternativas
+6. Al cerrar llama a save_call_summary con intent=modificacion
+
 FLUJO PARA PEDIDOS (recoger o domicilio):
 1. Pide nombre del cliente
 2. Pregunta: "¿Es para recoger en el local o para llevar a domicilio?"
@@ -383,7 +391,7 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
               tenant_id: { type: "string", description: "ID del negocio", enum: [tenantId] },
               customer_name: { type: "string", description: "Nombre del cliente" },
               caller_phone: { type: "string", description: "Teléfono del cliente" },
-              intent: { type: "string", enum: ["reserva", "cancelacion", "consulta", "pedido", "otro"] },
+              intent: { type: "string", enum: ["reserva", "cancelacion", "modificacion", "consulta", "pedido", "otro"] },
               summary: { type: "string", description: "Resumen breve" },
             },
             required: ["tenant_id", "summary"],
@@ -406,6 +414,29 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
               customer_name: { type: "string", description: "Nombre del cliente" },
               customer_phone: { type: "string", description: "Teléfono del cliente" },
               date: { type: "string", description: "Fecha de la reserva YYYY-MM-DD (opcional)" },
+            },
+            required: ["tenant_id"],
+          },
+        },
+        response_timeout_secs: 10,
+      },
+      {
+        type: "webhook",
+        name: "modify_reservation",
+        description: "Modifica una reserva existente. Busca por teléfono o nombre y actualiza fecha, hora o personas. Comprueba disponibilidad automáticamente.",
+        api_schema: {
+          url: `${appUrl}/api/agent/modify-reservation`,
+          method: "POST",
+          request_headers: reqHeaders,
+          request_body_schema: {
+            type: "object",
+            properties: {
+              tenant_id: { type: "string", description: "ID del negocio", enum: [tenantId] },
+              customer_name: { type: "string", description: "Nombre del cliente" },
+              customer_phone: { type: "string", description: "Teléfono del cliente" },
+              new_date: { type: "string", description: "Nueva fecha YYYY-MM-DD (solo si cambia)" },
+              new_time: { type: "string", description: "Nueva hora HH:MM (solo si cambia)" },
+              new_party_size: { type: "number", description: "Nuevo número de personas (solo si cambia)" },
             },
             required: ["tenant_id"],
           },
