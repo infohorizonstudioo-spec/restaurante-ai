@@ -141,6 +141,8 @@ export default function ReservasPage() {
         <div style={{display:'flex',alignItems:'center',gap:8}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={L?.buscarPlaceholder||'Buscar…'}
           style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:200,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
+          <button onClick={async()=>{const s=await supabase.auth.getSession();if(s.data.session)window.open('/api/export?type=reservations','_blank')}} style={{padding:'6px 12px',fontSize:11,fontWeight:600,borderRadius:7,border:`1px solid ${C.border}`,background:'transparent',color:C.text3,cursor:'pointer',fontFamily:'inherit'}}>📥 Exportar</button>
+          <a href="/reservas/nueva" style={{padding:'7px 14px',fontSize:12,fontWeight:700,background:C.amber,color:'#0C1018',borderRadius:8,textDecoration:'none'}}>+ Nueva</a>
           <NotifBell/>
         </div>
       </div>

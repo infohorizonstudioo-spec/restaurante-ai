@@ -185,6 +185,7 @@ export default function LlamadasPage() {
               {f.label}{f.count>0&&<span> ({f.count})</span>}
             </button>
           ))}
+          <button onClick={async()=>{const s=await supabase.auth.getSession();if(s.data.session)window.open('/api/export?type=calls','_blank')}} style={{padding:'4px 12px',fontSize:11,fontWeight:600,borderRadius:10,border:`1px solid ${C.border}`,background:'transparent',color:C.text3,cursor:'pointer',fontFamily:'inherit'}}>📥 Exportar</button>
         </div>
       </div>
 
