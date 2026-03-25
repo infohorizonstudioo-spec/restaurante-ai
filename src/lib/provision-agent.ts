@@ -35,8 +35,17 @@ const PROMPT_BASE: Record<string, string> = {
 4. Llama a check_availability SIEMPRE antes de confirmar. Si no hay sitio, ofrece las alternativas que devuelve.
 5. Si hay hueco → llama a create_reservation con customer_phone={{caller_phone}}
 6. Confirma: "Perfecto, [nombre] el [dia] a las [hora] para [X] personas."
-7. Al cerrar → llama a save_call_summary
-IMPORTANTE: Siempre pasa customer_phone={{caller_phone}} cuando llames a create_reservation.`,
+7. Al cerrar → llama a save_call_summary con customer_name, intent, caller_phone={{caller_phone}}
+IMPORTANTE: Siempre pasa customer_phone={{caller_phone}} en create_reservation y save_call_summary.
+
+FLUJO PARA PEDIDOS (recoger o domicilio):
+1. Pide nombre del cliente
+2. Pregunta si es para recoger o a domicilio
+3. El cliente va diciendo productos uno a uno
+4. CADA VEZ que diga un producto: llama a update_order con los items acumulados. La primera vez sin order_id (crea el pedido). Las siguientes con el order_id que devolvió.
+5. Cuando el cliente diga "ya está" o "eso es todo": llama a update_order con action="confirm"
+6. Confirma: "Pedido listo, [items]. Total [X]€. ¿Algo más?"
+7. Al cerrar → llama a save_call_summary`,
 
   bar: `FLUJO PARA RESERVAS:
 1. Pide nombre del cliente
@@ -355,6 +364,43 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
               summary: { type: "string", description: "Resumen breve" },
             },
             required: ["tenant_id", "summary"],
+          },
+        },
+        response_timeout_secs: 10,
+      },
+      {
+        type: "webhook",
+        name: "update_order",
+        description: "Crea o actualiza un pedido EN VIVO. Llámalo cada vez que el cliente añade un producto. Primera vez sin order_id para crear. Luego con order_id para añadir más. Al final con action=confirm para confirmar.",
+        api_schema: {
+          url: `${appUrl}/api/agent/update-order`,
+          method: "POST",
+          request_headers: reqHeaders,
+          request_body_schema: {
+            type: "object",
+            properties: {
+              tenant_id: { type: "string", description: "ID del negocio", enum: [tenantId] },
+              order_id: { type: "string", description: "ID del pedido existente (vacío si es nuevo)" },
+              customer_name: { type: "string", description: "Nombre del cliente" },
+              customer_phone: { type: "string", description: "Teléfono del cliente" },
+              items: {
+                type: "array",
+                description: "Lista de productos con name, quantity y price",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    quantity: { type: "number" },
+                    price: { type: "number" },
+                  },
+                },
+              },
+              order_type: { type: "string", enum: ["recoger", "domicilio", "mesa"], description: "Tipo de pedido" },
+              pickup_time: { type: "string", description: "Hora de recogida HH:MM" },
+              notes: { type: "string", description: "Notas del pedido" },
+              action: { type: "string", enum: ["confirm", "cancel"], description: "Confirmar o cancelar el pedido" },
+            },
+            required: ["tenant_id", "customer_name"],
           },
         },
         response_timeout_secs: 10,
