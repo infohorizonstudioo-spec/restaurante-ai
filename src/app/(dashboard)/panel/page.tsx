@@ -48,7 +48,7 @@ const ACTIVE_CALL_LABEL = 'Actividad en vivo'
 // ── Tipos de evento del feed
 interface LiveEvent {
   id: string
-  type: 'call_incoming'|'call_active'|'call_ended'|'call_missed'|'reservation'|'order'|'pending'|'system'
+  type: 'call_incoming'|'call_active'|'call_ended'|'call_missed'|'reservation'|'order'|'pending'|'system'|'whatsapp'|'email'|'sms'
   icon: string
   color: string
   title: string
@@ -68,13 +68,14 @@ function timeAgo(d: Date, lang='es') {
 }
 
 // ── Demo events dinámicos por tipo de negocio ──────────────────────────────
-function buildDemoEvents(_evtConfig: BusinessEventConfig): Omit<LiveEvent,'id'|'ts'>[] {
+function buildDemoEvents(_evtConfig: BusinessEventConfig, lang='es'): Omit<LiveEvent,'id'|'ts'>[] {
+  const _t = (s:string) => tx(s, lang)
   return [
-    { type: 'call_incoming', icon: '📞', color: C.teal, title: 'Llamada entrante — +34 612 345 678', sub: '📅 Reserva detectada', priority: 'high', demo: true },
-    { type: 'reservation', icon: '📅', color: C.teal, title: 'Nueva reserva — María López', sub: '4 personas · 21:00', priority: 'high', demo: true },
-    { type: 'call_ended', icon: '✅', color: C.green, title: 'Llamada finalizada — Carlos Ruiz', sub: 'Reserva confirmada para mañana', demo: true },
-    { type: 'system', icon: '💬', color: C.text2, title: 'Consulta sobre el menú', sub: 'Cliente preguntó por opciones vegetarianas', demo: true },
-    { type: 'call_incoming', icon: '📞', color: C.teal, title: 'Llamada entrante — +34 698 765 432', sub: '💬 Consulta detectada', demo: true },
+    { type: 'call_incoming', icon: '📞', color: C.teal, title: `${_t('Llamada entrante')} — +34 612 345 678`, sub: `📅 ${_t('Reserva detectada')}`, priority: 'high', demo: true },
+    { type: 'reservation', icon: '📅', color: C.teal, title: `${_t('Nueva reserva')} — María López`, sub: _t('4 personas · 21:00'), priority: 'high', demo: true },
+    { type: 'call_ended', icon: '✅', color: C.green, title: `${_t('Llamada finalizada')} — Carlos Ruiz`, sub: _t('Reserva confirmada para mañana'), demo: true },
+    { type: 'system', icon: '💬', color: C.text2, title: _t('Consulta sobre el menú'), sub: _t('Cliente preguntó por opciones vegetarianas'), demo: true },
+    { type: 'call_incoming', icon: '📞', color: C.teal, title: `${_t('Llamada entrante')} — +34 698 765 432`, sub: `💬 ${_t('Consulta detectada')}`, demo: true },
   ]
 }
 
@@ -184,7 +185,7 @@ function ActiveCallBlock({ call, businessType, lang='es' }:{ call:any; businessT
         <p style={{ fontSize:13,fontWeight:600,color:C.text,marginBottom:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{call.caller_phone||_tx('Número oculto')}</p>
         <div style={{ display:'flex',alignItems:'center',gap:6 }}>
           <div style={{ width:5,height:5,borderRadius:'50%',background:color,animation:'rz-pulse 1.5s ease-in-out infinite' }}/>
-          <span style={{ fontSize:11,color,fontWeight:500 }}>{stateInfo.label}</span>
+          <span style={{ fontSize:11,color,fontWeight:500 }}>{_tx(stateInfo.label)}</span>
         </div>
       </div>
       <span style={{ fontFamily:'var(--rz-mono)',fontSize:12,color:C.text3,flexShrink:0 }}>{dur}</span>
@@ -201,7 +202,8 @@ function CallRow({ call, idx, businessType, lang='es' }:{ call:any; idx:number; 
   const done = ['completada','completed'].includes(status)
   const phone = call.caller_phone||call.from_number||_tx('Número oculto')
   const dur = call.duration_seconds ? (call.duration_seconds>=60?`${Math.round(call.duration_seconds/60)}m`:`${call.duration_seconds}s`) : null
-  const time = call.started_at ? new Date(call.started_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : ''
+  const loc = lang==='es'?'es-ES':lang==='en'?'en-GB':lang==='fr'?'fr-FR':lang==='pt'?'pt-PT':'ca-ES'
+  const time = call.started_at ? new Date(call.started_at).toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'}) : ''
   const ic = schema?.color || C.text3
   const intentLabel = schema?.label || call.intent
   return (
@@ -213,7 +215,7 @@ function CallRow({ call, idx, businessType, lang='es' }:{ call:any; idx:number; 
       <div style={{ flex:1,minWidth:0 }}>
         <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:3 }}>
           <p style={{ fontSize:13,fontWeight:600,color:C.text }}>{phone}</p>
-          {schema && call.intent && <span style={{ fontSize:10,padding:'1px 7px',borderRadius:10,background:`${ic}18`,color:ic,fontWeight:600 }}>{schema.icon} {intentLabel}</span>}
+          {schema && call.intent && <span style={{ fontSize:10,padding:'1px 7px',borderRadius:10,background:`${ic}18`,color:ic,fontWeight:600 }}>{schema.icon} {_tx(intentLabel)}</span>}
           {done && <span style={{ fontSize:10,padding:'1px 7px',borderRadius:10,background:C.greenDim,color:C.green,fontWeight:600 }}>{_tx('Completada')}</span>}
         </div>
         {call.summary ? <p style={{ fontSize:12,color:C.text2,lineHeight:1.5,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' as const,overflow:'hidden' }}>{call.summary}</p>
@@ -382,6 +384,8 @@ export default function PanelPage() {
     if (!rtKey || !tenant) return
     const tenantId   = tenant.id
     const tenantType = tenant.type || 'otro'
+    const rtLang = tenant.language || 'es'
+    const _rtx = (s:string) => tx(s, rtLang)
     // Guard: si ya hay canal activo con este mismo key, no re-suscribir
     if (rtChannelRef.current) {
       supabase.removeChannel(rtChannelRef.current)
@@ -392,7 +396,7 @@ export default function PanelPage() {
         const c = payload.new as any
         const schType = INTENT_MAP[c.intent||'otro'] || 'inquiry'
         const sch = SCHEMA_MAP[schType]
-        pushEvent({ type:'call_incoming' as any, icon:'📞', color:C.teal, title:`${ACTIVE_CALL_LABEL} — ${c.caller_phone||'Número oculto'}`, sub: sch ? `${sch.icon} ${sch.label} detectada` : '', priority:'high' })
+        pushEvent({ type:'call_incoming' as any, icon:'📞', color:C.teal, title:`${_rtx('Llamada entrante')} — ${c.caller_phone||_rtx('Número oculto')}`, sub: sch ? `${sch.icon} ${_rtx(sch.label)} ${_rtx('detectada')}` : '', priority:'high' })
         if (c.status === 'activa') setActiveCalls(prev => [c, ...prev.filter(x => x.id !== c.id)])
         setCalls(prev => [c, ...prev].slice(0, 8))
       })
@@ -410,8 +414,8 @@ export default function PanelPage() {
           const schType = INTENT_MAP[c.intent||'otro'] || 'inquiry'
           const sch = SCHEMA_MAP[schType]
           pushEvent({ type:'call_ended' as any, icon:sch?.icon||'✅', color:sch?.color||C.green,
-            title:`${sch?.label||'Llamada'} finalizada${c.customer_name?' — '+c.customer_name:''}`,
-            sub:c.summary?.slice(0,80)||'Resumen generado' })
+            title:`${_rtx(sch?.label||'Llamada')} ${_rtx('finalizada')}${c.customer_name?' — '+c.customer_name:''}`,
+            sub:c.summary?.slice(0,80)||_rtx('Resumen generado') })
         }
         setCalls(prev => prev.map(x => x.id === c.id ? c : x))
       })
@@ -419,8 +423,8 @@ export default function PanelPage() {
         const r = payload.new as any
         const sch = SCHEMA_MAP['reservation'] || SCHEMA_MAP['appointment']
         pushEvent({ type:'reservation' as any, icon:sch?.icon||'📅', color:sch?.color||C.teal,
-          title:`${sch?.label||'Nueva cita'} — ${r.customer_name||r.patient_name||r.owner_name||'Cliente'}`,
-          sub:`${r.people||r.party_size||''} ${r.people?'personas ·':''} ${(r.time||'').slice(0,5)}`.trim(),
+          title:`${_rtx(sch?.label||'Reserva')} — ${r.customer_name||r.patient_name||r.owner_name||_rtx('Cliente')}`,
+          sub:`${r.people||r.party_size||''} ${r.people?_rtx('personas')+' ·':''} ${(r.time||'').slice(0,5)}`.trim(),
           priority:'high' })
         setReservas(prev => [...prev, r])
       })
@@ -429,7 +433,7 @@ export default function PanelPage() {
         setReservas(prev => prev.map(x => x.id === r.id ? r : x))
         if (r.status === 'cancelled' || r.status === 'no_show') {
           pushEvent({ type:'reservation' as any, icon:'❌', color:C.red,
-            title:`Reserva ${r.status==='cancelled'?'cancelada':'no presentado'} — ${r.customer_name||'Cliente'}`,
+            title:`${_rtx('Reserva')} ${r.status==='cancelled'?_rtx('cancelada'):_rtx('no presentado')} — ${r.customer_name||_rtx('Cliente')}`,
             sub:`${(r.time||'').slice(0,5)}`.trim() })
         }
       })
@@ -448,10 +452,10 @@ export default function PanelPage() {
         setActiveOrders(prev => [o, ...prev.filter(x => x.id !== o.id)].slice(0,5))
         const itemList = Array.isArray(o.items) && o.items.length > 0
           ? o.items.map((i:any)=>`${i.quantity||1}× ${i.name}`).join(', ')
-          : 'tomando pedido…'
+          : _rtx('tomando pedido…')
         pushEvent({ type:'order' as any, icon:'🛍️', color:C.violet,
-          title:`Nuevo pedido — ${o.customer_name||o.customer_phone||'Cliente'}`,
-          sub:`${itemList} · ${o.order_type||'recoger'}`, priority:'high' })
+          title:`${_rtx('Nuevo pedido')} — ${o.customer_name||o.customer_phone||_rtx('Cliente')}`,
+          sub:`${itemList} · ${_rtx(o.order_type||'recoger')}`, priority:'high' })
         // Alerta de pedido según configuración del negocio
         const alertMode = tenant?.agent_config?.order_alert_mode || 'banner'
         if (alertMode !== 'none') {
@@ -477,7 +481,7 @@ export default function PanelPage() {
               ? o.items.map((i:any)=>`${i.quantity||1}× ${i.name}`).join(', ')
               : 'pedido'
             pushEvent({ type:'order' as any, icon:'✅', color:C.green,
-              title:`Pedido confirmado — ${o.customer_name||'Cliente'}`,
+              title:`${_rtx('Pedido confirmado')} — ${o.customer_name||_rtx('Cliente')}`,
               sub:itemList, priority:'high' })
           }
         }
@@ -489,8 +493,8 @@ export default function PanelPage() {
         const urgIcon = ce.is_urgency ? '🚨' : '⚕️'
         const urgColor = ce.is_urgency ? C.red : C.teal
         pushEvent({ type:'reservation' as any, icon:urgIcon, color:urgColor,
-          title:`${ce.is_urgency?'🚨 Urgencia':ce.consultation_type||'Consulta'} — ${ce.patient_name||ce.patient_phone||'Paciente'}`,
-          sub: ce.symptoms ? ce.symptoms.slice(0,60) : `${ce.consultation_type||'consulta'} · ${ce.duration_minutes||20}min`,
+          title:`${ce.is_urgency?'🚨 '+_rtx('Urgencia'):ce.consultation_type||_rtx('Consulta')} — ${ce.patient_name||ce.patient_phone||_rtx('Paciente')}`,
+          sub: ce.symptoms ? ce.symptoms.slice(0,60) : `${ce.consultation_type||_rtx('consulta')} · ${ce.duration_minutes||20}min`,
           priority: ce.is_urgency ? 'high' : 'normal' })
       })
       .on('postgres_changes',{ event:'UPDATE', schema:'public', table:'consultation_events', filter:`tenant_id=eq.${tenantId}` }, payload => {
@@ -501,14 +505,49 @@ export default function PanelPage() {
           setActiveConsultations(prev => prev.filter(x => x.id !== ce.id))
           if (ce.status === 'confirmed') {
             pushEvent({ type:'reservation' as any, icon:'✅', color:C.green,
-              title:`Cita confirmada — ${ce.patient_name||'Paciente'}`,
-              sub:`${ce.consultation_type||'consulta'} · ${ce.appointment_date||''} ${(ce.appointment_time||'').slice(0,5)}`.trim(),
+              title:`${_rtx('Cita confirmada')} — ${ce.patient_name||_rtx('Paciente')}`,
+              sub:`${ce.consultation_type||_rtx('consulta')} · ${ce.appointment_date||''} ${(ce.appointment_time||'').slice(0,5)}`.trim(),
               priority:'high' })
           } else if (ce.status === 'escalated') {
             pushEvent({ type:'system' as any, icon:'🚨', color:C.red,
-              title:`🚨 URGENCIA — ${ce.patient_name||ce.patient_phone||'Paciente'}`,
-              sub: ce.symptoms?.slice(0,60) || 'Requiere atención inmediata',
+              title:`🚨 ${_rtx('URGENTE')} — ${ce.patient_name||ce.patient_phone||_rtx('Paciente')}`,
+              sub: ce.symptoms?.slice(0,60) || _rtx('Requiere atención inmediata'),
               priority:'high' })
+          }
+        }
+      })
+      // ── Multichannel: conversations + messages ──────────────
+      .on('postgres_changes',{ event:'INSERT', schema:'public', table:'conversations', filter:`tenant_id=eq.${tenantId}` }, payload => {
+        const conv = payload.new as any
+        const chMeta: Record<string,{icon:string;color:string;label:string}> = {
+          whatsapp: { icon:'💬', color:'#25D366', label:'WhatsApp' },
+          email:    { icon:'✉️', color:'#60A5FA', label:'Email' },
+          sms:      { icon:'📱', color:C.amber,   label:'SMS' },
+        }
+        const m = chMeta[conv.channel]
+        if (m) {
+          pushEvent({ type: conv.channel as any, icon: m.icon, color: m.color,
+            title:`${m.label} — ${conv.from_identifier || 'Cliente'}`,
+            sub: 'Nueva conversación entrante',
+            priority: 'high',
+          })
+        }
+      })
+      .on('postgres_changes',{ event:'INSERT', schema:'public', table:'messages', filter:`tenant_id=eq.${tenantId}` }, payload => {
+        const msg = payload.new as any
+        if (msg.role === 'customer' && msg.channel !== 'voice') {
+          const chMeta: Record<string,{icon:string;color:string;label:string}> = {
+            whatsapp: { icon:'💬', color:'#25D366', label:'WhatsApp' },
+            email:    { icon:'✉️', color:'#60A5FA', label:'Email' },
+            sms:      { icon:'📱', color:C.amber,   label:'SMS' },
+          }
+          const m = chMeta[msg.channel]
+          if (m) {
+            pushEvent({ type: msg.channel as any, icon: m.icon, color: m.color,
+              title:`${m.label} — mensaje entrante`,
+              sub: (msg.content || '').slice(0, 60),
+              priority: 'normal',
+            })
           }
         }
       })
@@ -535,7 +574,7 @@ export default function PanelPage() {
 
   useEffect(() => {
     if (!demoMode || !tenant) return
-    const demoEvents = buildDemoEvents(getEventConfig(tenant.type||'otro'))
+    const demoEvents = buildDemoEvents(getEventConfig(tenant.type||'otro'), tenant.language||'es')
     const fire = () => {
       const evt = demoEvents[demoIdx.current % demoEvents.length]
       pushEvent(evt)
@@ -589,7 +628,7 @@ export default function PanelPage() {
               </div>
             )}
           </div>
-          <p style={{ fontSize:11,color:C.text3,marginTop:2,textTransform:'capitalize' }}>{new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
+          <p style={{ fontSize:11,color:C.text3,marginTop:2,textTransform:'capitalize' }}>{new Date().toLocaleDateString(lang==='es'?'es-ES':lang==='en'?'en-GB':lang==='fr'?'fr-FR':lang==='pt'?'pt-PT':'ca-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
         </div>
         <div style={{ display:'flex',alignItems:'center',gap:10 }}>
           <AgentBar agentOn={agentOn} agentName={tenant.agent_name} lang={lang}/>
@@ -775,6 +814,18 @@ export default function PanelPage() {
             {/* Live feed */}
             <LiveFeed events={events} demoMode={demoMode} onToggleDemo={toggleDemo} lang={lang}/>
 
+            {/* Mensajes multicanal — acceso rápido */}
+            <Link href="/mensajes" style={{ textDecoration:'none' }}>
+              <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,padding:'14px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer' }}>
+                <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                  <span style={{ fontSize:18 }}>💬</span>
+                  <span style={{ fontSize:14,fontWeight:700,color:C.text }}>{_tx('Mensajes')}</span>
+                  <span style={{ fontSize:11,color:C.text3 }}>WhatsApp · Email · SMS</span>
+                </div>
+                <span style={{ fontSize:12,color:C.amber,fontWeight:600 }}>{_tx('Ver todo')} →</span>
+              </div>
+            </Link>
+
             <InsightsPanel insights={insights} headerLabel={panelT.insights.detected} lang={lang} agentName={tenant.agent_name||'Sofía'}/>
 
             {/* Reservas hoy */}
@@ -799,7 +850,7 @@ export default function PanelPage() {
                     <p style={{ fontSize:13,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{r.customer_name}</p>
                     <p style={{ fontSize:11,color:C.text3 }}>{(r.time||r.reservation_time||'').slice(0,5)} · {r.people||r.party_size}p</p>
                   </div>
-                  <span style={{ fontSize:10,padding:'2px 8px',borderRadius:10,background:r.status==='confirmada'?C.greenDim:C.surface2,color:r.status==='confirmada'?C.green:C.text3,fontWeight:600,border:`1px solid ${r.status==='confirmada'?C.green+'25':C.border}`,flexShrink:0 }}>{r.status}</span>
+                  <span style={{ fontSize:10,padding:'2px 8px',borderRadius:10,background:r.status==='confirmada'?C.greenDim:C.surface2,color:r.status==='confirmada'?C.green:C.text3,fontWeight:600,border:`1px solid ${r.status==='confirmada'?C.green+'25':C.border}`,flexShrink:0 }}>{_tx(r.status)}</span>
                 </div>
               ))}
             </div>

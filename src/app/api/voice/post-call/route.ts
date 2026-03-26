@@ -625,6 +625,60 @@ export async function POST(req: Request) {
       learnFromCallAsync(),
     ])
 
+    // ── Backfill: crear registros en conversations + messages ───────────────
+    try {
+      const { data: convRecord } = await admin.from('conversations').insert({
+        tenant_id: tenantId,
+        channel: 'voice',
+        direction: 'inbound',
+        external_id: key,
+        from_identifier: callerPhone || null,
+        to_identifier: null,
+        status: 'closed',
+        intent: decision.intent,
+        summary: decision.summary,
+        decision_status: decision.status,
+        decision_confidence: decision.confidence,
+        decision_flags: decision.special_flags,
+        reasoning_label: decision.reasoning_label,
+        closed_at: new Date().toISOString(),
+        metadata: { duration, source: 'voice_backfill' },
+      }).select('id').maybeSingle()
+
+      if (convRecord?.id) {
+        // Link call to conversation
+        await admin.from('calls')
+          .update({ conversation_id_ref: convRecord.id })
+          .eq('call_sid', key).eq('tenant_id', tenantId)
+
+        // Store transcript as a message
+        if (transcript) {
+          await admin.from('messages').insert({
+            conversation_id: convRecord.id,
+            tenant_id: tenantId,
+            role: 'system',
+            channel: 'voice',
+            content: transcript,
+            content_type: 'text',
+            metadata: { type: 'transcript', duration },
+          })
+        }
+        if (decision.summary) {
+          await admin.from('messages').insert({
+            conversation_id: convRecord.id,
+            tenant_id: tenantId,
+            role: 'agent',
+            channel: 'voice',
+            content: decision.summary,
+            content_type: 'text',
+            metadata: { intent: decision.intent },
+          })
+        }
+      }
+    } catch {
+      // Non-critical: don't fail post-call for backfill errors
+    }
+
     const alreadyCounted = (sessionResult as any)?.already_counted === true
 
     // ── Billing atómico ─────────────────────────────────────────────────────

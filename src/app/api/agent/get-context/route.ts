@@ -12,8 +12,9 @@ export const dynamic = "force-dynamic"
 // ============================================================
 // LOGICA POR TIPO DE NEGOCIO
 // Motor base comun, comportamiento diferente por sector
+// Exported for use by channel-agent.ts
 // ============================================================
-const BUSINESS_TYPE_LOGIC: Record<string, object> = {
+export const BUSINESS_TYPE_LOGIC: Record<string, object> = {
   restaurante: {
     sector: "restaurante",
     action_name: "reserva de mesa",
@@ -348,12 +349,10 @@ const BUSINESS_TYPE_LOGIC: Record<string, object> = {
   }
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-    const { tenant_id } = await req.json()
-    if (!tenant_id) return NextResponse.json({ error: "tenant_id required" }, { status: 400 })
-
+/**
+ * Build business context for a tenant — used by voice agent AND text channels.
+ */
+export async function buildBusinessContext(tenant_id: string) {
     const [tenantRes, knowledgeRes, rulesRes, memoryRes] = await Promise.all([
       supabase.from("tenants")
         .select("id, name, type, phone, address, agent_name, agent_config, reservation_config")
@@ -368,7 +367,7 @@ export async function POST(req: NextRequest) {
         .order("confidence", { ascending: false }).limit(15),
     ])
 
-    if (!tenantRes.data) return NextResponse.json({ error: "tenant not found" }, { status: 404 })
+    if (!tenantRes.data) return null
 
     const t = tenantRes.data
     const businessType = t.type || "otro"
@@ -427,12 +426,22 @@ export async function POST(req: NextRequest) {
     // business_type_logic del sector correspondiente
     const business_type_logic = BUSINESS_TYPE_LOGIC[businessType] || BUSINESS_TYPE_LOGIC.otro
 
+    return { business_type_logic, business_context }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+    const { tenant_id } = await req.json()
+    if (!tenant_id) return NextResponse.json({ error: "tenant_id required" }, { status: 400 })
+
+    const result = await buildBusinessContext(tenant_id)
+    if (!result) return NextResponse.json({ error: "tenant not found" }, { status: 404 })
+
     return NextResponse.json({
       success: true,
-      business_type_logic,
-      business_context,
-      // Resumen compacto para el agente
-      summary: "Negocio: " + t.name + " | Tipo: " + businessType + " | Logica: " + JSON.stringify(business_type_logic) + " | Contexto: " + JSON.stringify(business_context)
+      ...result,
+      summary: "Negocio: " + result.business_context.business_name + " | Tipo: " + result.business_context.business_type + " | Logica: " + JSON.stringify(result.business_type_logic) + " | Contexto: " + JSON.stringify(result.business_context)
     })
   } catch (err) {
     return NextResponse.json({ error: "internal error" }, { status: 500 })
