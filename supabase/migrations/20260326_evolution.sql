@@ -97,6 +97,13 @@ CREATE INDEX IF NOT EXISTS idx_scheduled_reminders_reservation
 -- ── Phase 4: Visual Editor ─────────────────────────────────
 ALTER TABLE tables ADD COLUMN IF NOT EXISTS rotation FLOAT DEFAULT 0;
 
+-- ── Phase 5: Table Combining (juntar mesas) ───────────────
+-- combo_group: UUID shared by tables that are physically joined together
+-- Tables with the same combo_group form a single bookable unit with combined capacity
+ALTER TABLE tables ADD COLUMN IF NOT EXISTS combo_group UUID;
+CREATE INDEX IF NOT EXISTS idx_tables_combo_group
+  ON tables(combo_group) WHERE combo_group IS NOT NULL;
+
 -- ── Indexes for query performance ──────────────────────────
 CREATE INDEX IF NOT EXISTS idx_daily_summaries_tenant_date
   ON daily_summaries(tenant_id, date);
