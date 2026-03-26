@@ -16,6 +16,7 @@ import AsesorReservasView from './AsesorReservasView'
 import SegurosReservasView from './SegurosReservasView'
 import InmoReservasView from './InmoReservasView'
 import AcademiaClasesView from './AcademiaClasesView'
+import Link from 'next/link'
 import { C } from '@/lib/colors'
 
 const DAYS = ['DO','LU','MA','MI','JU','VI','SA']
