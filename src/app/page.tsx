@@ -612,6 +612,21 @@ export default function HomePage() {
                 body:'Filtra consultas, agenda reuniones con el profesional adecuado y recoge la información antes de la cita.',
                 ejemplo:'"Necesito consulta fiscal para autónomo" → agenda con el asesor fiscal disponible.'
               },
+              {
+                icon:'🛒',tipo:'Ecommerce y tiendas online',
+                body:'Resuelve dudas sobre productos, estado de pedidos, devoluciones y disponibilidad. Sin que tu equipo tenga que revisar cada mensaje.',
+                ejemplo:'"¿Cuándo llega mi pedido?" → consulta el estado y responde con fecha exacta.'
+              },
+              {
+                icon:'🏨',tipo:'Hoteles y alojamientos',
+                body:'Disponibilidad de habitaciones, check-in, peticiones especiales y reservas directas sin comisiones de plataformas.',
+                ejemplo:'"¿Tienen habitación doble el puente de mayo?" → confirma disponibilidad y reserva.'
+              },
+              {
+                icon:'🏗️',tipo:'Reformas y construcción',
+                body:'Recoge datos del proyecto, agenda visitas para presupuesto y filtra consultas por tipo de obra.',
+                ejemplo:'"Quiero reformar el baño completo" → recoge datos y agenda visita del técnico.'
+              },
             ].map(({icon,tipo,body,ejemplo})=>(
               <div key={tipo} className="card-hover" style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'28px 24px'}}>
                 <span style={{fontSize:32,display:'block',marginBottom:14}}>{icon}</span>
