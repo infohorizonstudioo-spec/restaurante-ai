@@ -291,6 +291,8 @@ export default function HomePage() {
             '💇 Peluquerías','🏥 Clínicas','🦷 Dentistas','🔧 Talleres',
             '⚖️ Asesorías','🍽️ Restaurantes','🏋️ Gimnasios','💆 Spas',
             '🏠 Inmobiliarias','🐾 Veterinarias','📦 Transportistas','🎓 Academias',
+            '🛒 Ecommerce','🏨 Hoteles','🚗 Concesionarios','🧹 Limpieza',
+            '📸 Fotografía','🎨 Diseño','🏗️ Reformas','💻 Informática',
           ].map(s=>(
             <div key={s} style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:20,padding:'7px 16px',fontSize:13,color:'rgba(255,255,255,0.5)',fontWeight:500,whiteSpace:'nowrap'}}>
               {s}
