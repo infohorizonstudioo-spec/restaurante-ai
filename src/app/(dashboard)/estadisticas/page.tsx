@@ -7,7 +7,8 @@ import { useTenant } from '@/contexts/TenantContext'
 import Link from 'next/link'
 
 export default function EstadisticasPage(){
-  const { t, tx } = useTenant()
+  const { template, t, tx } = useTenant()
+  const L = template?.labels
   const [plan,setPlan]   = useState<string>('free')
   const [loading,setLoad]= useState(true)
   const [data,setData]   = useState<any>(null)
@@ -119,9 +120,9 @@ export default function EstadisticasPage(){
         <div className="rz-grid-4col" style={{gap:12,marginBottom:20}}>
           {[
             {label:tx('Llamadas este mes'),value:d.callsMonth,sub:tx('Completadas')+': '+d.callsMonthCompleted,color:'#F0A84E'},
-            {label:tx('Reservas este mes'), value:d.resMonth,  sub:tx('Via agente')+': '+d.resVoiceMonth,   color:'#34D399'},
-            {label:tx('Tasa conversión'),   value:d.convRate+'%',sub:tx('Reservas voz / llamadas completadas'), color:d.convRate>=30?'#059669':d.convRate>=15?'#d97706':'#dc2626'},
-            {label:'Clientes',          value:d.custs,    sub:'Personas/reserva: '+d.avgPeople, color:'#A78BFA'},
+            {label:`${L?.reservas||tx('Reservas')} ${tx('este mes')}`, value:d.resMonth,  sub:tx('Via agente')+': '+d.resVoiceMonth,   color:'#34D399'},
+            {label:tx('Tasa conversión'),   value:d.convRate+'%',sub:`${L?.reservas||tx('Reservas')} ${tx('voz / llamadas completadas')}`, color:d.convRate>=30?'#059669':d.convRate>=15?'#d97706':'#dc2626'},
+            {label:L?.clientes||'Clientes', value:d.custs, sub:`${tx('Media por')} ${L?.reserva?.toLowerCase()||'reserva'}: ${d.avgPeople}`, color:'#A78BFA'},
           ].map(k=>(
             <div key={k.label} style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'18px 20px'}}>
               <p style={{fontSize:28,fontWeight:700,color:k.color,letterSpacing:'-0.025em'}}>{k.value}</p>

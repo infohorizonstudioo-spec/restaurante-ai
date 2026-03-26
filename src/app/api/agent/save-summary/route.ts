@@ -105,11 +105,14 @@ export async function POST(req: NextRequest) {
 
     // ── 4. Aprendizaje ────────────────────────────────────────────────────
     try {
+      const intentConfidence: Record<string, number> = {
+        reserva: 0.95, pedido: 0.90, cancelacion: 0.85, consulta: 0.70, otro: 0.60,
+      }
       await learnFromCall({
         tenantId: tenant_id,
         memoryType: 'pattern',
-        content: `${callIntent} | confirmed | ${summary.slice(0, 100)}`,
-        confidence: 0.75,
+        content: `${callIntent} | confirmed | ${summary.slice(0, 200)}`,
+        confidence: intentConfidence[callIntent] || 0.70,
       })
     } catch {}
 

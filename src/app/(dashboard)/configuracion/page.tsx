@@ -336,7 +336,20 @@ export default function ConfiguracionPage() {
           {/* Horario */}
           <div>
             <p style={{fontSize:13,fontWeight:700,color:C.amber,letterSpacing:'0.03em',marginBottom:12}}>{tx('Horario de apertura')}</p>
-            {isHosb ? (
+            {tenant?.type === 'hotel' ? (
+              <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:70}}>Check-in</span>
+                  <input type="time" className="rz-inp" style={{width:120,textAlign:'center'}} value={schedCfg.service_hours?.open||'14:00'} onChange={e=>setSchedCfg(s=>({...s,service_hours:{...s.service_hours,open:e.target.value}}))}/>
+                  <span style={{fontSize:11,color:C.muted}}>({tx('hora a partir de la cual pueden entrar')})</span>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:70}}>Check-out</span>
+                  <input type="time" className="rz-inp" style={{width:120,textAlign:'center'}} value={schedCfg.service_hours?.close||'12:00'} onChange={e=>setSchedCfg(s=>({...s,service_hours:{...s.service_hours,close:e.target.value}}))}/>
+                  <span style={{fontSize:11,color:C.muted}}>({tx('hora límite de salida')})</span>
+                </div>
+              </div>
+            ) : isHosb ? (
               <div style={{display:'flex',flexDirection:'column',gap:12}}>
                 <div style={{display:'flex',alignItems:'center',gap:10}}>
                   <span style={{fontSize:12,fontWeight:600,color:C.sub,minWidth:70}}>{tx('Comidas')}</span>
@@ -517,9 +530,33 @@ export default function ConfiguracionPage() {
         <SectionCard id="knowledge" icon="🧠" title={tx("¿Qué sabe de tu negocio?")} sub={`${tx('Cuéntale a')} ${agentName} ${tx('todo lo que necesita para responder bien')}`} active={openSection==='knowledge'} onClick={()=>toggleSection('knowledge')}>
           <KArea tx={tx} label={tx('Horarios')} sub={tx('Cuándo abrís y cuándo cerráis. Escríbelo como lo dirías por teléfono.')} placeholder={"Lunes a viernes de 9 a 14 y de 17 a 20\nSábados de 10 a 14\nDomingos cerrado"} value={cfg.knowledge.horarios||''} onChange={v=>upCfg('knowledge','horarios',v)}/>
           {isHosb && <KArea tx={tx} label={tx('Carta / Menú')} sub={`${tx('Escribe los platos y precios.')} ${agentName} ${tx('se lo aprenderá de memoria.')}`} placeholder={"Arroz a banda: 14€\nPaella: 13€\nChuletón: 22€\nMenú del día: 13.50€ (primero, segundo, postre y pan)"} value={cfg.knowledge.menu||''} onChange={v=>upCfg('knowledge','menu',v)}/>}
-          <KArea tx={tx} label={isHosb?tx('Otros servicios y precios'):tx('Tus servicios y precios')} sub={`${tx('Escribe qué ofreces y cuánto cuesta.')} ${agentName} ${tx('lo usará cuando los clientes pregunten.')}`} placeholder={"Corte de pelo: 15€\nTinte completo: 45€\nManicura: 20€\n..."} value={cfg.knowledge.services} onChange={v=>upCfg('knowledge','services',v)}/>
+          <KArea tx={tx} label={isHosb?tx('Otros servicios y precios'):tx('Tus servicios y precios')} sub={`${tx('Escribe qué ofreces y cuánto cuesta.')} ${agentName} ${tx('lo usará cuando los clientes pregunten.')}`} placeholder={
+            tenant?.type === 'clinica_dental' ? "Revisión: 30€\nLimpieza dental: 60€\nEmpaste: 50€\nOrtodoncia: consultar" :
+            tenant?.type === 'clinica_medica' ? "Consulta general: 50€\nEspecialista: 80€\nRevisión completa: 120€" :
+            tenant?.type === 'veterinaria' ? "Consulta general: 35€\nVacunas: 25€\nDesparasitación: 15€\nCirugía: consultar" :
+            tenant?.type === 'fisioterapia' ? "Sesión fisioterapia: 40€\nPunción seca: 45€\nPilates terapéutico: 30€" :
+            tenant?.type === 'psicologia' ? "Primera consulta: 60€\nSesión individual: 55€\nTerapia de pareja: 70€\nOnline: 50€" :
+            tenant?.type === 'gimnasio' ? "Matrícula: 30€\nAbono mensual: 45€\nClase suelta: 10€\nEntrenador personal: 35€/sesión" :
+            tenant?.type === 'academia' ? "Inglés (grupo): 80€/mes\nRefuerzo escolar: 60€/mes\nClase particular: 25€/hora" :
+            tenant?.type === 'spa' ? "Masaje relajante 60min: 55€\nFacial completo: 65€\nCircuito termal: 30€\nBono 5 masajes: 220€" :
+            tenant?.type === 'taller' ? "Cambio aceite + filtros: 60€\nRevisión pre-ITV: 45€\nNeumáticos (desde): 50€/ud\nDiagnóstico: 30€" :
+            tenant?.type === 'hotel' ? "Individual: 60€/noche\nDoble: 90€/noche\nSuite: 150€/noche\nDesayuno buffet: 12€" :
+            tenant?.type === 'ecommerce' ? "Producto A: 29.99€\nProducto B: 49.99€\nEnvío gratis a partir de 50€" :
+            tenant?.type === 'seguros' ? "Seguro auto (desde): 300€/año\nSeguro hogar (desde): 150€/año\nSeguro salud: consultar" :
+            tenant?.type === 'inmobiliaria' ? "Piso 2 hab. centro: 850€/mes\nCasa adosada: 1.200€/mes\nEstudio: 550€/mes" :
+            tenant?.type === 'asesoria' ? "Asesoría fiscal: 80€/trimestre\nDeclaración renta: 50€\nConstitución empresa: 300€" :
+            isHosb ? "Entrantes: 8-12€\nCarnes: 15-22€\nPescados: 14-20€\nPostres: 5-8€" :
+            "Servicio básico: 20€\nServicio completo: 40€\nPack especial: 60€\n..."
+          } value={cfg.knowledge.services} onChange={v=>upCfg('knowledge','services',v)}/>
           <KArea tx={tx} label={tx('Condiciones y normas')} sub={tx('Política de cancelaciones, reserva mínima, señal, etc.')} placeholder={"Cancelación con 24h de antelación sin coste\nGrupos de más de 8 requieren señal\n..."} value={cfg.knowledge.conditions} onChange={v=>upCfg('knowledge','conditions',v)}/>
-          <KArea tx={tx} label={tx('Preguntas que te hacen siempre')} sub={tx('Escribe las preguntas más frecuentes y sus respuestas')} placeholder={"¿Tenéis terraza? Sí, con capacidad para 20 personas\n¿Hay parking? Sí, en la calle lateral gratuito\n..."} value={cfg.knowledge.faqs} onChange={v=>upCfg('knowledge','faqs',v)}/>
+          <KArea tx={tx} label={tx('Preguntas que te hacen siempre')} sub={tx('Escribe las preguntas más frecuentes y sus respuestas')} placeholder={
+            tenant?.type === 'clinica_dental' ? "¿Hacéis urgencias? Sí, con cita previa\n¿Aceptáis mutuas? Sí, Adeslas, Sanitas y DKV\n..." :
+            tenant?.type === 'veterinaria' ? "¿Atendéis urgencias? Sí, de lunes a viernes\n¿Atendéis animales exóticos? Consultar\n..." :
+            tenant?.type === 'hotel' ? "¿Hay parking? Sí, gratuito para huéspedes\n¿Admitís mascotas? Sí, con suplemento de 15€/noche\n¿A qué hora es el check-in? A partir de las 14:00" :
+            tenant?.type === 'gimnasio' ? "¿Hay piscina? Sí, climatizada\n¿Puedo ir sin reservar? Sí, las clases dirigidas sí requieren reserva\n..." :
+            tenant?.type === 'taller' ? "¿Hacéis presupuesto gratis? Sí, sin compromiso\n¿Tenéis coche de sustitución? Sí, bajo disponibilidad\n..." :
+            "¿Tenéis terraza? Sí, con capacidad para 20 personas\n¿Hay parking? Sí, en la calle lateral gratuito\n..."
+          } value={cfg.knowledge.faqs} onChange={v=>upCfg('knowledge','faqs',v)}/>
           <div style={{background:C.tealDim,border:`1px solid ${C.teal}33`,borderRadius:10,padding:'10px 14px'}}>
             <p style={{fontSize:12,color:C.teal,fontWeight:600}}>💡 {tx('Por qué es importante')}</p>
             <p style={{fontSize:12,color:C.sub,marginTop:3,lineHeight:1.5}}>{tx('Cuanto más le cuentes a')} {agentName}{tx(', mejor responderá. Piensa en')} {agentName} {tx('como una empleada nueva: necesita conocer tu negocio para atender bien.')}</p>
@@ -597,8 +634,319 @@ export default function ConfiguracionPage() {
         </SectionCard>
         )}
 
+        {/* ── Alertas configurables ─────────────────────────────── */}
+        <AlertRulesSection tenantId={tenant?.id} tx={tx} />
+
+        {/* ── Recordatorios configurables ─────────────────────── */}
+        <RemindersSection tenantId={tenant?.id} tx={tx} />
+
         <div style={{height:40}}/>
       </div>
+    </div>
+  )
+}
+
+// ── Alert Rules Section Component ────────────────────────────────
+function AlertRulesSection({ tenantId, tx: _tx }: { tenantId?: string; tx: (s: string) => string }) {
+  const [rules, setRules] = useState<any[]>([])
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const EVENT_LABELS: Record<string, { label: string; desc: string }> = {
+    complaint:             { label: 'Queja / Reclamacion',  desc: 'Un cliente envia una queja' },
+    cancellation:          { label: 'Cancelacion',          desc: 'Se cancela una reserva o cita' },
+    escalation:            { label: 'Escalacion',           desc: 'Una conversacion es escalada a humano' },
+    vip_message:           { label: 'Mensaje de VIP',       desc: 'Un cliente VIP escribe' },
+    large_group:           { label: 'Grupo grande',         desc: 'Reserva de grupo grande' },
+    crisis:                { label: 'Crisis',               desc: 'Deteccion de crisis (psicologia)' },
+    likely_no_show:        { label: 'Probable ausencia',    desc: 'Riesgo de no-show' },
+    critical_change:       { label: 'Cambio critico',       desc: 'Cambio importante en agenda' },
+    missed_call:           { label: 'Llamada perdida',      desc: 'Se pierde una llamada' },
+    new_reservation:       { label: 'Nueva reserva',        desc: 'Se crea una reserva' },
+  }
+
+  useEffect(() => {
+    if (!tenantId) return
+    fetch(`/api/tenant/alert-rules?tenant_id=${tenantId}`)
+      .then(r => r.json())
+      .then(d => setRules(d.rules || []))
+      .catch(() => {})
+  }, [tenantId])
+
+  const toggleRule = (eventType: string, field: string, value: any) => {
+    setRules(prev => prev.map(r => r.event_type === eventType ? { ...r, [field]: value } : r))
+  }
+
+  const toggleChannel = (eventType: string, channel: string) => {
+    setRules(prev => prev.map(r => {
+      if (r.event_type !== eventType) return r
+      const channels = r.channels || ['in_app']
+      return {
+        ...r,
+        channels: channels.includes(channel)
+          ? channels.filter((c: string) => c !== channel)
+          : [...channels, channel],
+      }
+    }))
+  }
+
+  const saveRules = async () => {
+    if (!tenantId) return
+    setSaving(true)
+    await fetch('/api/tenant/alert-rules', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenant_id: tenantId, rules }),
+    })
+    setSaving(false)
+  }
+
+  if (rules.length === 0) return null
+
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
+      <button onClick={() => setOpen(!open)} style={{
+        width: '100%', padding: '16px 20px', border: 'none', background: 'transparent', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 15 }}>🔔</span>
+          <span style={{ color: C.amber, fontSize: 13, fontWeight: 700, letterSpacing: '0.04em' }}>
+            {_tx('ALERTAS AL RESPONSABLE')}
+          </span>
+        </div>
+        <span style={{ color: C.muted, fontSize: 12, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▼</span>
+      </button>
+
+      {open && (
+        <div style={{ padding: '0 20px 20px', borderTop: `1px solid ${C.border}` }}>
+          <p style={{ fontSize: 12, color: C.muted, margin: '12px 0 16px' }}>
+            {_tx('Elige que eventos generan aviso, con que prioridad y por que canal')}
+          </p>
+
+          {rules.map(rule => {
+            const meta = EVENT_LABELS[rule.event_type]
+            if (!meta) return null
+            return (
+              <div key={rule.event_type} style={{
+                padding: '12px 14px', borderRadius: 10, marginBottom: 8,
+                border: `1px solid ${rule.enabled ? C.amber + '30' : C.border}`,
+                background: rule.enabled ? C.amberDim : 'transparent',
+                transition: 'all 0.15s',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: rule.enabled ? C.text : C.muted }}>
+                        {meta.label}
+                      </span>
+                      <span style={{
+                        fontSize: 10, padding: '1px 6px', borderRadius: 6, fontWeight: 600,
+                        color: rule.priority === 'critical' ? C.red : rule.priority === 'warning' ? C.amber : C.teal,
+                        background: (rule.priority === 'critical' ? C.red : rule.priority === 'warning' ? C.amber : C.teal) + '18',
+                      }}>
+                        {rule.priority === 'critical' ? 'Critico' : rule.priority === 'warning' ? 'Alerta' : 'Info'}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{meta.desc}</p>
+                  </div>
+
+                  {/* Toggle */}
+                  <div onClick={() => toggleRule(rule.event_type, 'enabled', !rule.enabled)} style={{
+                    width: 40, height: 22, borderRadius: 11, cursor: 'pointer',
+                    background: rule.enabled ? C.amber : C.muted + '40',
+                    position: 'relative', transition: 'background 0.15s',
+                  }}>
+                    <div style={{
+                      width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                      position: 'absolute', top: 2,
+                      left: rule.enabled ? 20 : 2,
+                      transition: 'left 0.15s',
+                    }} />
+                  </div>
+                </div>
+
+                {/* Channels */}
+                {rule.enabled && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    {(['in_app', 'sms', 'push'] as const).map(ch => {
+                      const chLabels: Record<string, string> = { in_app: 'En app', sms: 'SMS', push: 'Push' }
+                      const active = (rule.channels || []).includes(ch)
+                      return (
+                        <button key={ch} onClick={() => toggleChannel(rule.event_type, ch)} style={{
+                          padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                          border: `1px solid ${active ? C.teal + '40' : C.border}`,
+                          background: active ? C.tealDim : 'transparent',
+                          color: active ? C.teal : C.muted,
+                          cursor: 'pointer',
+                        }}>
+                          {chLabels[ch]}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          <button onClick={saveRules} disabled={saving} style={{
+            marginTop: 12, padding: '10px 24px', borderRadius: 10, border: 'none',
+            background: `linear-gradient(135deg, ${C.amber}, #E8923A)`,
+            color: '#0C1018', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            opacity: saving ? 0.6 : 1,
+          }}>
+            {saving ? _tx('Guardando...') : _tx('Guardar alertas')}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Reminders Section Component ──────────────────────────────────
+function RemindersSection({ tenantId, tx: _tx }: { tenantId?: string; tx: (s: string) => string }) {
+  const [config, setConfig] = useState({ intervals: ['24h'], channel: 'sms', enabled: true })
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    if (!tenantId) return
+    fetch(`/api/tenant/reminders?tenant_id=${tenantId}`)
+      .then(r => r.json())
+      .then(d => { setConfig(d.config || config); setLoaded(true) })
+      .catch(() => setLoaded(true))
+  }, [tenantId])
+
+  const toggleInterval = (interval: string) => {
+    setConfig(prev => ({
+      ...prev,
+      intervals: prev.intervals.includes(interval)
+        ? prev.intervals.filter(i => i !== interval)
+        : [...prev.intervals, interval],
+    }))
+  }
+
+  const saveConfig = async () => {
+    if (!tenantId) return
+    setSaving(true)
+    await fetch('/api/tenant/reminders', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenant_id: tenantId, config }),
+    })
+    setSaving(false)
+  }
+
+  if (!loaded) return null
+
+  const INTERVALS = [
+    { key: '24h', label: '24 horas antes', desc: 'Recordatorio el dia anterior' },
+    { key: '2h', label: '2 horas antes', desc: 'Recordatorio cercano' },
+    { key: '30min', label: '30 minutos antes', desc: 'Recordatorio de ultima hora' },
+  ]
+
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
+      <button onClick={() => setOpen(!open)} style={{
+        width: '100%', padding: '16px 20px', border: 'none', background: 'transparent', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 15 }}>⏰</span>
+          <span style={{ color: C.teal, fontSize: 13, fontWeight: 700, letterSpacing: '0.04em' }}>
+            {_tx('RECORDATORIOS AL CLIENTE')}
+          </span>
+        </div>
+        <span style={{ color: C.muted, fontSize: 12, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▼</span>
+      </button>
+
+      {open && (
+        <div style={{ padding: '0 20px 20px', borderTop: `1px solid ${C.border}` }}>
+          <p style={{ fontSize: 12, color: C.muted, margin: '12px 0 16px' }}>
+            {_tx('El sistema envia recordatorios automaticos a tus clientes antes de su cita')}
+          </p>
+
+          {/* Enable/disable */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{_tx('Recordatorios activados')}</span>
+            <div onClick={() => setConfig(prev => ({ ...prev, enabled: !prev.enabled }))} style={{
+              width: 40, height: 22, borderRadius: 11, cursor: 'pointer',
+              background: config.enabled ? C.teal : C.muted + '40',
+              position: 'relative', transition: 'background 0.15s',
+            }}>
+              <div style={{
+                width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                position: 'absolute', top: 2,
+                left: config.enabled ? 20 : 2,
+                transition: 'left 0.15s',
+              }} />
+            </div>
+          </div>
+
+          {config.enabled && (
+            <>
+              {/* Intervals */}
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 8, letterSpacing: '0.04em' }}>
+                  {_tx('CUANDO ENVIAR')}
+                </p>
+                {INTERVALS.map(int => {
+                  const active = config.intervals.includes(int.key)
+                  return (
+                    <div key={int.key} onClick={() => toggleInterval(int.key)} style={{
+                      padding: '10px 14px', borderRadius: 10, marginBottom: 6, cursor: 'pointer',
+                      border: `1px solid ${active ? C.teal + '40' : C.border}`,
+                      background: active ? C.tealDim : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      transition: 'all 0.15s',
+                    }}>
+                      <div>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: active ? C.text : C.muted }}>{int.label}</span>
+                        <p style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{int.desc}</p>
+                      </div>
+                      {active && <span style={{ color: C.teal, fontSize: 16 }}>✓</span>}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Channel preference */}
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 8, letterSpacing: '0.04em' }}>
+                  {_tx('CANAL PREFERIDO')}
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {(['sms', 'whatsapp'] as const).map(ch => (
+                    <button key={ch} onClick={() => setConfig(prev => ({ ...prev, channel: ch }))} style={{
+                      padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      border: `1px solid ${config.channel === ch ? C.teal + '40' : C.border}`,
+                      background: config.channel === ch ? C.tealDim : 'transparent',
+                      color: config.channel === ch ? C.teal : C.muted,
+                      cursor: 'pointer',
+                    }}>
+                      {ch === 'sms' ? 'SMS' : 'WhatsApp'}
+                    </button>
+                  ))}
+                </div>
+                <p style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>
+                  {_tx('Si el canal principal falla, se intenta por el otro automaticamente')}
+                </p>
+              </div>
+            </>
+          )}
+
+          <button onClick={saveConfig} disabled={saving} style={{
+            padding: '10px 24px', borderRadius: 10, border: 'none',
+            background: `linear-gradient(135deg, ${C.teal}, #1BB5A0)`,
+            color: '#0C1018', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            opacity: saving ? 0.6 : 1,
+          }}>
+            {saving ? _tx('Guardando...') : _tx('Guardar recordatorios')}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

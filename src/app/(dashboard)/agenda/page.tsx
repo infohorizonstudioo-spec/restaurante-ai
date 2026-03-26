@@ -118,7 +118,8 @@ function ResBlock({r, onHover, onLeave}: {r:any, onHover:(e:React.MouseEvent,r:a
 
 // ── Página principal ──────────────────────────────────────────────────────
 export default function AgendaPage() {
-  const { tenant, loading: tenantLoading } = useTenant()
+  const { tenant, template, loading: tenantLoading } = useTenant()
+  const L = template?.labels
   const [base,setBase]   = useState(new Date())
   const [res,setRes]     = useState<any[]>([])
   const [loading,setLoad]= useState(true)
@@ -231,7 +232,7 @@ export default function AgendaPage() {
             <Stat label="Hoy" value={todayCount} color="#34d399"/>
           </div>}
           <Link href="/reservas/nueva" className="new-btn">
-            <span style={{fontSize:16,lineHeight:1}}>+</span>{!isMobile&&' Nueva reserva'}
+            <span style={{fontSize:16,lineHeight:1}}>+</span>{!isMobile&&` Nueva ${L?.reserva || 'reserva'}`}
           </Link>
           <NotifBell/>
         </div>

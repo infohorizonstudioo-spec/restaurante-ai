@@ -7,6 +7,15 @@ import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import { getStatusLabel } from '@/lib/i18n'
 import EcomReservasView from './EcomReservasView'
+import VetReservasView from './VetReservasView'
+import BarbeReservasView from './BarbeReservasView'
+import PeluReservasView from './PeluReservasView'
+import FisioReservasView from './FisioReservasView'
+import PsicoReservasView from './PsicoReservasView'
+import AsesorReservasView from './AsesorReservasView'
+import SegurosReservasView from './SegurosReservasView'
+import InmoReservasView from './InmoReservasView'
+import AcademiaClasesView from './AcademiaClasesView'
 
 const C = {
   amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
@@ -46,6 +55,15 @@ function getWeek(base: Date) {
 export default function ReservasPage() {
   const { tenant, template, t, tx } = useTenant()
   if (tenant?.type === 'ecommerce') return <EcomReservasView />
+  if (tenant?.type === 'veterinaria') return <VetReservasView />
+  if (tenant?.type === 'barberia') return <BarbeReservasView />
+  if (tenant?.type === 'peluqueria') return <PeluReservasView />
+  if (tenant?.type === 'fisioterapia') return <FisioReservasView />
+  if (tenant?.type === 'psicologia') return <PsicoReservasView />
+  if (tenant?.type === 'asesoria') return <AsesorReservasView />
+  if (tenant?.type === 'seguros') return <SegurosReservasView />
+  if (tenant?.type === 'inmobiliaria') return <InmoReservasView />
+  if (tenant?.type === 'academia') return <AcademiaClasesView />
 
   const [base,setBase]         = useState(new Date())
   const [selected,setSelected] = useState(new Date().toISOString().slice(0,10))

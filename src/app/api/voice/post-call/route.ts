@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { getBusinessRules } from '@/lib/business-memory'
 import { getBusinessKnowledge, buildKnowledgeContext } from '@/lib/business-knowledge'
+import { resolveTemplate } from '@/lib/templates'
 import { createNotification } from '@/lib/notifications'
 import { learnFromCall, getTenantMemory, buildMemoryContext, getAdaptiveThresholds } from '@/lib/tenant-learning'
 
@@ -49,9 +50,9 @@ function analyzeLocally(transcript: string, callerPhone: string): CallAnalysis {
   let intent = 'consulta'
   if (/cancelar|cancela|anular|anulo|no\s+puedo\s+ir|no\s+vamos|no\s+podemos/i.test(t))
     intent = 'cancelacion'
-  else if (/pedir|pedido|llevar|domicilio|recoger|pizza|pollo|hamburguesa|bocadillo/i.test(t))
+  else if (/pedir|pedido|llevar|domicilio|recoger|enviar|envío|comprar/i.test(t))
     intent = 'pedido'
-  else if (/reserv|mesa|terraza|interior|personas?|cena|comida|almuerzo|comer|cita/i.test(t))
+  else if (/reserv|mesa|terraza|interior|personas?|cena|comida|almuerzo|comer|cita|sesión|sesion|clase|consulta médica|consulta dental|tratamiento|visita|habitación|habitacion|turno|hora|agendar|pedir\s+(?:cita|hora|turno)/i.test(t))
     intent = 'reserva'
   else if (/queja|reclamaci|problema|incidente|horrible|terrible/i.test(t))
     intent = 'queja'
@@ -100,7 +101,7 @@ function analyzeLocally(transcript: string, callerPhone: string): CallAnalysis {
 
   // ── Detalles ────────────────────────────────────────────────────────────
   const timeMatch   = transcript.match(/(?:a las?|para las?)\s+(\d{1,2}(?:[:h]\d{0,2})?(?:\s*(?:de la (?:tarde|noche|mañana))?))/i)
-  const peopleMatch = transcript.match(/(\d+)\s*(?:personas?|comensales?|adultos?)/i)
+  const peopleMatch = transcript.match(/(\d+)\s*(?:personas?|comensales?|adultos?|huéspedes?|alumnos?|socios?)/i)
   const dateMatch   = transcript.match(/\b(mañana|hoy|pasado mañana|lunes|martes|miércoles|jueves|viernes|sábado|domingo)\b/i)
 
   // ── Resumen ─────────────────────────────────────────────────────────────
@@ -422,7 +423,9 @@ export async function POST(req: Request) {
     if (analysis.details?.is_urgency) specialFlags.push('out_of_policy')
     if (confidence < (effectiveRules.min_confidence_to_confirm || 0.7)) specialFlags.push('low_confidence')
 
-    const decisionStatus = analysis.intent === 'reserva' && confidence >= (effectiveRules.min_confidence_to_confirm || 0.7)
+    const threshold = effectiveRules.min_confidence_to_confirm || 0.7
+    const isBookingIntent = analysis.intent === 'reserva' || analysis.intent === 'pedido'
+    const decisionStatus = isBookingIntent && confidence >= threshold
       ? 'confirmed'
       : analysis.intent === 'cancelacion' ? 'cancelled'
       : confidence < 0.55 ? 'needs_human_attention'
@@ -545,7 +548,7 @@ export async function POST(req: Request) {
           await createNotification({
             tenant_id: tenantId,
             type:      'reservation_created',
-            title:     `Nueva reserva — ${name}`,
+            title:     `Nueva ${resolveTemplate(tenantInfo?.type || 'otro').labels.reserva.toLowerCase()} — ${name}`,
             body:      decision.summary,
             call_sid:  key,
             priority:  'info',

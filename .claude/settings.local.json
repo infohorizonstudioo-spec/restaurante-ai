@@ -126,7 +126,13 @@
       "Bash(find /c/Users/krush/restaurante-ai -type f \\\\\\(-name *.sql -o -name *migration* \\\\\\))",
       "Bash(find /c/Users/krush/restaurante-ai -type f \\\\\\(-name *.md -o -name schema.* \\\\\\))",
       "Bash(ls:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git remote:*)",
+      "Bash(find \"/c/Users/krush/restaurante-ai\" -type f -name \"*.tsx\" -path \"*/app/\\(dashboard\\)/*\")",
+      "Bash(find \"/c/Users/krush/restaurante-ai/src/app/\\(dashboard\\)\" -type f -name \"*.tsx\")",
+      "Bash(npm install:*)"
     ]
   }
 }

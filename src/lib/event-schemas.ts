@@ -25,6 +25,15 @@ const CONFIGS: Record<string, BusinessEventConfig> = {
   fisioterapia: { ...DEFAULT_CONFIG, eventLabel: 'Sesión', eventLabelPlural: 'Sesiones' },
   psicologia: { ...DEFAULT_CONFIG, eventLabel: 'Sesión', eventLabelPlural: 'Sesiones' },
   inmobiliaria: { ...DEFAULT_CONFIG, eventLabel: 'Visita', eventLabelPlural: 'Visitas' },
+  asesoria: { ...DEFAULT_CONFIG, eventLabel: 'Cita', eventLabelPlural: 'Citas' },
+  seguros: { ...DEFAULT_CONFIG, eventLabel: 'Cita', eventLabelPlural: 'Citas' },
+  gimnasio: { ...DEFAULT_CONFIG, eventLabel: 'Clase', eventLabelPlural: 'Clases' },
+  academia: { ...DEFAULT_CONFIG, eventLabel: 'Clase', eventLabelPlural: 'Clases' },
+  spa: { ...DEFAULT_CONFIG, eventLabel: 'Cita', eventLabelPlural: 'Citas' },
+  taller: { ...DEFAULT_CONFIG, eventLabel: 'Cita', eventLabelPlural: 'Citas' },
+  hotel: { ...DEFAULT_CONFIG, eventLabel: 'Reserva', eventLabelPlural: 'Reservas', fields: ['customer_name', 'checkin_date', 'checkout_date', 'guests', 'room_type', 'notes'] },
+  ecommerce: { ...DEFAULT_CONFIG, eventLabel: 'Pedido', eventLabelPlural: 'Pedidos', fields: ['customer_name', 'items', 'address', 'notes'], actions: ['confirm', 'cancel', 'ship', 'deliver'] },
+  cafeteria: { ...DEFAULT_CONFIG, eventLabel: 'Reserva', eventLabelPlural: 'Reservas' },
 }
 
 export function getEventConfig(businessType: string): BusinessEventConfig {

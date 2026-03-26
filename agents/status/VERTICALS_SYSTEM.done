@@ -1,0 +1,31 @@
+COMPLETADO
+
+ARCHIVOS MODIFICADOS:
+- src/lib/agent-tools.ts — Fix bug: tenantType no estaba destructurado en createReservationTool (línea 215)
+- src/app/onboarding/page.tsx — Añadidos 13 flujos de onboarding completos para todos los tipos de negocio
+
+FLUJOS DE ONBOARDING AÑADIDOS:
+- barberia (corte, barba, servicios, staff)
+- fisioterapia (tratamientos, duración, profesionales)
+- psicologia (servicios, duración, profesionales)
+- hotel (habitaciones, check-in/out, capacidad)
+- ecommerce (gestiones: pedidos, productos, devoluciones)
+- gimnasio (actividades, capacidad clases)
+- academia (cursos, alumnos por clase)
+- spa (tratamientos, terapeutas/cabinas)
+- taller (servicios mecánicos, urgencias, capacidad)
+- seguros (tipos de seguro, siniestros urgentes)
+- inmobiliaria (servicios, agentes, visitas)
+- cafeteria (reservas, pedidos)
+
+SIMULACIONES DE CONVERSACIÓN AÑADIDAS:
+- barberia, fisioterapia, psicologia, hotel, ecommerce, gimnasio, academia, spa, taller, seguros, inmobiliaria
+
+COBERTURA VERIFICADA:
+- 20 tipos en get-context (lógica del agente por vertical)
+- 20+ tipos en provision-agent (prompts ElevenLabs por vertical)
+- 19 tipos en scheduling-engine (reglas de horarios por vertical)
+- 18+ tipos en agent-decision (reglas de decisión por vertical)
+- 19 flujos de onboarding + 1 fallback = todos los tipos cubiertos
+- 18 tipos en registro = todos con flujo de onboarding real
+- 0 errores TypeScript

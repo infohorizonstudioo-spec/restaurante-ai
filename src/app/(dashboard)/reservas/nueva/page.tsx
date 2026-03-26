@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PageLoader } from '@/components/ui'
+import { useTenant } from '@/contexts/TenantContext'
 
 const HOURS = Array.from({length:30},(_,i)=>{
   const h = Math.floor(i/2)+8
@@ -13,6 +14,8 @@ const HOURS = Array.from({length:30},(_,i)=>{
 
 export default function NuevaReservaPage() {
   const router = useRouter()
+  const { template } = useTenant()
+  const L = template?.labels
   const [tid, setTid]       = useState<string|null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -83,7 +86,7 @@ export default function NuevaReservaPage() {
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
             body: JSON.stringify({
               to: form.customer_phone,
-              message: `✅ Reserva confirmada: ${form.customer_name}, ${dateStr} a las ${form.time}, ${form.people} personas. ¡Te esperamos!`
+              message: `✅ ${L?.reserva || 'Reserva'} confirmada: ${form.customer_name}, ${dateStr} a las ${form.time}, ${form.people} personas. ¡Te esperamos!`
             })
           }).catch(() => {})
         }
@@ -122,7 +125,7 @@ export default function NuevaReservaPage() {
         <div style={{display:'flex', alignItems:'center', gap:12}}>
           <Link href="/agenda" style={{display:'flex', alignItems:'center', justifyContent:'center', width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`, color:C.sub, textDecoration:'none', fontSize:16}}>←</Link>
           <div>
-            <h1 style={{fontSize:17, fontWeight:700, color:C.text}}>Nueva reserva</h1>
+            <h1 style={{fontSize:17, fontWeight:700, color:C.text}}>Nueva {L?.reserva?.toLowerCase() || 'reserva'}</h1>
             <p style={{fontSize:12, color:C.muted, marginTop:1}}>Añadir manualmente</p>
           </div>
         </div>
@@ -134,7 +137,7 @@ export default function NuevaReservaPage() {
 
           {/* Nombre */}
           <div>
-            <label style={label}>NOMBRE DEL CLIENTE *</label>
+            <label style={label}>NOMBRE DEL {(L?.cliente || 'CLIENTE').toUpperCase()} *</label>
             <input className="rz-inp" style={inp} placeholder="Juan García" value={form.customer_name} onChange={e=>up('customer_name',e.target.value)} autoFocus/>
           </div>
 
@@ -191,7 +194,7 @@ export default function NuevaReservaPage() {
               border:'none', borderRadius:10, color:'#0C1018', fontSize:14, fontWeight:700,
               cursor: saving ? 'not-allowed' : 'pointer', fontFamily:'inherit', transition:'all 0.15s'
             }}>
-              {saving ? 'Guardando...' : '✓ Confirmar reserva'}
+              {saving ? 'Guardando...' : `✓ Confirmar ${L?.reserva?.toLowerCase() || 'reserva'}`}
             </button>
           </div>
 

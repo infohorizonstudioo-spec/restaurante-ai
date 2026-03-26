@@ -25,12 +25,33 @@ const AVAIL_CFG = {
 
 type AvailType = keyof typeof AVAIL_CFG
 
-const CATEGORIES = ['Entrantes','Carnes','Pescados','Postres','Bebidas','Menú del día','Especiales','Otro']
+const CATEGORIES_BY_TYPE: Record<string, string[]> = {
+  restaurante: ['Entrantes','Carnes','Pescados','Postres','Bebidas','Menú del día','Especiales','Otro'],
+  bar: ['Tapas','Raciones','Bocadillos','Bebidas','Cócteles','Especiales','Otro'],
+  cafeteria: ['Cafés','Desayunos','Meriendas','Bollería','Bocadillos','Bebidas','Otro'],
+  hotel: ['Habitaciones','Servicios','Restaurante','Minibar','Packs','Otro'],
+  ecommerce: ['Electrónica','Ropa','Hogar','Accesorios','Deportes','Ofertas','Otro'],
+  gimnasio: ['Abonos','Clases','Entrenamiento personal','Suplementos','Otro'],
+  academia: ['Idiomas','Refuerzo','Oposiciones','Formación profesional','Talleres','Otro'],
+  spa: ['Masajes','Faciales','Corporales','Circuitos','Bonos','Otro'],
+  taller: ['Revisiones','Neumáticos','Mecánica','Electricidad','Chapa y pintura','Otro'],
+  clinica_dental: ['Revisiones','Limpieza','Empastes','Ortodoncia','Implantes','Estética','Otro'],
+  clinica_medica: ['Consultas','Revisiones','Pruebas','Especialidades','Otro'],
+  veterinaria: ['Consultas','Vacunas','Cirugía','Peluquería','Productos','Otro'],
+  fisioterapia: ['Manual','Deportiva','Rehabilitación','Electroterapia','Pilates','Otro'],
+  psicologia: ['Individual','Pareja','Familiar','Infantil','Online','Otro'],
+  asesoria: ['Fiscal','Laboral','Contabilidad','Jurídico','Mercantil','Otro'],
+  seguros: ['Auto','Hogar','Salud','Vida','Negocio','Otro'],
+  inmobiliaria: ['Venta','Alquiler','Vacacional','Tasaciones','Otro'],
+}
+const DEFAULT_CATEGORIES = ['General','Servicios','Productos','Otro']
 
 export default function ProductosPage() {
   const { tenant } = useTenant()
   if (tenant?.type === 'barberia') return <BarbeProductosView />
   if (tenant?.type === 'peluqueria') return <PeluProductosView />
+
+  const CATEGORIES = CATEGORIES_BY_TYPE[tenant?.type || ''] || DEFAULT_CATEGORIES
 
   const [tid, setTid]         = useState<string|null>(null)
   const [items, setItems]     = useState<any[]>([])
@@ -225,17 +246,18 @@ export default function ProductosPage() {
       </div>
 
       {/* Modal */}
-      {modal && <ProductModal item={modal._new ? null : modal} onSave={saveItem} onClose={() => setModal(null)} />}
+      {modal && <ProductModal item={modal._new ? null : modal} onSave={saveItem} onClose={() => setModal(null)} categories={CATEGORIES} />}
     </div>
   )
 }
 
 
-function ProductModal({ item, onSave, onClose }: { item: any | null, onSave: (d: any) => void, onClose: () => void }) {
+function ProductModal({ item, onSave, onClose, categories }: { item: any | null, onSave: (d: any) => void, onClose: () => void, categories: string[] }) {
+  const CATEGORIES = categories
   const [form, setForm] = useState({
     id:                   item?.id || undefined,
     name:                 item?.name || '',
-    category:             item?.category || 'Carnes',
+    category:             item?.category || categories[0] || 'General',
     description:          item?.description || '',
     availability_type:    (item?.availability_type || 'always_available') as AvailType,
     daily_limit:          item?.daily_limit || '',

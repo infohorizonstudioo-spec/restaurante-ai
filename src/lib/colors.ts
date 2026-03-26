@@ -23,4 +23,9 @@ export const C = {
   surface3: '#202C3E',
   border: 'rgba(255,255,255,0.07)',
   borderMd: 'rgba(255,255,255,0.11)',
+  // Aliases for backwards compatibility with page-local C objects
+  card: '#131920',
+  card2: '#161D2A',
+  sub: '#8895A7',
+  muted: '#49566A',
 }

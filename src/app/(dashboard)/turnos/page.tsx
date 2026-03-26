@@ -35,7 +35,8 @@ function SlotBar({ label, used, max }: { label: string; used: number; max: numbe
 }
 
 export default function TurnosPage() {
-  const { tx } = useTenant()
+  const { template, tx } = useTenant()
+  const L = template?.labels
   const [tid, setTid]           = useState<string|null>(null)
   const [loading, setLoading]   = useState(true)
   const [stats, setStats]       = useState<SlotStats[]>([])
@@ -104,7 +105,7 @@ export default function TurnosPage() {
         {/* KPIs */}
         <div className="rz-grid-4col" style={{ gap:10, marginBottom:20 }}>
           {[
-            { label:tx('Reservas hoy'), value:totalReservas, color:C.amber },
+            { label:tx(`${L?.reservas || 'Reservas'} hoy`), value:totalReservas, color:C.amber },
             { label:tx('Personas hoy'), value:totalPersonas, color:C.teal },
             { label:tx('Franjas activas'), value:slotsWithRes, color:C.green },
             { label:tx('Franjas completas'), value:slotsFull, color:slotsFull>0?C.red:C.muted },

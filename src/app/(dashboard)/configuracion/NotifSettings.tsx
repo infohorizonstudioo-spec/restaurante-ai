@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
+import { useTenant } from '@/contexts/TenantContext'
 
 const C = {
   amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)', amberBorder:'rgba(240,168,78,0.25)',
@@ -32,6 +33,9 @@ const PREF_KEY = 'rz-notif-prefs'
 const DEFAULT_PREFS = { calls:true, reservas:true, pedidos:true, incidencias:true, pendientes:true, sound:true }
 
 export default function NotifSettings() {
+  const { tenant, template } = useTenant()
+  const L = template?.labels
+  const hasOrders = template?.hasOrders ?? false
   const { status, requestPermission, sendTest } = usePushNotifications()
   const [prefs, setPrefs] = useState(() => {
     if (typeof window === 'undefined') return DEFAULT_PREFS
@@ -91,11 +95,11 @@ export default function NotifSettings() {
 
         {/* Tipos */}
         <Toggle on={prefs.calls}       onChange={v=>setPref('calls',v)}       label="Llamadas"              desc="Nueva llamada, llamada activa, perdida"/>
-        <Toggle on={prefs.reservas}    onChange={v=>setPref('reservas',v)}    label="Reservas"              desc="Nueva reserva, pendiente de revisión"/>
-        <Toggle on={prefs.pedidos}     onChange={v=>setPref('pedidos',v)}     label="Pedidos"               desc="Nuevo pedido recibido"/>
+        <Toggle on={prefs.reservas}    onChange={v=>setPref('reservas',v)}    label={L?.reservas || 'Reservas'} desc={`Nueva ${L?.reserva?.toLowerCase() || 'reserva'}, pendiente de revisión`}/>
+        {hasOrders && <Toggle on={prefs.pedidos}     onChange={v=>setPref('pedidos',v)}     label="Pedidos"               desc="Nuevo pedido recibido"/>}
         <Toggle on={prefs.incidencias} onChange={v=>setPref('incidencias',v)} label="Incidencias"           desc="Alertas importantes y problemas"/>
         <div style={{ paddingBottom:4 }}>
-          <Toggle on={prefs.pendientes} onChange={v=>setPref('pendientes',v)} label="Pendientes de revisión" desc="Llamadas o reservas que necesitan atención"/>
+          <Toggle on={prefs.pendientes} onChange={v=>setPref('pendientes',v)} label="Pendientes de revisión" desc={`Llamadas o ${L?.reservas?.toLowerCase() || 'reservas'} que necesitan atención`}/>
         </div>
         <Toggle on={prefs.sound} onChange={v=>setPref('sound',v)} label="Sonido al recibir avisos" desc="Reproducir un tono suave con cada notificación"/>
 

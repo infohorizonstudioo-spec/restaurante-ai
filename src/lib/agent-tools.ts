@@ -6,6 +6,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { parseReservationConfig, checkSlotAvailability, generateSlots } from './scheduling-engine'
 import { resolveTemplate } from './templates'
+import { makeDecision } from './agent-decision'
+import { scheduleReminders, cancelReminders } from './reminder-engine'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -48,6 +50,12 @@ export async function sendWhatsApp(to: string, body: string): Promise<boolean> {
     })
     return true
   } catch { return false }
+}
+
+// ── Helper: get business-type-aware label (reserva/cita/sesión/clase) ────
+function getBookingLabel(type: string): { singular: string; plural: string } {
+  const tmpl = resolveTemplate(type)
+  return { singular: tmpl.labels.reserva.toLowerCase(), plural: tmpl.labels.reservas.toLowerCase() }
 }
 
 // ── Helper: format date for display ──────────────────────────
@@ -211,7 +219,7 @@ export async function createReservationTool(params: {
   const source = params.source || 'voice_agent'
 
   // 1. Check availability
-  const { cfg, tmpl, zones, tables, existing, tenantName } = await loadAvailabilityContext(tenant_id, finalDate)
+  const { tenantType, cfg, tmpl, zones, tables, existing, tenantName } = await loadAvailabilityContext(tenant_id, finalDate)
 
   const availability = checkSlotAvailability({
     time: finalTime, date: finalDate, party_size: finalPartySize, zone_name: zone,
@@ -289,36 +297,99 @@ export async function createReservationTool(params: {
     }
   }
 
-  // 5. Insert reservation
+  // 5. Run decision engine — per-type logic decides auto-confirm vs needs-review
+  const decision = await makeDecision({
+    tenantId: tenant_id,
+    type: tenantType,
+    input: {
+      party_size: finalPartySize,
+      date: finalDate,
+      time: finalTime,
+      notes: notesStr,
+      customer_name,
+      customer_phone,
+    },
+  })
+
+  // Crisis handling (psicologia) — don't create reservation, flag immediately
+  if (decision.action === 'crisis') {
+    await supabase.from('notifications').insert({
+      tenant_id, type: 'crisis_alert',
+      title: `⚠️ ALERTA — ${customer_name}`,
+      body: decision.reason,
+      read: false,
+    })
+    return {
+      success: true, crisis: true,
+      message: decision.reason,
+      flags: decision.flags,
+    }
+  }
+
+  // Reject — date too far, past date, etc.
+  if (decision.action === 'reject') {
+    return {
+      success: false, rejected: true,
+      reason: decision.reason,
+      flags: decision.flags,
+      message: decision.reason,
+    }
+  }
+
+  const finalStatus = decision.status === 'confirmed' ? 'confirmada' : 'pendiente'
+
+  // 6. Insert reservation with decision-based status
   const { data: reservation, error } = await supabase.from('reservations').insert({
     tenant_id, customer_id: customerId, customer_name,
     customer_phone: customer_phone || null,
     date: finalDate, time: finalTime, people: finalPartySize,
     table_id: assignedTableId, notes: notesStr || null,
-    status: 'confirmada', source,
+    status: finalStatus, source,
   }).select('id').maybeSingle()
 
   if (error) return { success: false, error: 'could not create reservation: ' + error.message }
 
-  // 6. Update table status
+  // 7. Update table status
   if (assignedTableId) {
     await supabase.from('tables').update({ status: 'reservada' }).eq('id', assignedTableId)
   }
 
-  // 7. SMS confirmation
+  // 8. Notification for owner if needs review
+  if (decision.action === 'needs_review') {
+    await supabase.from('notifications').insert({
+      tenant_id, type: 'reservation_review',
+      title: `📋 Revisar — ${customer_name} (${finalPartySize}p)`,
+      body: `${decision.reason} | ${formatDateES(finalDate)} a las ${finalTime}`,
+      read: false,
+    })
+  }
+
+  // 9. SMS confirmation — con terminología adaptada al tipo de negocio
+  const bLabel = getBookingLabel(tenantType)
   if (customer_phone) {
     const bizName = tenantName || 'Tu negocio'
     const dateStr = formatDateES(finalDate)
-    const smsBody = `✅ ${bizName}: Hola ${customer_name}, tu reserva está confirmada para el ${dateStr} a las ${finalTime}, ${finalPartySize} persona${finalPartySize !== 1 ? 's' : ''}. ¡Te esperamos!`
+    const smsBody = finalStatus === 'confirmada'
+      ? `✅ ${bizName}: Hola ${customer_name}, tu ${bLabel.singular} está confirmada para el ${dateStr} a las ${finalTime}${finalPartySize > 1 ? `, ${finalPartySize} personas` : ''}. ¡Te esperamos!`
+      : `📋 ${bizName}: Hola ${customer_name}, tu ${bLabel.singular} para el ${dateStr} a las ${finalTime}${finalPartySize > 1 ? ` (${finalPartySize}p)` : ''} está pendiente de confirmación. Te avisamos enseguida.`
     sendSms(customer_phone, smsBody).catch(() => {})
+  }
+
+  // Schedule reminders
+  if (reservation?.id) {
+    scheduleReminders(reservation.id).catch(() => {})
   }
 
   return {
     success: true, reservation_id: reservation?.id || null,
     customer_name, date: finalDate, time: finalTime, party_size: finalPartySize,
     table: assignedTableId ? `Mesa asignada${assignedTableInfo}` : null,
-    status: 'confirmed',
-    message: `Reserva confirmada para ${customer_name} el ${finalDate} a las ${finalTime}, ${finalPartySize} persona${finalPartySize !== 1 ? 's' : ''}${assignedTableInfo}.`,
+    status: finalStatus === 'confirmada' ? 'confirmed' : 'pending_review',
+    decision_flags: decision.flags,
+    decision_confidence: decision.confidence,
+    message: finalStatus === 'confirmada'
+      ? `${bLabel.singular.charAt(0).toUpperCase() + bLabel.singular.slice(1)} confirmada para ${customer_name} el ${finalDate} a las ${finalTime}, ${finalPartySize} persona${finalPartySize !== 1 ? 's' : ''}${assignedTableInfo}.`
+      : `${bLabel.singular.charAt(0).toUpperCase() + bLabel.singular.slice(1)} registrada para ${customer_name} el ${finalDate} a las ${finalTime}, ${finalPartySize} persona${finalPartySize !== 1 ? 's' : ''}. Pendiente de confirmación por el negocio.`,
   }
 }
 
@@ -332,6 +403,10 @@ export async function cancelReservationTool(params: {
   if (!customer_phone && !customer_name) {
     return { success: false, error: 'customer_phone or customer_name required' }
   }
+
+  // Get tenant type for dynamic labels
+  const { data: tenantData } = await supabase.from('tenants').select('type').eq('id', tenant_id).maybeSingle()
+  const bLabel = getBookingLabel(tenantData?.type || 'otro')
 
   let query = supabase.from('reservations')
     .select('id, customer_name, customer_phone, date, time, people, status')
@@ -369,7 +444,7 @@ export async function cancelReservationTool(params: {
   if (toCancel.customer_phone) {
     const { data: tenantInfo } = await supabase.from('tenants').select('name').eq('id', tenant_id).maybeSingle()
     const bizName = tenantInfo?.name || 'Tu negocio'
-    sendSms(toCancel.customer_phone, `❌ ${bizName}: ${toCancel.customer_name}, tu reserva del ${dateStr} a las ${time} ha sido cancelada. Si necesitas algo, llámanos.`).catch(() => {})
+    sendSms(toCancel.customer_phone, `❌ ${bizName}: ${toCancel.customer_name}, tu ${bLabel.singular} del ${dateStr} a las ${time} ha sido cancelada. Si necesitas algo, llámanos.`).catch(() => {})
   }
 
   // Notify waitlist
@@ -379,7 +454,7 @@ export async function cancelReservationTool(params: {
     .order('created_at').limit(1).maybeSingle()
 
   if (waitlisted?.customer_phone) {
-    sendSms(waitlisted.customer_phone, `🎉 ¡Buenas noticias, ${waitlisted.customer_name}! Ha quedado un hueco el ${dateStr}. Llámanos para confirmar tu reserva.`).catch(() => {})
+    sendSms(waitlisted.customer_phone, `🎉 ¡Buenas noticias, ${waitlisted.customer_name}! Ha quedado un hueco el ${dateStr}. Llámanos para confirmar tu ${bLabel.singular}.`).catch(() => {})
     await supabase.from('waitlist').update({ status: 'notified' }).eq('id', waitlisted.id)
   }
 
@@ -387,14 +462,17 @@ export async function cancelReservationTool(params: {
   await supabase.from('notifications').insert({
     tenant_id, type: 'reservation_cancelled',
     title: `Cancelación — ${toCancel.customer_name}`,
-    body: `${toCancel.customer_name} canceló su reserva del ${dateStr} a las ${time} (${toCancel.people}p)`,
+    body: `${toCancel.customer_name} canceló su ${bLabel.singular} del ${dateStr} a las ${time} (${toCancel.people}p)`,
     read: false,
   })
+
+  // Cancel scheduled reminders
+  cancelReminders(toCancel.id).catch(() => {})
 
   return {
     success: true, cancelled_id: toCancel.id,
     customer_name: toCancel.customer_name, date: toCancel.date, time, people: toCancel.people,
-    message: `Cancelada la reserva de ${toCancel.customer_name} para el ${dateStr} a las ${time}, ${toCancel.people} personas.`,
+    message: `Cancelada la ${bLabel.singular} de ${toCancel.customer_name} para el ${dateStr} a las ${time}, ${toCancel.people} personas.`,
     waitlist_notified: !!waitlisted,
   }
 }
@@ -409,6 +487,9 @@ export async function modifyReservationTool(params: {
   const { tenant_id, customer_name, customer_phone, new_date, new_time, new_party_size } = params
   if (!customer_phone && !customer_name) return { success: false, error: 'need phone or name' }
   if (!new_date && !new_time && !new_party_size) return { success: false, error: 'need at least one change' }
+
+  const { data: tenantData } = await supabase.from('tenants').select('type').eq('id', tenant_id).maybeSingle()
+  const bLabel = getBookingLabel(tenantData?.type || 'otro')
 
   let query = supabase.from('reservations')
     .select('id, customer_name, customer_phone, date, time, people, status, tenant_id')
@@ -425,8 +506,8 @@ export async function modifyReservationTool(params: {
     return {
       success: false, found: false,
       message: customer_phone
-        ? `No encuentro ninguna reserva activa con el teléfono ${customer_phone}.`
-        : `No encuentro ninguna reserva a nombre de ${customer_name}.`,
+        ? `No encuentro ninguna ${bLabel.singular} activa con el teléfono ${customer_phone}.`
+        : `No encuentro ninguna ${bLabel.singular} a nombre de ${customer_name}.`,
       suggestion: 'Pregúntale si puede dar más datos.',
     }
   }
@@ -472,14 +553,18 @@ export async function modifyReservationTool(params: {
   const phone = original.customer_phone || customer_phone
   if (phone) {
     const bizName = tenantName || 'Tu negocio'
-    sendSms(phone, `${bizName}: Hola ${original.customer_name}, tu reserva ha sido modificada: ${newDateStr} a las ${finalTime}, ${finalPeople} personas. Te esperamos!`).catch(() => {})
+    sendSms(phone, `${bizName}: Hola ${original.customer_name}, tu ${bLabel.singular} ha sido modificada: ${newDateStr} a las ${finalTime}, ${finalPeople} personas. Te esperamos!`).catch(() => {})
   }
+
+  // Re-schedule reminders
+  cancelReminders(original.id).catch(() => {})
+  scheduleReminders(original.id).catch(() => {})
 
   return {
     success: true, reservation_id: original.id, customer_name: original.customer_name,
     old: { date: original.date, time: oldTime, people: original.people },
     new: { date: finalDate, time: finalTime, people: finalPeople },
-    message: `Reserva modificada: ${original.customer_name}, ahora el ${newDateStr} a las ${finalTime}, ${finalPeople} personas.`,
+    message: `${bLabel.singular.charAt(0).toUpperCase() + bLabel.singular.slice(1)} modificada: ${original.customer_name}, ahora el ${newDateStr} a las ${finalTime}, ${finalPeople} personas.`,
   }
 }
 

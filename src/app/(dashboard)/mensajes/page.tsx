@@ -25,16 +25,18 @@ const CHANNEL_META: Record<string, { icon: string; color: string; label: string 
 }
 
 const STATUS_META: Record<string, { color: string; label: string }> = {
-  active:   { color: C.green, label: 'Activa' },
-  closed:   { color: C.text3, label: 'Cerrada' },
-  pending:  { color: C.yellow, label: 'Pendiente' },
-  archived: { color: C.text3, label: 'Archivada' },
+  active:    { color: C.green, label: 'Activa' },
+  escalated: { color: C.red, label: 'Escalada' },
+  closed:    { color: C.text3, label: 'Cerrada' },
+  pending:   { color: C.yellow, label: 'Pendiente' },
+  archived:  { color: C.text3, label: 'Archivada' },
 }
 
 type Conversation = {
   id: string; channel: string; status: string; intent?: string; summary?: string;
   from_identifier?: string; last_message_at: string; created_at: string;
-  customer_id?: string; metadata?: any;
+  customer_id?: string; metadata?: any; priority?: string;
+  escalated_at?: string; escalated_reason?: string;
   customer?: { name: string; phone?: string; email?: string }
 }
 
@@ -134,9 +136,25 @@ export default function MensajesPage() {
     loadMessages(selected.id)
   }
 
+  // ── Escalation actions ─────────────────────────────────────
+  const handleEscalation = async (action: 'escalate' | 'resume' | 'close') => {
+    if (!selected || !tid) return
+    await fetch('/api/channels/escalate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversationId: selected.id, tenantId: tid, action }),
+    })
+    const newStatus = action === 'escalate' ? 'escalated' : action === 'resume' ? 'active' : 'closed'
+    setSelected({ ...selected, status: newStatus })
+    loadConversations(tid)
+  }
+
   // ── Filter conversations ───────────────────────────────────
+  const escalatedCount = conversations.filter(c => c.status === 'escalated').length
   const filtered = filter === 'all'
     ? conversations
+    : filter === 'escalated'
+    ? conversations.filter(c => c.status === 'escalated')
     : conversations.filter(c => c.channel === filter)
 
   const channelCounts = conversations.reduce((acc, c) => {
@@ -174,9 +192,10 @@ export default function MensajesPage() {
           </p>
 
           {/* Channel filter tabs */}
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {[
               { key: 'all', label: tx('Todos'), count: conversations.length },
+              ...(escalatedCount > 0 ? [{ key: 'escalated', label: 'Escaladas', count: escalatedCount }] : []),
               ...Object.entries(CHANNEL_META).filter(([k]) => channelCounts[k]).map(([k, v]) => ({
                 key: k, label: v.label, count: channelCounts[k] || 0,
               })),
@@ -223,7 +242,7 @@ export default function MensajesPage() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
                   <span style={{ color: C.text2, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
-                    {conv.summary || conv.intent || ch.label}
+                    {conv.status === 'escalated' ? `⚠️ ${conv.escalated_reason || 'Escalada'}` : conv.summary || conv.intent || ch.label}
                   </span>
                   <span style={{
                     fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
@@ -269,18 +288,57 @@ export default function MensajesPage() {
                   {selected.intent && <span style={{ marginLeft: 12, color: C.amber }}> {selected.intent}</span>}
                 </div>
               </div>
-              <button onClick={async () => {
-                await supabase.from('conversations')
-                  .update({ status: selected.status === 'active' ? 'closed' : 'active', updated_at: new Date().toISOString() })
-                  .eq('id', selected.id)
-                setSelected({ ...selected, status: selected.status === 'active' ? 'closed' : 'active' })
-              }} style={{
-                padding: '8px 16px', borderRadius: 8, border: `1px solid ${C.border}`,
-                background: 'transparent', color: C.text2, fontSize: 12, cursor: 'pointer',
-              }}>
-                {selected.status === 'active' ? tx('Cerrar') : tx('Reabrir')}
-              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {selected.status === 'escalated' ? (
+                  <button onClick={() => handleEscalation('resume')} style={{
+                    padding: '8px 16px', borderRadius: 8, border: 'none',
+                    background: C.green, color: '#000', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  }}>
+                    Reanudar IA
+                  </button>
+                ) : selected.status === 'active' ? (
+                  <button onClick={() => handleEscalation('escalate')} style={{
+                    padding: '8px 16px', borderRadius: 8, border: `1px solid ${C.border}`,
+                    background: 'transparent', color: C.text2, fontSize: 12, cursor: 'pointer',
+                  }}>
+                    Tomar control
+                  </button>
+                ) : null}
+                <button onClick={() => handleEscalation(selected.status === 'closed' ? 'resume' : 'close')} style={{
+                  padding: '8px 16px', borderRadius: 8, border: `1px solid ${C.border}`,
+                  background: 'transparent', color: C.text2, fontSize: 12, cursor: 'pointer',
+                }}>
+                  {selected.status === 'closed' ? tx('Reabrir') : tx('Cerrar')}
+                </button>
+              </div>
             </div>
+
+            {/* Escalation banner */}
+            {selected.status === 'escalated' && (
+              <div style={{
+                padding: '12px 24px', background: C.redDim,
+                borderBottom: `1px solid ${C.red}30`,
+                display: 'flex', alignItems: 'center', gap: 10,
+              }}>
+                <span style={{ fontSize: 16 }}>⚠️</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: C.red, fontSize: 13, fontWeight: 700 }}>
+                    Conversacion escalada — La IA esta pausada
+                  </div>
+                  {selected.escalated_reason && (
+                    <div style={{ color: C.text2, fontSize: 12, marginTop: 2 }}>
+                      {selected.escalated_reason}
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => handleEscalation('resume')} style={{
+                  padding: '6px 14px', borderRadius: 6, border: 'none',
+                  background: C.green, color: '#000', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                }}>
+                  Reanudar IA
+                </button>
+              </div>
+            )}
 
             {/* Messages */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>

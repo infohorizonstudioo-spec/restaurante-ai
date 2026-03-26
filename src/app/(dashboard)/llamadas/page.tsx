@@ -31,8 +31,8 @@ const DECISION_CFG: Record<string,{color:string;bg:string;icon:string}> = {
 function getFlagLabel(flag: string, name: string, txFn: (s:string)=>string): string {
   const map: Record<string,string> = {
     large_group: txFn('Grupo grande'),
-    allergy_note: txFn('Mencionó alergias'),
-    specific_table_request: txFn('Pidió mesa concreta'),
+    allergy_note: txFn('Mencionó alergias o restricciones'),
+    specific_table_request: txFn('Petición específica de espacio'),
     low_confidence: name + ' ' + txFn('tuvo dudas'),
     no_availability: txFn('No había hueco'),
     modification_request: txFn('Quería cambiar algo'),
@@ -41,18 +41,29 @@ function getFlagLabel(flag: string, name: string, txFn: (s:string)=>string): str
     accessibility_need: txFn('Necesidades especiales'),
     late_arrival_notice: txFn('Avisó que llega tarde'),
     out_of_policy: txFn('Pedía algo que no ofrecemos'),
-    confused_customer: txFn('Cliente con dudas'),
+    confused_customer: txFn('Tenía dudas'),
     repeat_pattern: txFn('Patrón repetido'),
+    urgency: txFn('Urgencia detectada'),
+    crisis: txFn('Situación de crisis'),
+    first_visit_complex: txFn('Primera visita compleja'),
+    surgery: txFn('Cirugía programada'),
+    long_stay: txFn('Estancia larga'),
+    high_value_order: txFn('Pedido de alto valor'),
+    tow_required: txFn('Necesita grúa'),
+    return_request: txFn('Solicitud de devolución'),
   }
-  return map[flag] || flag
+  return map[flag] || flag.replace(/_/g, ' ')
 }
 const FLAG_LABELS: Record<string,string> = {
-  large_group:'Grupo grande', allergy_note:'Mencionó alergias', specific_table_request:'Pidió mesa concreta',
+  large_group:'Grupo grande', allergy_note:'Alergias/restricciones', specific_table_request:'Petición de espacio',
   low_confidence:'Tuvo dudas', no_availability:'No había hueco',
   modification_request:'Quería cambiar algo', cancellation_request:'Quería cancelar',
   special_occasion:'Ocasión especial', accessibility_need:'Necesidades especiales',
-  late_arrival_notice:'Avisó que llega tarde', out_of_policy:'Pedía algo que no ofrecemos',
-  confused_customer:'Cliente con dudas', repeat_pattern:'Patrón repetido',
+  late_arrival_notice:'Avisó que llega tarde', out_of_policy:'Fuera de política',
+  confused_customer:'Tenía dudas', repeat_pattern:'Patrón repetido',
+  urgency:'Urgencia', crisis:'Crisis', first_visit_complex:'Primera visita compleja',
+  surgery:'Cirugía', long_stay:'Estancia larga', high_value_order:'Alto valor',
+  tow_required:'Necesita grúa', return_request:'Devolución',
 }
 // Opciones en lenguaje humano para corregir lo que hizo Sofía
 const CORRECTION_OPTIONS = [

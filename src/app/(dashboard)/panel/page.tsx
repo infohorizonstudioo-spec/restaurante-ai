@@ -29,14 +29,19 @@ const INTENT_MAP: Record<string, string> = {
   reserva: 'reservation', pedido: 'order', cancelacion: 'cancellation',
   consulta: 'inquiry', otro: 'inquiry',
 }
-const SCHEMA_MAP: Record<string, { icon: string; color: string; label: string }> = {
-  reservation: { icon: '📅', color: '#2DD4BF', label: 'Reserva' },
-  appointment: { icon: '📋', color: '#2DD4BF', label: 'Cita' },
-  order:       { icon: '🛍️', color: '#A78BFA', label: 'Pedido' },
-  cancellation:{ icon: '❌', color: '#F87171', label: 'Cancelación' },
-  inquiry:     { icon: '💬', color: '#8895A7', label: 'Consulta' },
-  visit:       { icon: '🏠', color: '#60A5FA', label: 'Visita' },
+function getSchemaMap(eventLabel?: string): Record<string, { icon: string; color: string; label: string }> {
+  const resLabel = eventLabel || 'Reserva'
+  return {
+    reservation: { icon: '📅', color: '#2DD4BF', label: resLabel },
+    appointment: { icon: '📋', color: '#2DD4BF', label: resLabel },
+    order:       { icon: '🛍️', color: '#A78BFA', label: 'Pedido' },
+    cancellation:{ icon: '❌', color: '#F87171', label: 'Cancelación' },
+    inquiry:     { icon: '💬', color: '#8895A7', label: 'Consulta' },
+    visit:       { icon: '🏠', color: '#60A5FA', label: resLabel },
+  }
 }
+// Default fallback for contexts without tenant
+const SCHEMA_MAP = getSchemaMap()
 const CALL_STATE_MAP: Record<string, { label: string; color: string }> = {
   escuchando:   { label: 'Escuchando', color: '#2DD4BF' },
   hablando:     { label: 'Hablando',   color: '#F0A84E' },
@@ -68,13 +73,26 @@ function timeAgo(d: Date, lang='es') {
 }
 
 // ── Demo events dinámicos por tipo de negocio ──────────────────────────────
-function buildDemoEvents(_evtConfig: BusinessEventConfig, lang='es'): Omit<LiveEvent,'id'|'ts'>[] {
+function buildDemoEvents(evtConfig: BusinessEventConfig, lang='es'): Omit<LiveEvent,'id'|'ts'>[] {
   const _t = (s:string) => tx(s, lang)
+  const eL = evtConfig.eventLabel || 'Reserva'
+  const eLower = eL.toLowerCase()
+
+  // Ejemplos adaptados por tipo de negocio
+  const demoByType: Record<string, { name: string; sub: string; consultaSub: string }> = {
+    'Cita':    { name: 'María López',   sub: 'Revisión · 10:30',              consultaSub: 'Paciente preguntó por horarios disponibles' },
+    'Sesión':  { name: 'Ana García',    sub: 'Sesión individual · 17:00',     consultaSub: 'Cliente preguntó por disponibilidad' },
+    'Clase':   { name: 'Roberto Díaz',  sub: 'Spinning · 19:00',             consultaSub: 'Socio preguntó por horarios de clases' },
+    'Visita':  { name: 'Elena Mora',    sub: 'Piso 2 hab. centro · 17:00',   consultaSub: 'Cliente preguntó por pisos disponibles' },
+    'Pedido':  { name: 'Luis Fernández',sub: '3 productos · 45.90€',         consultaSub: 'Cliente preguntó por estado de envío' },
+  }
+  const demo = demoByType[eL] || { name: 'María López', sub: '4 personas · 21:00', consultaSub: 'Cliente preguntó por opciones vegetarianas' }
+
   return [
-    { type: 'call_incoming', icon: '📞', color: C.teal, title: `${_t('Llamada entrante')} — +34 612 345 678`, sub: `📅 ${_t('Reserva detectada')}`, priority: 'high', demo: true },
-    { type: 'reservation', icon: '📅', color: C.teal, title: `${_t('Nueva reserva')} — María López`, sub: _t('4 personas · 21:00'), priority: 'high', demo: true },
-    { type: 'call_ended', icon: '✅', color: C.green, title: `${_t('Llamada finalizada')} — Carlos Ruiz`, sub: _t('Reserva confirmada para mañana'), demo: true },
-    { type: 'system', icon: '💬', color: C.text2, title: _t('Consulta sobre el menú'), sub: _t('Cliente preguntó por opciones vegetarianas'), demo: true },
+    { type: 'call_incoming', icon: '📞', color: C.teal, title: `${_t('Llamada entrante')} — +34 612 345 678`, sub: `📅 ${eL} detectada`, priority: 'high', demo: true },
+    { type: 'reservation', icon: '📅', color: C.teal, title: `Nueva ${eLower} — ${demo.name}`, sub: demo.sub, priority: 'high', demo: true },
+    { type: 'call_ended', icon: '✅', color: C.green, title: `${_t('Llamada finalizada')} — Carlos Ruiz`, sub: `${eL} confirmada para mañana`, demo: true },
+    { type: 'system', icon: '💬', color: C.text2, title: _t('Consulta atendida'), sub: demo.consultaSub, demo: true },
     { type: 'call_incoming', icon: '📞', color: C.teal, title: `${_t('Llamada entrante')} — +34 698 765 432`, sub: `💬 ${_t('Consulta detectada')}`, demo: true },
   ]
 }
@@ -194,10 +212,10 @@ function ActiveCallBlock({ call, businessType, lang='es' }:{ call:any; businessT
 }
 
 // ── Call row — usa schemas dinámicos
-function CallRow({ call, idx, businessType, lang='es' }:{ call:any; idx:number; businessType:string; lang?:string }) {
+function CallRow({ call, idx, businessType, lang='es', eventLabel }:{ call:any; idx:number; businessType:string; lang?:string; eventLabel?:string }) {
   const _tx = (s:string) => tx(s, lang)
   const schemaType = INTENT_MAP[call.intent] || 'inquiry'
-  const schema = SCHEMA_MAP[schemaType]
+  const schema = getSchemaMap(eventLabel)[schemaType]
   const status = call.status||'completada'
   const done = ['completada','completed'].includes(status)
   const phone = call.caller_phone||call.from_number||_tx('Número oculto')
@@ -337,6 +355,8 @@ export default function PanelPage() {
   const [forecast, setForecast] = useState<any[]>([])
   const [insights, setInsights] = useState<any[]>([])
   const [orderAlert, setOrderAlert] = useState<{name:string;type:string;id:string}|null>(null)
+  const [daySummary, setDaySummary] = useState<any>(null)
+  const [summaryOpen, setSummaryOpen] = useState(false)
   const demoTimer              = useRef<ReturnType<typeof setInterval>|null>(null)
   const demoIdx                = useRef(0)
   const rtChannelRef           = useRef<any>(null)
@@ -369,11 +389,18 @@ export default function PanelPage() {
     setActiveOrders(ao||[]); setActiveConsultations(ac2||[])
     setLoading(false)
 
-    // Load insights + forecast after main data
+    // Load insights + forecast + yesterday's summary after main data
     const token = (await supabase.auth.getSession()).data.session?.access_token
     const headers = { 'Authorization': 'Bearer ' + token }
     fetch('/api/insights', { headers }).then(r => r.json()).then(d => setInsights(d.insights || [])).catch(() => {})
     fetch('/api/peak-prediction', { headers }).then(r => r.json()).then(d => setForecast(d.forecast || [])).catch(() => {})
+
+    // Load yesterday's summary
+    const yd = new Date(); yd.setDate(yd.getDate() - 1)
+    const ydStr = yd.toISOString().slice(0, 10)
+    supabase.from('daily_summaries')
+      .select('*').eq('tenant_id', tid).eq('date', ydStr).maybeSingle()
+      .then(({ data }) => { if (data) setDaySummary(data) })
   }, [router])
 
   useEffect(() => { load() }, [load])
@@ -386,6 +413,8 @@ export default function PanelPage() {
     const tenantType = tenant.type || 'otro'
     const rtLang = tenant.language || 'es'
     const _rtx = (s:string) => tx(s, rtLang)
+    const rtEvt = getEventConfig(tenantType)
+    const rtSM = getSchemaMap(rtEvt.eventLabel)
     // Guard: si ya hay canal activo con este mismo key, no re-suscribir
     if (rtChannelRef.current) {
       supabase.removeChannel(rtChannelRef.current)
@@ -395,7 +424,7 @@ export default function PanelPage() {
       .on('postgres_changes',{ event:'INSERT', schema:'public', table:'calls', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const c = payload.new as any
         const schType = INTENT_MAP[c.intent||'otro'] || 'inquiry'
-        const sch = SCHEMA_MAP[schType]
+        const sch = rtSM[schType]
         pushEvent({ type:'call_incoming' as any, icon:'📞', color:C.teal, title:`${_rtx('Llamada entrante')} — ${c.caller_phone||_rtx('Número oculto')}`, sub: sch ? `${sch.icon} ${_rtx(sch.label)} ${_rtx('detectada')}` : '', priority:'high' })
         if (c.status === 'activa') setActiveCalls(prev => [c, ...prev.filter(x => x.id !== c.id)])
         setCalls(prev => [c, ...prev].slice(0, 8))
@@ -412,7 +441,7 @@ export default function PanelPage() {
         }
         if (c.status==='completada'||c.status==='completed') {
           const schType = INTENT_MAP[c.intent||'otro'] || 'inquiry'
-          const sch = SCHEMA_MAP[schType]
+          const sch = rtSM[schType]
           pushEvent({ type:'call_ended' as any, icon:sch?.icon||'✅', color:sch?.color||C.green,
             title:`${_rtx(sch?.label||'Llamada')} ${_rtx('finalizada')}${c.customer_name?' — '+c.customer_name:''}`,
             sub:c.summary?.slice(0,80)||_rtx('Resumen generado') })
@@ -421,9 +450,9 @@ export default function PanelPage() {
       })
       .on('postgres_changes',{ event:'INSERT', schema:'public', table:'reservations', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const r = payload.new as any
-        const sch = SCHEMA_MAP['reservation'] || SCHEMA_MAP['appointment']
+        const sch = rtSM['reservation'] || rtSM['appointment']
         pushEvent({ type:'reservation' as any, icon:sch?.icon||'📅', color:sch?.color||C.teal,
-          title:`${_rtx(sch?.label||'Reserva')} — ${r.customer_name||r.patient_name||r.owner_name||_rtx('Cliente')}`,
+          title:`${_rtx(sch?.label||rtEvt.eventLabel||'Reserva')} — ${r.customer_name||r.patient_name||r.owner_name||_rtx('Cliente')}`,
           sub:`${r.people||r.party_size||''} ${r.people?_rtx('personas')+' ·':''} ${(r.time||'').slice(0,5)}`.trim(),
           priority:'high' })
         setReservas(prev => [...prev, r])
@@ -433,7 +462,7 @@ export default function PanelPage() {
         setReservas(prev => prev.map(x => x.id === r.id ? r : x))
         if (r.status === 'cancelled' || r.status === 'no_show') {
           pushEvent({ type:'reservation' as any, icon:'❌', color:C.red,
-            title:`${_rtx('Reserva')} ${r.status==='cancelled'?_rtx('cancelada'):_rtx('no presentado')} — ${r.customer_name||_rtx('Cliente')}`,
+            title:`${_rtx(rtEvt.eventLabel||'Reserva')} ${r.status==='cancelled'?_rtx('cancelada'):_rtx('no presentado')} — ${r.customer_name||_rtx('Cliente')}`,
             sub:`${(r.time||'').slice(0,5)}`.trim() })
         }
       })
@@ -600,6 +629,8 @@ export default function PanelPage() {
   const agentOn   = !!tenant.agent_phone
   const tmpl      = resolveTemplate(tenant.type||'otro')
   const L         = tmpl.labels
+  const evtCfg    = getEventConfig(tenant.type||'otro')
+  const SM        = getSchemaMap(evtCfg.eventLabel)
   const panelT    = getTranslations(tenant.language || 'es')
   const cs        = getCommonStrings(tenant.language || 'es')
   const hour      = new Date().getHours()
@@ -657,6 +688,81 @@ export default function PanelPage() {
       )}
 
       <div style={{ maxWidth:1200,margin:'0 auto',padding:'22px 28px',display:'flex',flexDirection:'column',gap:16 }}>
+
+        {/* ── Yesterday's Summary ── */}
+        {daySummary && (
+          <div style={{
+            background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12,
+            overflow: 'hidden',
+          }}>
+            <button onClick={() => setSummaryOpen(!summaryOpen)} style={{
+              width: '100%', padding: '14px 20px', border: 'none', background: 'transparent',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 16 }}>📊</span>
+                <span style={{ color: C.text, fontSize: 14, fontWeight: 700 }}>
+                  {_tx('Resumen de ayer')}
+                </span>
+                {daySummary.highlights?.length > 0 && (
+                  <span style={{ fontSize: 12, color: C.text2 }}>
+                    — {daySummary.highlights[0]?.title}
+                  </span>
+                )}
+              </div>
+              <span style={{ color: C.text3, fontSize: 12, transform: summaryOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▼</span>
+            </button>
+            {summaryOpen && (
+              <div style={{ padding: '0 20px 16px', borderTop: `1px solid ${C.border}` }}>
+                {/* Channel breakdown */}
+                {daySummary.channel_breakdown && (
+                  <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+                    {Object.entries(daySummary.channel_breakdown as Record<string, any>).map(([ch, data]: [string, any]) => (
+                      <div key={ch} style={{
+                        padding: '8px 14px', borderRadius: 8, background: C.surface2,
+                        border: `1px solid ${C.border}`, minWidth: 100,
+                      }}>
+                        <div style={{ fontSize: 11, color: C.text3, fontWeight: 600 }}>
+                          {ch === 'voice' ? 'Llamadas' : ch === 'whatsapp' ? 'WhatsApp' : ch === 'email' ? 'Email' : 'SMS'}
+                        </div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginTop: 2 }}>{data.count}</div>
+                        {data.escalated > 0 && (
+                          <div style={{ fontSize: 10, color: C.red, marginTop: 2 }}>{data.escalated} escaladas</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Highlights */}
+                {daySummary.highlights?.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    {(daySummary.highlights as any[]).map((h: any, i: number) => (
+                      <div key={i} style={{
+                        padding: '6px 0', display: 'flex', alignItems: 'center', gap: 8,
+                      }}>
+                        <span style={{
+                          width: 6, height: 6, borderRadius: '50%',
+                          background: h.type === 'positive' ? C.green : h.type === 'warning' ? C.yellow : C.blue,
+                        }} />
+                        <span style={{ fontSize: 13, color: C.text }}>{h.title}</span>
+                        <span style={{ fontSize: 12, color: C.text3 }}>{h.description}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Pending actions */}
+                {daySummary.pending_actions?.length > 0 && (
+                  <div style={{ marginTop: 10, padding: '8px 12px', background: C.amberDim, borderRadius: 8, border: `1px solid ${C.amber}20` }}>
+                    <div style={{ fontSize: 11, color: C.amber, fontWeight: 700, marginBottom: 4 }}>{_tx('Pendiente')}</div>
+                    {(daySummary.pending_actions as string[]).map((a: string, i: number) => (
+                      <div key={i} style={{ fontSize: 12, color: C.text2, marginTop: 2 }}>• {a}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Alert trial ── */}
         {isTrial && callsLeft<=5 && (
@@ -805,7 +911,7 @@ export default function PanelPage() {
                   </div>
                 )}
               </div>
-            ) : calls.map((call,i)=><CallRow key={call.id} call={call} idx={i} businessType={tenant.type||'otro'} lang={lang}/>)}
+            ) : calls.map((call,i)=><CallRow key={call.id} call={call} idx={i} businessType={tenant.type||'otro'} lang={lang} eventLabel={evtCfg.eventLabel}/>)}
           </div>
 
           {/* Columna derecha: feed + reservas */}

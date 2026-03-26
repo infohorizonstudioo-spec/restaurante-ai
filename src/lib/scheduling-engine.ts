@@ -44,6 +44,7 @@ const DEFAULTS_BY_TYPE: Record<string, Partial<ReservationConfig>> = {
   taller: { reservation_slot_interval_minutes: 60, default_reservation_duration_minutes: 120, buffer_minutes: 0, max_new_reservations_per_slot: 3, max_new_people_per_slot: 3, service_hours: { open: '08:00', close: '19:00', closed_days: [0] } },
   inmobiliaria: { reservation_slot_interval_minutes: 30, default_reservation_duration_minutes: 60, buffer_minutes: 10, max_new_reservations_per_slot: 1, max_new_people_per_slot: 2, service_hours: { open: '09:00', close: '19:00' } },
   seguros: { reservation_slot_interval_minutes: 30, default_reservation_duration_minutes: 30, buffer_minutes: 5, max_new_reservations_per_slot: 1, max_new_people_per_slot: 1, service_hours: { open: '09:00', close: '18:00' } },
+  hotel: { reservation_slot_interval_minutes: 60, default_reservation_duration_minutes: 1440, buffer_minutes: 0, max_new_reservations_per_slot: 10, max_new_people_per_slot: 20, service_hours: { open: '00:00', close: '23:59' } },
   ecommerce: { reservation_slot_interval_minutes: 60, default_reservation_duration_minutes: 30, buffer_minutes: 0, max_new_reservations_per_slot: 50, max_new_people_per_slot: 50, service_hours: { open: '00:00', close: '23:59' } },
 }
 
@@ -431,12 +432,18 @@ export function calculateDayStats(
 export function parseReservationConfig(raw: any, businessType?: string): ReservationConfig {
   const defaults = businessType ? getDefaultsForType(businessType) : DEFAULT_CONFIG
   if (!raw || typeof raw !== 'object') return { ...defaults }
+
+  // Si hay num_professionals, multiplicar slots y personas por franja
+  const numPros = raw.num_professionals || raw.total_spaces || 0
+  const baseMaxRes = raw.max_new_reservations_per_slot ?? defaults.max_new_reservations_per_slot
+  const baseMaxPpl = raw.max_new_people_per_slot ?? defaults.max_new_people_per_slot
+
   return {
     reservation_slot_interval_minutes:   raw.reservation_slot_interval_minutes   ?? defaults.reservation_slot_interval_minutes,
     default_reservation_duration_minutes: raw.default_reservation_duration_minutes ?? defaults.default_reservation_duration_minutes,
     buffer_minutes:                       raw.buffer_minutes                       ?? defaults.buffer_minutes,
-    max_new_reservations_per_slot:        raw.max_new_reservations_per_slot        ?? defaults.max_new_reservations_per_slot,
-    max_new_people_per_slot:              raw.max_new_people_per_slot              ?? defaults.max_new_people_per_slot,
+    max_new_reservations_per_slot:        numPros > 1 ? Math.max(baseMaxRes, numPros) : baseMaxRes,
+    max_new_people_per_slot:              numPros > 1 ? Math.max(baseMaxPpl, numPros) : baseMaxPpl,
     zone_slot_limits:                     raw.zone_slot_limits                     ?? defaults.zone_slot_limits,
     service_hours:                        raw.service_hours                        ?? defaults.service_hours,
   }

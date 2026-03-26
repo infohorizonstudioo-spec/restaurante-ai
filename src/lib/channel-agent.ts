@@ -114,6 +114,17 @@ const TOOLS: Anthropic.Tool[] = [
       required: ['customer_name'],
     },
   },
+  {
+    name: 'escalate_to_human',
+    description: 'Escala la conversación a un humano cuando no puedes resolver algo: quejas graves, situaciones delicadas, peticiones complejas, o cuando el cliente pide hablar con una persona.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        reason: { type: 'string', description: 'Motivo de la escalación (ej: "Queja grave", "Solicitud compleja")' },
+      },
+      required: ['reason'],
+    },
+  },
 ]
 
 // ── Execute a tool call ──────────────────────────────────────
@@ -135,8 +146,34 @@ async function executeTool(tenantId: string, name: string, input: any, source: s
       return updateOrderTool(params)
     case 'add_to_waitlist':
       return addToWaitlistTool(params)
+    case 'escalate_to_human':
+      return escalateToHumanTool(tenantId, input)
     default:
       return { error: `Unknown tool: ${name}` }
+  }
+}
+
+// ── Escalate to human handler ────────────────────────────────
+async function escalateToHumanTool(tenantId: string, input: { reason: string }) {
+  const { createClient } = await import('@supabase/supabase-js')
+  const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+
+  // Create critical notification
+  await admin.from('notifications').insert({
+    tenant_id: tenantId,
+    type: 'important_alert',
+    title: 'Conversación escalada',
+    body: input.reason,
+    priority: 'critical',
+    read: false,
+    action_required: true,
+    target_url: '/mensajes',
+  })
+
+  return {
+    success: true,
+    message: 'Conversación escalada al responsable. El equipo se pondrá en contacto.',
+    reason: input.reason,
   }
 }
 
@@ -167,7 +204,32 @@ function buildSystemPrompt(params: {
 
   const today = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 
-  return `Eres ${bc.agent_name || 'el asistente virtual'} de ${bc.business_name}, un negocio de tipo ${bc.business_type}.
+  // Contexto específico por tipo de negocio
+  const TYPE_CONTEXT: Record<string, string> = {
+    restaurante: 'Eres la recepcionista del restaurante. Hablas de reservas, mesas, carta y pedidos.',
+    bar: 'Eres la persona que atiende en el bar. Hablas de reservas, zona, tapas y eventos.',
+    clinica_dental: 'Eres la recepcionista de la clínica dental. Hablas de citas, tratamientos y urgencias dentales. NO preguntes síntomas.',
+    clinica_medica: 'Eres la recepcionista de la clínica. Hablas de citas, especialidades y revisiones. NO preguntes motivo médico.',
+    veterinaria: 'Eres la recepcionista de la veterinaria. Hablas de citas para mascotas, vacunas y urgencias.',
+    peluqueria: 'Eres la recepcionista del salón. Hablas de citas, servicios de peluquería y estilismo.',
+    barberia: 'Eres quien atiende en la barbería. Hablas de citas, cortes, barba y servicios.',
+    fisioterapia: 'Eres la recepcionista de fisioterapia. Hablas de sesiones, tratamientos y rehabilitación.',
+    psicologia: 'Eres la recepcionista de psicología. Hablas de citas con total DISCRECIÓN. NUNCA preguntes motivos.',
+    hotel: 'Eres el/la recepcionista del hotel. Hablas de reservas de habitación, check-in, check-out y servicios.',
+    ecommerce: 'Eres el servicio de atención al cliente de la tienda. Hablas de pedidos, productos, envíos y devoluciones.',
+    gimnasio: 'Eres quien atiende en el gimnasio. Hablas de clases, horarios, abonos e inscripciones.',
+    academia: 'Eres la secretaría de la academia. Hablas de clases, cursos, horarios e inscripciones.',
+    spa: 'Eres la recepcionista del spa. Hablas de citas, tratamientos, masajes y bonos.',
+    taller: 'Eres quien atiende en el taller. Hablas de citas, revisiones, reparaciones y presupuestos.',
+    asesoria: 'Eres la recepcionista de la asesoría. Hablas de citas, consultas fiscales, laborales y jurídicas.',
+    seguros: 'Eres quien atiende en la correduría. Hablas de citas, pólizas, seguros y siniestros urgentes.',
+    inmobiliaria: 'Eres quien atiende en la inmobiliaria. Hablas de visitas, pisos disponibles y citas con agentes.',
+  }
+
+  const typeContext = TYPE_CONTEXT[bc.business_type] || `Eres ${bc.agent_name || 'el asistente'} de ${bc.business_name}.`
+
+  return `${typeContext}
+Te llamas ${bc.agent_name || 'Asistente'}. Trabajas en ${bc.business_name}.
 
 ${CHANNEL_INSTRUCTIONS[channel] || CHANNEL_INSTRUCTIONS.whatsapp}
 ${TONE_INSTRUCTIONS[responseTone] || TONE_INSTRUCTIONS.professional}
@@ -180,7 +242,7 @@ ${bc.business_information || 'No disponible'}
 HORARIOS:
 ${typeof bc.hours_var === 'object' ? JSON.stringify(bc.hours_var) : bc.hours_var || 'Consultar'}
 
-SERVICIOS/CARTA:
+SERVICIOS${btl.catalog_label ? ' / ' + btl.catalog_label.toUpperCase() : ''}:
 ${(bc.services_var || bc.catalog_var || bc.menu_var || []).join(', ') || 'Disponible bajo petición'}
 
 REGLAS:
@@ -194,17 +256,23 @@ Acción principal: ${btl.action_name || 'gestión'}
 Campos requeridos: ${(btl.required_fields || []).join(', ')}
 Campos opcionales: ${(btl.optional_fields || []).join(', ')}
 Pasos: ${(btl.flow || []).join(' → ')}
+${btl.urgency_keywords ? `Palabras de urgencia: ${btl.urgency_keywords.join(', ')}` : ''}
+${btl.urgency_action ? `Si detectas urgencia: ${btl.urgency_action}` : ''}
+${btl.crisis_keywords ? `Palabras de crisis: ${btl.crisis_keywords.join(', ')}` : ''}
+${btl.crisis_action ? `Si detectas crisis: ${btl.crisis_action}` : ''}
 
 ${customerContext ? `CONTEXTO DEL CLIENTE:\n${customerContext}` : ''}
 
 ${bc.memory_var?.owner_rules?.length ? `REGLAS DEL PROPIETARIO:\n${bc.memory_var.owner_rules.join('\n')}` : ''}
 
 INSTRUCCIONES IMPORTANTES:
-- SIEMPRE llama a check_availability ANTES de crear una reserva
+- SIEMPRE llama a check_availability ANTES de crear una reserva/cita
 - Solo llama a create_reservation tras confirmación explícita del cliente
-- Si el cliente pregunta algo que no puedes resolver, sugiere llamar al negocio
+- Si el cliente tiene una queja grave, situación delicada, o pide hablar con una persona, usa escalate_to_human
+- Si el cliente pregunta algo que no puedes resolver, usa escalate_to_human o sugiere llamar al negocio
 - Responde SIEMPRE en el idioma del cliente
-- NO inventes información que no esté en el contexto del negocio`
+- NO inventes información que no esté en el contexto del negocio
+- Usa la terminología correcta: "${btl.action_name || 'gestión'}" (no digas "reserva" si es una cita, sesión o clase)`
 }
 
 // ── Main agent function ──────────────────────────────────────
@@ -301,7 +369,8 @@ export async function processWithAgent(params: {
 
   // Detect intent from actions
   let intent: string | undefined
-  if (actions.some(a => a.type === 'create_reservation')) intent = 'reserva'
+  if (actions.some(a => a.type === 'escalate_to_human')) intent = 'escalacion'
+  else if (actions.some(a => a.type === 'create_reservation')) intent = 'reserva'
   else if (actions.some(a => a.type === 'cancel_reservation')) intent = 'cancelacion'
   else if (actions.some(a => a.type === 'modify_reservation')) intent = 'modificacion'
   else if (actions.some(a => a.type === 'update_order')) intent = 'pedido'

@@ -137,7 +137,7 @@ export type BusinessType =
   | 'peluqueria' | 'barberia' | 'seguros' | 'inmobiliaria'
   | 'veterinaria' | 'fisioterapia' | 'psicologia'
   | 'gimnasio' | 'academia' | 'spa' | 'taller'
-  | 'ecommerce' | 'otro'
+  | 'hotel' | 'ecommerce' | 'otro'
 
 interface TypeOverride {
   template: MasterTemplate
@@ -236,6 +236,17 @@ const TYPE_MAP: Record<string, TypeOverride> = {
     reservaLabel: 'Cita', reservasLabel: 'Citas',
     clienteLabel: 'Cliente', clientesLabel: 'Clientes',
     agentContext: 'Eres la recepcionista de un taller mecánico. Gestiona citas para reparaciones y revisiones. Pregunta: nombre del cliente, marca y modelo del vehículo, tipo de servicio (revisión, ITV, reparación, neumáticos...) y día preferido.',
+  },
+
+  hotel: {
+    template: 'hosteleria',
+    hasSpaces: true,
+    reservaLabel: 'Reserva',
+    reservasLabel: 'Reservas',
+    clienteLabel: 'Huésped',
+    clientesLabel: 'Huéspedes',
+    unitLabels: { singular: 'Habitación', plural: 'Habitaciones', icon: '🛏️', zoneLabel: 'Planta', zonesLabel: 'Plantas' },
+    agentContext: 'Eres la recepcionista de un hotel. Gestiona reservas de habitaciones. Pregunta: nombre del huésped, fechas de entrada y salida, número de personas, tipo de habitación (individual, doble, suite) y preferencias especiales.',
   },
 
   ecommerce: {

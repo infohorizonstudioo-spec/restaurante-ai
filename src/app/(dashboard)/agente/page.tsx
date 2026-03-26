@@ -22,12 +22,51 @@ const STATUS_OPTS = [
   { value:'needs_human_attention', label:'⚠ Requiere atención humana', color:C.amber },
   { value:'rejected',              label:'✕ Rechazar automáticamente', color:C.red },
 ]
-const PATTERN_KEYS = [
-  { key:'large_group',       label:'Grupos grandes',             icon:'👥', desc:'Cuando el grupo supera el máximo automático' },
-  { key:'birthday_requests', label:'Cumpleaños y celebraciones', icon:'🎂', desc:'Cuando el cliente menciona cumpleaños, aniversario, etc.' },
-  { key:'allergy_notes',     label:'Alergias e intolerancias',   icon:'⚕️', desc:'Cuando el cliente menciona alergias o restricciones alimentarias' },
-  { key:'table_specific',    label:'Mesa específica',            icon:'📍', desc:'Cuando el cliente pide una mesa o zona concreta' },
-  { key:'accessibility',     label:'Accesibilidad',              icon:'♿', desc:'Silla de ruedas, carrito de bebé, movilidad reducida' },
+// Patrones de decisión adaptativos por tipo de negocio
+const PATTERN_KEYS_BY_TYPE: Record<string, { key:string; label:string; icon:string; desc:string }[]> = {
+  restaurante: [
+    { key:'large_group',       label:'Grupos grandes',             icon:'👥', desc:'Cuando el grupo supera el máximo automático' },
+    { key:'birthday_requests', label:'Cumpleaños y celebraciones', icon:'🎂', desc:'Cuando el cliente menciona cumpleaños, aniversario, etc.' },
+    { key:'allergy_notes',     label:'Alergias e intolerancias',   icon:'⚕️', desc:'Cuando el cliente menciona alergias o restricciones alimentarias' },
+    { key:'table_specific',    label:'Mesa específica',            icon:'📍', desc:'Cuando el cliente pide una mesa o zona concreta' },
+    { key:'accessibility',     label:'Accesibilidad',              icon:'♿', desc:'Silla de ruedas, carrito de bebé, movilidad reducida' },
+  ],
+  clinica_dental: [
+    { key:'urgency',            label:'Urgencias dentales',      icon:'🚨', desc:'Dolor agudo, rotura de pieza, sangrado' },
+    { key:'first_visit_complex',label:'Primera visita compleja', icon:'📋', desc:'Nuevo paciente con caso complejo' },
+    { key:'accessibility',      label:'Accesibilidad',           icon:'♿', desc:'Movilidad reducida, silla de ruedas' },
+  ],
+  clinica_medica: [
+    { key:'urgency',       label:'Urgencias médicas',    icon:'🚨', desc:'Fiebre alta, dolor agudo, malestar severo' },
+    { key:'accessibility', label:'Accesibilidad',        icon:'♿', desc:'Movilidad reducida' },
+  ],
+  veterinaria: [
+    { key:'urgency',       label:'Urgencias veterinarias', icon:'🚨', desc:'Accidente, no respira, no come, muy mal' },
+    { key:'surgery',       label:'Cirugías',               icon:'🔪', desc:'Operaciones programadas' },
+  ],
+  psicologia: [
+    { key:'crisis',        label:'Situaciones de crisis',  icon:'⚠️', desc:'Detección de riesgo — activa protocolo de crisis (024)' },
+  ],
+  hotel: [
+    { key:'large_group',    label:'Grupos grandes',    icon:'👥', desc:'Reservas de muchas habitaciones' },
+    { key:'long_stay',      label:'Estancia larga',    icon:'📅', desc:'Estancias superiores a 14 noches' },
+    { key:'special_request',label:'Peticiones especiales', icon:'⭐', desc:'Cuna, cama supletoria, vista, planta alta' },
+  ],
+  ecommerce: [
+    { key:'high_value_order', label:'Pedidos de alto valor', icon:'💰', desc:'Pedidos superiores a 500€' },
+    { key:'return_request',   label:'Devoluciones',          icon:'🔄', desc:'Solicitudes de devolución o cambio' },
+  ],
+  taller: [
+    { key:'urgency',        label:'Averías urgentes',    icon:'🚨', desc:'Avería en carretera, no arranca, humo' },
+    { key:'tow_required',   label:'Necesita grúa',       icon:'🚗', desc:'El vehículo no puede desplazarse' },
+  ],
+  seguros: [
+    { key:'urgency',        label:'Siniestro urgente',   icon:'🚨', desc:'Accidente, robo, siniestro en curso' },
+  ],
+}
+const DEFAULT_PATTERNS = [
+  { key:'large_group',  label:'Grupos grandes',  icon:'👥', desc:'Cuando supera el máximo automático' },
+  { key:'accessibility',label:'Accesibilidad',   icon:'♿', desc:'Movilidad reducida, necesidades especiales' },
 ]
 const FLAG_LABELS: Record<string,string> = {
   large_group:'Grupo grande', allergy_note:'Alergia', specific_table_request:'Mesa específica',
@@ -49,7 +88,8 @@ const TABS = [
 ]
 
 export default function AgentePage() {
-  const { tx } = useTenant()
+  const { tenant, tx } = useTenant()
+  const PATTERN_KEYS = PATTERN_KEYS_BY_TYPE[tenant?.type || ''] || PATTERN_KEYS_BY_TYPE.restaurante || DEFAULT_PATTERNS
   const [loading, setLoading]       = useState(true)
   const [tab, setTab]               = useState<'rules'|'knowledge'|'memory'>('rules')
   const [token, setToken]           = useState<string>('')

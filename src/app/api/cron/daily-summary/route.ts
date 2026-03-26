@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { summarizeDay } from '@/lib/summary-engine'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/cron/daily-summary
- * Sends a daily activity summary SMS to each business owner at 9:00 AM.
+ * Generates structured daily summaries and sends SMS to each business owner.
  */
 export async function GET(req: Request) {
   const cronSecret = process.env.CRON_SECRET
@@ -22,16 +23,12 @@ export async function GET(req: Request) {
   const accountSid = process.env.TWILIO_ACCOUNT_SID
   const authToken = process.env.TWILIO_AUTH_TOKEN
   const fromNumber = process.env.TWILIO_SMS_NUMBER || process.env.TWILIO_PHONE_NUMBER
-  if (!accountSid || !authToken || !fromNumber) {
-    return NextResponse.json({ ok: true, sent: 0, reason: 'SMS not configured' })
-  }
 
   const yesterday = new Date()
   yesterday.setDate(yesterday.getDate() - 1)
   const yStr = yesterday.toISOString().slice(0, 10)
-  const today = new Date().toISOString().slice(0, 10)
 
-  // Get all active tenants with phone numbers
+  // Get all active tenants
   const { data: tenants } = await admin.from('tenants')
     .select('id, name, phone, agent_phone')
     .eq('active', true)
@@ -40,41 +37,53 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, sent: 0 })
   }
 
-  const twilioAuth = Buffer.from(`${accountSid}:${authToken}`).toString('base64')
   let sent = 0
+  const summaries: string[] = []
 
   for (const t of tenants) {
+    // Generate structured summary
+    const summary = await summarizeDay(t.id, yStr)
+    if (!summary || summary.total_conversations === 0) {
+      summaries.push(`${t.name}: no activity`)
+      continue
+    }
+
+    summaries.push(`${t.name}: ${summary.total_conversations} interactions`)
+
+    // Send SMS if configured
     const ownerPhone = t.phone || t.agent_phone
-    if (!ownerPhone) continue
-
-    // Get yesterday's stats
-    const [callsRes, reservasRes, ordersRes] = await Promise.all([
-      admin.from('calls').select('id', { count: 'exact', head: true })
-        .eq('tenant_id', t.id).gte('started_at', yStr + 'T00:00:00').lt('started_at', today + 'T00:00:00'),
-      admin.from('reservations').select('id,people', { count: 'exact' })
-        .eq('tenant_id', t.id).eq('date', yStr).in('status', ['confirmada', 'confirmed']),
-      admin.from('order_events').select('id,total_estimate', { count: 'exact' })
-        .eq('tenant_id', t.id).eq('status', 'confirmed')
-        .gte('created_at', yStr + 'T00:00:00').lt('created_at', today + 'T00:00:00'),
-    ])
-
-    const calls = callsRes.count || 0
-    const reservas = reservasRes.count || 0
-    const personas = (reservasRes.data || []).reduce((s: number, r: any) => s + (r.people || 1), 0)
-    const pedidos = ordersRes.count || 0
-    const ingresos = (ordersRes.data || []).reduce((s: number, o: any) => s + (o.total_estimate || 0), 0)
-
-    // Only send if there was activity
-    if (calls === 0 && reservas === 0 && pedidos === 0) continue
+    if (!ownerPhone || !accountSid || !authToken || !fromNumber) continue
 
     const dateStr = yesterday.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
-    let msg = `📊 ${t.name} — Resumen del ${dateStr}:\n`
-    if (calls > 0) msg += `📞 ${calls} llamada${calls !== 1 ? 's' : ''}\n`
-    if (reservas > 0) msg += `📅 ${reservas} reserva${reservas !== 1 ? 's' : ''} (${personas} personas)\n`
-    if (pedidos > 0) msg += `🛍️ ${pedidos} pedido${pedidos !== 1 ? 's' : ''} (${ingresos.toFixed(0)}€)\n`
-    msg += `\nVe al panel: https://restaurante-ai.vercel.app/panel`
+
+    // Build rich SMS from structured summary
+    let msg = `${t.name} — ${dateStr}:\n`
+
+    // Channel breakdown
+    const channels = Object.entries(summary.channel_breakdown)
+    for (const [ch, data] of channels) {
+      const chName = ch === 'voice' ? 'Llamadas' : ch === 'whatsapp' ? 'WhatsApp' : ch === 'email' ? 'Email' : 'SMS'
+      msg += `${chName}: ${data.count}`
+      if (data.escalated > 0) msg += ` (${data.escalated} escaladas)`
+      msg += '\n'
+    }
+
+    // Highlights
+    for (const h of summary.highlights.slice(0, 2)) {
+      const icon = h.type === 'positive' ? '+' : h.type === 'warning' ? '!' : '-'
+      msg += `${icon} ${h.title}\n`
+    }
+
+    // Pending actions
+    if (summary.pending_actions.length > 0) {
+      msg += `Pendiente: ${summary.pending_actions[0]}\n`
+    }
+
+    msg = msg.slice(0, 320) // SMS limit with concatenation
+    msg += `\nPanel: https://restaurante-ai.vercel.app/panel`
 
     try {
+      const twilioAuth = Buffer.from(`${accountSid}:${authToken}`).toString('base64')
       const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
         method: 'POST',
         headers: { 'Authorization': `Basic ${twilioAuth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -84,5 +93,5 @@ export async function GET(req: Request) {
     } catch {}
   }
 
-  return NextResponse.json({ ok: true, sent, tenants: tenants.length })
+  return NextResponse.json({ ok: true, sent, tenants: tenants.length, summaries })
 }

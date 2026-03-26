@@ -17,6 +17,7 @@ import { normalizePhone } from './phone-utils'
 import { buildBusinessContext, BUSINESS_TYPE_LOGIC } from '@/app/api/agent/get-context/route'
 import { processWithAgent, type AgentResponse } from './channel-agent'
 import { sendSms, sendWhatsApp } from './agent-tools'
+import { classifyMessage, type MessageClassification } from './message-intelligence'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -180,15 +181,64 @@ export async function processMessage(msg: IncomingMessage): Promise<ProcessResul
       metadata: msg.metadata || {},
     }).select('id').maybeSingle()
 
-    // Create notification for incoming message
+    // ── 6b. Classify message intelligence ──────────────────────
+    const classification = await classifyMessage(
+      msg.content,
+      tenant.type || 'otro',
+      resolved.customerData,
+    )
+
+    // Store classification in message metadata
+    if (inMsg?.id) {
+      await supabase.from('messages')
+        .update({ metadata: { ...(msg.metadata || {}), classification } })
+        .eq('id', inMsg.id)
+    }
+
+    // Update conversation priority if higher
+    if (classification.priority === 'critical' || classification.priority === 'high') {
+      await supabase.from('conversations').update({
+        priority: classification.priority,
+        updated_at: new Date().toISOString(),
+      }).eq('id', conversation.id)
+    }
+
+    // Create notification — priority-aware
+    const notifPriority = classification.priority === 'critical' ? 'critical'
+      : classification.priority === 'high' ? 'warning' : 'info'
+    const notifType = classification.needsEscalation ? 'important_alert'
+      : msg.channel === 'whatsapp' ? 'new_whatsapp'
+      : msg.channel === 'email' ? 'new_email' : 'new_sms'
+
     await supabase.from('notifications').insert({
       tenant_id: tenantId,
-      type: msg.channel === 'whatsapp' ? 'new_whatsapp' : msg.channel === 'email' ? 'new_email' : 'new_sms',
+      type: notifType,
       title: `${msg.channel === 'whatsapp' ? 'WhatsApp' : msg.channel === 'email' ? 'Email' : 'SMS'} — ${resolved.customerData.name || msg.from}`,
-      body: msg.content.slice(0, 200),
+      body: classification.needsEscalation
+        ? `⚠️ ${classification.escalationReason || 'Requiere atención'} — ${msg.content.slice(0, 150)}`
+        : msg.content.slice(0, 200),
+      priority: notifPriority,
       read: false,
       related_entity_id: conversation.id,
+      target_url: '/mensajes',
     })
+
+    // If escalation needed, mark conversation and block auto-respond
+    if (classification.needsEscalation) {
+      await supabase.from('conversations').update({
+        status: 'escalated',
+        priority: classification.priority,
+        escalated_at: new Date().toISOString(),
+        escalated_reason: classification.escalationReason || 'Escalación automática',
+        updated_at: new Date().toISOString(),
+      }).eq('id', conversation.id)
+
+      return {
+        success: true,
+        conversationId: conversation.id,
+        messageId: inMsg?.id,
+      }
+    }
 
     // ── 7. If auto-respond is off, stop here ───────────────────
     if (!autoRespond) {

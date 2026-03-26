@@ -169,6 +169,26 @@ export const BUSINESS_TYPE_LOGIC: Record<string, object> = {
     catalog_instruction: "Para servicios y precios llama a get_menu_or_services.",
     closing: "Cita confirmada para [nombre] el [fecha] a las [hora]."
   },
+  hotel: {
+    sector: "hotel",
+    action_name: "reserva de habitación",
+    required_fields: ["nombre_huesped", "fecha_entrada", "fecha_salida", "numero_personas", "tipo_habitacion"],
+    optional_fields: ["preferencias", "servicios_adicionales", "hora_llegada"],
+    flow: [
+      "Pregunta nombre del huésped",
+      "Pregunta fechas de entrada y salida",
+      "Pregunta número de personas",
+      "Pregunta tipo de habitación preferida",
+      "Llama a check_availability con fecha de entrada",
+      "Si hay disponibilidad confirma con el huésped",
+      "Llama a create_reservation con todos los datos en notes",
+      "Informa de horarios de check-in y check-out"
+    ],
+    catalog_label: "habitaciones y servicios",
+    catalog_instruction: "Para tipos de habitación y servicios llama a get_menu_or_services.",
+    closing: "Reserva confirmada del [fecha_entrada] al [fecha_salida]. Check-in a partir de las 14:00."
+  },
+
   ecommerce: {
     sector: "ecommerce",
     action_name: "gestion de pedido o consulta de producto",

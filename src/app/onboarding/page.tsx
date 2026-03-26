@@ -413,6 +413,575 @@ const FLOWS: Record<string, FlowConfig> = {
       }
     ]
   },
+
+  barberia: {
+    emoji:'💈', label:'Barbería', agentDefaultName:'Carlos',
+    steps: [
+      {
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que escucharán tus clientes al llamar',
+        fields: [
+          {key:'agent_name', type:'text', label:'Nombre del recepcionista', placeholder:'Ej: Carlos, Álex…', defaultValue:'Carlos'},
+          {key:'language', type:'select', label:'Idioma', defaultValue:'es',
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+        ]
+      },
+      {
+        id:'phone', title:'¿Cuál es el número de teléfono del agente?',
+        subtitle:'El número Twilio que comprarás para que los clientes llamen a tu recepcionista IA',
+        fields: [{key:'agent_phone', type:'text', label:'Número de teléfono (formato internacional)', placeholder:'Ej: +12138753573', defaultValue:''}]
+      },
+      {
+        id:'hours', title:'¿Cuándo abrís?', subtitle:'Horario de la barbería',
+        fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
+      },
+      {
+        id:'services', title:'¿Qué servicios ofrecéis?',
+        subtitle:'La recepcionista los conocerá todos y podrá informar a los clientes',
+        fields: [
+          {key:'services', type:'multiselect', label:'Servicios', defaultValue:['corte_hombre','barba_perfilado'],
+            options:[
+              {value:'corte_hombre',label:'Corte de pelo',emoji:'💇'},
+              {value:'barba_perfilado',label:'Barba y perfilado',emoji:'🪒'},
+              {value:'afeitado',label:'Afeitado clásico',emoji:'🪒'},
+              {value:'barba_color',label:'Tinte de barba',emoji:'🎨'},
+              {value:'tinte_pelo',label:'Tinte de pelo',emoji:'🎨'},
+              {value:'tratamiento',label:'Tratamiento capilar',emoji:'💆'},
+              {value:'cejas',label:'Depilación de cejas',emoji:'✨'},
+            ]
+          }
+        ]
+      },
+      {
+        id:'staff', title:'¿Cuántos barberos tenéis?',
+        subtitle:'La recepcionista distribuirá las citas entre ellos',
+        fields: [
+          {key:'num_professionals', type:'number', label:'Número de barberos', placeholder:'Ej: 2', defaultValue:2, min:1, max:20},
+          {key:'appointment_duration', type:'duration', label:'¿Cuánto dura de media una cita?', defaultValue:30,
+            options:[{value:'20',label:'20 minutos'},{value:'30',label:'30 minutos'},{value:'45',label:'45 minutos'},{value:'60',label:'1 hora'}]},
+        ]
+      }
+    ]
+  },
+
+  fisioterapia: {
+    emoji:'💪', label:'Fisioterapia', agentDefaultName:'Ana',
+    steps: [
+      {
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que oirán tus pacientes al llamar',
+        fields: [
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Ana, Laura…', defaultValue:'Ana'},
+          {key:'language', type:'select', label:'Idioma', defaultValue:'es',
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+        ]
+      },
+      {
+        id:'phone', title:'¿Cuál es el número de teléfono del agente?',
+        subtitle:'El número Twilio que comprarás para que los clientes llamen a tu recepcionista IA',
+        fields: [{key:'agent_phone', type:'text', label:'Número de teléfono (formato internacional)', placeholder:'Ej: +12138753573', defaultValue:''}]
+      },
+      {
+        id:'hours', title:'¿Cuándo atendéis?', subtitle:'Horario de la clínica',
+        fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
+      },
+      {
+        id:'services', title:'¿Qué tratamientos ofrecéis?',
+        subtitle:'Los principales — el paciente podrá preguntar por cualquiera',
+        fields: [
+          {key:'services', type:'multiselect', label:'Tratamientos', defaultValue:['manual','deportiva'],
+            options:[
+              {value:'manual',label:'Fisioterapia manual',emoji:'🤲'},
+              {value:'deportiva',label:'Fisioterapia deportiva',emoji:'⚽'},
+              {value:'traumatologica',label:'Traumatología / Rehabilitación',emoji:'🦴'},
+              {value:'neurologica',label:'Neurológica',emoji:'🧠'},
+              {value:'suelo_pelvico',label:'Suelo pélvico',emoji:'🩺'},
+              {value:'puncion_seca',label:'Punción seca',emoji:'📌'},
+              {value:'electroterapia',label:'Electroterapia / Ultrasonidos',emoji:'⚡'},
+              {value:'pilates',label:'Pilates terapéutico',emoji:'🧘'},
+            ]
+          }
+        ]
+      },
+      {
+        id:'details', title:'Detalles de la consulta',
+        subtitle:'Para gestionar bien la agenda',
+        fields: [
+          {key:'appointment_duration', type:'duration', label:'¿Cuánto dura una sesión?', defaultValue:45,
+            options:[{value:'30',label:'30 minutos'},{value:'45',label:'45 minutos'},{value:'60',label:'1 hora'},{value:'90',label:'1h 30min'}]},
+          {key:'num_professionals', type:'number', label:'¿Cuántos fisioterapeutas hay?', placeholder:'Ej: 2', defaultValue:2, min:1, max:30},
+        ]
+      }
+    ]
+  },
+
+  psicologia: {
+    emoji:'🧠', label:'Psicología', agentDefaultName:'María',
+    steps: [
+      {
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que oirán tus pacientes al llamar',
+        fields: [
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: María, Elena…', defaultValue:'María'},
+          {key:'language', type:'select', label:'Idioma', defaultValue:'es',
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+        ]
+      },
+      {
+        id:'phone', title:'¿Cuál es el número de teléfono del agente?',
+        subtitle:'El número Twilio que comprarás para que los clientes llamen a tu recepcionista IA',
+        fields: [{key:'agent_phone', type:'text', label:'Número de teléfono (formato internacional)', placeholder:'Ej: +12138753573', defaultValue:''}]
+      },
+      {
+        id:'hours', title:'¿Cuándo atendéis?', subtitle:'Horario de la consulta',
+        fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
+      },
+      {
+        id:'services', title:'¿Qué servicios ofrecéis?',
+        subtitle:'La recepcionista sabrá orientar a los pacientes',
+        fields: [
+          {key:'services', type:'multiselect', label:'Servicios', defaultValue:['individual'],
+            options:[
+              {value:'individual',label:'Terapia individual',emoji:'🧠'},
+              {value:'pareja',label:'Terapia de pareja',emoji:'💑'},
+              {value:'familiar',label:'Terapia familiar',emoji:'👨‍👩‍👧'},
+              {value:'infantil',label:'Psicología infantil / adolescente',emoji:'🧒'},
+              {value:'ansiedad',label:'Ansiedad y estrés',emoji:'😰'},
+              {value:'online',label:'Sesiones online',emoji:'💻'},
+            ]
+          }
+        ]
+      },
+      {
+        id:'details', title:'Detalles de las sesiones',
+        subtitle:'Para gestionar la agenda correctamente',
+        fields: [
+          {key:'appointment_duration', type:'duration', label:'¿Cuánto dura una sesión?', defaultValue:50,
+            options:[{value:'45',label:'45 minutos'},{value:'50',label:'50 minutos'},{value:'60',label:'1 hora'},{value:'90',label:'1h 30min'}]},
+          {key:'num_professionals', type:'number', label:'¿Cuántos psicólogos hay?', placeholder:'Ej: 1', defaultValue:1, min:1, max:20},
+        ]
+      }
+    ]
+  },
+
+  hotel: {
+    emoji:'🏨', label:'Hotel / Alojamiento', agentDefaultName:'Lucía',
+    steps: [
+      {
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que oirán tus huéspedes al llamar',
+        fields: [
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Lucía, Andrea…', defaultValue:'Lucía'},
+          {key:'language', type:'select', label:'Idioma', defaultValue:'es',
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+        ]
+      },
+      {
+        id:'phone', title:'¿Cuál es el número de teléfono del agente?',
+        subtitle:'El número Twilio que comprarás para que los huéspedes llamen a tu recepcionista IA',
+        fields: [{key:'agent_phone', type:'text', label:'Número de teléfono (formato internacional)', placeholder:'Ej: +12138753573', defaultValue:''}]
+      },
+      {
+        id:'hours', title:'¿Cuándo atendéis llamadas?', subtitle:'Normalmente 24h, pero puedes ajustar',
+        fields: [{key:'business_hours', type:'hours', label:'Horario de recepción', defaultValue:null}]
+      },
+      {
+        id:'rooms', title:'¿Qué tipo de habitaciones tenéis?',
+        subtitle:'La recepcionista informará sobre disponibilidad',
+        fields: [
+          {key:'services', type:'multiselect', label:'Tipos de habitación', defaultValue:['doble','individual'],
+            options:[
+              {value:'individual',label:'Individual',emoji:'🛏️'},
+              {value:'doble',label:'Doble',emoji:'🛏️'},
+              {value:'suite',label:'Suite',emoji:'👑'},
+              {value:'familiar',label:'Familiar',emoji:'👨‍👩‍👧'},
+              {value:'premium',label:'Premium / Deluxe',emoji:'⭐'},
+              {value:'apartamento',label:'Apartamento',emoji:'🏠'},
+            ]
+          }
+        ]
+      },
+      {
+        id:'capacity', title:'Capacidad del hotel',
+        subtitle:'Para gestionar la disponibilidad',
+        fields: [
+          {key:'total_tables', type:'number', label:'Número total de habitaciones', placeholder:'Ej: 30', defaultValue:20, min:1, max:500},
+          {key:'checkin_time', type:'select', label:'Hora de check-in', defaultValue:'14:00',
+            options:[{value:'12:00',label:'12:00'},{value:'13:00',label:'13:00'},{value:'14:00',label:'14:00'},{value:'15:00',label:'15:00'},{value:'16:00',label:'16:00'}]},
+          {key:'checkout_time', type:'select', label:'Hora de check-out', defaultValue:'12:00',
+            options:[{value:'10:00',label:'10:00'},{value:'11:00',label:'11:00'},{value:'12:00',label:'12:00'},{value:'13:00',label:'13:00'}]},
+        ]
+      }
+    ]
+  },
+
+  ecommerce: {
+    emoji:'🛒', label:'Ecommerce / Tienda Online', agentDefaultName:'Paula',
+    steps: [
+      {
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que oirán tus clientes al llamar',
+        fields: [
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Paula, Marta…', defaultValue:'Paula'},
+          {key:'language', type:'select', label:'Idioma', defaultValue:'es',
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+        ]
+      },
+      {
+        id:'phone', title:'¿Cuál es el número de teléfono del agente?',
+        subtitle:'El número Twilio que comprarás para que los clientes llamen a tu recepcionista IA',
+        fields: [{key:'agent_phone', type:'text', label:'Número de teléfono (formato internacional)', placeholder:'Ej: +12138753573', defaultValue:''}]
+      },
+      {
+        id:'hours', title:'¿Cuándo atendéis llamadas?', subtitle:'Horario de atención telefónica',
+        fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
+      },
+      {
+        id:'services', title:'¿Qué gestiona tu recepcionista?',
+        subtitle:'Marca todo lo que debe poder atender por teléfono',
+        fields: [
+          {key:'services', type:'multiselect', label:'Gestiones', defaultValue:['estado_pedido','productos'],
+            options:[
+              {value:'estado_pedido',label:'Estado de pedidos',emoji:'📦'},
+              {value:'productos',label:'Información sobre productos',emoji:'🛍️'},
+              {value:'devoluciones',label:'Devoluciones y cambios',emoji:'🔄'},
+              {value:'pedidos_telefono',label:'Pedidos por teléfono',emoji:'📞'},
+              {value:'reclamaciones',label:'Reclamaciones',emoji:'📋'},
+              {value:'envios',label:'Información de envíos',emoji:'🚚'},
+            ]
+          }
+        ]
+      }
+    ]
+  },
+
+  gimnasio: {
+    emoji:'🏋️', label:'Gimnasio / Centro Deportivo', agentDefaultName:'Álex',
+    steps: [
+      {
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que oirán tus socios al llamar',
+        fields: [
+          {key:'agent_name', type:'text', label:'Nombre del recepcionista', placeholder:'Ej: Álex, Sergio…', defaultValue:'Álex'},
+          {key:'language', type:'select', label:'Idioma', defaultValue:'es',
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+        ]
+      },
+      {
+        id:'phone', title:'¿Cuál es el número de teléfono del agente?',
+        subtitle:'El número Twilio que comprarás para que los socios llamen a tu recepcionista IA',
+        fields: [{key:'agent_phone', type:'text', label:'Número de teléfono (formato internacional)', placeholder:'Ej: +12138753573', defaultValue:''}]
+      },
+      {
+        id:'hours', title:'¿Cuándo abrís?', subtitle:'Horario del gimnasio',
+        fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
+      },
+      {
+        id:'services', title:'¿Qué actividades ofrecéis?',
+        subtitle:'La recepcionista informará sobre horarios y disponibilidad',
+        fields: [
+          {key:'services', type:'multiselect', label:'Actividades', defaultValue:['sala_fitness','clases_dirigidas'],
+            options:[
+              {value:'sala_fitness',label:'Sala de musculación / Fitness',emoji:'🏋️'},
+              {value:'clases_dirigidas',label:'Clases dirigidas (spinning, body pump…)',emoji:'🚴'},
+              {value:'yoga',label:'Yoga / Pilates',emoji:'🧘'},
+              {value:'crossfit',label:'CrossFit / Funcional',emoji:'💪'},
+              {value:'natacion',label:'Natación / Piscina',emoji:'🏊'},
+              {value:'artes_marciales',label:'Artes marciales / Boxeo',emoji:'🥊'},
+              {value:'personal_trainer',label:'Entrenador personal',emoji:'👨‍🏫'},
+              {value:'nutricion',label:'Nutrición deportiva',emoji:'🥗'},
+            ]
+          }
+        ]
+      },
+      {
+        id:'capacity', title:'Capacidad',
+        subtitle:'Para gestionar reservas de clases',
+        fields: [
+          {key:'max_group', type:'number', label:'Plazas máximas por clase', placeholder:'Ej: 20', defaultValue:20, min:5, max:100},
+          {key:'appointment_duration', type:'duration', label:'¿Cuánto dura una clase?', defaultValue:60,
+            options:[{value:'45',label:'45 minutos'},{value:'60',label:'1 hora'},{value:'90',label:'1h 30min'}]},
+        ]
+      }
+    ]
+  },
+
+  academia: {
+    emoji:'📚', label:'Academia / Centro de Formación', agentDefaultName:'Clara',
+    steps: [
+      {
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que oirán tus alumnos al llamar',
+        fields: [
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Clara, Raquel…', defaultValue:'Clara'},
+          {key:'language', type:'select', label:'Idioma', defaultValue:'es',
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+        ]
+      },
+      {
+        id:'phone', title:'¿Cuál es el número de teléfono del agente?',
+        subtitle:'El número Twilio que comprarás para que los alumnos llamen a tu recepcionista IA',
+        fields: [{key:'agent_phone', type:'text', label:'Número de teléfono (formato internacional)', placeholder:'Ej: +12138753573', defaultValue:''}]
+      },
+      {
+        id:'hours', title:'¿Cuándo atendéis?', subtitle:'Horario de la academia',
+        fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
+      },
+      {
+        id:'services', title:'¿Qué cursos o materias ofrecéis?',
+        subtitle:'La recepcionista informará sobre disponibilidad y horarios',
+        fields: [
+          {key:'services', type:'multiselect', label:'Áreas', defaultValue:['idiomas'],
+            options:[
+              {value:'idiomas',label:'Idiomas (inglés, francés…)',emoji:'🌍'},
+              {value:'informatica',label:'Informática / Programación',emoji:'💻'},
+              {value:'oposiciones',label:'Oposiciones',emoji:'📋'},
+              {value:'refuerzo',label:'Refuerzo escolar',emoji:'📖'},
+              {value:'universidad',label:'Preparación universitaria',emoji:'🎓'},
+              {value:'musica',label:'Música / Arte',emoji:'🎵'},
+              {value:'fp',label:'Formación profesional',emoji:'🔧'},
+            ]
+          }
+        ]
+      },
+      {
+        id:'details', title:'Detalles de las clases',
+        subtitle:'Para gestionar la agenda',
+        fields: [
+          {key:'appointment_duration', type:'duration', label:'¿Cuánto dura una clase?', defaultValue:60,
+            options:[{value:'45',label:'45 minutos'},{value:'60',label:'1 hora'},{value:'90',label:'1h 30min'},{value:'120',label:'2 horas'}]},
+          {key:'max_group', type:'number', label:'Alumnos máximos por clase', placeholder:'Ej: 12', defaultValue:12, min:1, max:50},
+        ]
+      }
+    ]
+  },
+
+  spa: {
+    emoji:'💆', label:'Spa / Centro de Bienestar', agentDefaultName:'Nerea',
+    steps: [
+      {
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que oirán tus clientes al llamar',
+        fields: [
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Nerea, Silvia…', defaultValue:'Nerea'},
+          {key:'language', type:'select', label:'Idioma', defaultValue:'es',
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+        ]
+      },
+      {
+        id:'phone', title:'¿Cuál es el número de teléfono del agente?',
+        subtitle:'El número Twilio que comprarás para que los clientes llamen a tu recepcionista IA',
+        fields: [{key:'agent_phone', type:'text', label:'Número de teléfono (formato internacional)', placeholder:'Ej: +12138753573', defaultValue:''}]
+      },
+      {
+        id:'hours', title:'¿Cuándo abrís?', subtitle:'Horario del spa',
+        fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
+      },
+      {
+        id:'services', title:'¿Qué tratamientos ofrecéis?',
+        subtitle:'La recepcionista informará sobre disponibilidad y precios',
+        fields: [
+          {key:'services', type:'multiselect', label:'Tratamientos', defaultValue:['masaje','facial'],
+            options:[
+              {value:'masaje',label:'Masajes (relajante, descontracturante…)',emoji:'💆'},
+              {value:'facial',label:'Tratamientos faciales',emoji:'🧖'},
+              {value:'corporal',label:'Tratamientos corporales',emoji:'✨'},
+              {value:'circuito',label:'Circuito termal / Aguas',emoji:'🌊'},
+              {value:'manicura',label:'Manicura / Pedicura',emoji:'💅'},
+              {value:'depilacion',label:'Depilación',emoji:'🌸'},
+              {value:'packs',label:'Packs y bonos',emoji:'🎁'},
+            ]
+          }
+        ]
+      },
+      {
+        id:'details', title:'Detalles del spa',
+        subtitle:'Para gestionar bien las citas',
+        fields: [
+          {key:'appointment_duration', type:'duration', label:'¿Cuánto dura un tratamiento medio?', defaultValue:60,
+            options:[{value:'30',label:'30 minutos'},{value:'45',label:'45 minutos'},{value:'60',label:'1 hora'},{value:'90',label:'1h 30min'},{value:'120',label:'2 horas'}]},
+          {key:'num_professionals', type:'number', label:'¿Cuántos terapeutas / cabinas tenéis?', placeholder:'Ej: 3', defaultValue:3, min:1, max:20},
+        ]
+      }
+    ]
+  },
+
+  taller: {
+    emoji:'🔧', label:'Taller Mecánico', agentDefaultName:'Javi',
+    steps: [
+      {
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que oirán tus clientes al llamar',
+        fields: [
+          {key:'agent_name', type:'text', label:'Nombre del recepcionista', placeholder:'Ej: Javi, Miguel…', defaultValue:'Javi'},
+          {key:'language', type:'select', label:'Idioma', defaultValue:'es',
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+        ]
+      },
+      {
+        id:'phone', title:'¿Cuál es el número de teléfono del agente?',
+        subtitle:'El número Twilio que comprarás para que los clientes llamen a tu recepcionista IA',
+        fields: [{key:'agent_phone', type:'text', label:'Número de teléfono (formato internacional)', placeholder:'Ej: +12138753573', defaultValue:''}]
+      },
+      {
+        id:'hours', title:'¿Cuándo abrís?', subtitle:'Horario del taller',
+        fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
+      },
+      {
+        id:'services', title:'¿Qué servicios ofrecéis?',
+        subtitle:'La recepcionista informará sobre lo que hacéis',
+        fields: [
+          {key:'services', type:'multiselect', label:'Servicios', defaultValue:['revision','neumaticos'],
+            options:[
+              {value:'revision',label:'Revisión general / Pre-ITV',emoji:'🔍'},
+              {value:'aceite',label:'Cambio de aceite y filtros',emoji:'🛢️'},
+              {value:'neumaticos',label:'Neumáticos',emoji:'🛞'},
+              {value:'frenos',label:'Frenos y embrague',emoji:'🛑'},
+              {value:'electricidad',label:'Electricidad / Batería',emoji:'⚡'},
+              {value:'chapa_pintura',label:'Chapa y pintura',emoji:'🎨'},
+              {value:'aire_acondicionado',label:'Aire acondicionado',emoji:'❄️'},
+              {value:'itv',label:'Preparación ITV',emoji:'📋'},
+            ]
+          }
+        ]
+      },
+      {
+        id:'capacity', title:'Capacidad del taller',
+        subtitle:'Para gestionar las citas',
+        fields: [
+          {key:'total_tables', type:'number', label:'¿Cuántos coches podéis atender a la vez?', placeholder:'Ej: 4', defaultValue:4, min:1, max:30},
+          {key:'has_urgencias', type:'toggle', label:'¿Atendéis urgencias / averías?',
+            hint:'La recepcionista ofrecerá cita urgente o servicio de grúa', defaultValue:true},
+        ]
+      }
+    ]
+  },
+
+  seguros: {
+    emoji:'🛡️', label:'Correduría de Seguros', agentDefaultName:'Carmen',
+    steps: [
+      {
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que oirán tus clientes al llamar',
+        fields: [
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Carmen, Teresa…', defaultValue:'Carmen'},
+          {key:'language', type:'select', label:'Idioma', defaultValue:'es',
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+        ]
+      },
+      {
+        id:'phone', title:'¿Cuál es el número de teléfono del agente?',
+        subtitle:'El número Twilio que comprarás para que los clientes llamen a tu recepcionista IA',
+        fields: [{key:'agent_phone', type:'text', label:'Número de teléfono (formato internacional)', placeholder:'Ej: +12138753573', defaultValue:''}]
+      },
+      {
+        id:'hours', title:'¿Cuándo atendéis?', subtitle:'Horario de la correduría',
+        fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
+      },
+      {
+        id:'services', title:'¿Qué tipos de seguros ofrecéis?',
+        subtitle:'La recepcionista orientará a los clientes según su necesidad',
+        fields: [
+          {key:'services', type:'multiselect', label:'Tipos de seguro', defaultValue:['auto','hogar'],
+            options:[
+              {value:'auto',label:'Seguro de coche / Moto',emoji:'🚗'},
+              {value:'hogar',label:'Seguro de hogar',emoji:'🏠'},
+              {value:'salud',label:'Seguro de salud',emoji:'🏥'},
+              {value:'vida',label:'Seguro de vida',emoji:'❤️'},
+              {value:'negocio',label:'Seguro de negocio / RC',emoji:'🏢'},
+              {value:'viaje',label:'Seguro de viaje',emoji:'✈️'},
+              {value:'decesos',label:'Decesos',emoji:'🕊️'},
+            ]
+          }
+        ]
+      },
+      {
+        id:'details', title:'Detalles de las citas',
+        subtitle:'Para gestionar la agenda',
+        fields: [
+          {key:'appointment_duration', type:'duration', label:'¿Cuánto dura una cita media?', defaultValue:30,
+            options:[{value:'15',label:'15 minutos'},{value:'30',label:'30 minutos'},{value:'45',label:'45 minutos'},{value:'60',label:'1 hora'}]},
+          {key:'has_urgencias', type:'toggle', label:'¿Atendéis siniestros urgentes?',
+            hint:'La recepcionista transferirá los siniestros al departamento correspondiente', defaultValue:true},
+        ]
+      }
+    ]
+  },
+
+  inmobiliaria: {
+    emoji:'🏠', label:'Inmobiliaria', agentDefaultName:'Patricia',
+    steps: [
+      {
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que oirán tus clientes al llamar',
+        fields: [
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Patricia, Rosa…', defaultValue:'Patricia'},
+          {key:'language', type:'select', label:'Idioma', defaultValue:'es',
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+        ]
+      },
+      {
+        id:'phone', title:'¿Cuál es el número de teléfono del agente?',
+        subtitle:'El número Twilio que comprarás para que los clientes llamen a tu recepcionista IA',
+        fields: [{key:'agent_phone', type:'text', label:'Número de teléfono (formato internacional)', placeholder:'Ej: +12138753573', defaultValue:''}]
+      },
+      {
+        id:'hours', title:'¿Cuándo atendéis?', subtitle:'Horario de la inmobiliaria',
+        fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
+      },
+      {
+        id:'services', title:'¿Qué servicios ofrecéis?',
+        subtitle:'La recepcionista orientará a los clientes según su interés',
+        fields: [
+          {key:'services', type:'multiselect', label:'Servicios', defaultValue:['venta','alquiler'],
+            options:[
+              {value:'venta',label:'Venta de inmuebles',emoji:'🏘️'},
+              {value:'alquiler',label:'Alquiler',emoji:'🔑'},
+              {value:'alquiler_vacacional',label:'Alquiler vacacional',emoji:'🏖️'},
+              {value:'tasaciones',label:'Tasaciones',emoji:'📊'},
+              {value:'gestion_patrimonial',label:'Gestión patrimonial',emoji:'🏛️'},
+              {value:'obra_nueva',label:'Obra nueva / Promociones',emoji:'🏗️'},
+            ]
+          }
+        ]
+      },
+      {
+        id:'details', title:'¿Cómo organizáis las visitas?',
+        subtitle:'Para gestionar bien la agenda de los agentes',
+        fields: [
+          {key:'appointment_duration', type:'duration', label:'¿Cuánto dura una visita a un inmueble?', defaultValue:60,
+            options:[{value:'30',label:'30 minutos'},{value:'45',label:'45 minutos'},{value:'60',label:'1 hora'},{value:'90',label:'1h 30min'}]},
+          {key:'num_professionals', type:'number', label:'¿Cuántos agentes inmobiliarios hay?', placeholder:'Ej: 3', defaultValue:3, min:1, max:50},
+        ]
+      }
+    ]
+  },
+
+  cafeteria: {
+    emoji:'☕', label:'Cafetería', agentDefaultName:'Sofía',
+    steps: [
+      {
+        id:'agent', title:'¿Cómo se llamará tu recepcionista?', subtitle:'El nombre que oirán tus clientes al llamar',
+        fields: [
+          {key:'agent_name', type:'text', label:'Nombre de la recepcionista', placeholder:'Ej: Sofía, Carmen…', defaultValue:'Sofía'},
+          {key:'language', type:'select', label:'Idioma', defaultValue:'es',
+            options:[{value:'es',label:'Español'},{value:'ca',label:'Català'},{value:'eu',label:'Euskera'},{value:'en',label:'English'}]},
+        ]
+      },
+      {
+        id:'phone', title:'¿Cuál es el número de teléfono del agente?',
+        subtitle:'El número Twilio que comprarás para que los clientes llamen a tu recepcionista IA',
+        fields: [{key:'agent_phone', type:'text', label:'Número de teléfono (formato internacional)', placeholder:'Ej: +12138753573', defaultValue:''}]
+      },
+      {
+        id:'hours', title:'¿Cuándo abrís?', subtitle:'Horario de la cafetería',
+        fields: [{key:'business_hours', type:'hours', label:'Horario', defaultValue:null}]
+      },
+      {
+        id:'services', title:'¿Qué gestionáis por teléfono?',
+        subtitle:'Tu recepcionista se centrará en esto',
+        fields: [
+          {key:'services', type:'multiselect', label:'Servicios', defaultValue:['reservas','informacion'],
+            options:[
+              {value:'reservas',label:'Reservar mesas',emoji:'🍽️'},
+              {value:'pedidos',label:'Pedidos para llevar',emoji:'📦'},
+              {value:'informacion',label:'Preguntas sobre carta y horario',emoji:'ℹ️'},
+              {value:'eventos',label:'Reservar para eventos',emoji:'🎉'},
+            ]
+          }
+        ]
+      }
+    ]
+  },
 }
 
 // Fallback para tipos no reconocidos
@@ -704,7 +1273,145 @@ function SimulationStep({ tenant, answers, flow }: { tenant:any; answers:Record<
         {from:'agent', text:`Perfecto Carlos. Hasta el lunes. ¡Que tenga buen día!`},
       ]
     }
-    // Restaurante / Bar por defecto
+    if (type === 'barberia') {
+      return [
+        {from:'cliente', text:'Buenas, quería pedir cita para corte y barba.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Tienes preferencia de día o de barbero?`},
+        {from:'cliente', text:'El viernes por la tarde si puede ser.'},
+        {from:'agent', text:`El viernes tengo hueco a las 17:00 y a las 18:30. ¿Cuál prefieres?`},
+        {from:'cliente', text:'A las 17:00.'},
+        {from:'agent', text:`Apuntado. Viernes a las 17:00, corte y barba. ¿A nombre de quién?`},
+        {from:'cliente', text:'David.'},
+        {from:'agent', text:`Hecho David. Nos vemos el viernes. ¡Hasta luego!`},
+      ]
+    }
+    if (type === 'fisioterapia') {
+      return [
+        {from:'cliente', text:'Hola, necesito una cita de fisioterapia para la espalda.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Es una lesión reciente o un tratamiento que ya llevas?`},
+        {from:'cliente', text:'Me duele desde hace una semana, creo que es una contractura.'},
+        {from:'agent', text:`Vale, te apunto para fisioterapia manual. ¿Qué día te viene bien?`},
+        {from:'cliente', text:'El miércoles por la mañana.'},
+        {from:'agent', text:`Tengo hueco el miércoles a las 10:00. ¿Te viene bien?`},
+        {from:'cliente', text:'Perfecto.'},
+        {from:'agent', text:`Anotado. Miércoles a las 10:00. ¿Me das tu nombre?`},
+        {from:'cliente', text:'Pedro Martín.'},
+        {from:'agent', text:`Genial Pedro. Hasta el miércoles. ¡Que vaya bien!`},
+      ]
+    }
+    if (type === 'psicologia') {
+      return [
+        {from:'cliente', text:'Hola, quería pedir cita con un psicólogo.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Es tu primera consulta con nosotros?`},
+        {from:'cliente', text:'Sí, es la primera vez.'},
+        {from:'agent', text:`Perfecto. ¿Qué día y hora te vendrían mejor?`},
+        {from:'cliente', text:'El jueves por la tarde si puede ser.'},
+        {from:'agent', text:`El jueves tengo disponible a las 17:00. ¿Te parece bien?`},
+        {from:'cliente', text:'Sí, perfecto.'},
+        {from:'agent', text:`Anotado. Jueves a las 17:00, primera consulta. ¿Me das tu nombre?`},
+        {from:'cliente', text:'Ana López.'},
+        {from:'agent', text:`Perfecto Ana. Hasta el jueves. ¡Un saludo!`},
+      ]
+    }
+    if (type === 'hotel') {
+      return [
+        {from:'cliente', text:'Hola, quería reservar una habitación para el fin de semana.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Para cuántas personas y qué tipo de habitación busca?`},
+        {from:'cliente', text:'Somos dos, una doble estaría bien.'},
+        {from:'agent', text:`Perfecto. ¿Del viernes al domingo? Tengo habitación doble disponible.`},
+        {from:'cliente', text:'Sí, viernes y sábado.'},
+        {from:'agent', text:`Reserva anotada: habitación doble del viernes al domingo. Check-in a partir de las 14:00. ¿A nombre de quién?`},
+        {from:'cliente', text:'A nombre de García.'},
+        {from:'agent', text:`Hecho. Reserva confirmada a nombre de García. ¡Les esperamos el viernes!`},
+      ]
+    }
+    if (type === 'ecommerce') {
+      return [
+        {from:'cliente', text:'Hola, quería saber el estado de mi pedido.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Me das tu nombre o número de pedido?`},
+        {from:'cliente', text:'Soy María González, pedí unas zapatillas la semana pasada.'},
+        {from:'agent', text:`Vale María, dame un segundo que lo miro... Tu pedido está en camino, debería llegarte mañana o pasado.`},
+        {from:'cliente', text:'Genial, muchas gracias.'},
+        {from:'agent', text:`De nada María. Si necesitas algo más, aquí estamos. ¡Hasta luego!`},
+      ]
+    }
+    if (type === 'gimnasio') {
+      return [
+        {from:'cliente', text:'Hola, quería apuntarme a una clase de spinning.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. Las clases de spinning son los martes y jueves a las 19:00. ¿Cuál te viene mejor?`},
+        {from:'cliente', text:'El martes.'},
+        {from:'agent', text:`Perfecto. ¿Eres socio ya o es tu primera vez?`},
+        {from:'cliente', text:'Soy socio.'},
+        {from:'agent', text:`Genial. Te apunto al spinning del martes a las 19:00. ¿Me das tu nombre?`},
+        {from:'cliente', text:'Roberto Díaz.'},
+        {from:'agent', text:`Apuntado Roberto. ¡Nos vemos el martes!`},
+      ]
+    }
+    if (type === 'taller') {
+      return [
+        {from:'cliente', text:'Hola, quería pedir cita para la revisión del coche.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Qué coche es?`},
+        {from:'cliente', text:'Un Seat León de 2019.'},
+        {from:'agent', text:`Vale. ¿Es revisión general o algo concreto? Aceite, frenos, pre-ITV...`},
+        {from:'cliente', text:'Revisión general, que me toca la ITV pronto.'},
+        {from:'agent', text:`Perfecto, revisión pre-ITV. ¿Qué día te viene bien traerlo?`},
+        {from:'cliente', text:'El lunes si puede ser.'},
+        {from:'agent', text:`El lunes por la mañana te lo puedo coger. ¿A nombre de quién?`},
+        {from:'cliente', text:'Antonio Ruiz.'},
+        {from:'agent', text:`Hecho Antonio. Te esperamos el lunes con el León. ¡Hasta luego!`},
+      ]
+    }
+    if (type === 'seguros') {
+      return [
+        {from:'cliente', text:'Hola, quería informarme sobre un seguro de hogar.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Busca contratar uno nuevo o quiere comparar con el que tiene?`},
+        {from:'cliente', text:'Quiero ver opciones, acabo de comprar un piso.'},
+        {from:'agent', text:`Enhorabuena. Lo mejor es que hable con un asesor. ¿Le viene bien el miércoles a las 11:00?`},
+        {from:'cliente', text:'Sí, perfecto.'},
+        {from:'agent', text:`Cita anotada el miércoles a las 11:00 para seguro de hogar. ¿Me da su nombre?`},
+        {from:'cliente', text:'Luis Fernández.'},
+        {from:'agent', text:`Perfecto Luis. Hasta el miércoles. ¡Un saludo!`},
+      ]
+    }
+    if (type === 'inmobiliaria') {
+      return [
+        {from:'cliente', text:'Hola, estoy buscando un piso en alquiler por la zona centro.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Tiene alguna preferencia de precio o número de habitaciones?`},
+        {from:'cliente', text:'Dos habitaciones, hasta 900 euros al mes.'},
+        {from:'agent', text:`Tenemos varias opciones. Lo mejor es que un agente le enseñe los pisos. ¿Le viene bien el jueves por la tarde?`},
+        {from:'cliente', text:'Sí, a las 17:00 podría.'},
+        {from:'agent', text:`Perfecto. ¿Me da su nombre y teléfono para confirmarle la visita?`},
+        {from:'cliente', text:'Soy Elena Mora, 612 345 678.'},
+        {from:'agent', text:`Anotado Elena. Un agente le llamará para confirmar. ¡Hasta pronto!`},
+      ]
+    }
+    if (type === 'spa') {
+      return [
+        {from:'cliente', text:'Hola, quería reservar un masaje relajante.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿De cuánto tiempo lo quieres, de 30, 60 o 90 minutos?`},
+        {from:'cliente', text:'De una hora.'},
+        {from:'agent', text:`Perfecto. ¿Qué día te vendría bien?`},
+        {from:'cliente', text:'El sábado si puede ser.'},
+        {from:'agent', text:`El sábado tengo hueco a las 11:00 y a las 16:00. ¿Cuál prefieres?`},
+        {from:'cliente', text:'A las 11.'},
+        {from:'agent', text:`Anotado. Masaje relajante de 60 min el sábado a las 11:00. ¿A nombre de quién?`},
+        {from:'cliente', text:'Cristina.'},
+        {from:'agent', text:`Perfecto Cristina. Te recomiendo llegar 10 minutitos antes. ¡Hasta el sábado!`},
+      ]
+    }
+    if (type === 'academia') {
+      return [
+        {from:'cliente', text:'Hola, quería apuntar a mi hijo a clases de inglés.'},
+        {from:'agent', text:`${businessName}, buenas. Soy ${agentName}. ¿Qué edad tiene y qué nivel tiene más o menos?`},
+        {from:'cliente', text:'Tiene 12 años, está en primero de ESO.'},
+        {from:'agent', text:`Perfecto. Tenemos grupo de inglés para ESO los martes y jueves de 17:00 a 18:00. ¿Le vendría bien?`},
+        {from:'cliente', text:'Sí, eso está genial.'},
+        {from:'agent', text:`Apuntado. ¿Me da el nombre del alumno?`},
+        {from:'cliente', text:'Pablo Serrano.'},
+        {from:'agent', text:`Perfecto. Pablo empieza el martes. ¡Hasta pronto!`},
+      ]
+    }
+    // Restaurante / Bar / Cafetería por defecto
     const hasOrders = services.includes('pedidos')
     if (hasOrders) {
       return [
@@ -840,12 +1547,18 @@ export default function OnboardingPage() {
             conditions: '',
             faqs: '',
           },
-          special_cases: {
-            allergies: 'review',
-            birthdays: 'confirm',
-            events: 'review',
-            vip: 'confirm',
-          }
+          special_cases: (() => {
+            const type = tenant?.type || 'otro'
+            if (['restaurante','bar','cafeteria'].includes(type)) return { allergies:'review', birthdays:'confirm', events:'review', vip:'confirm' }
+            if (['clinica_dental','clinica_medica','fisioterapia'].includes(type)) return { urgency:'review', first_visit:'confirm', vip:'confirm' }
+            if (type === 'veterinaria') return { urgency:'review', surgery:'review', vip:'confirm' }
+            if (type === 'psicologia') return { crisis:'review', first_visit:'confirm' }
+            if (type === 'hotel') return { large_group:'review', long_stay:'review', vip:'confirm' }
+            if (type === 'taller') return { urgency:'review', tow_required:'review' }
+            if (type === 'seguros') return { urgency:'review', siniestro:'review' }
+            if (type === 'ecommerce') return { high_value:'review', return_request:'review' }
+            return { vip:'confirm' }
+          })(),
         },
       }).eq('id', tenant.id)
     } catch(e) { console.error('save error:', e) }
@@ -860,7 +1573,7 @@ export default function OnboardingPage() {
   const completeOnboarding = useCallback(async () => {
     if (!tenant) return
     setSaving(true)
-    // Guardar datos en business_knowledge, business_rules y agent_phone
+    // Guardar TODOS los datos recogidos en business_knowledge, business_rules y tenant
     try {
       await fetch('/api/onboarding/complete', {
         method: 'POST',
@@ -873,8 +1586,22 @@ export default function OnboardingPage() {
           agent_name: answers.agent_name || null,
           hours: answers.business_hours || null,
           services: answers.services || null,
-          max_capacity: answers.max_group || null,
+          max_capacity: answers.total_tables ? (answers.total_tables * (answers.table_capacity || 4)) : (answers.max_group || null),
           advance_hours: 24,
+          // Campos específicos por vertical
+          num_professionals: answers.num_professionals || null,
+          appointment_duration: answers.appointment_duration || null,
+          has_urgencias: answers.has_urgencias || false,
+          total_tables: answers.total_tables || null,
+          table_capacity: answers.table_capacity || null,
+          max_group: answers.max_group || null,
+          reservation_duration: answers.reservation_duration || null,
+          checkin_time: answers.checkin_time || null,
+          checkout_time: answers.checkout_time || null,
+          animal_types: answers.animal_types || null,
+          meeting_types: answers.meeting_types || null,
+          salon_tipo: answers.salon_tipo || null,
+          num_dentists: answers.num_dentists || null,
         })
       })
     } catch(e) { console.error('onboarding/complete error', e) }

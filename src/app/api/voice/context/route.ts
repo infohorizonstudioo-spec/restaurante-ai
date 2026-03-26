@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { resolveTemplate } from "@/lib/templates"
+import { BUSINESS_TYPE_LOGIC } from "@/app/api/agent/get-context/route"
 
 export const dynamic = "force-dynamic"
 
@@ -142,6 +144,12 @@ export async function POST(req: NextRequest) {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     })
 
+    // Business type context for ElevenLabs agent
+    const businessType = tenant.type || 'otro'
+    const tmpl = resolveTemplate(businessType)
+    const typeLogic = BUSINESS_TYPE_LOGIC[businessType] || BUSINESS_TYPE_LOGIC.otro
+    const bookingTerm = tmpl.labels.reserva.toLowerCase() // "reserva" | "cita" | "sesión" | "clase"
+
     // Return dynamic variables for ElevenLabs
     return NextResponse.json({
       dynamic_variables: {
@@ -152,6 +160,9 @@ export async function POST(req: NextRequest) {
         caller_phone: callerPhone,
         customer_context: customerContext,
         current_date: currentDate,
+        business_type: businessType,
+        booking_term: bookingTerm,
+        action_name: (typeLogic as any).action_name || 'gestión',
       }
     })
 

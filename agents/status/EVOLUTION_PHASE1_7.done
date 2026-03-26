@@ -1,0 +1,33 @@
+COMPLETADO
+
+== ARCHIVOS CREADOS ==
+src/lib/message-intelligence.ts — Clasificacion de mensajes (keyword + Claude Haiku)
+src/lib/summary-engine.ts — Motor de resumenes (conversacion, dia, cliente)
+src/lib/alert-rules.ts — Alertas configurables (evaluateAndNotify, dispatchAlert)
+src/lib/reminder-engine.ts — Recordatorios (schedule, cancel, sendDue, fallback)
+src/lib/feature-flags.ts — Feature flags por plan (hasFeature, requireFeature)
+src/hooks/useFeatureFlag.ts — Hook React para gating por plan
+src/hooks/useSupabaseQuery.ts — SWR wrapper para Supabase
+src/hooks/useRealtimeSubscription.ts — SWR + Supabase realtime incremental
+src/components/UpgradeGate.tsx — Componente wrapper para upgrade prompt
+src/app/api/channels/escalate/route.ts — API escalation toggle
+src/app/api/tenant/alert-rules/route.ts — API CRUD alert rules
+src/app/api/tenant/reminders/route.ts — API CRUD reminder config
+src/app/api/cron/check-reminders/route.ts — Cron cada 15min para recordatorios
+supabase/migrations/20260326_evolution.sql — Migracion SQL completa
+
+== ARCHIVOS MODIFICADOS ==
+src/lib/channel-engine.ts — Integrar classifyMessage + escalation + notif priority
+src/lib/channel-agent.ts — Tool escalate_to_human + intent escalacion
+src/lib/agent-tools.ts — scheduleReminders/cancelReminders en create/cancel/modify
+src/lib/notifications.ts — (sin cambios, ya soportaba priority)
+src/lib/colors.ts — Aliases card/card2/sub/muted
+src/app/api/cron/send-reminders/route.ts — Reescrito con reminder engine
+src/app/api/cron/daily-summary/route.ts — Reescrito con summary engine
+src/app/(dashboard)/mensajes/page.tsx — Escalation UI (tab, banner, botones)
+src/app/(dashboard)/panel/page.tsx — Widget resumen de ayer
+src/app/(dashboard)/configuracion/page.tsx — Secciones Alertas + Recordatorios
+src/app/(dashboard)/mesas/page.tsx — Editor SVG con resize/rotate/dup/snap/zoom/undo
+
+== BUILD ==
+next build: OK (sin errores)

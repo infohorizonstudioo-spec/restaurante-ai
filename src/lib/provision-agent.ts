@@ -203,6 +203,32 @@ FLUJO PARA CANCELACIONES:
 
 Si el cliente tiene urgencia por siniestro: "tranquilo, te paso ahora mismo con un compañero que te ayuda." Y usa transfer_to_number.`,
 
+  hotel: `FLUJO PARA RESERVAS DE HABITACIÓN:
+1. Pide nombre del huésped
+2. Pregunta fechas: "¿para qué días sería?"
+3. Pregunta número de personas y tipo de habitación (individual, doble, suite, familiar)
+4. Pregunta si tiene preferencias: vista, planta, cama supletoria, cuna
+5. Llama a check_availability con la fecha de entrada
+6. Si hay disponibilidad → llama a create_reservation con customer_phone={{caller_phone}} y en notes incluye: checkout, tipo habitación, número huéspedes y preferencias
+7. Confirma: "hecho, [nombre], te tengo reservada una [tipo] del [fecha entrada] al [fecha salida] para [X] personas."
+8. Informa del horario de check-in (normalmente a partir de las 14:00) y check-out (antes de las 12:00)
+9. Al cerrar → llama a save_call_summary
+
+FLUJO PARA CANCELACIONES:
+1. Pregunta nombre o número de reserva
+2. Llama a cancel_reservation con customer_phone={{caller_phone}}
+3. Si hay política de cancelación, informa
+4. Al cerrar llama a save_call_summary con intent=cancelacion
+
+FLUJO PARA MODIFICACIONES:
+1. Pregunta qué quiere cambiar: fechas, tipo habitación, o número de personas
+2. Llama a modify_reservation con los nuevos datos
+3. Si no hay disponibilidad para el cambio, ofrece alternativas
+4. Al cerrar llama a save_call_summary con intent=modificacion
+
+Si preguntan por servicios del hotel (spa, restaurante, parking, wifi): responde con lo que tengas en los datos.
+Si preguntan por precios: responde con lo que tengas. Si no lo sabes: "eso depende de las fechas, déjame que te busco la mejor tarifa y te llamo."`,
+
   ecommerce: `FLUJO PARA CONSULTAS DE PRODUCTO:
 1. Pregunta qué producto o servicio busca
 2. Llama a get_menu_or_services para consultar el catálogo
@@ -411,7 +437,9 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
       .eq("active", true)
 
     const kv: Record<string, string> = {}
-    for (const k of (knowledge || [])) kv[k.category] = k.content
+    for (const k of (knowledge || [])) {
+      kv[k.category] = kv[k.category] ? kv[k.category] + ". " + k.content : k.content
+    }
 
     // 3. Leer business_rules
     const { data: rules } = await supabase
@@ -424,6 +452,9 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
       if (r.rule_key === "max_capacity") rulesLines.push("Aforo máximo: " + r.rule_value)
       else if (r.rule_key === "advance_booking_hours") rulesLines.push("Reservas con mínimo " + r.rule_value + "h de antelación")
       else if (r.rule_key === "large_group_min") rulesLines.push("Grupos de más de " + r.rule_value + " personas: llamar directamente")
+      else if (r.rule_key === "num_professionals") rulesLines.push("Profesionales disponibles: " + r.rule_value)
+      else if (r.rule_key === "slot_duration") rulesLines.push("Duración por cita/servicio: " + r.rule_value + " minutos")
+      else if (r.rule_key === "total_spaces") rulesLines.push("Espacios/mesas totales: " + r.rule_value)
       else if (r.rule_key === "closed_days") {
         try { rulesLines.push("Cerrado: " + JSON.parse(r.rule_value).join(", ")) } catch { rulesLines.push("Días cerrados: " + r.rule_value) }
       }
@@ -661,7 +692,14 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
       name: `${tenant.name} — Reservo.AI`,
       conversation_config: {
         agent: {
-          first_message: `${tenant.name}, buenas, dígame.`,
+          first_message: (() => {
+            const type = tenant.type || 'otro'
+            const name = tenant.name
+            if (['clinica_dental','clinica_medica','fisioterapia','psicologia'].includes(type)) return `${name}, buenos días. ¿En qué puedo ayudarle?`
+            if (type === 'hotel') return `${name}, bienvenido. ¿En qué puedo ayudarle?`
+            if (type === 'ecommerce') return `${name}, hola. ¿En qué puedo ayudarte?`
+            return `${name}, buenas, dígame.`
+          })(),
           language: "es",
           prompt: {
             prompt,
