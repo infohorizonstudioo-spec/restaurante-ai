@@ -5,12 +5,13 @@ import Link from 'next/link'
 /* ─── LIVE NOTIFICATION FEED ─── */
 const NOTIFICATIONS = [
   { icon:'📞', color:'#2DD4BF', msg:'Llamada entrante — Cita corte y color mañana', sub:'hace 2s' },
+  { icon:'💬', color:'#4ADE80', msg:'WhatsApp — "¿Tienen mesa para hoy?" → Reserva confirmada', sub:'hace 5s' },
   { icon:'✅', color:'#4ADE80', msg:'Cita confirmada — García · Viernes 11:00', sub:'hace 8s' },
-  { icon:'📋', color:'#F0A84E', msg:'Consulta registrada — Clínica · Revisión anual', sub:'hace 15s' },
+  { icon:'📧', color:'#60A5FA', msg:'Email respondido — Presupuesto ortodoncia enviado', sub:'hace 12s' },
   { icon:'📞', color:'#2DD4BF', msg:'Llamada entrante — Presupuesto instalación AC', sub:'hace 22s' },
-  { icon:'✅', color:'#4ADE80', msg:'Reserva confirmada — López · Lunes 10:00', sub:'hace 31s' },
-  { icon:'🔧', color:'#A78BFA', msg:'Servicio agendado — Taller · Revisión ITV', sub:'hace 40s' },
-  { icon:'📞', color:'#2DD4BF', msg:'Llamada entrante — Asesoría fiscal autónomo', sub:'hace 55s' },
+  { icon:'💬', color:'#4ADE80', msg:'WhatsApp — Recordatorio enviado a 3 clientes', sub:'hace 28s' },
+  { icon:'📧', color:'#60A5FA', msg:'Email — Consulta fiscal resuelta automáticamente', sub:'hace 35s' },
+  { icon:'✅', color:'#4ADE80', msg:'Reserva confirmada — López · Lunes 10:00', sub:'hace 40s' },
 ]
 
 function LiveFeed() {
@@ -127,9 +128,9 @@ function DemoWidget() {
     <div style={{maxWidth:480,margin:'0 auto 48px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(240,168,78,0.25)',borderRadius:20,padding:24,textAlign:'center'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:16}}>
         <div style={{width:10,height:10,borderRadius:'50%',background:'#4ADE80',animation:'pulse 2s ease-in-out infinite'}}/>
-        <span style={{fontSize:14,fontWeight:600,color:'#E8EEF6'}}>Prueba ahora — habla con nuestra IA</span>
+        <span style={{fontSize:14,fontWeight:600,color:'#E8EEF6'}}>Habla con tu futura recepcionista</span>
       </div>
-      <p style={{fontSize:13,color:'rgba(255,255,255,0.45)',marginBottom:20}}>Pulsa el botón y habla como si llamaras a un negocio. Pide una reserva, pregunta precios, o lo que quieras.</p>
+      <p style={{fontSize:13,color:'rgba(255,255,255,0.45)',marginBottom:20}}>Pulsa el botón y habla como si llamaras a un negocio. Pide una reserva, pregunta precios, cambia una cita. Haz lo que harías con una persona real.</p>
       <div ref={widgetRef} dangerouslySetInnerHTML={{__html:'<elevenlabs-convai agent-id="agent_0701kkw2sdx5fp685xp6ckngf6zj"></elevenlabs-convai>'}}/>
       <p style={{fontSize:11,color:'rgba(255,255,255,0.2)',marginTop:12}}>Conversación real con IA · Sin registro · Gratis</p>
     </div>
@@ -141,7 +142,7 @@ export default function HomePage() {
   const C = {
     bg:'#090C13', card:'rgba(255,255,255,0.03)', border:'rgba(255,255,255,0.07)',
     text:'#E8EEF6', muted:'rgba(255,255,255,0.45)', amber:'#F0A84E', teal:'#2DD4BF',
-    red:'#F87171', green:'#4ADE80'
+    red:'#F87171', green:'#4ADE80', blue:'#60A5FA'
   }
   return (
     <main style={{fontFamily:"'Sora','DM Sans',-apple-system,sans-serif",background:C.bg,color:C.text,lineHeight:1.5,overflowX:'hidden'}}>
@@ -175,6 +176,9 @@ export default function HomePage() {
           .adapt-grid{grid-template-columns:1fr!important}
           .trust-grid{grid-template-columns:1fr!important}
           .compare-grid{grid-template-columns:1fr!important}
+          .channel-grid{grid-template-columns:1fr!important}
+          .central-grid{grid-template-columns:1fr!important}
+          .stats-grid{grid-template-columns:repeat(2,1fr)!important}
         }
       `}</style>
 
@@ -194,24 +198,27 @@ export default function HomePage() {
       </nav>
 
       {/* ══════════════════════════════════════════
-          1. HERO — Impacto + dinero + problema real
+          1. HERO — Impacto inmediato + multicanal natural
          ══════════════════════════════════════════ */}
       <section style={{minHeight:'100vh',display:'grid',gridTemplateColumns:'1fr 1fr',gap:60,alignItems:'center',padding:'100px clamp(16px,5vw,64px) 60px',maxWidth:1200,margin:'0 auto'}} className="hero-grid">
         {/* LEFT */}
         <div style={{animation:'fadeUp 0.8s ease forwards'}}>
           <div style={{display:'inline-flex',alignItems:'center',gap:8,background:'rgba(240,168,78,0.1)',border:'1px solid rgba(240,168,78,0.25)',borderRadius:20,padding:'5px 14px',marginBottom:30}}>
             <div style={{width:7,height:7,borderRadius:'50%',background:C.amber,animation:'pulse 1.5s ease-in-out infinite'}}/>
-            <span style={{fontSize:11.5,fontWeight:600,color:C.amber,letterSpacing:'0.06em'}}>ATENDIENDO LLAMADAS AHORA MISMO</span>
+            <span style={{fontSize:11.5,fontWeight:600,color:C.amber,letterSpacing:'0.06em'}}>RESPONDIENDO CLIENTES AHORA MISMO</span>
           </div>
-          <h1 style={{fontSize:'clamp(36px,4.5vw,60px)',fontWeight:800,letterSpacing:'-0.04em',lineHeight:1.08,marginBottom:24,color:C.text}}>
-            Cada llamada<br/>que no coges es<br/>
-            <span style={{background:'linear-gradient(135deg,#F0A84E,#FBBF24)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>dinero que se va</span>
+          <h1 style={{fontSize:'clamp(36px,4.5vw,58px)',fontWeight:800,letterSpacing:'-0.04em',lineHeight:1.08,marginBottom:24,color:C.text}}>
+            Cada cliente que<br/>no atiendes es<br/>
+            <span style={{background:'linear-gradient(135deg,#F0A84E,#FBBF24)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>dinero que pierdes</span>
           </h1>
           <p style={{fontSize:17,color:C.muted,lineHeight:1.75,marginBottom:12,maxWidth:520}}>
-            Reservo atiende tus llamadas, entiende lo que necesita cada cliente y <strong style={{color:C.text}}>toma decisiones por ti.</strong> Reservas, citas, pedidos. Todo resuelto, sin que tengas que hacer nada.
+            Reservo responde llamadas, WhatsApp, emails. Entiende lo que necesita cada cliente y <strong style={{color:C.text}}>toma decisiones por ti.</strong> Reservas, citas, pedidos, consultas. Todo resuelto.
           </p>
-          <p style={{fontSize:15.5,color:C.text,fontWeight:600,marginBottom:40,padding:'12px 0',borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
-            No es un chatbot. Es alguien que trabaja por ti.
+          <p style={{fontSize:15.5,color:C.text,fontWeight:600,marginBottom:14,padding:'12px 0',borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
+            No importa cómo te contacten. Siempre respondes.
+          </p>
+          <p style={{fontSize:14,color:C.muted,marginBottom:36,fontStyle:'italic'}}>
+            No es un bot. Es alguien que trabaja por ti.
           </p>
           <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:40}}>
             <Link href="/registro" className="btn-primary" style={{padding:'14px 32px',fontSize:15,borderRadius:12,display:'inline-block',boxShadow:'0 6px 24px rgba(240,168,78,0.35)'}}>
@@ -222,7 +229,7 @@ export default function HomePage() {
             </Link>
           </div>
           <div style={{display:'flex',gap:28,flexWrap:'wrap'}}>
-            {[['0€','sin tarjeta'],['< 2s','tiempo respuesta'],['24/7','sin descanso']].map(([n,l])=>(
+            {[['0€','sin tarjeta'],['< 2s','tiempo respuesta'],['24/7','todos los canales']].map(([n,l])=>(
               <div key={l}>
                 <p style={{fontSize:22,fontWeight:700,color:C.amber,letterSpacing:'-0.03em'}}>{n}</p>
                 <p style={{fontSize:12,color:'rgba(255,255,255,0.35)',fontWeight:500,marginTop:1}}>{l}</p>
@@ -294,9 +301,9 @@ export default function HomePage() {
 
       {/* ── STATS BAR ── */}
       <div style={{background:'rgba(240,168,78,0.05)',borderTop:'1px solid rgba(240,168,78,0.1)',borderBottom:'1px solid rgba(240,168,78,0.1)',padding:'28px clamp(16px,5vw,64px)'}}>
-        <div style={{maxWidth:1200,margin:'0 auto',display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:24,textAlign:'center'}}>
+        <div style={{maxWidth:1200,margin:'0 auto',display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:24,textAlign:'center'}} className="stats-grid">
           {[
-            {n:'100%', s:'llamadas atendidas', t:'Todas. Sin excepción.'},
+            {n:'100%', s:'mensajes atendidos', t:'Llamadas, WhatsApp, emails. Todos.'},
             {n:'+35%', s:'más reservas', t:'Clientes que antes se perdían'},
             {n:'2s', s:'tiempo de respuesta', t:'Tu cliente nunca espera'},
             {n:'24/7', s:'siempre disponible', t:'Festivos, noches, fines de semana'},
@@ -311,87 +318,141 @@ export default function HomePage() {
       </div>
 
       {/* ══════════════════════════════════════════
-          2. DEMO — Ejemplo real de decisiones
+          2. MULTICANAL — Integración natural
          ══════════════════════════════════════════ */}
-      <section id="demo" style={{padding:'90px clamp(16px,5vw,64px)',maxWidth:1200,margin:'0 auto'}}>
+      <section style={{padding:'90px clamp(16px,5vw,64px)',maxWidth:1200,margin:'0 auto'}}>
         <div style={{textAlign:'center',marginBottom:56}}>
-          <p style={{fontSize:12,fontWeight:600,color:C.teal,letterSpacing:'0.08em',marginBottom:12}}>ESCUCHA LA DIFERENCIA</p>
+          <p style={{fontSize:12,fontWeight:600,color:C.teal,letterSpacing:'0.08em',marginBottom:12}}>SIEMPRE DISPONIBLE</p>
           <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
-            No sigue un guion.<br/>
-            <span style={{color:C.amber}}>Entiende, decide y resuelve.</span>
+            Da igual cómo te contacten.<br/>
+            <span style={{color:C.amber}}>Siempre hay alguien al otro lado.</span>
           </h2>
-          <p style={{fontSize:16,color:C.muted,maxWidth:580,margin:'0 auto'}}>
-            Mira lo que pasa cuando un cliente llama. No repite respuestas. Escucha lo que necesita y actúa como alguien de tu equipo.
+          <p style={{fontSize:16,color:C.muted,maxWidth:560,margin:'0 auto'}}>
+            Mientras tú trabajas, esto responde. Por teléfono, por WhatsApp, por email. Cada cliente recibe una respuesta inmediata, personalizada y con criterio.
           </p>
         </div>
-
-        {/* Live demo widget — habla con el agente real */}
-        <DemoWidget />
-
-        {/* Demo scenarios */}
-        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="prob-grid">
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="channel-grid">
           {[
             {
-              icon:'🍽️',
-              situation:'No hay mesa a las 21:00',
-              decision:'Ofrece 21:30 o 22:00 automáticamente',
-              detail:'No dice "no hay disponibilidad". Busca la mejor alternativa y la ofrece al momento.',
-              color:'rgba(240,168,78,0.1)',bc:'rgba(240,168,78,0.2)',tag:'DECIDE'
+              icon:'📞',title:'Si llaman, responde',
+              body:'Atiende cada llamada en menos de 2 segundos. Entiende lo que necesitan, ofrece alternativas y confirma reservas. Como la mejor persona de tu equipo, pero sin descanso.',
+              example:'Cliente llama a las 23:00 un domingo → Reserva confirmada para el lunes.',
+              color:'rgba(240,168,78,0.1)',bc:'rgba(240,168,78,0.2)'
             },
             {
-              icon:'👤',
-              situation:'Llama un cliente habitual',
-              decision:'Lo reconoce y le ofrece su mesa de siempre',
-              detail:'Sabe quién es, qué prefiere y cómo tratarlo. Como lo haría tu mejor empleado.',
-              color:'rgba(45,212,191,0.1)',bc:'rgba(45,212,191,0.2)',tag:'RECUERDA'
+              icon:'💬',title:'Si escriben, responde',
+              body:'WhatsApp es el primer canal de contacto para millones de clientes. Responde al instante, gestiona reservas y resuelve dudas con la misma inteligencia que por teléfono.',
+              example:'"¿Tienen hueco mañana a las 17:00?" → Reserva confirmada en 3 mensajes.',
+              color:'rgba(45,212,191,0.1)',bc:'rgba(45,212,191,0.2)'
             },
             {
-              icon:'⚠️',
-              situation:'Petición especial o fuera de lo normal',
-              decision:'Te avisa con todo el contexto',
-              detail:'No inventa ni improvisa. Si algo se sale de lo habitual, te pasa el aviso para que decidas tú.',
-              color:'rgba(167,139,250,0.1)',bc:'rgba(167,139,250,0.2)',tag:'AVISA'
+              icon:'📧',title:'Si preguntan, responde',
+              body:'Emails, consultas, presupuestos. Responde con contexto, adjunta información relevante y cierra la gestión. Sin que nadie de tu equipo tenga que abrir la bandeja de entrada.',
+              example:'Email pidiendo información de precios → Respuesta personalizada en 30 segundos.',
+              color:'rgba(96,165,250,0.1)',bc:'rgba(96,165,250,0.2)'
             },
-          ].map(({icon,situation,decision,detail,color,bc,tag})=>(
-            <div key={situation} className="card-hover" style={{background:color,border:`1px solid ${bc}`,borderRadius:16,padding:'28px 24px'}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-                <span style={{fontSize:32}}>{icon}</span>
-                <span style={{fontSize:10,fontWeight:700,color:C.amber,letterSpacing:'0.1em',background:'rgba(240,168,78,0.15)',padding:'3px 10px',borderRadius:20}}>{tag}</span>
+          ].map(({icon,title,body,example,color,bc})=>(
+            <div key={title} className="card-hover" style={{background:color,border:`1px solid ${bc}`,borderRadius:16,padding:'28px 24px'}}>
+              <span style={{fontSize:32,display:'block',marginBottom:16}}>{icon}</span>
+              <h3 style={{fontSize:18,fontWeight:700,color:C.text,marginBottom:12,letterSpacing:'-0.02em'}}>{title}</h3>
+              <p style={{fontSize:13.5,color:C.muted,lineHeight:1.65,marginBottom:16}}>{body}</p>
+              <div style={{background:'rgba(255,255,255,0.04)',borderRadius:10,padding:'10px 14px',borderLeft:`3px solid ${C.amber}`,fontSize:12.5,color:'rgba(255,255,255,0.5)',fontStyle:'italic',lineHeight:1.5}}>
+                {example}
               </div>
-              <p style={{fontSize:13,color:'rgba(255,255,255,0.4)',fontWeight:500,marginBottom:6}}>Situación:</p>
-              <h3 style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:12,letterSpacing:'-0.02em'}}>{situation}</h3>
-              <div style={{background:'rgba(255,255,255,0.05)',borderRadius:10,padding:'12px 14px',marginBottom:14,borderLeft:`3px solid ${C.amber}`}}>
-                <p style={{fontSize:13,fontWeight:600,color:C.amber}}>→ {decision}</p>
-              </div>
-              <p style={{fontSize:13.5,color:C.muted,lineHeight:1.65}}>{detail}</p>
             </div>
           ))}
         </div>
-
-        {/* Decision summary */}
-        <div style={{marginTop:40,background:'rgba(45,212,191,0.06)',border:'1px solid rgba(45,212,191,0.15)',borderRadius:16,padding:'24px 32px',textAlign:'center'}}>
-          <p style={{fontSize:17,fontWeight:600,color:'rgba(255,255,255,0.85)',lineHeight:1.6}}>
-            No responde siempre lo mismo. <span style={{color:C.teal,fontWeight:800}}>Escucha, entiende y actúa según lo que está pasando.</span>
-          </p>
-          <p style={{fontSize:14,color:C.muted,marginTop:8}}>
-            Sin intervención humana. Sin esperas. Sin errores.
+        <div style={{marginTop:40,textAlign:'center'}}>
+          <p style={{fontSize:18,fontWeight:700,color:C.text,lineHeight:1.6}}>
+            Responde, entiende y actúa. <span style={{color:C.amber}}>Sin importar el canal.</span>
           </p>
         </div>
       </section>
 
       {/* ══════════════════════════════════════════
-          3. INTELIGENCIA REAL
+          3. DEMO — Ejemplo real
          ══════════════════════════════════════════ */}
-      <section style={{background:'rgba(255,255,255,0.015)',borderTop:'1px solid rgba(255,255,255,0.06)',borderBottom:'1px solid rgba(255,255,255,0.06)',padding:'90px clamp(16px,5vw,64px)'}}>
+      <section id="demo" style={{background:'rgba(255,255,255,0.015)',borderTop:'1px solid rgba(255,255,255,0.06)',borderBottom:'1px solid rgba(255,255,255,0.06)',padding:'90px clamp(16px,5vw,64px)'}}>
+        <div style={{maxWidth:1200,margin:'0 auto'}}>
+          <div style={{textAlign:'center',marginBottom:56}}>
+            <p style={{fontSize:12,fontWeight:600,color:C.teal,letterSpacing:'0.08em',marginBottom:12}}>ESCUCHA LA DIFERENCIA</p>
+            <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
+              No sigue un guion.<br/>
+              <span style={{color:C.amber}}>Entiende, decide y resuelve.</span>
+            </h2>
+            <p style={{fontSize:16,color:C.muted,maxWidth:580,margin:'0 auto'}}>
+              No repite respuestas. Escucha lo que necesita tu cliente y actúa como alguien de tu equipo. Pruébalo tú mismo.
+            </p>
+          </div>
+
+          {/* Live demo widget */}
+          <DemoWidget />
+
+          {/* Demo scenarios */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="prob-grid">
+            {[
+              {
+                icon:'🍽️',
+                situation:'No hay mesa a las 21:00',
+                decision:'Ofrece 21:30 o 22:00 automáticamente',
+                detail:'No dice "no hay disponibilidad". Busca la mejor alternativa y la ofrece al momento.',
+                color:'rgba(240,168,78,0.1)',bc:'rgba(240,168,78,0.2)',tag:'DECIDE'
+              },
+              {
+                icon:'👤',
+                situation:'Llama un cliente habitual',
+                decision:'Lo reconoce y le ofrece su mesa de siempre',
+                detail:'Sabe quién es, qué prefiere y cómo tratarlo. Como lo haría tu mejor empleado.',
+                color:'rgba(45,212,191,0.1)',bc:'rgba(45,212,191,0.2)',tag:'RECUERDA'
+              },
+              {
+                icon:'⚠️',
+                situation:'Petición especial o fuera de lo normal',
+                decision:'Te avisa con todo el contexto',
+                detail:'No inventa ni improvisa. Si algo se sale de lo habitual, te pasa el aviso para que decidas tú.',
+                color:'rgba(167,139,250,0.1)',bc:'rgba(167,139,250,0.2)',tag:'AVISA'
+              },
+            ].map(({icon,situation,decision,detail,color,bc,tag})=>(
+              <div key={situation} className="card-hover" style={{background:color,border:`1px solid ${bc}`,borderRadius:16,padding:'28px 24px'}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+                  <span style={{fontSize:32}}>{icon}</span>
+                  <span style={{fontSize:10,fontWeight:700,color:C.amber,letterSpacing:'0.1em',background:'rgba(240,168,78,0.15)',padding:'3px 10px',borderRadius:20}}>{tag}</span>
+                </div>
+                <p style={{fontSize:13,color:'rgba(255,255,255,0.4)',fontWeight:500,marginBottom:6}}>Situación:</p>
+                <h3 style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:12,letterSpacing:'-0.02em'}}>{situation}</h3>
+                <div style={{background:'rgba(255,255,255,0.05)',borderRadius:10,padding:'12px 14px',marginBottom:14,borderLeft:`3px solid ${C.amber}`}}>
+                  <p style={{fontSize:13,fontWeight:600,color:C.amber}}>→ {decision}</p>
+                </div>
+                <p style={{fontSize:13.5,color:C.muted,lineHeight:1.65}}>{detail}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Decision summary */}
+          <div style={{marginTop:40,background:'rgba(45,212,191,0.06)',border:'1px solid rgba(45,212,191,0.15)',borderRadius:16,padding:'24px 32px',textAlign:'center'}}>
+            <p style={{fontSize:17,fontWeight:600,color:'rgba(255,255,255,0.85)',lineHeight:1.6}}>
+              No responde siempre igual. <span style={{color:C.teal,fontWeight:800}}>Sabe qué hacer en cada situación.</span>
+            </p>
+            <p style={{fontSize:14,color:C.muted,marginTop:8}}>
+              Sin intervención humana. Sin esperas. Sin errores.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════
+          4. INTELIGENCIA REAL — No responde. Decide.
+         ══════════════════════════════════════════ */}
+      <section style={{padding:'90px clamp(16px,5vw,64px)'}}>
         <div style={{maxWidth:1200,margin:'0 auto'}}>
           <div style={{textAlign:'center',marginBottom:56}}>
             <p style={{fontSize:12,fontWeight:600,color:C.amber,letterSpacing:'0.08em',marginBottom:12}}>INTELIGENCIA REAL</p>
             <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
-              No es un bot que repite frases.<br/>
-              <span style={{color:C.amber}}>Piensa antes de responder.</span>
+              No responde. Decide.<br/>
+              <span style={{color:C.amber}}>Piensa antes de actuar.</span>
             </h2>
             <p style={{fontSize:16,color:C.muted,maxWidth:520,margin:'0 auto'}}>
-              La diferencia es simple: un bot sigue instrucciones. Tu recepcionista entiende lo que está pasando y actúa en consecuencia.
+              La diferencia entre un bot y tu recepcionista es simple: un bot sigue instrucciones. Tu recepcionista entiende lo que está pasando y actúa en consecuencia.
             </p>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:20}} className="intel-grid">
@@ -403,20 +464,20 @@ export default function HomePage() {
                 color:'rgba(167,139,250,0.12)',bc:'rgba(167,139,250,0.2)'
               },
               {
-                icon:'🧠',title:'Piensa antes de actuar',
-                body:'Cruza disponibilidad, reglas de tu negocio y lo que pide el cliente. Todo en menos de un segundo.',
+                icon:'🧠',title:'Cruza información',
+                body:'Disponibilidad, reglas de tu negocio, historial del cliente. Todo en menos de un segundo. Propone alternativas cuando algo no encaja.',
                 example:'Grupo de 8 + terraza ocupada → sugiere salón privado automáticamente.',
                 color:'rgba(240,168,78,0.1)',bc:'rgba(240,168,78,0.2)'
               },
               {
-                icon:'✅',title:'Decide en cada situación',
-                body:'Si puede resolverlo, lo resuelve. Si necesita tu atención, te avisa. Sabe cuándo actuar y cuándo preguntar.',
+                icon:'✅',title:'Actúa con criterio',
+                body:'Si puede resolverlo, lo resuelve. Si necesita tu atención, te avisa. Sabe cuándo actuar solo y cuándo preguntar.',
                 example:'Petición fuera de horario → no dice "no se puede". Ofrece la mejor alternativa.',
                 color:'rgba(45,212,191,0.1)',bc:'rgba(45,212,191,0.2)'
               },
               {
-                icon:'📚',title:'Aprende de tu negocio',
-                body:'Cada día entiende mejor cómo trabajas. Tus preferencias, tus excepciones, tu forma de tratar al cliente.',
+                icon:'📚',title:'Cada día mejor',
+                body:'Cada interacción la hace más inteligente. Tus preferencias, tus excepciones, tu forma de tratar al cliente. Aprende y mejora.',
                 example:'Cliente habitual llama → lo reconoce y le ofrece su mesa de siempre.',
                 color:'rgba(74,222,128,0.1)',bc:'rgba(74,222,128,0.2)'
               },
@@ -435,104 +496,35 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════
-          4. ADAPTACIÓN A CADA NEGOCIO
-         ══════════════════════════════════════════ */}
-      <section style={{padding:'90px clamp(16px,5vw,64px)',maxWidth:1200,margin:'0 auto'}}>
-        <div style={{textAlign:'center',marginBottom:56}}>
-          <p style={{fontSize:12,fontWeight:600,color:C.teal,letterSpacing:'0.08em',marginBottom:12}}>SE ADAPTA A TI</p>
-          <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
-            Tu negocio es único.<br/>
-            <span style={{color:C.amber}}>Tu recepcionista también.</span>
-          </h2>
-          <p style={{fontSize:16,color:C.muted,maxWidth:540,margin:'0 auto'}}>
-            No todos los negocios trabajan igual. Por eso tu recepcionista aprende cómo funciona el tuyo y responde como si llevara meses contigo.
-          </p>
-        </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="adapt-grid">
-          {[
-            {
-              icon:'🍽️',tipo:'Restaurantes',
-              body:'Gestiona reservas, turnos, mesas especiales, alergias y grupos grandes sin perder una sola llamada.',
-              ejemplo:'"Mesa en terraza para 2 el sábado" → comprueba disponibilidad y confirma al instante.'
-            },
-            {
-              icon:'💈',tipo:'Peluquerías y estética',
-              body:'Citas con el profesional correcto, duración de cada servicio y reagendamientos. Todo automático.',
-              ejemplo:'"Quiero corte y color con María" → busca el primer hueco con María.'
-            },
-            {
-              icon:'🏥',tipo:'Clínicas y consultas',
-              body:'Citas con el especialista adecuado, urgencias filtradas y recordatorios para que nadie falte.',
-              ejemplo:'"Necesito ver al Dr. López esta semana" → revisa agenda y ofrece opciones reales.'
-            },
-            {
-              icon:'🔧',tipo:'Talleres y servicios',
-              body:'Presupuestos, citas para diagnóstico y seguimiento de reparaciones. Sin llamadas de vuelta.',
-              ejemplo:'"Mi coche hace un ruido al frenar" → agenda revisión y anota el síntoma.'
-            },
-            {
-              icon:'🏋️',tipo:'Gimnasios y centros',
-              body:'Reservas de clases, información de horarios y gestión de pruebas gratuitas para nuevos clientes.',
-              ejemplo:'"¿Hay yoga mañana por la tarde?" → confirma horario y reserva plaza.'
-            },
-            {
-              icon:'⚖️',tipo:'Asesorías y despachos',
-              body:'Filtra consultas, agenda reuniones con el profesional adecuado y recoge la información antes de la cita.',
-              ejemplo:'"Necesito consulta fiscal para autónomo" → agenda con el asesor fiscal disponible.'
-            },
-          ].map(({icon,tipo,body,ejemplo})=>(
-            <div key={tipo} className="card-hover" style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'28px 24px'}}>
-              <span style={{fontSize:32,display:'block',marginBottom:14}}>{icon}</span>
-              <h3 style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:10,letterSpacing:'-0.02em'}}>{tipo}</h3>
-              <p style={{fontSize:13.5,color:C.muted,lineHeight:1.65,marginBottom:14}}>{body}</p>
-              <div style={{background:'rgba(240,168,78,0.06)',borderRadius:10,padding:'10px 14px',fontSize:12.5,color:C.amber,lineHeight:1.5}}>
-                {ejemplo}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════
-          5. BENEFICIOS
+          5. INCLUSO SI NO TIENES MUCHAS LLAMADAS
          ══════════════════════════════════════════ */}
       <section style={{background:'rgba(255,255,255,0.015)',borderTop:'1px solid rgba(255,255,255,0.06)',borderBottom:'1px solid rgba(255,255,255,0.06)',padding:'90px clamp(16px,5vw,64px)'}}>
-        <div style={{maxWidth:1200,margin:'0 auto'}}>
+        <div style={{maxWidth:1000,margin:'0 auto'}}>
           <div style={{textAlign:'center',marginBottom:56}}>
-            <p style={{fontSize:12,fontWeight:600,color:C.green,letterSpacing:'0.08em',marginBottom:12}}>RESULTADOS REALES</p>
-            <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15}}>
-              Lo que cambia cuando<br/>
-              <span style={{color:C.amber}}>dejas de perder llamadas</span>
+            <p style={{fontSize:12,fontWeight:600,color:C.green,letterSpacing:'0.08em',marginBottom:12}}>PARA NEGOCIOS DE CUALQUIER TAMAÑO</p>
+            <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
+              "No recibo tantas llamadas"<br/>
+              <span style={{color:C.amber}}>No necesitas muchas para perder dinero.</span>
             </h2>
+            <p style={{fontSize:16,color:C.muted,maxWidth:560,margin:'0 auto',lineHeight:1.7}}>
+              Basta con una llamada perdida a la semana para que un cliente elija a otro. Basta con un WhatsApp sin respuesta para que no vuelvan a escribirte.
+            </p>
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:20}} className="intel-grid">
+          <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:20}} className="central-grid">
             {[
-              {
-                number:'100%',label:'Llamadas atendidas',
-                body:'Nunca más una llamada sin respuesta. Ni en horario de comida, ni los domingos, ni a las 3 de la mañana.',
-                icon:'📞'
-              },
-              {
-                number:'+35%',label:'Más clientes',
-                body:'Cada llamada que antes se perdía ahora es una oportunidad cerrada. Más reservas, más ingresos.',
-                icon:'📈'
-              },
-              {
-                number:'-80%',label:'Menos interrupciones',
-                body:'Tu equipo deja de atender el teléfono para centrarse en lo que importa: el cliente que ya está ahí.',
-                icon:'🎯'
-              },
-              {
-                number:'24/7',label:'Más tranquilidad',
-                body:'Tu recepcionista no descansa, no enferma, no tiene días malos. Trabaja por ti todo el día, todos los días.',
-                icon:'😌'
-              },
-            ].map(({number,label,body,icon})=>(
-              <div key={label} className="card-hover" style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'28px 24px',textAlign:'center'}}>
-                <span style={{fontSize:28,display:'block',marginBottom:12}}>{icon}</span>
-                <p style={{fontSize:36,fontWeight:800,color:C.amber,letterSpacing:'-0.04em',marginBottom:4}}>{number}</p>
-                <h3 style={{fontSize:15,fontWeight:700,color:C.text,marginBottom:10}}>{label}</h3>
-                <p style={{fontSize:13,color:C.muted,lineHeight:1.65}}>{body}</p>
+              {icon:'🕐',title:'Responde cuando tú no puedes',body:'Estás cortando el pelo. Estás con un paciente. Estás conduciendo. Da igual. Tu cliente recibe respuesta igualmente.'},
+              {icon:'✨',title:'Da imagen profesional',body:'Un negocio que responde siempre transmite seriedad. Tu cliente siente que hay un equipo detrás, aunque seas tú solo.'},
+              {icon:'💰',title:'No pierdes ni una oportunidad',body:'Ese cliente que llamó el sábado a las 14:00 mientras comías. Esa consulta por WhatsApp a las 22:00. Ahora se resuelven solas.'},
+              {icon:'📋',title:'Organiza todo sin que hagas nada',body:'Cada cliente, cada cita, cada conversación queda registrada y organizada. Sin post-its, sin cuadernos, sin caos.'},
+            ].map(({icon,title,body})=>(
+              <div key={title} style={{display:'flex',alignItems:'flex-start',gap:16,background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'28px 24px'}}>
+                <div style={{width:48,height:48,borderRadius:12,background:'rgba(74,222,128,0.1)',border:'1px solid rgba(74,222,128,0.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>
+                  {icon}
+                </div>
+                <div>
+                  <h3 style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:8,letterSpacing:'-0.01em'}}>{title}</h3>
+                  <p style={{fontSize:13.5,color:C.muted,lineHeight:1.65}}>{body}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -540,13 +532,106 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════
-          6. CÓMO FUNCIONA — 3 pasos
+          6. TODO EN UN SOLO SITIO
+         ══════════════════════════════════════════ */}
+      <section style={{padding:'90px clamp(16px,5vw,64px)',maxWidth:1200,margin:'0 auto'}}>
+        <div style={{textAlign:'center',marginBottom:56}}>
+          <p style={{fontSize:12,fontWeight:600,color:C.blue,letterSpacing:'0.08em',marginBottom:12}}>CONTROL TOTAL</p>
+          <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
+            Todo en un solo sitio.<br/>
+            <span style={{color:C.amber}}>Sin cambiar entre apps.</span>
+          </h2>
+          <p style={{fontSize:16,color:C.muted,maxWidth:560,margin:'0 auto'}}>
+            Clientes, conversaciones, reservas, historial. Todo lo que necesitas para tener tu negocio bajo control, en un solo panel.
+          </p>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16}} className="intel-grid">
+          {[
+            {icon:'👥',title:'Todos tus clientes',body:'Cada persona que te contacta queda registrada. Nombre, historial, preferencias. Sin que tengas que apuntar nada.'},
+            {icon:'💬',title:'Todas las conversaciones',body:'Llamadas, WhatsApp, emails. Todo en el mismo sitio. Sabes qué se habló, cuándo y con quién.'},
+            {icon:'📅',title:'Todas las reservas',body:'Agenda completa y actualizada en tiempo real. Creadas automáticamente desde cualquier canal.'},
+            {icon:'📊',title:'Todo el control',body:'Estadísticas, actividad, rendimiento. Ves exactamente qué está pasando en tu negocio en cada momento.'},
+          ].map(({icon,title,body})=>(
+            <div key={title} className="card-hover" style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'24px 20px',textAlign:'center'}}>
+              <div style={{width:52,height:52,borderRadius:14,background:'rgba(96,165,250,0.1)',border:'1px solid rgba(96,165,250,0.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,margin:'0 auto 16px'}}>
+                {icon}
+              </div>
+              <h3 style={{fontSize:15,fontWeight:700,color:C.text,marginBottom:8,letterSpacing:'-0.01em'}}>{title}</h3>
+              <p style={{fontSize:13,color:C.muted,lineHeight:1.65}}>{body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════
+          7. ADAPTACIÓN A CADA NEGOCIO
+         ══════════════════════════════════════════ */}
+      <section style={{background:'rgba(255,255,255,0.015)',borderTop:'1px solid rgba(255,255,255,0.06)',borderBottom:'1px solid rgba(255,255,255,0.06)',padding:'90px clamp(16px,5vw,64px)'}}>
+        <div style={{maxWidth:1200,margin:'0 auto'}}>
+          <div style={{textAlign:'center',marginBottom:56}}>
+            <p style={{fontSize:12,fontWeight:600,color:C.teal,letterSpacing:'0.08em',marginBottom:12}}>SE ADAPTA A TI</p>
+            <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
+              Tu negocio es único.<br/>
+              <span style={{color:C.amber}}>Tu recepcionista también.</span>
+            </h2>
+            <p style={{fontSize:16,color:C.muted,maxWidth:540,margin:'0 auto'}}>
+              No todos los negocios trabajan igual. Tu recepcionista aprende cómo funciona el tuyo y responde como si llevara meses contigo.
+            </p>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="adapt-grid">
+            {[
+              {
+                icon:'🍽️',tipo:'Restaurantes',
+                body:'Gestiona reservas, turnos, mesas especiales, alergias y grupos grandes sin perder una sola llamada.',
+                ejemplo:'"Mesa en terraza para 2 el sábado" → comprueba disponibilidad y confirma al instante.'
+              },
+              {
+                icon:'💈',tipo:'Peluquerías y estética',
+                body:'Citas con el profesional correcto, duración de cada servicio y reagendamientos. Todo automático.',
+                ejemplo:'"Quiero corte y color con María" → busca el primer hueco con María.'
+              },
+              {
+                icon:'🏥',tipo:'Clínicas y consultas',
+                body:'Citas con el especialista adecuado, urgencias filtradas y recordatorios para que nadie falte.',
+                ejemplo:'"Necesito ver al Dr. López esta semana" → revisa agenda y ofrece opciones reales.'
+              },
+              {
+                icon:'🔧',tipo:'Talleres y servicios',
+                body:'Presupuestos, citas para diagnóstico y seguimiento de reparaciones. Sin llamadas de vuelta.',
+                ejemplo:'"Mi coche hace un ruido al frenar" → agenda revisión y anota el síntoma.'
+              },
+              {
+                icon:'🏋️',tipo:'Gimnasios y centros',
+                body:'Reservas de clases, información de horarios y gestión de pruebas gratuitas para nuevos clientes.',
+                ejemplo:'"¿Hay yoga mañana por la tarde?" → confirma horario y reserva plaza.'
+              },
+              {
+                icon:'⚖️',tipo:'Asesorías y despachos',
+                body:'Filtra consultas, agenda reuniones con el profesional adecuado y recoge la información antes de la cita.',
+                ejemplo:'"Necesito consulta fiscal para autónomo" → agenda con el asesor fiscal disponible.'
+              },
+            ].map(({icon,tipo,body,ejemplo})=>(
+              <div key={tipo} className="card-hover" style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'28px 24px'}}>
+                <span style={{fontSize:32,display:'block',marginBottom:14}}>{icon}</span>
+                <h3 style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:10,letterSpacing:'-0.02em'}}>{tipo}</h3>
+                <p style={{fontSize:13.5,color:C.muted,lineHeight:1.65,marginBottom:14}}>{body}</p>
+                <div style={{background:'rgba(240,168,78,0.06)',borderRadius:10,padding:'10px 14px',fontSize:12.5,color:C.amber,lineHeight:1.5}}>
+                  {ejemplo}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════
+          8. CÓMO FUNCIONA — 3 pasos
          ══════════════════════════════════════════ */}
       <section style={{padding:'90px clamp(16px,5vw,64px)',maxWidth:1200,margin:'0 auto'}}>
         <div style={{textAlign:'center',marginBottom:56}}>
           <p style={{fontSize:12,fontWeight:600,color:C.amber,letterSpacing:'0.08em',marginBottom:12}}>ASÍ DE FÁCIL</p>
           <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15}}>
-            De cero a atender llamadas<br/>
+            De cero a atender clientes<br/>
             <span style={{color:C.amber}}>en menos de lo que piensas</span>
           </h2>
         </div>
@@ -560,13 +645,13 @@ export default function HomePage() {
             },
             {
               n:'02',icon:'⚙️',title:'Creamos tu recepcionista',
-              body:'La configuramos para que responda exactamente como tú quieres. La probamos contigo hasta que suene perfecto.',
+              body:'La configuramos para que responda exactamente como tú quieres. La probamos contigo hasta que suene perfecto. Llamadas, WhatsApp, email. Todo listo.',
               time:'Lista en 48 horas',
               color:'rgba(45,212,191,0.1)',bc:'rgba(45,212,191,0.2)'
             },
             {
               n:'03',icon:'✅',title:'Empieza a trabajar por ti',
-              body:'Activamos tu recepcionista y empieza a atender llamadas reales. Tú solo te dedicas a lo tuyo. Las llamadas están cubiertas.',
+              body:'Activamos tu recepcionista y empieza a atender clientes reales desde todos los canales. Tú solo te dedicas a lo tuyo.',
               time:'Desde el primer día',
               color:'rgba(74,222,128,0.1)',bc:'rgba(74,222,128,0.2)'
             },
@@ -587,34 +672,39 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════
-          7. CONFIANZA
+          9. EMPLEADO vs RESERVO — Comparación visual
          ══════════════════════════════════════════ */}
       <section style={{background:'rgba(255,255,255,0.015)',borderTop:'1px solid rgba(255,255,255,0.06)',borderBottom:'1px solid rgba(255,255,255,0.06)',padding:'90px clamp(16px,5vw,64px)'}}>
-        <div style={{maxWidth:1200,margin:'0 auto'}}>
-          <div style={{textAlign:'center',marginBottom:56}}>
-            <p style={{fontSize:12,fontWeight:600,color:C.teal,letterSpacing:'0.08em',marginBottom:12}}>PUEDES CONFIAR</p>
-            <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15}}>
-              Trabaja como alguien<br/>
-              <span style={{color:C.amber}}>de tu equipo</span>
+        <div style={{maxWidth:800,margin:'0 auto'}}>
+          <div style={{textAlign:'center',marginBottom:48}}>
+            <p style={{fontSize:12,fontWeight:600,color:C.red,letterSpacing:'0.08em',marginBottom:12}}>LA COMPARACIÓN</p>
+            <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:14}}>
+              Lo que te cuesta no tener<br/>
+              <span style={{color:C.amber}}>a alguien siempre disponible</span>
             </h2>
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="trust-grid">
+
+          {/* Comparison headers */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16,padding:'0 28px',marginBottom:8}} className="compare-grid">
+            <div/>
+            <p style={{fontSize:12,fontWeight:600,color:'rgba(255,255,255,0.3)',textAlign:'center',letterSpacing:'0.06em'}}>EMPLEADO</p>
+            <p style={{fontSize:12,fontWeight:600,color:C.amber,textAlign:'center',letterSpacing:'0.06em'}}>RESERVO.AI</p>
+          </div>
+
+          <div style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:20,padding:'8px 28px',overflow:'hidden'}}>
             {[
-              {icon:'⚡',title:'Responde en menos de 2 segundos',body:'Tu cliente nunca espera. Descuelga y responde al instante, como la mejor recepcionista que hayas tenido.'},
-              {icon:'🔒',title:'Nunca deja una llamada sin atender',body:'Da igual la hora, el día o cuántas llamadas entren a la vez. Todas se atienden. Todas.'},
-              {icon:'🎯',title:'Actúa como alguien de tu equipo',body:'Usa el tono de tu negocio, conoce tus reglas y trata a cada cliente como tú lo harías.'},
-              {icon:'📊',title:'Tú tienes el control total',body:'Panel en tiempo real con cada llamada, cada decisión y cada reserva. Ajustas lo que quieras, cuando quieras.'},
-              {icon:'🤝',title:'Si no sabe, te avisa',body:'No inventa ni improvisa. Si algo se sale de lo normal, te pasa el aviso con todo el contexto para que decidas tú.'},
-              {icon:'📈',title:'Cada día mejor',body:'Aprende de cada interacción. Las llamadas de la semana que viene se atenderán mejor que las de esta.'},
-            ].map(({icon,title,body})=>(
-              <div key={title} style={{display:'flex',alignItems:'flex-start',gap:14,background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'24px 20px'}}>
-                <div style={{width:44,height:44,borderRadius:12,background:'rgba(45,212,191,0.1)',border:'1px solid rgba(45,212,191,0.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>
-                  {icon}
-                </div>
-                <div>
-                  <h3 style={{fontSize:15,fontWeight:700,color:C.text,marginBottom:6,letterSpacing:'-0.01em'}}>{title}</h3>
-                  <p style={{fontSize:13,color:C.muted,lineHeight:1.65}}>{body}</p>
-                </div>
+              {label:'Disponibilidad',employee:'8h/día, 5 días',reservo:'24h/día, 365 días'},
+              {label:'Canales',employee:'Solo teléfono',reservo:'Llamadas + WhatsApp + Email'},
+              {label:'Llamadas simultáneas',employee:'1 a la vez',reservo:'Ilimitadas'},
+              {label:'Tiempo de respuesta',employee:'Depende',reservo:'< 2 segundos'},
+              {label:'Vacaciones / bajas',employee:'30 días/año',reservo:'Nunca'},
+              {label:'Errores por cansancio',employee:'Frecuentes',reservo:'0'},
+              {label:'Coste mensual',employee:'1.500€ - 2.000€',reservo:'Desde 99€/mes'},
+            ].map(({label,employee,reservo},i)=>(
+              <div key={label} style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16,padding:'16px 0',borderBottom:i<6?'1px solid rgba(255,255,255,0.06)':'none',alignItems:'center'}} className="compare-grid">
+                <p style={{fontSize:13.5,color:C.muted}}>{label}</p>
+                <p style={{fontSize:13.5,color:'rgba(255,255,255,0.25)',textDecoration:'line-through',textAlign:'center'}}>{employee}</p>
+                <p style={{fontSize:13.5,color:C.teal,fontWeight:700,textAlign:'center'}}>{reservo}</p>
               </div>
             ))}
           </div>
@@ -622,7 +712,7 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════
-          8. PRECIOS — Comparar con empleado
+          10. PRECIOS
          ══════════════════════════════════════════ */}
       <section style={{padding:'90px clamp(16px,5vw,64px)'}}>
         <div style={{maxWidth:1100,margin:'0 auto'}}>
@@ -630,33 +720,16 @@ export default function HomePage() {
             <p style={{fontSize:12,fontWeight:600,color:C.amber,letterSpacing:'0.08em',marginBottom:12}}>PRECIOS</p>
             <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:14}}>
               Menos que un empleado.<br/>
-              <span style={{color:C.amber}}>Disponible todo el día.</span>
+              <span style={{color:C.amber}}>Disponible todo el día, en todos los canales.</span>
             </h2>
-            <p style={{fontSize:15,color:C.muted}}>Sin contratos. Sin permanencia. Cancela cuando quieras.</p>
-          </div>
-
-          {/* Comparison table */}
-          <div style={{maxWidth:700,margin:'0 auto 48px',background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:20,padding:'8px 28px',overflow:'hidden'}}>
-            {[
-              {label:'Disponibilidad',employee:'8h/día, 5 días',reservo:'24h/día, 365 días'},
-              {label:'Llamadas simultáneas',employee:'1 a la vez',reservo:'Ilimitadas'},
-              {label:'Vacaciones / bajas',employee:'30 días/año',reservo:'Nunca'},
-              {label:'Errores por cansancio',employee:'Frecuentes',reservo:'0'},
-              {label:'Coste mensual',employee:'1.500€ - 2.000€',reservo:'Desde 99€/mes'},
-            ].map(({label,employee,reservo},i)=>(
-              <div key={label} style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16,padding:'16px 0',borderBottom:i<4?'1px solid rgba(255,255,255,0.06)':'none',alignItems:'center'}} className="compare-grid">
-                <p style={{fontSize:13.5,color:C.muted}}>{label}</p>
-                <p style={{fontSize:13.5,color:'rgba(255,255,255,0.25)',textDecoration:'line-through',textAlign:'center'}}>{employee}</p>
-                <p style={{fontSize:13.5,color:C.teal,fontWeight:700,textAlign:'center'}}>{reservo}</p>
-              </div>
-            ))}
+            <p style={{fontSize:15,color:C.muted}}>Sin contratos. Sin permanencia. Pagas solo por lo que usas.</p>
           </div>
 
           {/* Pricing cards */}
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20,alignItems:'start'}} className="price-grid">
             {[
-              {plan:'Starter',price:'99',calls:'50 llamadas',sub:'Incluidas al mes',features:['Recepcionista 24/7','Reservas automáticas','Panel de control','Soporte por email'],cta:'Empezar gratis',highlight:false},
-              {plan:'Business',price:'299',calls:'200 llamadas',sub:'Incluidas al mes',features:['Todo lo de Starter','Reconoce clientes habituales','Decisiones personalizadas','Estadísticas avanzadas','Soporte prioritario'],cta:'Más popular',highlight:true},
+              {plan:'Starter',price:'99',calls:'50 llamadas',sub:'Incluidas al mes',features:['Recepcionista 24/7','Llamadas + WhatsApp + Email','Reservas automáticas','Panel de control','Soporte por email'],cta:'Empezar gratis',highlight:false},
+              {plan:'Business',price:'299',calls:'200 llamadas',sub:'Incluidas al mes',features:['Todo lo de Starter','Reconoce clientes habituales','Decisiones personalizadas','Estadísticas avanzadas','SMS de confirmación','Soporte prioritario'],cta:'Más popular',highlight:true},
               {plan:'Enterprise',price:'499',calls:'600 llamadas',sub:'Incluidas al mes',features:['Todo lo de Business','Hasta 3 locales','Manager dedicado','SLA garantizado','Soporte 24/7'],cta:'Contactar',highlight:false},
             ].map(({plan,price,calls,sub,features,cta,highlight})=>(
               <div key={plan} className="plan-card" style={{
@@ -688,6 +761,16 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+
+          {/* Usage-based note */}
+          <div style={{marginTop:32,textAlign:'center'}}>
+            <p style={{fontSize:13.5,color:C.muted,lineHeight:1.7}}>
+              Llamadas extra: 0,79€/llamada · Mensajes WhatsApp: desde 0,05€ · SMS: desde 0,08€
+            </p>
+            <p style={{fontSize:14,fontWeight:600,color:C.text,marginTop:8}}>
+              Pagas solo por lo que usas. Sin sorpresas.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -700,10 +783,12 @@ export default function HomePage() {
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
             {[
               {q:'¿Suena como un robot?',a:'No. Habla de forma natural y mantiene conversaciones fluidas. Tus clientes no notarán la diferencia.'},
-              {q:'¿Qué pasa si no sabe responder algo?',a:'Te avisa al momento con todo el contexto para que puedas intervenir tú. Nunca se queda bloqueada ni inventa respuestas.'},
-              {q:'¿Cuánto tarda en estar lista?',a:'En 15 minutos nos explicas tu negocio. En 48 horas tu recepcionista está atendiendo llamadas.'},
+              {q:'¿Qué pasa si no sabe responder algo?',a:'Te avisa al momento con todo el contexto para que puedas intervenir tú. Nunca inventa respuestas.'},
+              {q:'¿Cuánto tarda en estar lista?',a:'En 15 minutos nos explicas tu negocio. En 48 horas tu recepcionista está atendiendo clientes por todos los canales.'},
               {q:'¿Necesito cambiar mi número de teléfono?',a:'No. Desviamos las llamadas al sistema cuando tú no puedes contestar. Tu número sigue siendo el mismo.'},
-              {q:'¿De verdad decide por su cuenta?',a:'Sí. Sabe qué hacer en cada situación porque conoce tu negocio: tus horarios, tus reglas, tus excepciones. No sigue un guion — actúa como una persona de tu equipo.'},
+              {q:'¿También responde WhatsApp y emails?',a:'Sí. Es una recepcionista completa. Da igual por dónde te contacten: responde con la misma inteligencia y personalización.'},
+              {q:'¿De verdad decide por su cuenta?',a:'Sí. Conoce tu negocio: tus horarios, tus reglas, tus excepciones. No sigue un guion — actúa como una persona de tu equipo.'},
+              {q:'¿Y si tengo pocas llamadas?',a:'Precisamente. Cada llamada cuenta más cuando tienes pocas. Una sola oportunidad perdida puede ser un cliente que no vuelve.'},
               {q:'¿Puedo cancelar cuando quiera?',a:'Sí, sin permanencia ni penalizaciones. Es mes a mes.'},
             ].map(({q,a})=>(
               <div key={q} style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'20px 24px'}}>
@@ -726,13 +811,13 @@ export default function HomePage() {
               <span style={{fontSize:11.5,fontWeight:600,color:C.amber,letterSpacing:'0.06em'}}>EMPIEZA HOY · GRATIS</span>
             </div>
             <h2 style={{fontSize:'clamp(30px,4vw,52px)',fontWeight:800,letterSpacing:'-0.04em',lineHeight:1.1,marginBottom:20,color:C.text}}>
-              Deja de perder clientes<br/>por no coger el teléfono
+              Empieza ahora y deja<br/>de perder clientes
             </h2>
             <p style={{fontSize:17,color:C.muted,marginBottom:12,lineHeight:1.7}}>
-              Crea tu recepcionista y empieza a atender cada llamada como si tuvieras a alguien dedicado solo a eso.
+              Llaman, escriben, preguntan. Y tú no siempre puedes responder. Tu recepcionista sí.
             </p>
             <p style={{fontSize:15.5,fontWeight:600,color:C.text,marginBottom:40}}>
-              No es un bot. Esto trabaja mejor que una persona.
+              Mientras tú trabajas, esto responde. Siempre.
             </p>
             <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
               <Link href="/registro" className="btn-primary" style={{padding:'16px 40px',fontSize:16,borderRadius:14,display:'inline-block',boxShadow:'0 8px 32px rgba(240,168,78,0.4)'}}>
