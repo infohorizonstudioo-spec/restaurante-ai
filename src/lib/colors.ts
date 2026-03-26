@@ -32,4 +32,4 @@ export const C = {
   amberBorder: 'rgba(240,168,78,0.25)',
   orange: '#FB923C',
   orangeDim: 'rgba(251,146,60,0.10)',
-} as const
+}

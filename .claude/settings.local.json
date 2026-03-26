@@ -132,7 +132,11 @@
       "Bash(git remote:*)",
       "Bash(find \"/c/Users/krush/restaurante-ai\" -type f -name \"*.tsx\" -path \"*/app/\\(dashboard\\)/*\")",
       "Bash(find \"/c/Users/krush/restaurante-ai/src/app/\\(dashboard\\)\" -type f -name \"*.tsx\")",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(dir:*)",
+      "Bash(npm run:*)",
+      "Bash(ls -la /c/Users/krush/restaurante-ai/src/app/\\\\\\(dashboard\\\\\\)/)",
+      "Bash(head -5 src/app/\\\\\\(dashboard\\\\\\)/reservas/VetReservasView.tsx src/app/\\\\\\(dashboard\\\\\\)/reservas/EcomReservasView.tsx src/app/\\\\\\(dashboard\\\\\\)/reservas/BarbeReservasView.tsx src/app/\\\\\\(dashboard\\\\\\)/reservas/PeluReservasView.tsx)"
     ]
   }
 }
