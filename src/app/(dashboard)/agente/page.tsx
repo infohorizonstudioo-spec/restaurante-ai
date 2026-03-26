@@ -8,10 +8,10 @@ import { C } from '@/lib/colors'
 import { useToast } from '@/components/NotificationToast'
 
 const STATUS_OPTS = [
-  { value:'confirmed',             label:'✓ Confirmar automáticamente', color:C.green },
-  { value:'pending_review',        label:'⏳ Dejar pendiente de revisión', color:'#FBB53F' },
-  { value:'needs_human_attention', label:'⚠ Requiere atención humana', color:C.amber },
-  { value:'rejected',              label:'✕ Rechazar automáticamente', color:C.red },
+  { value:'confirmed',             label:'Aceptar sin preguntar', color:C.green },
+  { value:'pending_review',        label:'Avisarme para que yo decida', color:'#FBB53F' },
+  { value:'needs_human_attention', label:'Necesita mi aprobación', color:C.amber },
+  { value:'rejected',              label:'Rechazar directamente', color:C.red },
 ]
 // Patrones de decisión adaptativos por tipo de negocio
 const PATTERN_KEYS_BY_TYPE: Record<string, { key:string; label:string; icon:string; desc:string }[]> = {
@@ -73,9 +73,9 @@ function inp(extra={}) {
 
 // ── Tab sections ──────────────────────────────────────────────────────────────
 const TABS = [
-  { id:'rules',    label:'⚙️ Reglas',           icon:'⚙️' },
-  { id:'knowledge',label:'🧠 Base de conocimiento', icon:'🧠' },
-  { id:'memory',   label:'📚 Memoria aprendida', icon:'📚' },
+  { id:'rules',    label:'⚙️ Cómo decide',       icon:'⚙️' },
+  { id:'knowledge',label:'🧠 Lo que sabe',        icon:'🧠' },
+  { id:'memory',   label:'📚 Lo que ha aprendido', icon:'📚' },
 ]
 
 export default function AgentePage() {
@@ -152,8 +152,8 @@ export default function AgentePage() {
       {/* Header */}
       <div style={{ background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:40 }}>
         <div>
-          <h1 style={{ fontSize:16, fontWeight:700, color:C.text }}>{tx('Comportamiento del agente')}</h1>
-          <p style={{ fontSize:11, color:C.text3, marginTop:2 }}>{tx('Configura cómo decide y responde tu recepcionista IA')}</p>
+          <h1 style={{ fontSize:16, fontWeight:700, color:C.text }}>{tx('Mi recepcionista')}</h1>
+          <p style={{ fontSize:11, color:C.text3, marginTop:2 }}>{tx('Ajusta cómo atiende, qué sabe y qué ha aprendido')}</p>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           {tab==='rules' && updatedAt && <p style={{ fontSize:11, color:C.text3 }}>{tx('Guardado')} {new Date(updatedAt).toLocaleDateString('es-ES')}</p>}
@@ -193,24 +193,29 @@ export default function AgentePage() {
 
             {/* Reglas numéricas */}
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:18 }}>{tx('Reglas automáticas')}</h2>
+              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:18 }}>{tx('¿Qué puede hacer sola?')}</h2>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
                 <div>
-                  <label style={{ fontSize:12, color:C.text2, fontWeight:600, display:'block', marginBottom:6 }}>{tx('Tamaño máximo sin revisión')}</label>
+                  <label style={{ fontSize:12, color:C.text2, fontWeight:600, display:'block', marginBottom:6 }}>{tx('Grupos de hasta... personas')}</label>
                   <input type="number" min={1} max={50} value={rules.max_auto_party_size} onChange={e=>setRules((r:any)=>({...r,max_auto_party_size:parseInt(e.target.value)||6}))} style={inp()} />
-                  <p style={{ fontSize:11, color:C.text3, marginTop:4 }}>{tx('Grupos más grandes quedarán pendientes de revisión')}</p>
+                  <p style={{ fontSize:11, color:C.text3, marginTop:4 }}>{tx('Si vienen más, te avisa antes de confirmar')}</p>
                 </div>
                 <div>
-                  <label style={{ fontSize:12, color:C.text2, fontWeight:600, display:'block', marginBottom:6 }}>{tx('Confianza mínima para confirmar')}</label>
-                  <input type="number" min={0.3} max={1} step={0.05} value={rules.min_confidence_to_confirm} onChange={e=>setRules((r:any)=>({...r,min_confidence_to_confirm:parseFloat(e.target.value)||0.72}))} style={inp()} />
-                  <p style={{ fontSize:11, color:C.text3, marginTop:4 }}>{tx('0.72 = 72%. Por debajo: requiere atención humana')}</p>
+                  <label style={{ fontSize:12, color:C.text2, fontWeight:600, display:'block', marginBottom:6 }}>{tx('¿Cuándo te avisa?')}</label>
+                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                    <input type="range" min={30} max={100} step={5} value={Math.round(rules.min_confidence_to_confirm * 100)}
+                      onChange={e=>setRules((r:any)=>({...r,min_confidence_to_confirm:parseInt(e.target.value)/100}))}
+                      style={{ flex:1, accentColor:C.amber }} />
+                    <span style={{ fontSize:14, fontWeight:700, color:C.amber, minWidth:40, textAlign:'right' }}>{Math.round(rules.min_confidence_to_confirm * 100)}%</span>
+                  </div>
+                  <p style={{ fontSize:11, color:C.text3, marginTop:4 }}>{tx('Si no está segura al')} {Math.round(rules.min_confidence_to_confirm * 100)}%, {tx('te lo pasa a ti')}</p>
                 </div>
               </div>
               <div style={{ display:'flex', gap:12, marginTop:14, flexWrap:'wrap' }}>
                 {[
-                  { key:'special_requests_require_review', label:'Peticiones especiales → revisión' },
-                  { key:'allow_auto_cancellations',        label:'Permitir cancelaciones automáticas' },
-                  { key:'offer_alternative_times',         label:'Ofrecer horarios alternativos' },
+                  { key:'special_requests_require_review', label:'Avisarme con peticiones especiales' },
+                  { key:'allow_auto_cancellations',        label:'Puede cancelar reservas sola' },
+                  { key:'offer_alternative_times',         label:'Ofrece alternativas si no hay hueco' },
                 ].map(({ key, label }) => (
                   <button key={key} onClick={()=>setRules((r:any)=>({...r,[key]:!r[key]}))} style={{
                     padding:'8px 16px', fontSize:12, fontWeight:600, borderRadius:9, cursor:'pointer', fontFamily:'inherit',
@@ -224,8 +229,8 @@ export default function AgentePage() {
 
             {/* Patrones */}
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>{tx('Patrones de decisión')}</h2>
-              <p style={{ fontSize:12, color:C.text3, marginBottom:18 }}>{tx('Define qué hace el agente cuando detecta cada situación')}</p>
+              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>{tx('Situaciones especiales')}</h2>
+              <p style={{ fontSize:12, color:C.text3, marginBottom:18 }}>{tx('¿Qué hace tu recepcionista cuando pasa algo fuera de lo normal?')}</p>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 {PATTERN_KEYS.map(({ key, label, icon, desc }) => (
                   <div key={key} style={{ display:'flex', alignItems:'center', gap:14, padding:'12px 16px', background:C.surface2, borderRadius:10, border:`1px solid ${C.border}` }}>
@@ -246,7 +251,7 @@ export default function AgentePage() {
             {/* Historial de feedback */}
             {feedback.length > 0 && (
               <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-                <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:14 }}>📚 {tx('Correcciones recientes')}</h2>
+                <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:14 }}>📚 {tx('Últimas correcciones que le has hecho')}</h2>
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {feedback.slice(0,8).map((f:any,i:number) => (
                     <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', background:C.surface2, borderRadius:8 }}>
@@ -272,8 +277,8 @@ export default function AgentePage() {
 
             {/* Servicios */}
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>🛎️ {tx('Servicios ofrecidos')}</h2>
-              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('Qué servicios ofrece tu negocio (separados por coma)')}</p>
+              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>🛎️ {tx('¿Qué ofreces?')}</h2>
+              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('Los servicios que ofrece tu negocio (separados por coma)')}</p>
               <input value={(knowledge.services||[]).join(', ')} onChange={e=>setKnowledge((k:any)=>({...k,services:e.target.value.split(',').map((s:string)=>s.trim()).filter(Boolean)}))}
                 placeholder={tx('reservas, pedido para recoger, menú del día, entrega a domicilio...')}
                 style={{...inp()}}/>
@@ -282,7 +287,7 @@ export default function AgentePage() {
             {/* Horarios */}
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
               <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>🕐 {tx('Horarios')}</h2>
-              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('Define los turnos de tu negocio')}</p>
+              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('¿Cuándo abres? Tu recepcionista lo usará para ofrecer huecos')}</p>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 {[['lunch','Mediodía'],['dinner','Noche'],['morning','Mañana'],['weekend','Fin de semana']].map(([key,label])=>(
                   <div key={key} style={{ display:'flex', alignItems:'center', gap:12 }}>
@@ -296,22 +301,22 @@ export default function AgentePage() {
 
             {/* Menú */}
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>🍽️ {tx('Menú / Catálogo')}</h2>
-              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('Categorías y productos. El agente usará esto para responder preguntas sobre disponibilidad.')}</p>
+              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>🍽️ {tx('Tu carta / catálogo')}</h2>
+              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('Lo que vendes, organizado por categorías. Tu recepcionista lo usará para responder preguntas.')}</p>
               <MenuEditor menu={knowledge.menu||{}} onChange={(m:any)=>setKnowledge((k:any)=>({...k,menu:m}))} tx={tx}/>
             </div>
 
             {/* FAQs */}
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
               <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>❓ {tx('Preguntas frecuentes')}</h2>
-              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('Preguntas que el agente responderá directamente sin improvisar')}</p>
+              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('Respuestas exactas que dará tu recepcionista cuando le pregunten esto')}</p>
               <FaqEditor faqs={knowledge.faqs||[]} onChange={(f:any)=>setKnowledge((k:any)=>({...k,faqs:f}))} tx={tx}/>
             </div>
 
             {/* Notas especiales */}
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>📝 {tx('Notas especiales')}</h2>
-              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('Información adicional para el agente (políticas, restricciones, etc.)')}</p>
+              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>📝 {tx('Instrucciones extra')}</h2>
+              <p style={{ fontSize:12, color:C.text3, marginBottom:14 }}>{tx('Cualquier cosa que deba saber tu recepcionista: políticas, normas, excepciones...')}</p>
               <textarea value={knowledge.special_notes||''} onChange={e=>setKnowledge((k:any)=>({...k,special_notes:e.target.value}))}
                 rows={4} placeholder={tx('Ej: Los domingos solo abrimos para cenas. No aceptamos grupos de más de 20 sin reserva previa...')}
                 style={{...inp(), resize:'vertical'}}/>
@@ -324,12 +329,12 @@ export default function AgentePage() {
         {tab==='memory' && (
           <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>📚 {tx('Correcciones acumuladas')}</h2>
-              <p style={{ fontSize:12, color:C.text3, marginBottom:16 }}>{tx('Patrones detectados a partir de tus correcciones. Cuando hay 3 o más del mismo tipo, el sistema puede sugerirte automatizarlos.')}</p>
+              <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:6 }}>📚 {tx('Lo que ha aprendido')}</h2>
+              <p style={{ fontSize:12, color:C.text3, marginBottom:16 }}>{tx('Cada vez que corriges una decisión, tu recepcionista aprende. Aquí puedes ver qué ha ido aprendiendo.')}</p>
               {feedback.length === 0 ? (
                 <div style={{ padding:'32px 0', textAlign:'center' }}>
                   <div style={{ fontSize:28, marginBottom:10 }}>🧠</div>
-                  <p style={{ fontSize:13, color:C.text3 }}>{tx('Sin correcciones aún. Cuando corrijas decisiones del agente, aparecerán aquí y el sistema aprenderá.')}</p>
+                  <p style={{ fontSize:13, color:C.text3 }}>{tx('Todavía no has corregido ninguna decisión. Cuando lo hagas, tu recepcionista aprenderá y mejorará.')}</p>
                 </div>
               ) : (
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
