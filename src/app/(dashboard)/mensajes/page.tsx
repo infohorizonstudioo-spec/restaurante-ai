@@ -3,19 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
-
-const C = {
-  amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)',
-  teal:'#2DD4BF', tealDim:'rgba(45,212,191,0.10)',
-  green:'#34D399', greenDim:'rgba(52,211,153,0.10)',
-  red:'#F87171', redDim:'rgba(248,113,113,0.10)',
-  yellow:'#FBB53F', yellowDim:'rgba(251,181,63,0.10)',
-  violet:'#A78BFA', violetDim:'rgba(167,139,250,0.12)',
-  blue:'#60A5FA', blueDim:'rgba(96,165,250,0.10)',
-  text:'#E8EEF6', text2:'#8895A7', text3:'#49566A',
-  bg:'#0C1018', surface:'#131920', surface2:'#1A2230', surface3:'#202C3E',
-  border:'rgba(255,255,255,0.07)', borderMd:'rgba(255,255,255,0.11)',
-}
+import { C } from '@/lib/colors'
 
 const CHANNEL_META: Record<string, { icon: string; color: string; label: string }> = {
   whatsapp: { icon: '💬', color: '#25D366', label: 'WhatsApp' },
@@ -176,9 +164,9 @@ export default function MensajesPage() {
   }
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 64px)', background: C.bg }}>
+    <div className="rz-panel-split" style={{ display: 'flex', height: 'calc(100vh - 64px)', background: C.bg }}>
       {/* ── LEFT: Conversation List ─────────────────────────────── */}
-      <div style={{
+      <div className="rz-panel-list" style={{
         width: 380, minWidth: 320, borderRight: `1px solid ${C.border}`,
         display: 'flex', flexDirection: 'column', background: C.surface,
       }}>
@@ -217,8 +205,13 @@ export default function MensajesPage() {
           {loading ? (
             <div style={{ padding: 40, textAlign: 'center', color: C.text3 }}>{tx('Cargando...')}</div>
           ) : filtered.length === 0 ? (
-            <div style={{ padding: 40, textAlign: 'center', color: C.text3 }}>
-              {tx('Sin conversaciones')}
+            <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+              <div style={{position:'relative',display:'inline-block',marginBottom:20}}>
+                <div style={{width:56,height:56,borderRadius:16,background:`linear-gradient(135deg,rgba(240,168,78,0.10),rgba(240,168,78,0.04))`,border:'1px solid rgba(240,168,78,0.12)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22}}>💬</div>
+                <div style={{position:'absolute',inset:-6,borderRadius:22,border:'1px dashed rgba(240,168,78,0.12)',pointerEvents:'none'}}/>
+              </div>
+              <p style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:6}}>{tx('Sin conversaciones')}</p>
+              <p style={{fontSize:12,color:C.text2,lineHeight:1.6}}>{tx('Los mensajes de WhatsApp, email y SMS aparecerán aquí.')}</p>
             </div>
           ) : filtered.map(conv => {
             const ch = CHANNEL_META[conv.channel] || CHANNEL_META.sms
@@ -258,9 +251,10 @@ export default function MensajesPage() {
       {/* ── RIGHT: Message Thread ───────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: C.bg }}>
         {!selected ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
-            <span style={{ fontSize: 48, opacity: 0.3 }}>💬</span>
-            <span style={{ color: C.text3, fontSize: 15 }}>{tx('Selecciona una conversación')}</span>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+            <div style={{width:56,height:56,borderRadius:16,background:'rgba(255,255,255,0.03)',border:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,marginBottom:4}}>💬</div>
+            <p style={{ color: C.text, fontSize: 14, fontWeight: 600 }}>{tx('Selecciona una conversación')}</p>
+            <p style={{ color: C.text3, fontSize: 12 }}>{tx('Elige un mensaje del panel izquierdo para ver el hilo completo')}</p>
           </div>
         ) : (
           <>

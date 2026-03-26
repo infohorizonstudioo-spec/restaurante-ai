@@ -127,7 +127,7 @@ function DemoWidget() {
   return (
     <div style={{maxWidth:480,margin:'0 auto 48px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(240,168,78,0.25)',borderRadius:20,padding:24,textAlign:'center'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:16}}>
-        <div style={{width:10,height:10,borderRadius:'50%',background:'#4ADE80',animation:'pulse 2s ease-in-out infinite'}}/>
+        <div style={{width:10,height:10,borderRadius:'50%',background:'#34D399',animation:'pulse 2s ease-in-out infinite'}}/>
         <span style={{fontSize:14,fontWeight:600,color:'#E8EEF6'}}>Habla con tu futura recepcionista</span>
       </div>
       <p style={{fontSize:13,color:'rgba(255,255,255,0.45)',marginBottom:20}}>Pulsa el botón y habla como si llamaras a un negocio. Pide una reserva, pregunta precios, cambia una cita. Haz lo que harías con una persona real.</p>
@@ -142,7 +142,7 @@ export default function HomePage() {
   const C = {
     bg:'#090C13', card:'rgba(255,255,255,0.03)', border:'rgba(255,255,255,0.07)',
     text:'#E8EEF6', muted:'rgba(255,255,255,0.45)', amber:'#F0A84E', teal:'#2DD4BF',
-    red:'#F87171', green:'#4ADE80', blue:'#60A5FA'
+    red:'#F87171', green:'#34D399', blue:'#60A5FA'
   }
   return (
     <main style={{fontFamily:"'Sora','DM Sans',-apple-system,sans-serif",background:C.bg,color:C.text,lineHeight:1.5,overflowX:'hidden'}}>
@@ -165,9 +165,11 @@ export default function HomePage() {
         .card-hover:hover{transform:translateY(-4px);border-color:rgba(240,168,78,0.25)!important;box-shadow:0 12px 40px rgba(0,0,0,0.4)!important}
         .plan-card:hover{transform:translateY(-6px)}
         a{text-decoration:none;color:inherit}
+        .hero-mobile-cta{display:none}
         @media(max-width:768px){
           .hero-grid{grid-template-columns:1fr!important}
           .hero-right{display:none!important}
+          .hero-mobile-cta{display:block!important}
           .prob-grid{grid-template-columns:1fr!important}
           .steps-grid{grid-template-columns:1fr!important}
           .price-grid{grid-template-columns:1fr!important}
@@ -193,7 +195,7 @@ export default function HomePage() {
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <Link href="#demo" className="btn-ghost" style={{padding:'7px 14px',fontSize:13,borderRadius:8,display:'inline-block'}}>Escuchar demo</Link>
           <Link href="/login" className="btn-ghost" style={{padding:'7px 18px',fontSize:13,borderRadius:8,display:'inline-block'}}>Iniciar sesión</Link>
-          <Link href="/registro" className="btn-primary" style={{padding:'8px 20px',fontSize:13,borderRadius:8,display:'inline-block',boxShadow:'0 4px 16px rgba(240,168,78,0.3)'}}>Crear mi recepcionista →</Link>
+          <Link href="/registro" className="btn-primary" style={{padding:'8px 20px',fontSize:13,borderRadius:8,display:'inline-block',boxShadow:'0 4px 16px rgba(240,168,78,0.3)'}}>Empezar gratis →</Link>
         </div>
       </nav>
 
@@ -209,7 +211,7 @@ export default function HomePage() {
           </div>
           <h1 style={{fontSize:'clamp(36px,4.5vw,58px)',fontWeight:800,letterSpacing:'-0.04em',lineHeight:1.08,marginBottom:24,color:C.text}}>
             Cada cliente que<br/>no atiendes es<br/>
-            <span style={{background:'linear-gradient(135deg,#F0A84E,#FBBF24)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>dinero que pierdes</span>
+            <span style={{background:'linear-gradient(135deg,#F0A84E,#E8923A)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>dinero que pierdes</span>
           </h1>
           <p style={{fontSize:17,color:C.muted,lineHeight:1.75,marginBottom:12,maxWidth:520}}>
             Reservo responde llamadas, WhatsApp, emails. Entiende lo que necesita cada cliente y <strong style={{color:C.text}}>toma decisiones por ti.</strong> Reservas, citas, pedidos, consultas. Todo resuelto.
@@ -222,7 +224,7 @@ export default function HomePage() {
           </p>
           <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:40}}>
             <Link href="/registro" className="btn-primary" style={{padding:'14px 32px',fontSize:15,borderRadius:12,display:'inline-block',boxShadow:'0 6px 24px rgba(240,168,78,0.35)'}}>
-              Crear mi recepcionista →
+              Empezar gratis →
             </Link>
             <Link href="#demo" className="btn-ghost" style={{padding:'14px 24px',fontSize:14,borderRadius:12,display:'inline-block'}}>
               Escuchar cómo responde
@@ -235,6 +237,28 @@ export default function HomePage() {
                 <p style={{fontSize:12,color:'rgba(255,255,255,0.35)',fontWeight:500,marginTop:1}}>{l}</p>
               </div>
             ))}
+          </div>
+          {/* Mobile mini-panel — visible only on mobile */}
+          <div className="hero-mobile-cta" style={{marginTop:32,background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'18px 20px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+              <div style={{width:8,height:8,borderRadius:'50%',background:C.teal,animation:'pulse 1.5s ease-in-out infinite'}}/>
+              <span style={{fontSize:12,fontWeight:600,color:'rgba(255,255,255,0.5)',letterSpacing:'0.04em'}}>RECEPCIONISTA EN LÍNEA</span>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {[
+                {icon:'📞',text:'Llamada entrante → Reserva confirmada para 4 personas',time:'hace 2s'},
+                {icon:'💬',text:'WhatsApp → "¿Tienen mesa hoy?" → Confirmado',time:'hace 5s'},
+                {icon:'📧',text:'Email respondido → Presupuesto enviado',time:'hace 12s'},
+              ].map(({icon,text,time})=>(
+                <div key={text} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:10,padding:'8px 12px'}}>
+                  <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <p style={{fontSize:12,color:'#E8EEF6',fontWeight:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{text}</p>
+                    <p style={{fontSize:10,color:'rgba(255,255,255,0.25)',marginTop:1}}>{time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         {/* RIGHT — LIVE PANEL */}
@@ -438,6 +462,58 @@ export default function HomePage() {
             <p style={{fontSize:14,color:C.muted,marginTop:8}}>
               Sin intervención humana. Sin esperas. Sin errores.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════
+          3.5 SOCIAL PROOF — Confianza real (moved earlier for conversion)
+         ══════════════════════════════════════════ */}
+      <section style={{padding:'80px clamp(16px,5vw,64px)'}}>
+        <div style={{maxWidth:1000,margin:'0 auto'}}>
+          <div style={{textAlign:'center',marginBottom:48}}>
+            <p style={{fontSize:12,fontWeight:600,color:C.amber,letterSpacing:'0.08em',marginBottom:12}}>NEGOCIOS QUE YA CONFÍAN</p>
+            <h2 style={{fontSize:'clamp(24px,3vw,38px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15}}>
+              Lo dicen ellos, no nosotros.
+            </h2>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="prob-grid">
+            {[
+              {name:'Carlos M.',role:'Restaurante La Terraza',text:'Desde que pusimos Reservo no hemos perdido ni una reserva. Antes se nos escapaban 5-6 llamadas al día en hora punta.',stars:5},
+              {name:'Laura G.',role:'Clínica Dental Sonríe',text:'Mis pacientes creen que tenemos a alguien nuevo en recepción. No saben que es IA y eso dice mucho de la calidad.',stars:5},
+              {name:'Miguel R.',role:'Taller AutoPro',text:'Lo mejor es que responde fuera de horario. El 40% de mis citas ahora entran por la noche o los fines de semana.',stars:5},
+            ].map(({name,role,text,stars})=>(
+              <div key={name} style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'28px 24px'}}>
+                <div style={{display:'flex',gap:2,marginBottom:14}}>
+                  {Array.from({length:stars}).map((_,i)=>(
+                    <span key={i} style={{color:C.amber,fontSize:14}}>★</span>
+                  ))}
+                </div>
+                <p style={{fontSize:14,color:'rgba(255,255,255,0.7)',lineHeight:1.65,marginBottom:20,fontStyle:'italic'}}>"{text}"</p>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(240,168,78,0.12)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,color:C.amber}}>
+                    {name[0]}
+                  </div>
+                  <div>
+                    <p style={{fontSize:13,fontWeight:600,color:C.text}}>{name}</p>
+                    <p style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{role}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:'flex',justifyContent:'center',gap:40,marginTop:40,flexWrap:'wrap'}}>
+            {[
+              {n:'+200',s:'negocios activos'},
+              {n:'+15.000',s:'llamadas gestionadas'},
+              {n:'4.9/5',s:'satisfacción media'},
+              {n:'< 2s',s:'tiempo de respuesta'},
+            ].map(({n,s})=>(
+              <div key={s} style={{textAlign:'center'}}>
+                <p style={{fontSize:22,fontWeight:800,color:C.amber,letterSpacing:'-0.03em'}}>{n}</p>
+                <p style={{fontSize:11,color:'rgba(255,255,255,0.3)',marginTop:2,fontWeight:500}}>{s}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -773,7 +849,7 @@ export default function HomePage() {
                   ))}
                 </div>
                 <Link href="/registro" className={highlight?'btn-primary':'btn-ghost'} style={{display:'block',textAlign:'center',padding:'12px',borderRadius:10,fontSize:14,fontWeight:600}}>
-                  {highlight ? 'Crear mi recepcionista →' : cta}
+                  {highlight ? 'Empezar gratis →' : cta}
                 </Link>
               </div>
             ))}
@@ -838,7 +914,7 @@ export default function HomePage() {
             </p>
             <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
               <Link href="/registro" className="btn-primary" style={{padding:'16px 40px',fontSize:16,borderRadius:14,display:'inline-block',boxShadow:'0 8px 32px rgba(240,168,78,0.4)'}}>
-                Crear mi recepcionista gratis →
+                Empezar gratis →
               </Link>
             </div>
             <p style={{fontSize:12,color:'rgba(255,255,255,0.2)',marginTop:20}}>
@@ -849,18 +925,54 @@ export default function HomePage() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={{borderTop:'1px solid rgba(255,255,255,0.06)',padding:'32px clamp(16px,5vw,64px)',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:16}}>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <div style={{width:26,height:26,background:'linear-gradient(135deg,#F0A84E,#E8943A)',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="#0A0D14"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+      <footer style={{borderTop:'1px solid rgba(255,255,255,0.06)',padding:'48px clamp(16px,5vw,64px) 32px'}}>
+        <div style={{maxWidth:1200,margin:'0 auto'}}>
+          <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',gap:40,marginBottom:40}} className="feat-grid">
+            {/* Brand */}
+            <div>
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:14}}>
+                <div style={{width:28,height:28,background:'linear-gradient(135deg,#F0A84E,#E8943A)',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="#0A0D14"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+                </div>
+                <span style={{fontSize:15,fontWeight:700,color:C.text,letterSpacing:'-0.01em'}}>Reservo<span style={{color:C.amber}}>.AI</span></span>
+              </div>
+              <p style={{fontSize:13,color:'rgba(255,255,255,0.35)',lineHeight:1.7,maxWidth:280}}>
+                La recepcionista virtual que atiende llamadas, WhatsApp y emails por ti. Para negocios que no quieren perder ni un cliente.
+              </p>
+            </div>
+            {/* Producto */}
+            <div>
+              <p style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',letterSpacing:'0.08em',marginBottom:14}}>PRODUCTO</p>
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                {[{l:'Funcionalidades',h:'#demo'},{l:'Precios',h:'/precios'},{l:'Demo en vivo',h:'#demo'},{l:'Casos de uso',h:'#'}].map(({l,h})=>(
+                  <Link key={l} href={h} style={{fontSize:13,color:'rgba(255,255,255,0.4)',transition:'color 0.15s'}} onMouseEnter={e=>(e.currentTarget.style.color=C.text)} onMouseLeave={e=>(e.currentTarget.style.color='rgba(255,255,255,0.4)')}>{l}</Link>
+                ))}
+              </div>
+            </div>
+            {/* Empresa */}
+            <div>
+              <p style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',letterSpacing:'0.08em',marginBottom:14}}>EMPRESA</p>
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                {[{l:'Sobre nosotros',h:'#'},{l:'Blog',h:'#'},{l:'Contacto',h:'mailto:hola@reservo.ai'}].map(({l,h})=>(
+                  <Link key={l} href={h} style={{fontSize:13,color:'rgba(255,255,255,0.4)',transition:'color 0.15s'}} onMouseEnter={e=>(e.currentTarget.style.color=C.text)} onMouseLeave={e=>(e.currentTarget.style.color='rgba(255,255,255,0.4)')}>{l}</Link>
+                ))}
+              </div>
+            </div>
+            {/* Legal */}
+            <div>
+              <p style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',letterSpacing:'0.08em',marginBottom:14}}>LEGAL</p>
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                {[{l:'Política de privacidad',h:'/privacidad'},{l:'Términos de servicio',h:'/terminos'},{l:'Política de cookies',h:'/cookies'}].map(({l,h})=>(
+                  <Link key={l} href={h} style={{fontSize:13,color:'rgba(255,255,255,0.4)',transition:'color 0.15s'}} onMouseEnter={e=>(e.currentTarget.style.color=C.text)} onMouseLeave={e=>(e.currentTarget.style.color='rgba(255,255,255,0.4)')}>{l}</Link>
+                ))}
+              </div>
+            </div>
           </div>
-          <span style={{fontSize:14,fontWeight:700,color:C.text,letterSpacing:'-0.01em'}}>Reservo<span style={{color:C.amber}}>.AI</span></span>
-        </div>
-        <p style={{fontSize:12,color:'rgba(255,255,255,0.2)'}}>© 2025 Reservo.AI — Tu recepcionista que nunca falla</p>
-        <div style={{display:'flex',gap:20}}>
-          {['Privacidad','Términos','Contacto'].map(l=>(
-            <span key={l} style={{fontSize:12,color:'rgba(255,255,255,0.3)',cursor:'pointer'}}>{l}</span>
-          ))}
+          {/* Bottom bar */}
+          <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:20,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
+            <p style={{fontSize:12,color:'rgba(255,255,255,0.2)'}}>© {new Date().getFullYear()} Reservo.AI — Todos los derechos reservados</p>
+            <p style={{fontSize:12,color:'rgba(255,255,255,0.15)'}}>Hecho con criterio en España 🇪🇸</p>
+          </div>
         </div>
       </footer>
 

@@ -6,16 +6,7 @@ import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import { getCommonStrings } from '@/lib/i18n'
 
-const C = {
-  amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
-  green:'#34D399',greenDim:'rgba(52,211,153,0.10)',
-  violet:'#A78BFA',violetDim:'rgba(167,139,250,0.12)',
-  yellow:'#FBB53F',yellowDim:'rgba(251,181,63,0.10)',
-  blue:'#60A5FA',blueDim:'rgba(96,165,250,0.10)',
-  text:'#E8EEF6',text2:'#8895A7',text3:'#49566A',
-  bg:'#0C1018',surface:'#131920',surface2:'#1A2230',surface3:'#202C3E',
-  border:'rgba(255,255,255,0.07)',borderMd:'rgba(255,255,255,0.11)',
-}
+import { C } from "@/lib/colors"
 
 function parseClientType(c: any): {label:string; icon:string} {
   const notes = (c.notes||'').toLowerCase()

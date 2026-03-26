@@ -2,25 +2,13 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { PageLoader } from '@/components/ui'
+import { PageLoader, PageSkeleton } from '@/components/ui'
 import Link from 'next/link'
 import NotificationBell from '@/components/NotificationBell'
 import { resolveTemplate } from '@/lib/templates'
 import { getEventConfig, type BusinessEventConfig } from '@/lib/event-schemas'
 import { getTranslations, getCommonStrings, tx } from '@/lib/i18n'
-
-const C = {
-  amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)', amberGlow:'rgba(240,168,78,0.20)',
-  teal:'#2DD4BF', tealDim:'rgba(45,212,191,0.10)',
-  green:'#34D399', greenDim:'rgba(52,211,153,0.10)',
-  red:'#F87171', redDim:'rgba(248,113,113,0.10)',
-  yellow:'#FBB53F', yellowDim:'rgba(251,181,63,0.10)',
-  violet:'#A78BFA', violetDim:'rgba(167,139,250,0.12)',
-  blue:'#60A5FA', blueDim:'rgba(96,165,250,0.10)',
-  text:'#E8EEF6', text2:'#8895A7', text3:'#49566A',
-  bg:'#0C1018', surface:'#131920', surface2:'#1A2230', surface3:'#202C3E',
-  border:'rgba(255,255,255,0.07)', borderMd:'rgba(255,255,255,0.11)',
-}
+import { C } from '@/lib/colors'
 const PLAN_COL: Record<string,string> = { trial:C.amber,free:C.amber,starter:C.blue,pro:C.violet,business:C.green }
 const PLAN_LBL: Record<string,string> = { trial:'Trial',free:'Trial',starter:'Starter',pro:'Pro',business:'Business' }
 const PLAN_CALLS: Record<string,number> = { trial:10,free:10,starter:50,pro:200,business:600 }
@@ -614,7 +602,7 @@ export default function PanelPage() {
     return () => { if(demoTimer.current) clearInterval(demoTimer.current) }
   }, [demoMode, pushEvent, tenant])
 
-  if (loading) return <PageLoader/>
+  if (loading) return <PageSkeleton variant="cards"/>
   if (!tenant) return null
 
   const lang      = tenant.language||'es'

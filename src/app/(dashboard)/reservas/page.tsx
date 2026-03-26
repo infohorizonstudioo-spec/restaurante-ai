@@ -3,7 +3,7 @@ import NotifBell from '@/components/NotifBell'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getSessionTenant } from '@/lib/session-cache'
-import { PageLoader } from '@/components/ui'
+import { PageLoader, PageSkeleton } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import { getStatusLabel } from '@/lib/i18n'
 import EcomReservasView from './EcomReservasView'
@@ -16,16 +16,7 @@ import AsesorReservasView from './AsesorReservasView'
 import SegurosReservasView from './SegurosReservasView'
 import InmoReservasView from './InmoReservasView'
 import AcademiaClasesView from './AcademiaClasesView'
-
-const C = {
-  amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
-  teal:'#2DD4BF',green:'#34D399',greenDim:'rgba(52,211,153,0.10)',
-  red:'#F87171',redDim:'rgba(248,113,113,0.10)',
-  yellow:'#FBB53F',violet:'#A78BFA',violetDim:'rgba(167,139,250,0.12)',
-  text:'#E8EEF6',text2:'#8895A7',text3:'#49566A',
-  bg:'#0C1018',surface:'#131920',surface2:'#1A2230',surface3:'#202C3E',
-  border:'rgba(255,255,255,0.07)',borderMd:'rgba(255,255,255,0.11)',
-}
+import { C } from '@/lib/colors'
 
 const DAYS = ['DO','LU','MA','MI','JU','VI','SA']
 const STATUS_STYLES:Record<string,{bg:string;color:string;label:string}> = {
@@ -104,7 +95,7 @@ export default function ReservasPage() {
     return ()=>{ supabase.removeChannel(ch) }
   },[tid,load])
 
-  if (loading) return <PageLoader/>
+  if (loading) return <PageSkeleton variant="list"/>
 
   const week    = getWeek(base)
   const dayRes  = reservas.filter(r => (r.date||r.reservation_date)===selected)
@@ -184,8 +175,11 @@ export default function ReservasPage() {
           <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} {tx('para el')} {new Date(selected+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={L?.buscarPlaceholder||'Buscar…'}
-          style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:200,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
+        <div style={{position:'relative'}}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={L?.buscarPlaceholder||'Buscar…'}
+            style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:200,background:C.surface2,color:C.text,fontFamily:'inherit',paddingRight:search?50:14}}/>
+          {search&&<span style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',fontSize:10,color:C.text3,fontWeight:600}}>{filtered.length}</span>}
+        </div>
           <button onClick={async()=>{const s=await supabase.auth.getSession();if(s.data.session)window.open('/api/export?type=reservations','_blank')}} style={{padding:'6px 12px',fontSize:11,fontWeight:600,borderRadius:7,border:`1px solid ${C.border}`,background:'transparent',color:C.text3,cursor:'pointer',fontFamily:'inherit'}}>📥 {t.common.export}</button>
           <a href="/reservas/nueva" style={{padding:'7px 14px',fontSize:12,fontWeight:700,background:C.amber,color:'#0C1018',borderRadius:8,textDecoration:'none'}}>+ {t.reservations.newReservation}</a>
           <NotifBell/>
@@ -201,8 +195,8 @@ export default function ReservasPage() {
           const isSel = iso===selected, isToday = iso===today
           return (
             <button key={iso} onClick={()=>setSelected(iso)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',padding:'10px 4px',background:'none',border:'none',cursor:'pointer',borderBottom:isSel?`2px solid ${C.amber}`:`2px solid transparent`,transition:'all 0.12s'}}>
-              <span style={{fontSize:10,color:isToday?C.amber:C.text3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>{DAYS[d.getDay()]}</span>
-              <span style={{fontSize:16,fontWeight:isSel?700:500,color:isSel?C.amber:isToday?C.amber:C.text,marginTop:1}}>{d.getDate()}</span>
+              <span style={{fontSize:10,color:isToday?C.amber:C.text3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>{isToday?'HOY':DAYS[d.getDay()]}</span>
+              <span style={{fontSize:16,fontWeight:isSel?700:isToday?700:500,color:isSel?C.amber:isToday?C.amber:C.text,marginTop:1}}>{d.getDate()}</span>
               {count>0&&<span style={{width:18,height:18,borderRadius:'50%',background:isSel?C.amber:`rgba(255,255,255,0.08)`,color:isSel?'#0C1018':C.text2,fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',marginTop:2}}>{count}</span>}
             </button>
           )
@@ -212,10 +206,14 @@ export default function ReservasPage() {
 
       <div style={{maxWidth:760,margin:'0 auto',padding:'20px 24px'}}>
         {filtered.length===0 ? (
-          <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'60px 24px',textAlign:'center'}}>
-            <div style={{fontSize:36,marginBottom:10}}>📅</div>
-            <p style={{fontSize:15,fontWeight:600,color:C.text,marginBottom:4}}>{L?.emptyReservas||'Sin reservas este día'}</p>
-            <p style={{fontSize:13,color:C.text3}}>{tx('No hay')} {L?.reservas?.toLowerCase()||tx('reservas')} {tx('para el día seleccionado.')}</p>
+          <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'64px 24px',textAlign:'center'}}>
+            <div style={{position:'relative',display:'inline-block',marginBottom:20}}>
+              <div style={{width:64,height:64,borderRadius:18,background:`linear-gradient(135deg,${C.amberDim},rgba(240,168,78,0.04))`,border:`1px solid rgba(240,168,78,0.12)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:26}}>📅</div>
+              <div style={{position:'absolute',inset:-8,borderRadius:24,border:'1px dashed rgba(240,168,78,0.12)',pointerEvents:'none'}}/>
+            </div>
+            <p style={{fontSize:15,fontWeight:700,color:C.text,marginBottom:8}}>{L?.emptyReservas||'Sin reservas este día'}</p>
+            <p style={{fontSize:13,color:C.text2,lineHeight:1.6,maxWidth:320,margin:'0 auto 20px'}}>{tx('No hay')} {L?.reservas?.toLowerCase()||tx('reservas')} {tx('para el día seleccionado. Las nuevas entrarán automáticamente.')}</p>
+            <Link href="/reservas/nueva" style={{padding:'9px 20px',fontSize:13,fontWeight:600,color:'#0C1018',background:'linear-gradient(135deg,#F0A84E,#E8923A)',borderRadius:9,textDecoration:'none',display:'inline-block'}}>+ Crear {L?.reserva?.toLowerCase()||'reserva'}</Link>
           </div>
         ) : filtered.map((r,i)=>{
           const ss = STATUS_STYLES[r.status]||STATUS_STYLES.pendiente

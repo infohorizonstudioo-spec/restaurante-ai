@@ -8,13 +8,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import { calculateDayStats, parseReservationConfig, generateSlots } from '@/lib/scheduling-engine'
 import type { SlotStats, ReservationConfig } from '@/lib/scheduling-engine'
 
-const C = {
-  bg:'#0C1018', card:'#131920', card2:'#161D2A', border:'rgba(255,255,255,0.07)',
-  text:'#E8EEF6', sub:'#8895A7', muted:'#49566A',
-  amber:'#F0A84E', green:'#34D399', red:'#F87171', yellow:'#FBB53F', teal:'#2DD4BF',
-  amberDim:'rgba(240,168,78,0.10)', greenDim:'rgba(52,211,153,0.10)',
-  redDim:'rgba(248,113,113,0.10)',
-}
+import { C } from '@/lib/colors'
 
 function pct(used: number, max: number) { return max > 0 ? Math.min(100, Math.round(used/max*100)) : 0 }
 function barColor(p: number) { return p >= 100 ? C.red : p >= 75 ? C.yellow : C.green }

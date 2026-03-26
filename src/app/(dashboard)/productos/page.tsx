@@ -7,14 +7,7 @@ import NotifBell from '@/components/NotifBell'
 import { useTenant } from '@/contexts/TenantContext'
 import PeluProductosView from './PeluProductosView'
 import BarbeProductosView from './BarbeProductosView'
-
-const C = {
-  bg:'#0C1018', card:'#131920', card2:'#161D2A', border:'rgba(255,255,255,0.07)',
-  text:'#E8EEF6', sub:'#8895A7', muted:'#49566A', amber:'#F0A84E',
-  green:'#34D399', red:'#F87171', yellow:'#FBB53F', violet:'#A78BFA', teal:'#2DD4BF',
-  amberDim:'rgba(240,168,78,0.10)', greenDim:'rgba(52,211,153,0.10)',
-  redDim:'rgba(248,113,113,0.10)', yellowDim:'rgba(251,181,63,0.10)',
-}
+import { C } from '@/lib/colors'
 
 const AVAIL_CFG = {
   always_available: { label:'Siempre disponible', color:C.green,  bg:C.greenDim,  icon:'✓' },

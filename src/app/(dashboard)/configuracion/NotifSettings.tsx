@@ -3,14 +3,7 @@ import { useEffect, useState } from 'react'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useTenant } from '@/contexts/TenantContext'
 
-const C = {
-  amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)', amberBorder:'rgba(240,168,78,0.25)',
-  green:'#4ADE80', greenDim:'rgba(74,222,128,0.10)',
-  red:'#F87171', redDim:'rgba(248,113,113,0.10)',
-  text:'#E8EEF6', text2:'#8895A7', text3:'#49566A',
-  surface:'#131920', surface2:'#1A2230',
-  border:'rgba(255,255,255,0.07)',
-}
+import { C } from "@/lib/colors"
 
 function Toggle({ on, onChange, label, desc }: { on:boolean; onChange:(v:boolean)=>void; label:string; desc?:string }) {
   return (

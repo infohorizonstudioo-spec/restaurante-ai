@@ -6,14 +6,7 @@ import { getCommonStrings } from '@/lib/i18n'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
 
-const C = {
-  violet:'#A78BFA', violetDim:'rgba(167,139,250,0.12)',
-  amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)',
-  green:'#34D399', greenDim:'rgba(52,211,153,0.10)',
-  text:'#E8EEF6', text2:'#8895A7', text3:'#49566A',
-  bg:'#0C1018', surface:'#131920', surface2:'#1A2230',
-  border:'rgba(255,255,255,0.07)', borderMd:'rgba(255,255,255,0.11)',
-}
+import { C } from "@/lib/colors"
 
 export default function EcomClientesView() {
   const { tenant } = useTenant()

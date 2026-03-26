@@ -4,17 +4,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
-
-const C = {
-  amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)', amberBorder:'rgba(240,168,78,0.25)',
-  teal:'#2DD4BF', tealDim:'rgba(45,212,191,0.10)',
-  green:'#4ADE80', greenDim:'rgba(74,222,128,0.10)',
-  red:'#F87171', redDim:'rgba(248,113,113,0.10)',
-  violet:'#A78BFA', violetDim:'rgba(167,139,250,0.12)',
-  text:'#E8EEF6', text2:'#8895A7', text3:'#49566A',
-  bg:'#0C1018', surface:'#131920', surface2:'#1A2230', surface3:'#202C3E',
-  border:'rgba(255,255,255,0.07)', borderMd:'rgba(255,255,255,0.11)',
-}
+import { C } from '@/lib/colors'
+import { useToast } from '@/components/NotificationToast'
 
 const STATUS_OPTS = [
   { value:'confirmed',             label:'✓ Confirmar automáticamente', color:C.green },
@@ -88,6 +79,7 @@ const TABS = [
 ]
 
 export default function AgentePage() {
+  const toast = useToast()
   const { tenant, tx } = useTenant()
   const PATTERN_KEYS = PATTERN_KEYS_BY_TYPE[tenant?.type || ''] || PATTERN_KEYS_BY_TYPE.restaurante || DEFAULT_PATTERNS
   const [loading, setLoading]       = useState(true)
@@ -140,6 +132,7 @@ export default function AgentePage() {
     if (!res.ok) { setError(d.error||'Error'); setSaving(false); return }
     setSaved(true); setTimeout(()=>setSaved(false), 2000)
     setSaving(false)
+    toast.push({ title: 'Reglas guardadas', body: 'El comportamiento del agente se ha actualizado', type: 'agent', priority: 'info', icon: '🤖' })
   }
 
   const saveKnowledge = async () => {

@@ -6,16 +6,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-const C = {
-  amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)', amberBorder:'rgba(240,168,78,0.25)',
-  teal:'#2DD4BF', tealDim:'rgba(45,212,191,0.10)',
-  green:'#4ADE80', greenDim:'rgba(74,222,128,0.10)',
-  red:'#F87171', redDim:'rgba(248,113,113,0.10)',
-  violet:'#A78BFA', violetDim:'rgba(167,139,250,0.12)',
-  text:'#E8EEF6', text2:'#8895A7', text3:'#49566A',
-  bg:'#090C13', surface:'#0F141E', surface2:'#151D2B', surface3:'#1A2235',
-  border:'rgba(255,255,255,0.06)', borderMd:'rgba(255,255,255,0.10)',
-}
+import { C } from '@/lib/colors'
 const PLANS: Record<string,{label:string;price:number;calls:number;color:string;bg:string}> = {
   trial:    {label:'Trial',    price:0,   calls:10,  color:'rgba(255,255,255,0.35)', bg:'rgba(255,255,255,0.04)'},
   free:     {label:'Trial',    price:0,   calls:10,  color:'rgba(255,255,255,0.35)', bg:'rgba(255,255,255,0.04)'},

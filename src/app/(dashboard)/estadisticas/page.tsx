@@ -90,12 +90,12 @@ export default function EstadisticasPage(){
   if(!isPro) return (
     <div style={{background:'#0C1018',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
       <div style={{maxWidth:440,textAlign:'center'}}>
-        <div style={{width:64,height:64,borderRadius:16,background:'linear-gradient(135deg,#7c3aed,#a78bfa)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',boxShadow:'0 8px 24px rgba(124,58,237,0.25)'}}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <div style={{width:64,height:64,borderRadius:16,background:'linear-gradient(135deg,#F0A84E,#E8923A)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',boxShadow:'0 8px 24px rgba(240,168,78,0.25)'}}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#0C1018"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         </div>
         <h2 style={{fontSize:22,fontWeight:700,color:'#E8EEF6',marginBottom:10}}>Estadísticas avanzadas</h2>
         <p style={{fontSize:14,color:'#8895A7',lineHeight:1.6,marginBottom:24}}>Analiza el rendimiento de tu recepcionista: tasa de conversión, hora pico, tendencias de reservas y más. Disponible en Pro y Business.</p>
-        <Link href="/precios" style={{display:'inline-block',padding:'12px 28px',fontSize:14,fontWeight:600,color:'white',background:'linear-gradient(135deg,#7c3aed,#a78bfa)',borderRadius:10,textDecoration:'none',boxShadow:'0 4px 16px rgba(124,58,237,0.3)'}}>
+        <Link href="/precios" style={{display:'inline-block',padding:'12px 28px',fontSize:14,fontWeight:600,color:'#0C1018',background:'linear-gradient(135deg,#F0A84E,#E8923A)',borderRadius:10,textDecoration:'none',boxShadow:'0 4px 16px rgba(240,168,78,0.3)'}}>
           Ver planes →
         </Link>
       </div>
@@ -109,7 +109,7 @@ export default function EstadisticasPage(){
     <div style={{background:'#0C1018',minHeight:'100vh'}}>
       <div style={{background:'#131920',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}}>
         <div>
-          <h1 style={{fontSize:18,fontWeight:700,color:'#E8EEF6'}}>{t.nav.stats}</h1>
+          <h1 style={{fontSize:16,fontWeight:700,color:'#E8EEF6',letterSpacing:'-0.02em'}}>{t.nav.stats}</h1>
           <p style={{fontSize:12,color:'#49566A',marginTop:1}}>{tx('Rendimiento de tu recepcionista y reservas')}</p>
         </div>
         <NotifBell/>
@@ -144,7 +144,7 @@ export default function EstadisticasPage(){
                 return (
                   <div key={day} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
                     <p style={{fontSize:10,color:'#C4CDD8',fontWeight:600}}>{cnt||''}</p>
-                    <div style={{width:'100%',height:h+'%',minHeight:4,background:isPeak?'#1d4ed8':'#bfdbfe',borderRadius:4,transition:'height 0.5s'}}/>
+                    <div style={{width:'100%',height:h+'%',minHeight:4,background:isPeak?'#F0A84E':'rgba(240,168,78,0.35)',borderRadius:4,transition:'height 0.5s'}}/>
                     <p style={{fontSize:10,color:'#49566A'}}>{d.dayNames[day]}</p>
                   </div>
                 )

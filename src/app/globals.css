@@ -59,6 +59,30 @@
   --rz-shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
   --rz-shadow-md:  0 4px 16px rgba(0,0,0,0.5);
   --rz-shadow-amber: 0 0 20px rgba(240,168,78,0.15);
+
+  /* Typography scale */
+  --rz-fs-xs:   11px;
+  --rz-fs-sm:   12px;
+  --rz-fs-base: 13px;
+  --rz-fs-md:   14px;
+  --rz-fs-lg:   16px;
+  --rz-fs-xl:   18px;
+  --rz-fs-2xl:  22px;
+
+  /* Spacing scale (base 4px) */
+  --rz-sp-1:  4px;
+  --rz-sp-2:  8px;
+  --rz-sp-3:  12px;
+  --rz-sp-4:  16px;
+  --rz-sp-5:  20px;
+  --rz-sp-6:  24px;
+  --rz-sp-8:  32px;
+  --rz-sp-10: 40px;
+  --rz-sp-12: 48px;
+
+  /* Blue (missing from palette, used in some places) */
+  --rz-blue:     #60A5FA;
+  --rz-blue-dim: rgba(96,165,250,0.10);
 }
 
 /* ── Reset & Base ── */
@@ -210,6 +234,26 @@ input, textarea, select { font-family: var(--rz-font); }
   border: 1px solid var(--rz-border);
   border-radius: var(--rz-r-lg);
 }
+.rz-card-hover {
+  background: var(--rz-surface);
+  border: 1px solid var(--rz-border);
+  border-radius: var(--rz-r-lg);
+  transition: all 0.18s ease;
+  cursor: pointer;
+}
+.rz-card-hover:hover {
+  background: var(--rz-surface-2);
+  border-color: var(--rz-border-md);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+/* ── List item hover ── */
+.rz-list-item {
+  transition: background 0.12s ease;
+}
+.rz-list-item:hover {
+  background: var(--rz-surface-2) !important;
+}
 
 /* ── Badge ── */
 .rz-badge {
@@ -262,7 +306,7 @@ input, textarea, select { font-family: var(--rz-font); }
 
   /* Two-panel stacks vertically */
   .rz-panel-split { flex-direction: column !important; }
-  .rz-panel-list { width: 100% !important; max-height: 40vh; overflow-y: auto; }
+  .rz-panel-list { width: 100% !important; max-height: 40vh; overflow-y: auto; border-right: none !important; border-bottom: 1px solid var(--rz-border); }
   .rz-panel-detail { width: 100% !important; }
 
   /* Content padding reduced */
@@ -273,10 +317,29 @@ input, textarea, select { font-family: var(--rz-font); }
   /* Hide non-essential elements */
   .rz-hide-mobile { display: none !important; }
 
+  /* Dashboard page headers */
+  .rz-page-header { padding: 12px 16px !important; }
+  .rz-page-header h1 { font-size: 16px !important; }
+
+  /* Modals full-width on mobile */
+  .rz-modal-content { max-width: 100% !important; margin: 8px !important; border-radius: 14px !important; }
+
   /* Fix fixed-width inputs */
-  input[style*="width:200"], input[style*="width:220"], input[style*="width: 200"], input[style*="width: 220"] {
+  input[style*="width:200"], input[style*="width:220"], input[style*="width: 200"], input[style*="width: 220"],
+  input[style*="width: 200px"], input[style*="width: 220px"] {
     width: 100% !important;
+    max-width: 100% !important;
   }
+
+  /* Comparison table stacked on mobile */
+  .compare-grid { grid-template-columns: 1fr !important; gap: 4px !important; text-align: left !important; }
+  .compare-grid p { text-align: left !important; }
+
+  /* Notification bell dropdown */
+  .rz-notif-dropdown { width: calc(100vw - 32px) !important; right: -8px !important; }
+
+  /* Help button modal */
+  .rz-help-modal { width: calc(100vw - 32px) !important; max-width: none !important; }
 }
 
 @media (max-width: 480px) {

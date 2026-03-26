@@ -8,13 +8,8 @@ import { useTenant } from '@/contexts/TenantContext'
 import { isHosteleria } from '@/lib/templates'
 import { DEFAULT_CONFIG as DEFAULT_SCHED, parseReservationConfig } from '@/lib/scheduling-engine'
 import type { ReservationConfig } from '@/lib/scheduling-engine'
-const C = {
-  bg:'#0C1018', card:'#131920', card2:'#161D2A', border:'rgba(255,255,255,0.07)',
-  borderMd:'rgba(255,255,255,0.12)', text:'#E8EEF6', sub:'#8895A7', muted:'#49566A',
-  amber:'#F0A84E', teal:'#2DD4BF', green:'#34D399', red:'#F87171', violet:'#A78BFA',
-  amberDim:'rgba(240,168,78,0.10)', greenDim:'rgba(52,211,153,0.10)',
-  redDim:'rgba(248,113,113,0.10)', tealDim:'rgba(45,212,191,0.10)',
-}
+import { C } from '@/lib/colors'
+import { useToast } from '@/components/NotificationToast'
 
 // ── Config por defecto ────────────────────────────────────────────────────
 const DEFAULT: AgentConfig = {
@@ -148,6 +143,7 @@ function CaseBadge({value,onChange,tx}:{value:string,onChange:(v:string)=>void,t
 const FLOW_OPTIONS = ['nombre','teléfono','personas','fecha','hora','zona','servicio','notas','confirmar']
 
 export default function ConfiguracionPage() {
+  const toast = useToast()
   const { reload: reloadTenant, tx } = useTenant()
   const [tenant, setTenant]   = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -236,6 +232,7 @@ export default function ConfiguracionPage() {
     } catch { /* no crítico */ }
 
     setSaving(false); setSaved(true)
+    toast.push({ title: 'Configuración guardada', body: 'Los cambios se han aplicado correctamente', type: 'config', priority: 'info', icon: '✅' })
     if (basicForm.language !== (tenant.language || 'es')) {
       setTimeout(() => {
         window.location.href = '/panel?t=' + Date.now()

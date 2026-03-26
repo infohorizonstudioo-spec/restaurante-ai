@@ -7,16 +7,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import { getPresetsForType, type ElementPreset, type BusinessPresets } from '@/lib/space-presets'
 
 // ── COLORES & CONSTANTES ─────────────────────────────────────────────────────
-const C = {
-  bg:'#0C1018', card:'#131920', card2:'#161D2A', border:'rgba(255,255,255,0.07)',
-  borderMd:'rgba(255,255,255,0.11)',
-  text:'#E8EEF6', sub:'#8895A7', muted:'#49566A', amber:'#F0A84E',
-  green:'#34D399', red:'#F87171', yellow:'#FBB53F', teal:'#2DD4BF',
-  violet:'#A78BFA', blue:'#60A5FA',
-  amberDim:'rgba(240,168,78,0.10)', greenDim:'rgba(52,211,153,0.10)',
-  redDim:'rgba(248,113,113,0.10)', tealDim:'rgba(45,212,191,0.10)',
-  violetDim:'rgba(167,139,250,0.12)',
-}
+import { C } from '@/lib/colors'
 const ZONE_COLORS = ['#2DD4BF','#F0A84E','#A78BFA','#34D399','#60A5FA','#F87171','#FBB53F']
 const STATUS_CFG: Record<string,{label:string;color:string;bg:string;dim:string}> = {
   libre:     { label:'Libre',     color:C.green, bg:C.greenDim, dim:'rgba(52,211,153,0.06)' },

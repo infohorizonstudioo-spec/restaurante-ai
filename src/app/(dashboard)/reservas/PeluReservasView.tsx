@@ -6,16 +6,7 @@ import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import { getStatusLabel } from '@/lib/i18n'
 
-const C = {
-  amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
-  teal:'#2DD4BF',green:'#34D399',greenDim:'rgba(52,211,153,0.10)',
-  red:'#F87171',redDim:'rgba(248,113,113,0.10)',
-  yellow:'#FBB53F',violet:'#A78BFA',violetDim:'rgba(167,139,250,0.12)',
-  blue:'#60A5FA',blueDim:'rgba(96,165,250,0.10)',
-  text:'#E8EEF6',text2:'#8895A7',text3:'#49566A',
-  bg:'#0C1018',surface:'#131920',surface2:'#1A2230',surface3:'#202C3E',
-  border:'rgba(255,255,255,0.07)',borderMd:'rgba(255,255,255,0.11)',
-}
+import { C } from "@/lib/colors"
 
 const DAYS = ['DO','LU','MA','MI','JU','VI','SA']
 

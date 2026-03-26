@@ -7,20 +7,11 @@ import { useTenant } from '@/contexts/TenantContext'
 import { getStatusLabel } from '@/lib/i18n'
 import Link from 'next/link'
 
-const C = {
-  amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)', amberGlow:'rgba(240,168,78,0.20)',
-  teal:'#2DD4BF', tealDim:'rgba(45,212,191,0.10)',
-  green:'#34D399', greenDim:'rgba(52,211,153,0.10)',
-  red:'#F87171', redDim:'rgba(248,113,113,0.10)',
-  yellow:'#FBB53F', violet:'#A78BFA', violetDim:'rgba(167,139,250,0.12)',
-  text:'#E8EEF6', text2:'#8895A7', text3:'#49566A',
-  bg:'#0C1018', surface:'#131920', surface2:'#1A2230', surface3:'#202C3E',
-  border:'rgba(255,255,255,0.07)', borderMd:'rgba(255,255,255,0.11)',
-}
+import { C } from '@/lib/colors'
 const PLAN:Record<string,{label:string;color:string;price:number;calls:number;rate:number}> = {
   trial:     {label:'Trial',    color:C.amber,  price:0,   calls:10,  rate:0},
   free:      {label:'Trial',    color:C.amber,  price:0,   calls:10,  rate:0},
-  starter:   {label:'Starter',  color:'#60A5FA',price:99,  calls:50,  rate:0.90},
+  starter:   {label:'Starter',  color:'#2DD4BF',price:99,  calls:50,  rate:0.90},
   pro:       {label:'Pro',      color:C.violet, price:299, calls:200, rate:0.70},
   business:  {label:'Business', color:C.green,  price:499, calls:600, rate:0.50},
   enterprise:{label:'Business', color:C.green,  price:499, calls:600, rate:0.50},

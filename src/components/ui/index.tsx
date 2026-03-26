@@ -86,7 +86,15 @@ export function CardHeader({title,subtitle,action,icon}:{title:string;subtitle?:
 }
 
 export function EmptyState({icon,title,description,action}:{icon:ReactNode;title:string;description?:string;action?:ReactNode}){
-  return(<div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'56px 24px',textAlign:'center'}}><div style={{width:52,height:52,background:RZ.amberDim,borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:16,color:RZ.amber,fontSize:22}}>{icon}</div><p style={{fontSize:14,fontWeight:600,color:RZ.text,marginBottom:6}}>{title}</p>{description&&<p style={{fontSize:13,color:RZ.text3,marginBottom:20,maxWidth:280}}>{description}</p>}{action}</div>)
+  return(<div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'64px 24px',textAlign:'center'}}>
+    <div style={{position:'relative',marginBottom:20}}>
+      <div style={{width:64,height:64,background:`linear-gradient(135deg,${RZ.amberDim},rgba(240,168,78,0.04))`,borderRadius:18,display:'flex',alignItems:'center',justifyContent:'center',color:RZ.amber,fontSize:26,border:`1px solid rgba(240,168,78,0.12)`}}>{icon}</div>
+      <div style={{position:'absolute',inset:-8,borderRadius:24,border:`1px dashed rgba(240,168,78,0.12)`,pointerEvents:'none'}}/>
+    </div>
+    <p style={{fontSize:15,fontWeight:700,color:RZ.text,marginBottom:8,letterSpacing:'-0.01em'}}>{title}</p>
+    {description&&<p style={{fontSize:13,color:RZ.text2,marginBottom:24,maxWidth:320,lineHeight:1.6}}>{description}</p>}
+    {action}
+  </div>)
 }
 
 const AS:Record<string,{bg:string;c:string}> = {
@@ -125,4 +133,48 @@ export function StatCard({label,value,icon,href,bg=RZ.amberDim,color=RZ.amber}:{
 
 export function Skeleton({style}:{style?:any}){
   return<div style={{background:`linear-gradient(90deg,${RZ.surface} 25%,${RZ.surface2} 50%,${RZ.surface} 75%)`,backgroundSize:'200% 100%',animation:'shimmer 1.5s infinite',borderRadius:6,...style}}/>
+}
+
+/** Skeleton screen for dashboard pages — replaces blocking PageLoader */
+export function PageSkeleton({variant='list'}:{variant?:'list'|'cards'|'detail'}){
+  const rows = variant==='cards' ? 4 : variant==='detail' ? 1 : 5
+  return(
+    <div style={{minHeight:'100vh',background:RZ.bg}}>
+      {/* Header skeleton */}
+      <div style={{background:RZ.surface,borderBottom:`1px solid ${RZ.border}`,padding:'14px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',height:56}}>
+        <div style={{display:'flex',flexDirection:'column',gap:6}}>
+          <Skeleton style={{width:140,height:16,borderRadius:6}}/>
+          <Skeleton style={{width:200,height:10,borderRadius:4}}/>
+        </div>
+        <Skeleton style={{width:32,height:32,borderRadius:8}}/>
+      </div>
+      <div style={{maxWidth:960,margin:'0 auto',padding:'24px 28px'}}>
+        {variant==='cards' ? (
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:12}}>
+            {Array.from({length:rows}).map((_,i)=>(
+              <div key={i} style={{background:RZ.surface,border:`1px solid ${RZ.border}`,borderRadius:14,padding:'20px'}}>
+                <Skeleton style={{width:40,height:40,borderRadius:10,marginBottom:14}}/>
+                <Skeleton style={{width:'60%',height:20,borderRadius:6,marginBottom:8}}/>
+                <Skeleton style={{width:'80%',height:12,borderRadius:4}}/>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {Array.from({length:rows}).map((_,i)=>(
+              <div key={i} style={{background:RZ.surface,border:`1px solid ${RZ.border}`,borderRadius:12,padding:'14px 16px',display:'flex',alignItems:'center',gap:12}}>
+                <Skeleton style={{width:40,height:40,borderRadius:10,flexShrink:0}}/>
+                <div style={{flex:1,display:'flex',flexDirection:'column',gap:6}}>
+                  <Skeleton style={{width:'40%',height:14,borderRadius:5}}/>
+                  <Skeleton style={{width:'65%',height:10,borderRadius:4}}/>
+                </div>
+                <Skeleton style={{width:60,height:22,borderRadius:6}}/>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <style>{'@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}'}</style>
+    </div>
+  )
 }

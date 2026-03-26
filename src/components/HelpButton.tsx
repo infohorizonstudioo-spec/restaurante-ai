@@ -1,13 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useTenant } from '@/contexts/TenantContext'
-
-const C = {
-  bg:'#0C1018', card:'#131920', card2:'#161D2A', border:'rgba(255,255,255,0.08)',
-  text:'#E8EEF6', sub:'#8895A7', muted:'#49566A', amber:'#F0A84E',
-  green:'#34D399', red:'#F87171', teal:'#2DD4BF',
-  amberDim:'rgba(240,168,78,0.12)',
-}
+import { C } from '@/lib/colors'
 
 function getSections(name: string, tx: (s:string)=>string) {
   const n = name || 'Sofía'

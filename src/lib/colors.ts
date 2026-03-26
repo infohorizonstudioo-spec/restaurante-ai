@@ -28,4 +28,8 @@ export const C = {
   card2: '#161D2A',
   sub: '#8895A7',
   muted: '#49566A',
-}
+  amber2: '#E8923A',
+  amberBorder: 'rgba(240,168,78,0.25)',
+  orange: '#FB923C',
+  orangeDim: 'rgba(251,146,60,0.10)',
+} as const

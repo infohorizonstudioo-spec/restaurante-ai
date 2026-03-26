@@ -2,9 +2,10 @@
 import NotifBell from '@/components/NotifBell'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { PageLoader } from '@/components/ui'
+import { PageLoader, PageSkeleton, Modal } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import Link from 'next/link'
+import { useToast } from '@/components/NotificationToast'
 
 /* ── Status flow (matches agent update-order) ──────────────────────── */
 const STATUS_FLOW = ['collecting','confirmed','preparing','ready','delivered'] as const
@@ -53,6 +54,7 @@ function nextLabel(current: string): string {
 }
 
 export default function PedidosPage() {
+  const toast = useToast()
   const [plan, setPlan] = useState<string>('free')
   const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState<any[]>([])
@@ -123,7 +125,7 @@ export default function PedidosPage() {
     } catch { /* ignore audio errors */ }
   }
 
-  if (loading) return <PageLoader />
+  if (loading) return <PageSkeleton variant="list"/>
 
   // GUARDIA: pedidos solo disponible para hostelería
   if (template && !template.hasOrders) {
@@ -131,10 +133,10 @@ export default function PedidosPage() {
       <div style={{ background: '#0C1018', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ textAlign: 'center', maxWidth: 400 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🚫</div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#E8EEF6', marginBottom: 8 }}>Modulo no disponible</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#E8EEF6', marginBottom: 8 }}>Módulo no disponible</h2>
           <p style={{ fontSize: 14, color: '#8895A7', lineHeight: 1.6, marginBottom: 24 }}>
-            El modulo de pedidos no aplica para <strong>{template.label}</strong>.<br />
-            Este modulo esta disenado para negocios de hosteleria.
+            El módulo de pedidos no aplica para <strong>{template.label}</strong>.<br />
+            Este módulo está diseñado para negocios de hostelería.
           </p>
           <Link href="/panel" style={{ padding: '10px 24px', fontSize: 14, fontWeight: 600, color: 'white', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', borderRadius: 9, textDecoration: 'none' }}>
             Volver al panel
@@ -149,12 +151,12 @@ export default function PedidosPage() {
   if (!isPro) return (
     <div style={{ background: '#0C1018', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ maxWidth: 440, textAlign: 'center' }}>
-        <div style={{ width: 64, height: 64, borderRadius: 16, background: 'linear-gradient(135deg,#7c3aed,#a78bfa)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 24px rgba(124,58,237,0.25)' }}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+        <div style={{ width: 64, height: 64, borderRadius: 16, background: 'linear-gradient(135deg,#F0A84E,#E8923A)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 24px rgba(240,168,78,0.25)' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#0C1018"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
         </div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#E8EEF6', marginBottom: 10 }}>Gestion de pedidos</h2>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#E8EEF6', marginBottom: 10 }}>Gestión de pedidos</h2>
         <p style={{ fontSize: 14, color: '#8895A7', lineHeight: 1.6, marginBottom: 24 }}>Gestiona pedidos locales, para llevar y delivery desde tu panel. Disponible en el plan Pro y Business.</p>
-        <Link href="/precios" style={{ display: 'inline-block', padding: '12px 28px', fontSize: 14, fontWeight: 600, color: 'white', background: 'linear-gradient(135deg,#7c3aed,#a78bfa)', borderRadius: 10, textDecoration: 'none', boxShadow: '0 4px 16px rgba(124,58,237,0.3)' }}>
+        <Link href="/precios" style={{ display: 'inline-block', padding: '12px 28px', fontSize: 14, fontWeight: 600, color: '#0C1018', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', borderRadius: 10, textDecoration: 'none', boxShadow: '0 4px 16px rgba(240,168,78,0.3)' }}>
           Ver planes →
         </Link>
       </div>
@@ -169,6 +171,8 @@ export default function PedidosPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, tenant_id: tid, status })
     })
+    const sm = STATUS_META[status]
+    toast.push({ title: sm?.label || status, body: 'Estado del pedido actualizado', type: 'order', priority: 'info', icon: sm?.icon || '✅' })
     setModal(null)
     if (tid) load(tid)
   }
@@ -193,13 +197,13 @@ export default function PedidosPage() {
   return (
     <div style={{ background: '#0C1018', minHeight: '100vh' }}>
       {/* ── Header ────────────────────────────────────────────── */}
-      <div style={{ background: '#131920', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20 }}>
+      <div style={{ background: '#131920', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20 }}>
         <div>
-          <h1 style={{ fontSize: 18, fontWeight: 700, color: '#E8EEF6' }}>Pedidos</h1>
-          <p style={{ fontSize: 12, color: '#49566A', marginTop: 1 }}>{activos.length} activos · {orders.length} total</p>
+          <h1 style={{ fontSize: 16, fontWeight: 700, color: '#E8EEF6', letterSpacing: '-0.02em' }}>Pedidos</h1>
+          <p style={{ fontSize: 12, color: '#49566A', marginTop: 2 }}>{activos.length} activos · {orders.length} total</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={nuevoOrder} style={{ padding: '8px 18px', fontSize: 13, fontWeight: 600, color: 'white', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', border: 'none', borderRadius: 9, cursor: 'pointer' }}>
+          <button onClick={nuevoOrder} style={{ padding: '9px 18px', fontSize: 13, fontWeight: 700, color: '#0C1018', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', border: 'none', borderRadius: 9, cursor: 'pointer', boxShadow: '0 2px 12px rgba(240,168,78,0.25)' }}>
             + Nuevo pedido
           </button>
           <NotifBell />
@@ -242,10 +246,16 @@ export default function PedidosPage() {
 
         {/* ── Order cards ─────────────────────────────────────── */}
         {filtered.length === 0 ? (
-          <div style={{ background: '#131920', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '60px 24px', textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 10 }}>🛍️</div>
-            <p style={{ fontSize: 15, fontWeight: 600, color: '#C4CDD8', marginBottom: 4 }}>Sin pedidos</p>
-            <p style={{ fontSize: 13, color: '#49566A' }}>Los pedidos apareceran aqui en tiempo real.</p>
+          <div style={{ background: '#131920', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '64px 24px', textAlign: 'center' }}>
+            <div style={{ position: 'relative', display: 'inline-block', marginBottom: 20 }}>
+              <div style={{ width: 64, height: 64, background: 'linear-gradient(135deg,rgba(240,168,78,0.10),rgba(240,168,78,0.04))', borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, border: '1px solid rgba(240,168,78,0.12)' }}>🛍️</div>
+              <div style={{ position: 'absolute', inset: -8, borderRadius: 24, border: '1px dashed rgba(240,168,78,0.12)', pointerEvents: 'none' }}/>
+            </div>
+            <p style={{ fontSize: 15, fontWeight: 700, color: '#E8EEF6', marginBottom: 8 }}>Sin pedidos todavía</p>
+            <p style={{ fontSize: 13, color: '#8895A7', lineHeight: 1.6, maxWidth: 320, margin: '0 auto 20px' }}>Los pedidos de tus clientes aparecerán aquí en tiempo real cuando lleguen por llamada, WhatsApp o tu carta digital.</p>
+            <button onClick={nuevoOrder} style={{ padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#0C1018', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', border: 'none', borderRadius: 9, cursor: 'pointer' }}>
+              + Crear pedido manual
+            </button>
           </div>
         ) : filtered.map(o => {
           const sm = STATUS_META[o.status] || STATUS_META.collecting
@@ -331,24 +341,17 @@ export default function PedidosPage() {
       </div>
 
       {/* ── Order detail modal ────────────────────────────────── */}
-      {modal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }} onClick={() => setModal(null)}>
-          <div style={{ background: '#131920', borderRadius: 16, padding: 24, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.7)' }} onClick={e => e.stopPropagation()}>
-            {/* Modal header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-              <div>
-                <p style={{ fontSize: 18, fontWeight: 700, color: '#E8EEF6' }}>{modal.customer_name}</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                  <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: (STATUS_META[modal.status]?.color || '#8895A7') + '18', color: STATUS_META[modal.status]?.color || '#8895A7', fontWeight: 700 }}>
-                    {STATUS_META[modal.status]?.icon} {STATUS_META[modal.status]?.label || modal.status}
-                  </span>
-                  <span style={{ fontSize: 11, color: '#49566A' }}>
-                    {(TYPE_LABELS[modal.order_type]?.icon || '📦') + ' ' + (TYPE_LABELS[modal.order_type]?.label || modal.order_type)}
-                  </span>
-                  {modal.table_id && <span style={{ fontSize: 11, color: '#60A5FA', fontWeight: 600 }}>Mesa {modal.table_id}</span>}
-                </div>
-              </div>
-              <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#49566A', padding: 4 }}>×</button>
+      <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.customer_name || 'Pedido'} size="sm">
+        {modal && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: (STATUS_META[modal.status]?.color || '#8895A7') + '18', color: STATUS_META[modal.status]?.color || '#8895A7', fontWeight: 700 }}>
+                {STATUS_META[modal.status]?.icon} {STATUS_META[modal.status]?.label || modal.status}
+              </span>
+              <span style={{ fontSize: 11, color: '#49566A' }}>
+                {(TYPE_LABELS[modal.order_type]?.icon || '📦') + ' ' + (TYPE_LABELS[modal.order_type]?.label || modal.order_type)}
+              </span>
+              {modal.table_id && <span style={{ fontSize: 11, color: '#60A5FA', fontWeight: 600 }}>Mesa {modal.table_id}</span>}
             </div>
 
             {/* Customer info */}
@@ -457,9 +460,9 @@ export default function PedidosPage() {
                 <span>Actualizado: {new Date(modal.updated_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </div>
   )
 }

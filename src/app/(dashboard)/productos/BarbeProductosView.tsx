@@ -3,16 +3,7 @@ import { useState } from 'react'
 import NotifBell from '@/components/NotifBell'
 import { useTenant } from '@/contexts/TenantContext'
 
-const C = {
-  amber:'#F0A84E',amberDim:'rgba(240,168,78,0.10)',
-  teal:'#2DD4BF',tealDim:'rgba(45,212,191,0.10)',
-  green:'#34D399',greenDim:'rgba(52,211,153,0.10)',
-  violet:'#A78BFA',violetDim:'rgba(167,139,250,0.12)',
-  yellow:'#FBB53F',yellowDim:'rgba(251,181,63,0.10)',
-  text:'#E8EEF6',text2:'#8895A7',text3:'#49566A',
-  bg:'#0C1018',surface:'#131920',surface2:'#1A2230',
-  border:'rgba(255,255,255,0.07)',borderMd:'rgba(255,255,255,0.11)',
-}
+import { C } from "@/lib/colors"
 
 type Category = 'Corte' | 'Barba' | 'Combo' | 'Tratamiento'
 

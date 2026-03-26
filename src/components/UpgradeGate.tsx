@@ -2,11 +2,7 @@
 import { useFeatureFlag } from '@/hooks/useFeatureFlag'
 import type { Feature } from '@/lib/feature-flags'
 
-const C = {
-  amber: '#F0A84E', amberDim: 'rgba(240,168,78,0.10)',
-  text: '#E8EEF6', text2: '#8895A7', text3: '#49566A',
-  surface: '#131920', border: 'rgba(255,255,255,0.07)',
-}
+import { C } from '@/lib/colors'
 
 const PLAN_LABELS: Record<string, string> = {
   trial: 'Prueba', free: 'Prueba', starter: 'Basico',
@@ -32,7 +28,7 @@ export function UpgradeGate({ feature, children }: { feature: Feature; children:
         {featureLabel}
       </h3>
       <p style={{ fontSize: 14, color: C.text2, marginBottom: 20, maxWidth: 400, margin: '0 auto 20px' }}>
-        Esta funcion esta disponible a partir del plan {PLAN_LABELS[requiredPlan] || requiredPlan}.
+        Esta función está disponible a partir del plan {PLAN_LABELS[requiredPlan] || requiredPlan}.
         Actualiza tu plan para acceder.
       </p>
       <a href="/precios" style={{

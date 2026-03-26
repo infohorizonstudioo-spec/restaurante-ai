@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getSessionTenant } from '@/lib/session-cache'
-import { PageLoader } from '@/components/ui'
+import { PageLoader, PageSkeleton } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import { getCommonStrings, getStatusLabel } from '@/lib/i18n'
 
@@ -78,16 +78,7 @@ const INTENT_LABELS: Record<string,string> = {
   cancelacion: 'cancelar', consulta: 'preguntar algo', otro: 'otro asunto',
 }
 
-const C = {
-  amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)',
-  teal:'#2DD4BF', tealDim:'rgba(45,212,191,0.10)',
-  green:'#34D399', greenDim:'rgba(52,211,153,0.10)',
-  red:'#F87171', redDim:'rgba(248,113,113,0.10)',
-  yellow:'#FBB53F', violet:'#A78BFA', violetDim:'rgba(167,139,250,0.12)',
-  text:'#E8EEF6', text2:'#8895A7', text3:'#49566A',
-  bg:'#0C1018', surface:'#131920', surface2:'#1A2230', surface3:'#202C3E',
-  border:'rgba(255,255,255,0.07)', borderMd:'rgba(255,255,255,0.11)',
-}
+import { C } from '@/lib/colors'
 const SL:Record<string,string> = {
   completada:'Completada', completed:'Completada',
   activa:'En curso', 'in-progress':'En curso',
@@ -169,7 +160,7 @@ export default function LlamadasPage() {
     return () => { supabase.removeChannel(ch) }
   },[tid]) // eslint-disable-line
 
-  if (loading) return <PageLoader/>
+  if (loading) return <PageSkeleton variant="list"/>
 
   const filtered = filter==='all' ? calls : calls.filter(c => {
     const s = c.status||''
@@ -254,10 +245,13 @@ export default function LlamadasPage() {
           </div>
         )}
         {groups.length===0 ? (
-          <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'60px 24px', textAlign:'center'}}>
-            <div style={{width:56, height:56, borderRadius:'50%', background:C.amberDim, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 14px', fontSize:24}}>📞</div>
-            <p style={{fontSize:15, fontWeight:600, color:C.text, marginBottom:6}}>{cs.noCalls}</p>
-            <p style={{fontSize:13, color:C.text3, lineHeight:1.6}}>{tx('Las llamadas recibidas aparecerán aquí.')}</p>
+          <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'64px 24px', textAlign:'center'}}>
+            <div style={{position:'relative',display:'inline-block',marginBottom:20}}>
+              <div style={{width:64, height:64, borderRadius:18, background:`linear-gradient(135deg,${C.amberDim},rgba(240,168,78,0.04))`, border:`1px solid rgba(240,168,78,0.12)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:26}}>📞</div>
+              <div style={{position:'absolute',inset:-8,borderRadius:24,border:'1px dashed rgba(240,168,78,0.12)',pointerEvents:'none'}}/>
+            </div>
+            <p style={{fontSize:15, fontWeight:700, color:C.text, marginBottom:8}}>{cs.noCalls}</p>
+            <p style={{fontSize:13, color:C.text2, lineHeight:1.6, maxWidth:320, margin:'0 auto'}}>{tx('Las llamadas de tus clientes aparecerán aquí en tiempo real con su resumen, intención y decisión del agente.')}</p>
           </div>
         ) : groups.map(([date,dayCalls]) => (
           <div key={date} style={{marginBottom:20}}>
