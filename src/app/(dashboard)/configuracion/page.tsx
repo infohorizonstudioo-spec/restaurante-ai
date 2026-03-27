@@ -266,7 +266,7 @@ export default function ConfiguracionPage() {
       `}</style>
 
       {/* Header */}
-      <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 24px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div>
           <h1 style={{fontSize:17,fontWeight:700,color:C.text}}>{tx('Cómo trabaja tu recepcionista')}</h1>
           <p style={{fontSize:12,color:C.muted,marginTop:2}}>{tx('Enséñale cómo funciona tu negocio y cómo quieres que actúe')}</p>
@@ -278,7 +278,7 @@ export default function ConfiguracionPage() {
         </div>
       </div>
 
-      <div style={{maxWidth:760,margin:'0 auto',padding:'24px 20px',display:'flex',flexDirection:'column',gap:12}}>
+      <div className="rz-page-enter" style={{maxWidth:760,margin:'0 auto',padding:'24px 20px',display:'flex',flexDirection:'column',gap:12}}>
 
         {/* Datos básicos */}
         <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:'20px'}}>

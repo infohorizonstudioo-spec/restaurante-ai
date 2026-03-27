@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: { ignoreBuildErrors: true },
+  typescript: { ignoreBuildErrors: false },
   serverExternalPackages: [
     'twilio',
     '@anthropic-ai/sdk',
@@ -18,6 +18,15 @@ const nextConfig = {
         { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
       ]
     }]
+  },
+  async rewrites() {
+    return [
+      // API versioning: /api/v1/* → /api/* (forward-compatible)
+      {
+        source: '/api/v1/:path*',
+        destination: '/api/:path*',
+      },
+    ]
   },
   async redirects() {
     return [

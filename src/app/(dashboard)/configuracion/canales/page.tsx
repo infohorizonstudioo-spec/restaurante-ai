@@ -121,7 +121,7 @@ export default function CanalesPage() {
   if (!tenant) return <PageLoader />
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 900 }}>
+    <div className="rz-page-enter" style={{ padding: '32px 40px', maxWidth: 900 }}>
       <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, margin: 0 }}>
         {tx('Canales de comunicación')}
       </h1>

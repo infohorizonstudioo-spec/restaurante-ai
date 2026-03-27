@@ -73,7 +73,7 @@ export default function FacturacionPage() {
   return (
     <div style={{background:C.bg, minHeight:'100vh', fontFamily:'var(--rz-font)'}}>
       {/* Header */}
-      <div style={{background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 28px', position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom:`1px solid ${C.border}`, padding:'14px 28px', position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', justifyContent:'space-between'}}>
         <div>
           <h1 style={{fontSize:16, fontWeight:700, color:C.text, letterSpacing:'-0.02em'}}>{t.nav.billing}</h1>
           <p style={{fontSize:11, color:C.text3, marginTop:2}}>{tx('Control en tiempo real de tu plan y consumo')}</p>
@@ -81,10 +81,10 @@ export default function FacturacionPage() {
         <NotifBell/>
       </div>
 
-      <div style={{maxWidth:860, margin:'0 auto', padding:'24px 28px'}}>
+      <div className="rz-page-enter" style={{maxWidth:860, margin:'0 auto', padding:'24px 28px'}}>
 
         {/* Plan actual */}
-        <div style={{background:C.surface, border:`1px solid ${pi.color}22`, borderRadius:16, padding:'20px 24px', marginBottom:14, position:'relative', overflow:'hidden'}}>
+        <div className="rz-card-interactive" style={{background:C.surface, border:`1px solid ${pi.color}22`, borderRadius:16, padding:'20px 24px', marginBottom:14, position:'relative', overflow:'hidden'}}>
           <div style={{position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg, ${pi.color}, transparent)`, borderRadius:'16px 16px 0 0'}}/>
           <div style={{display:'flex', alignItems:'flex-start', justifyContent:'space-between'}}>
             <div>

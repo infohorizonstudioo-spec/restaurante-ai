@@ -53,6 +53,57 @@ function upstashConfigured(): boolean {
   return !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
 }
 
+/** Track cold-start preload state to avoid repeated calls */
+let _preloaded = false
+
+/**
+ * Preload rate limit state from Redis on cold start.
+ * Called once to restore counters across serverless instances.
+ */
+export async function preloadFromRedis(): Promise<void> {
+  if (_preloaded || !upstashConfigured()) return
+  _preloaded = true
+
+  const url = process.env.UPSTASH_REDIS_REST_URL!
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN!
+
+  try {
+    // Scan for all rate limit keys
+    const scanRes = await fetch(`${url}/keys/rl:*`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const scanData = await scanRes.json() as { result: string[] }
+    const keys = scanData.result || []
+
+    if (keys.length === 0) return
+
+    // Pipeline: GET all keys + TTL
+    const pipeline = keys.flatMap(k => [['GET', k], ['TTL', k]])
+    const pipeRes = await fetch(`${url}/pipeline`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(pipeline),
+    })
+    const pipeData = await pipeRes.json() as Array<{ result: number | string | null }>
+
+    const now = Date.now()
+    for (let i = 0; i < keys.length; i++) {
+      const redisKey = keys[i]!
+      const count = Number(pipeData[i * 2]?.result) || 0
+      const ttl = Number(pipeData[i * 2 + 1]?.result) || 0
+      if (ttl <= 0 || count <= 0) continue
+
+      const storeKey = redisKey.replace(/^rl:/, '')
+      store.set(storeKey, {
+        count,
+        resetAt: now + ttl * 1000,
+      })
+    }
+  } catch {
+    // Redis unavailable — in-memory starts fresh (fail-open for availability)
+  }
+}
+
 /**
  * Fire-and-forget: increment counter in Redis and sync the result back
  * to the in-memory store. This keeps counts roughly consistent across

@@ -91,11 +91,11 @@ function LiveFeed({ events, demoMode, onToggleDemo, lang='es' }: { events:LiveEv
   const display = events.slice(0, 12)
 
   return (
-    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, overflow:'hidden' }}>
+    <div className="rz-card-premium" style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, overflow:'hidden' }}>
       {/* Header */}
-      <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(255,255,255,0.015)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:8, height:8, borderRadius:'50%', background:C.green, animation:'rz-pulse 2s ease-in-out infinite' }}/>
+          <div className="rz-status-online"/>
           <span style={{ fontSize:14, fontWeight:700, color:C.text, letterSpacing:'-0.01em' }}>{_tx(ACTIVE_CALL_LABEL)}</span>
           {demoMode && <span style={{ fontSize:10, padding:'2px 8px', borderRadius:10, background:'rgba(251,181,63,0.15)', color:C.yellow, fontWeight:700, letterSpacing:'0.04em' }}>DEMO</span>}
         </div>
@@ -151,20 +151,22 @@ function LiveFeed({ events, demoMode, onToggleDemo, lang='es' }: { events:LiveEv
 // ── KPI Card
 function KpiCard({ value, label, sub, color=C.amber, href, icon, accent=false }:any) {
   const inner = (
-    <div style={{
+    <div className="rz-card-interactive" style={{
       background: accent ? `linear-gradient(135deg,${color}14,transparent 70%)` : C.surface,
       border:`1px solid ${accent?color+'22':C.border}`, borderRadius:14, padding:'18px 20px',
-      position:'relative', overflow:'hidden', cursor:href?'pointer':'default', transition:'border-color 0.15s',
+      position:'relative', overflow:'hidden', cursor:href?'pointer':'default',
     }}>
       {accent && <div style={{ position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${color},transparent)`,borderRadius:'14px 14px 0 0' }}/>}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+      {/* Ambient glow */}
+      <div style={{ position:'absolute',top:'-30%',right:'-10%',width:120,height:120,background:`radial-gradient(circle,${color}08,transparent 70%)`,pointerEvents:'none' }}/>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', position:'relative' }}>
         <div>
-          <p style={{ fontFamily:'var(--rz-mono)',fontSize:28,fontWeight:600,color,letterSpacing:'-0.03em',lineHeight:1,marginBottom:6 }}>{value}</p>
+          <p style={{ fontFamily:'var(--rz-mono)',fontSize:30,fontWeight:800,color,letterSpacing:'-0.03em',lineHeight:1,marginBottom:6 }}>{value}</p>
           <p style={{ fontSize:12,color:C.text2,fontWeight:500 }}>{label}</p>
           {sub && <p style={{ fontSize:11,color:C.text3,marginTop:3 }}>{sub}</p>}
         </div>
-        {icon && <div style={{ width:34,height:34,borderRadius:10,background:`${color}14`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
-          <span style={{ fontSize:16 }}>{icon}</span>
+        {icon && <div style={{ width:38,height:38,borderRadius:11,background:`linear-gradient(135deg,${color}18,${color}08)`,border:`1px solid ${color}20`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+          <span style={{ fontSize:17 }}>{icon}</span>
         </div>}
       </div>
     </div>
@@ -259,9 +261,9 @@ function InsightsPanel({ insights, headerLabel, lang='es', agentName='Sofía' }:
   const sorted = [...insights].sort((a, b) => (priorityOrder[a.priority as keyof typeof priorityOrder] || 1) - (priorityOrder[b.priority as keyof typeof priorityOrder] || 1))
 
   return (
-    <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
-      <div style={{ padding: '14px 18px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.violet, animation: 'rz-pulse 2s ease-in-out infinite' }}/>
+    <div className="rz-card-premium" style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ padding: '14px 18px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10, background:'rgba(255,255,255,0.015)' }}>
+        <div className="rz-status-busy"/>
         <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{headerLabel || (agentName + ' ' + _tx('ha detectado'))}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -634,7 +636,7 @@ export default function PanelPage() {
       `}</style>
 
       {/* ── Header ── */}
-      <div style={{ background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20 }}>
+      <div style={{ background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20 }}>
         <div>
           <div style={{ display:'flex',alignItems:'center',gap:10 }}>
             <h1 style={{ fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em' }}>
@@ -675,7 +677,7 @@ export default function PanelPage() {
         </div>
       )}
 
-      <div style={{ maxWidth:1200,margin:'0 auto',padding:'22px 28px',display:'flex',flexDirection:'column',gap:16 }}>
+      <div className="rz-page-enter" style={{ maxWidth:1200,margin:'0 auto',padding:'22px 28px',display:'flex',flexDirection:'column',gap:16 }}>
 
         {/* ── Yesterday's Summary ── */}
         {daySummary && (

@@ -149,7 +149,7 @@ export default function AgentePage() {
   return (
     <div style={{ minHeight:'100vh', background:C.bg }}>
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div style={{ background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:40 }}>
+      <div style={{ background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom:`1px solid ${C.border}`, padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:40 }}>
         <div>
           <h1 style={{ fontSize:16, fontWeight:700, color:C.text }}>{tx('Mi recepcionista')}</h1>
           <p style={{ fontSize:11, color:C.text3, marginTop:2 }}>{tx('Configura cómo atiende y qué sabe sobre tu negocio')}</p>
@@ -178,7 +178,7 @@ export default function AgentePage() {
         ))}
       </div>
 
-      <div style={{ maxWidth:860, margin:'0 auto', padding:'28px 28px 60px' }}>
+      <div className="rz-page-enter" style={{ maxWidth:860, margin:'0 auto', padding:'28px 28px 60px' }}>
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* TAB: COMPORTAMIENTO — How your receptionist acts                  */}
@@ -187,7 +187,7 @@ export default function AgentePage() {
           <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
 
             {/* ── Section 1: Autonomy rules ──────────────────────────────── */}
-            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
+            <div className="rz-card-interactive" style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 24px' }}>
               <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:4 }}>{tx('¿Qué puede hacer sola?')}</h2>
               <p style={{ fontSize:12, color:C.text3, marginBottom:18 }}>{tx('Decide cuánta libertad tiene tu recepcionista para tomar decisiones sin consultarte.')}</p>
 

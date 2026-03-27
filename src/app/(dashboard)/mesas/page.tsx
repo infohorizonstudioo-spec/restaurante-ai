@@ -823,7 +823,7 @@ export default function MesasPage() {
       <style>{`*{box-sizing:border-box;margin:0;padding:0}.rz-inp{background:rgba(255,255,255,0.04);border:1px solid ${C.border};border-radius:9px;padding:8px 10px;color:${C.text};font-size:12px;font-family:inherit;outline:none;width:100%;transition:border-color 0.15s}.rz-inp:focus{border-color:${C.amber}!important}.rz-inp::placeholder{color:${C.muted}}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.14)}@keyframes pulse-glow{0%,100%{box-shadow:0 0 0 0 rgba(45,212,191,0)}50%{box-shadow:0 0 8px 2px rgba(45,212,191,0.3)}}`}</style>
 
       {/* ── HEADER ──────────────────────────────────────────────────────────────── */}
-      <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexShrink:0,zIndex:20}}>
+      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexShrink:0,zIndex:20}}>
         <div style={{display:'flex',alignItems:'center',gap:14}}>
           <div>
             <h1 style={{fontSize:15,fontWeight:700,color:C.text,display:'flex',alignItems:'center',gap:8}}>
@@ -867,7 +867,7 @@ export default function MesasPage() {
 
       {/* ── FLOOR TAB ─────────────────────────────────────────────────────────── */}
       {tab === 'floor' && (
-        <div style={{flex:1,display:'flex',overflow:'hidden'}}>
+        <div className="rz-page-enter" style={{flex:1,display:'flex',overflow:'hidden'}}>
 
           {/* LEFT — Element Library */}
           {showLibrary && (

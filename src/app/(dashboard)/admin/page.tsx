@@ -120,7 +120,7 @@ export default function AdminPage() {
   return (
     <div style={{background:C.bg,minHeight:'100vh',fontFamily:"'Sora',-apple-system,sans-serif",color:C.text}}>
       {/* HEADER */}
-      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}}>
+      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}}>
         <div style={{display:'flex',alignItems:'center',gap:12}}>
           <div style={{width:32,height:32,background:`linear-gradient(135deg,${C.amber},#E8943A)`,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:14,color:'#0A0D14'}}>H</div>
           <div>
@@ -135,7 +135,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div style={{maxWidth:1100,margin:'0 auto',padding:'24px 24px 60px'}}>
+      <div className="rz-page-enter" style={{maxWidth:1100,margin:'0 auto',padding:'24px 24px 60px'}}>
 
         {/* KPIs */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:24}}>

@@ -285,7 +285,7 @@ export default function PedidosPage() {
   return (
     <div style={{ background: '#0C1018', minHeight: '100vh' }}>
       {/* ── Header ────────────────────────────────────────────── */}
-      <div style={{ background: '#131920', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20 }}>
+      <div style={{ background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20 }}>
         <div>
           <h1 style={{ fontSize: 16, fontWeight: 700, color: '#E8EEF6', letterSpacing: '-0.02em' }}>{L.title}</h1>
           <p style={{ fontSize: 12, color: '#49566A', marginTop: 2 }}>{activos.length} {L.active} · {orders.length} {L.total}</p>
@@ -315,7 +315,7 @@ export default function PedidosPage() {
         ))}
       </div>
 
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '20px 24px' }}>
+      <div className="rz-page-enter" style={{ maxWidth: 960, margin: '0 auto', padding: '20px 24px' }}>
         {/* ── Status summary cards ────────────────────────────── */}
         {activos.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 10, marginBottom: 20 }}>

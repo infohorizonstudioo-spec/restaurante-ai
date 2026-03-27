@@ -97,14 +97,17 @@ export async function POST(req: NextRequest) {
 
     // Cancellation policy
     if (cancellation_policy) {
-      const policyText = { flexible: 'Cancelación flexible: hasta 2 horas antes', moderate: 'Cancelación moderada: hasta 24 horas antes', strict: 'No se admiten cancelaciones' }[cancellation_policy] || cancellation_policy
+      const policyMap: Record<string, string> = { flexible: 'Cancelación flexible: hasta 2 horas antes', moderate: 'Cancelación moderada: hasta 24 horas antes', strict: 'No se admiten cancelaciones' }
+      const policyText = policyMap[cancellation_policy as string] || cancellation_policy
       knowledge.push({ tenant_id, category: "politicas", content: policyText, active: true })
     }
 
     // Agent personality
     if (agent_tone || agent_autonomy) {
-      const toneText = { friendly: 'cercano y cálido', professional: 'profesional', direct: 'directo y eficiente' }[agent_tone] || 'profesional'
-      const autoText = { cautious: 'prudente, consulta antes de decidir cosas importantes', balanced: 'equilibrado, gestiona lo rutinario y consulta lo especial', autonomous: 'autónomo, gestiona casi todo sin consultar' }[agent_autonomy] || 'equilibrado'
+      const toneMap: Record<string, string> = { friendly: 'cercano y cálido', professional: 'profesional', direct: 'directo y eficiente' }
+      const autoMap: Record<string, string> = { cautious: 'prudente, consulta antes de decidir cosas importantes', balanced: 'equilibrado, gestiona lo rutinario y consulta lo especial', autonomous: 'autónomo, gestiona casi todo sin consultar' }
+      const toneText = toneMap[agent_tone as string] || 'profesional'
+      const autoText = autoMap[agent_autonomy as string] || 'equilibrado'
       knowledge.push({ tenant_id, category: "personalidad_agente", content: `Tono: ${toneText}. Autonomía: ${autoText}`, active: true })
     }
 

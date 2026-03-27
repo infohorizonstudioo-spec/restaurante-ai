@@ -3,11 +3,16 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { validateEnv } from '@/lib/env'
 import { analyzeRequest, isBlocked, getDeceptionResponse, record404 } from '@/lib/security-guardian'
 import { getBlockPage } from '@/lib/block-page'
+import { csrfMiddleware } from '@/lib/csrf'
+import { preloadFromRedis } from '@/lib/rate-limit'
 
 // Validate required env vars on cold start in production
 if (process.env.NODE_ENV === 'production') {
   validateEnv()
 }
+
+// Preload rate limit state from Redis on cold start (fire-and-forget)
+preloadFromRedis()
 
 // Rutas que requieren autenticación
 const PROTECTED = [
@@ -130,13 +135,16 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Otras rutas API → pasar (protegidas internamente) con headers básicos
+  // Otras rutas API → pasar (protegidas internamente) con headers básicos + CSRF
   if (pathname.startsWith('/api/')) {
     const response = NextResponse.next()
     response.headers.set('X-Content-Type-Options', 'nosniff')
     response.headers.set('X-Frame-Options', 'DENY')
     response.headers.set('Content-Security-Policy', "default-src 'none'")
     response.headers.set('X-DNS-Prefetch-Control', 'off')
+    // CSRF protection for state-changing API requests
+    const csrfError = csrfMiddleware(request, response)
+    if (csrfError) return csrfError
     return response
   }
 
@@ -158,9 +166,9 @@ export async function middleware(request: NextRequest) {
       {
         cookies: {
           getAll() { return request.cookies.getAll() },
-          setAll(cookiesToSet) {
+          setAll(cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
             cookiesToSet.forEach(({ name, value, options }) =>
-              response.cookies.set(name, value, options)
+              response.cookies.set(name, value, options as any)
             )
           },
         },

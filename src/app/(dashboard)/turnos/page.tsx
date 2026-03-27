@@ -82,7 +82,7 @@ export default function TurnosPage() {
       <style>{`*{box-sizing:border-box}`}</style>
 
       {/* Header */}
-      <div style={{ background:C.card, borderBottom:`1px solid ${C.border}`, padding:'14px 24px', position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <div style={{ background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom:`1px solid ${C.border}`, padding:'14px 24px', position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div>
           <h1 style={{ fontSize:17, fontWeight:700, color:C.text }}>{tx('Control de turnos')}</h1>
           <p style={{ fontSize:12, color:C.muted, marginTop:2 }}>{tx('Capacidad por franja')} · {date===today?tx('Hoy'):date}</p>
@@ -94,7 +94,7 @@ export default function TurnosPage() {
         </div>
       </div>
 
-      <div style={{ maxWidth:1000, margin:'0 auto', padding:'20px 24px' }}>
+      <div className="rz-page-enter" style={{ maxWidth:1000, margin:'0 auto', padding:'20px 24px' }}>
 
         {/* KPIs */}
         <div className="rz-grid-4col" style={{ gap:10, marginBottom:20 }}>

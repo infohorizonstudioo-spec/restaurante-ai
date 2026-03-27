@@ -221,7 +221,7 @@ export default function AgendaPage() {
       `}</style>
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:isMobile?'10px 12px':'14px 24px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
+      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:isMobile?'10px 12px':'14px 24px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
         <div style={{display:'flex',alignItems:'center',gap:isMobile?10:20}}>
           <div>
             <h1 style={{fontSize:isMobile?15:17,fontWeight:700,color:C.text,lineHeight:1.2}}>{tx('Agenda')}</h1>
@@ -270,7 +270,7 @@ export default function AgendaPage() {
 
 
       {/* ── Calendario ───────────────────────────────────────────────────── */}
-      <div style={{flex:1,overflow:'auto'}}>
+      <div className="rz-page-enter" style={{flex:1,overflow:'auto'}}>
         <div style={{minWidth:isMobile?0:820}}>
 
           {/* Cabecera días (hidden on mobile — day selector above replaces it) */}

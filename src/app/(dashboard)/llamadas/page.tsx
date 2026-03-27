@@ -196,7 +196,7 @@ export default function LlamadasPage() {
   return (
     <div style={{background:C.bg, minHeight:'100vh'}}>
       {/* Header */}
-      <div style={{background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10, position:'sticky', top:0, zIndex:20}}>
+      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom:`1px solid ${C.border}`, padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10, position:'sticky', top:0, zIndex:20}}>
         <div>
           <h1 style={{fontSize:16, fontWeight:700, color:C.text, letterSpacing:'-0.02em'}}>{t.nav.calls}</h1>
           <p style={{fontSize:11, color:C.text3, marginTop:2}}>{calls.length} {cs.callsTotal}</p>
@@ -221,7 +221,7 @@ export default function LlamadasPage() {
         </div>
       </div>
 
-      <div style={{maxWidth:800, margin:'0 auto', padding:'20px 24px'}}>
+      <div className="rz-page-enter" style={{maxWidth:800, margin:'0 auto', padding:'20px 24px'}}>
 
         {/* Banner de sugerencias de aprendizaje */}
         {suggestions.length>0&&(
@@ -239,7 +239,7 @@ export default function LlamadasPage() {
           </div>
         )}
         {groups.length===0 ? (
-          <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'64px 24px', textAlign:'center'}}>
+          <div className="rz-card-interactive" style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'64px 24px', textAlign:'center'}}>
             <div style={{position:'relative',display:'inline-block',marginBottom:20}}>
               <div style={{width:64, height:64, borderRadius:18, background:`linear-gradient(135deg,${C.amberDim},rgba(240,168,78,0.04))`, border:`1px solid rgba(240,168,78,0.12)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:26}}>📞</div>
               <div style={{position:'absolute',inset:-8,borderRadius:24,border:'1px dashed rgba(240,168,78,0.12)',pointerEvents:'none'}}/>

@@ -110,7 +110,7 @@ function DefaultClientesView() {
 
   return (
     <div style={{background:C.bg,minHeight:'100vh',display:'flex',flexDirection:'column'}}>
-      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,position:'sticky',top:0,zIndex:20}}>
+      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,position:'sticky',top:0,zIndex:20}}>
         <div>
           <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{clientesLabel}</h1>
           <p style={{fontSize:11,color:C.text3,marginTop:2}}>{clientes.length} {tx('registrados')}</p>
@@ -122,7 +122,7 @@ function DefaultClientesView() {
         </div>
       </div>
 
-      <div className="rz-panel-split" style={{display:'flex',flex:1,overflow:'hidden'}}>
+      <div className="rz-panel-split rz-page-enter" style={{display:'flex',flex:1,overflow:'hidden'}}>
         <div className="rz-panel-list" style={{width:320,flexShrink:0,overflowY:'auto',borderRight:`1px solid ${C.border}`,background:C.surface}}>
           {filtered.length===0 ? (
             <div style={{padding:'64px 24px',textAlign:'center'}}>
@@ -166,7 +166,7 @@ function DefaultClientesView() {
             </div>
           ) : (
             <>
-              <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:20,marginBottom:16}}>
+              <div className="rz-card-interactive" style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:20,marginBottom:16}}>
                 <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:16}}>
                   <div style={{width:50,height:50,borderRadius:'50%',background:selected.vip?C.yellowDim:C.amberDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,fontWeight:700,color:selected.vip?C.yellow:C.amber}}>
                     {selected.name?.[0]?.toUpperCase()||'?'}

@@ -166,7 +166,7 @@ export default function ReservasPage() {
 
   return (
     <div style={{background:C.bg,minHeight:'100vh'}}>
-      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,position:'sticky',top:0,zIndex:20}}>
+      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,position:'sticky',top:0,zIndex:20}}>
         <div>
           <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{L?.pageTitle || 'Reservas'}</h1>
           <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} {tx('para el')} {new Date(selected+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})}</p>
@@ -201,9 +201,9 @@ export default function ReservasPage() {
         <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n})} style={{padding:'12px',background:'none',border:'none',cursor:'pointer',color:C.text3,fontSize:18}} aria-label="Siguiente">›</button>
       </div>
 
-      <div style={{maxWidth:760,margin:'0 auto',padding:'20px 24px'}}>
+      <div className="rz-page-enter" style={{maxWidth:760,margin:'0 auto',padding:'20px 24px'}}>
         {filtered.length===0 ? (
-          <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'64px 24px',textAlign:'center'}}>
+          <div className="rz-card-interactive" style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'64px 24px',textAlign:'center'}}>
             <div style={{position:'relative',display:'inline-block',marginBottom:20}}>
               <div style={{width:64,height:64,borderRadius:18,background:`linear-gradient(135deg,${C.amberDim},rgba(240,168,78,0.04))`,border:`1px solid rgba(240,168,78,0.12)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:26}}>📅</div>
               <div style={{position:'absolute',inset:-8,borderRadius:24,border:'1px dashed rgba(240,168,78,0.12)',pointerEvents:'none'}}/>

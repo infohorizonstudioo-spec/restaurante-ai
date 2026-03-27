@@ -107,14 +107,14 @@ export default function EstadisticasPage(){
 
   return (
     <div style={{background:'#0C1018',minHeight:'100vh'}}>
-      <div style={{background:'#131920',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}}>
+      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}}>
         <div>
           <h1 style={{fontSize:16,fontWeight:700,color:'#E8EEF6',letterSpacing:'-0.02em'}}>{t.nav.stats}</h1>
           <p style={{fontSize:12,color:'#49566A',marginTop:1}}>{tx('Rendimiento de tu recepcionista y reservas')}</p>
         </div>
         <NotifBell/>
       </div>
-      <div style={{maxWidth:1000,margin:'0 auto',padding:'24px'}}>
+      <div className="rz-page-enter" style={{maxWidth:1000,margin:'0 auto',padding:'24px'}}>
 
         {/* KPIs */}
         <div className="rz-grid-4col" style={{gap:12,marginBottom:20}}>
@@ -134,7 +134,7 @@ export default function EstadisticasPage(){
 
         <div className="rz-grid-2col-equal" style={{gap:16,marginBottom:16}}>
           {/* Reservas por día */}
-          <div style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'18px 20px'}}>
+          <div className="rz-card-interactive" style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'18px 20px'}}>
             <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:14}}>{tx('Reservas por día de la semana')}</p>
             <div style={{display:'flex',gap:8,alignItems:'flex-end',height:100}}>
               {[1,2,3,4,5,6,0].map(day=>{

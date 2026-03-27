@@ -176,7 +176,7 @@ export default function MensajesPage() {
   }
 
   return (
-    <div className="rz-panel-split" style={{ display: 'flex', height: 'calc(100vh - 64px)', background: C.bg }}>
+    <div className="rz-panel-split rz-page-enter" style={{ display: 'flex', height: 'calc(100vh - 64px)', background: C.bg }}>
       {/* ── LEFT: Conversation List ─────────────────────────────── */}
       <div className="rz-panel-list" style={{
         width: 380, minWidth: 320, borderRight: `1px solid ${C.border}`,
@@ -264,7 +264,7 @@ export default function MensajesPage() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: C.bg }}>
         {!selected ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
-            <div style={{width:56,height:56,borderRadius:16,background:'rgba(255,255,255,0.03)',border:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,marginBottom:4}}>💬</div>
+            <div className="rz-card-interactive" style={{width:56,height:56,borderRadius:16,background:'rgba(255,255,255,0.03)',border:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,marginBottom:4}}>💬</div>
             <p style={{ color: C.text, fontSize: 14, fontWeight: 600 }}>{tx('Selecciona una conversación')}</p>
             <p style={{ color: C.text3, fontSize: 12 }}>{tx('Elige un mensaje del panel izquierdo para ver el hilo completo')}</p>
           </div>
@@ -272,7 +272,7 @@ export default function MensajesPage() {
           <>
             {/* Conversation header */}
             <div style={{
-              padding: '16px 24px', borderBottom: `1px solid ${C.border}`, background: C.surface,
+              padding: '16px 24px', borderBottom: `1px solid ${C.border}`, background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
               <div>

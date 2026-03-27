@@ -9,7 +9,7 @@ interface UseSupabaseQueryResult<T> {
   data: T | null
   error: any
   isLoading: boolean
-  mutate: KeyedMutator<T>
+  mutate: KeyedMutator<T | null>
 }
 
 export function useSupabaseQuery<T>(
