@@ -43,12 +43,24 @@ function ResetContent() {
     e.preventDefault()
     if (!email.trim()) { setMsg('Introduce tu email'); return }
     setLoad(true); setMsg('')
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: process.env.NEXT_PUBLIC_APP_URL + '/reset'
-    })
+    try {
+      // Usar endpoint server-side para enviar el email de reset
+      // Esto garantiza que la URL de redirect y las credenciales son correctas
+      const res = await fetch('/api/auth/request-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setSent(true)
+      } else {
+        setMsg(data.error || 'Error al enviar el email. Inténtalo de nuevo.')
+      }
+    } catch {
+      setMsg('Error de conexión. Inténtalo de nuevo.')
+    }
     setLoad(false)
-    if (error) setMsg(error.message)
-    else setSent(true)
   }
 
   async function handleReset(e: React.FormEvent) {
