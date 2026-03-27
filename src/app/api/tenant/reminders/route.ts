@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getRemindersConfig } from '@/lib/reminder-engine'
+import { requireAuth } from '@/lib/api-auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,18 +13,22 @@ const supabase = createClient(
 )
 
 export async function GET(req: NextRequest) {
-  const tenantId = req.nextUrl.searchParams.get('tenant_id')
-  if (!tenantId) return NextResponse.json({ error: 'Missing tenant_id' }, { status: 400 })
+  const auth = await requireAuth(req)
+  if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const config = await getRemindersConfig(tenantId)
+  const config = await getRemindersConfig(auth.tenantId)
   return NextResponse.json({ config })
 }
 
 export async function PUT(req: NextRequest) {
   try {
-    const { tenant_id, config } = await req.json()
-    if (!tenant_id || !config) {
-      return NextResponse.json({ error: 'Missing tenant_id or config' }, { status: 400 })
+    const auth = await requireAuth(req)
+    if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+    const tenant_id = auth.tenantId
+    const { config } = await req.json()
+    if (!config) {
+      return NextResponse.json({ error: 'Missing config' }, { status: 400 })
     }
 
     await supabase.from('reminder_configs').upsert({

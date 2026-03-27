@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { agentResponseEmail } from '@/lib/email-templates'
+import { requireAuth } from '@/lib/api-auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,8 +16,12 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    const { tenant_id, conversation_id, to, subject, content } = await req.json()
-    if (!tenant_id || !to || !content) {
+    const auth = await requireAuth(req)
+    if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+    const tenant_id = auth.tenantId
+    const { conversation_id, to, subject, content } = await req.json()
+    if (!to || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 

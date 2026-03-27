@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAlertRules, type AlertEventType } from '@/lib/alert-rules'
+import { requireAuth } from '@/lib/api-auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,18 +13,22 @@ const supabase = createClient(
 )
 
 export async function GET(req: NextRequest) {
-  const tenantId = req.nextUrl.searchParams.get('tenant_id')
-  if (!tenantId) return NextResponse.json({ error: 'Missing tenant_id' }, { status: 400 })
+  const auth = await requireAuth(req)
+  if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const rules = await getAlertRules(tenantId)
+  const rules = await getAlertRules(auth.tenantId)
   return NextResponse.json({ rules })
 }
 
 export async function PUT(req: NextRequest) {
   try {
-    const { tenant_id, rules } = await req.json()
-    if (!tenant_id || !rules || !Array.isArray(rules)) {
-      return NextResponse.json({ error: 'Missing tenant_id or rules' }, { status: 400 })
+    const auth = await requireAuth(req)
+    if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+    const tenant_id = auth.tenantId
+    const { rules } = await req.json()
+    if (!rules || !Array.isArray(rules)) {
+      return NextResponse.json({ error: 'Missing rules' }, { status: 400 })
     }
 
     for (const rule of rules) {

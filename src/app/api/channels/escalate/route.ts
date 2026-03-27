@@ -5,6 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAuth } from '@/lib/api-auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,10 +14,14 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { conversationId, action, tenantId } = await req.json()
+    const auth = await requireAuth(req)
+    if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-    if (!conversationId || !tenantId) {
-      return NextResponse.json({ error: 'Missing conversationId or tenantId' }, { status: 400 })
+    const { conversationId, action } = await req.json()
+    const tenantId = auth.tenantId
+
+    if (!conversationId) {
+      return NextResponse.json({ error: 'Missing conversationId' }, { status: 400 })
     }
 
     // Verify conversation belongs to tenant

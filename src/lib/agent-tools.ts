@@ -23,11 +23,16 @@ export async function sendSms(to: string, body: string): Promise<boolean> {
 
   try {
     const twilioAuth = Buffer.from(`${accountSid}:${authToken}`).toString('base64')
-    await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
       method: 'POST',
       headers: { 'Authorization': `Basic ${twilioAuth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ From: fromNumber, To: to, Body: body }).toString(),
     })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      console.error('Twilio SMS error:', err.code, err.message)
+      return false
+    }
     return true
   } catch { return false }
 }
@@ -43,11 +48,16 @@ export async function sendWhatsApp(to: string, body: string): Promise<boolean> {
     const twilioAuth = Buffer.from(`${accountSid}:${authToken}`).toString('base64')
     const fromWa = fromNumber.startsWith('whatsapp:') ? fromNumber : `whatsapp:${fromNumber}`
     const toWa = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`
-    await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
       method: 'POST',
       headers: { 'Authorization': `Basic ${twilioAuth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ From: fromWa, To: toWa, Body: body }).toString(),
     })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      console.error('Twilio SMS error:', err.code, err.message)
+      return false
+    }
     return true
   } catch { return false }
 }
@@ -417,7 +427,7 @@ export async function cancelReservationTool(params: {
   const bLabel = getBookingLabel(tenantData?.type || 'otro')
 
   let query = supabase.from('reservations')
-    .select('id, customer_name, customer_phone, date, time, people, status')
+    .select('id, customer_name, customer_phone, date, time, people, status, table_id')
     .eq('tenant_id', tenant_id)
     .in('status', ['confirmada', 'confirmed', 'pendiente', 'pending'])
     .order('date', { ascending: true })
@@ -447,6 +457,11 @@ export async function cancelReservationTool(params: {
   await supabase.from('reservations')
     .update({ status: 'cancelada' })
     .eq('id', toCancel.id).eq('tenant_id', tenant_id)
+
+  // Free the table if one was assigned
+  if (toCancel.table_id) {
+    await supabase.from('tables').update({ status: 'libre' }).eq('id', toCancel.table_id)
+  }
 
   // SMS to cancelled customer
   if (toCancel.customer_phone) {
@@ -500,7 +515,7 @@ export async function modifyReservationTool(params: {
   const bLabel = getBookingLabel(tenantData?.type || 'otro')
 
   let query = supabase.from('reservations')
-    .select('id, customer_name, customer_phone, date, time, people, status, tenant_id')
+    .select('id, customer_name, customer_phone, date, time, people, status, tenant_id, table_id')
     .eq('tenant_id', tenant_id)
     .in('status', ['confirmada', 'confirmed', 'pendiente', 'pending'])
     .gte('date', new Date().toISOString().slice(0, 10))
@@ -543,9 +558,31 @@ export async function modifyReservationTool(params: {
     }
   }
 
+  // Re-run decision engine for the modified reservation
+  const { tenantType } = await loadAvailabilityContext(tenant_id, finalDate)
+  const decisionResult = await makeDecision({
+    tenantId: tenant_id,
+    type: tenantType,
+    input: {
+      party_size: finalPeople,
+      date: finalDate,
+      time: finalTime,
+      notes: '',
+      is_new_customer: false,
+    },
+  })
+  const newStatus = decisionResult.status === 'confirmed' ? 'confirmada'
+    : decisionResult.status === 'rejected' ? 'cancelada'
+    : 'pendiente'
+
   await supabase.from('reservations').update({
-    date: finalDate, time: finalTime, people: finalPeople,
+    date: finalDate, time: finalTime, people: finalPeople, status: newStatus,
   }).eq('id', original.id).eq('tenant_id', tenant_id)
+
+  // Free old table if date/time changed
+  if (original.table_id && (finalDate !== original.date || finalTime !== (original.time||'').slice(0,5))) {
+    await supabase.from('tables').update({ status: 'libre' }).eq('id', original.table_id)
+  }
 
   const oldTime = (original.time || '').slice(0, 5)
   const oldDateStr = formatDateES(original.date)
@@ -713,7 +750,7 @@ export async function addToWaitlistTool(params: {
   }).select('id').maybeSingle()
 
   if (error && error.code === '42P01') {
-    return { success: true, waitlist_supported: false, message: 'Te apuntamos y te avisamos si queda hueco.' }
+    return { success: false, waitlist_supported: false, message: 'La lista de espera no está disponible en este momento.' }
   }
   if (error) return { success: false, error: 'could not add to waitlist' }
 

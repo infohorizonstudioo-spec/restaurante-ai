@@ -4,6 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAuth } from '@/lib/api-auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,9 +15,11 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {
-    const tenantId = req.nextUrl.searchParams.get('tenant_id')
+    const auth = await requireAuth(req)
+    if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+    const tenantId = auth.tenantId
     const channel = req.nextUrl.searchParams.get('channel')
-    if (!tenantId) return NextResponse.json({ error: 'tenant_id required' }, { status: 400 })
 
     let query = supabase.from('channel_configs').select('*').eq('tenant_id', tenantId)
     if (channel) query = query.eq('channel', channel)
@@ -32,10 +35,14 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    const auth = await requireAuth(req)
+    if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
     const body = await req.json()
-    const { tenant_id, channel, ...updates } = body
-    if (!tenant_id || !channel) {
-      return NextResponse.json({ error: 'tenant_id and channel required' }, { status: 400 })
+    const { channel, ...updates } = body
+    const tenant_id = auth.tenantId
+    if (!channel) {
+      return NextResponse.json({ error: 'channel required' }, { status: 400 })
     }
 
     // Upsert channel config
