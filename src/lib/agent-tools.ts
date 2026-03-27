@@ -156,8 +156,14 @@ export async function checkAvailabilityTool(params: {
     })
 
     if (result.available) {
+      // Smart tip: warn if almost full
+      const capacityWarning = result.slots_remaining <= 1
+        ? ' Queda muy poco hueco — confírmalo rápido antes de que se llene.'
+        : result.slots_remaining <= 2
+        ? ' Quedan pocas plazas a esa hora.'
+        : ''
       return {
-        success: true, available: true, message: result.message,
+        success: true, available: true, message: result.message + capacityWarning,
         slot: time, slots_remaining: result.slots_remaining, people_remaining: result.people_remaining,
       }
     }

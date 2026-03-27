@@ -302,8 +302,18 @@ export async function processWithAgent(params: {
 
   const source = `${channel}_agent`
 
+  // Enrich customer context with smart intelligence
+  let enrichedCustomerContext = customerContext || ''
+  if (customerPhone) {
+    try {
+      const { buildSmartCustomerContext } = await import('@/lib/smart-context')
+      const { contextText } = await buildSmartCustomerContext(tenantId, customerPhone)
+      if (contextText) enrichedCustomerContext += contextText
+    } catch { /* non-critical enhancement */ }
+  }
+
   const systemPrompt = buildSystemPrompt({
-    channel, businessContext, businessTypeLogic, responseTone, customerContext,
+    channel, businessContext, businessTypeLogic, responseTone, customerContext: enrichedCustomerContext,
   })
 
   // Rolling window: keep last 20 messages to fit in context

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { resolveTemplate } from "@/lib/templates"
 import { BUSINESS_TYPE_LOGIC } from "@/app/api/agent/get-context/route"
+import { buildSmartCustomerContext, getDemandForecast } from "@/lib/smart-context"
 
 export const dynamic = "force-dynamic"
 
@@ -126,6 +127,17 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+
+    // ── Smart Context Engine: deep intelligence about this customer ──
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      const [smartCtx, forecast] = await Promise.all([
+        buildSmartCustomerContext(tenant.id, callerPhone, today),
+        getDemandForecast(tenant.id, today),
+      ])
+      if (smartCtx.contextText) customerContext += smartCtx.contextText
+      if (forecast) customerContext += '\n' + forecast
+    } catch { /* smart context is enhancement, not critical */ }
 
     // Load business knowledge
     const { data: kb } = await supabase
