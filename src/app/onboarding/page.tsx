@@ -146,7 +146,7 @@ export default function OnboardingPage() {
   const [step,setStep] = useState(0)
   const [saving,setSaving] = useState(false)
   const [tid,setTid] = useState<string|null>(null)
-  const autoSaveRef = useRef<ReturnType<typeof setTimeout>>()
+  const autoSaveRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const [d, setD] = useState({
     business_type:'', business_name:'', phone:'', address:'', email:'',

@@ -4,6 +4,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,12 +25,16 @@ const STATUS_MAP: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.webhook, 'whatsapp:status')
+    if (rl.blocked) return rl.response
+
     const formData = await req.formData()
     const messageSid = formData.get('MessageSid')?.toString()
     const messageStatus = formData.get('MessageStatus')?.toString()
 
     if (messageSid && messageStatus) {
       const mappedStatus = STATUS_MAP[messageStatus] || messageStatus
+      logger.info('WhatsApp status update', { messageSid, status: mappedStatus })
       await supabase.from('messages')
         .update({ status: mappedStatus })
         .eq('external_id', messageSid)

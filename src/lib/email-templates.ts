@@ -4,7 +4,10 @@
  * Adapts terminology per business type (reserva/cita/sesión/clase).
  */
 
+import { escapeHtml } from './sanitize'
+
 function baseTemplate(businessName: string, content: string): string {
+  businessName = escapeHtml(businessName)
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -34,11 +37,15 @@ export function agentResponseEmail(params: {
   responseContent: string
 }): string {
   const { businessName, customerName, agentName, responseContent } = params
-  const greeting = customerName ? `Hola ${customerName},` : 'Hola,'
+  const safeCustomer = customerName ? escapeHtml(customerName) : ''
+  const safeAgent = escapeHtml(agentName)
+  const safeBusiness = escapeHtml(businessName)
+  const safeContent = escapeHtml(responseContent).replace(/\n/g, '<br>')
+  const greeting = safeCustomer ? `Hola ${safeCustomer},` : 'Hola,'
   const content = `
     <p>${greeting}</p>
-    <div style="white-space:pre-wrap;">${responseContent.replace(/\n/g, '<br>')}</div>
-    <p style="margin-top:24px;color:#666;">Un saludo,<br><strong>${agentName}</strong><br>${businessName}</p>
+    <div style="white-space:pre-wrap;">${safeContent}</div>
+    <p style="margin-top:24px;color:#666;">Un saludo,<br><strong>${safeAgent}</strong><br>${safeBusiness}</p>
   `
   return baseTemplate(businessName, content)
 }
@@ -54,19 +61,23 @@ export function reservationConfirmationEmail(params: {
   peopleLabel?: string  // "Personas" | "Pacientes" | "Participantes" | "Alumnos"
 }): string {
   const { businessName, customerName, date, time, people, notes } = params
-  const label = params.bookingLabel || 'reserva'
-  const pLabel = params.peopleLabel || 'Personas'
+  const label = escapeHtml(params.bookingLabel || 'reserva')
+  const pLabel = escapeHtml(params.peopleLabel || 'Personas')
+  const safeCustomer = escapeHtml(customerName)
+  const safeTime = escapeHtml(time)
+  const safeNotes = notes ? escapeHtml(notes) : ''
   const dateStr = new Date(date + 'T12:00:00').toLocaleDateString('es-ES', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
+  const safeDateStr = escapeHtml(dateStr)
   const content = `
-    <p>Hola ${customerName},</p>
+    <p>Hola ${safeCustomer},</p>
     <p>Te confirmo tu ${label}:</p>
     <table style="background:#f9f9f9;border-radius:8px;padding:16px;width:100%;margin:16px 0;" cellpadding="8">
-      <tr><td style="color:#666;">Fecha</td><td style="font-weight:600;">${dateStr}</td></tr>
-      <tr><td style="color:#666;">Hora</td><td style="font-weight:600;">${time}</td></tr>
+      <tr><td style="color:#666;">Fecha</td><td style="font-weight:600;">${safeDateStr}</td></tr>
+      <tr><td style="color:#666;">Hora</td><td style="font-weight:600;">${safeTime}</td></tr>
       ${people > 1 ? `<tr><td style="color:#666;">${pLabel}</td><td style="font-weight:600;">${people}</td></tr>` : ''}
-      ${notes ? `<tr><td style="color:#666;">Notas</td><td>${notes}</td></tr>` : ''}
+      ${safeNotes ? `<tr><td style="color:#666;">Notas</td><td>${safeNotes}</td></tr>` : ''}
     </table>
     <p>¡Te esperamos!</p>
   `
@@ -81,13 +92,16 @@ export function reservationCancelledEmail(params: {
   bookingLabel?: string
 }): string {
   const { businessName, customerName, date, time } = params
-  const label = params.bookingLabel || 'reserva'
+  const label = escapeHtml(params.bookingLabel || 'reserva')
+  const safeCustomer = escapeHtml(customerName)
+  const safeTime = escapeHtml(time)
   const dateStr = new Date(date + 'T12:00:00').toLocaleDateString('es-ES', {
     weekday: 'long', day: 'numeric', month: 'long'
   })
+  const safeDateStr = escapeHtml(dateStr)
   const content = `
-    <p>Hola ${customerName},</p>
-    <p>Tu ${label} del <strong>${dateStr}</strong> a las <strong>${time}</strong> queda cancelada.</p>
+    <p>Hola ${safeCustomer},</p>
+    <p>Tu ${label} del <strong>${safeDateStr}</strong> a las <strong>${safeTime}</strong> queda cancelada.</p>
     <p>Si necesitas cualquier cosa, escríbenos o llámanos sin problema.</p>
   `
   return baseTemplate(businessName, content)

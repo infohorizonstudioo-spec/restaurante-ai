@@ -5,6 +5,9 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizeUUID, sanitizeString } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,7 +53,16 @@ async function buildVapidAuth(endpoint: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   try {
-    const { tenant_id, title, body, url = '/panel', priority = 'info', tag } = await req.json()
+    const rl = rateLimitByIp(req, RATE_LIMITS.messaging, 'push:send')
+    if (rl.blocked) return rl.response
+
+    const raw = await req.json()
+    const tenant_id = sanitizeUUID(raw.tenant_id)
+    const title = sanitizeString(raw.title, 200)
+    const body = sanitizeString(raw.body, 500)
+    const url = sanitizeString(raw.url || '/panel', 500)
+    const priority = ['info', 'warning', 'critical'].includes(raw.priority) ? raw.priority : 'info'
+    const tag = sanitizeString(raw.tag, 50)
     if (!tenant_id) return NextResponse.json({ error: 'tenant_id requerido' }, { status: 400 })
 
     // Solo enviar si viene de servidor (no exponer al cliente)
@@ -71,15 +83,23 @@ export async function POST(req: NextRequest) {
     await Promise.all(subs.map(async sub => {
       try {
         const vapidAuth = await buildVapidAuth(sub.endpoint)
-        const res = await fetch(sub.endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type':  'application/octet-stream',
-            'Authorization': vapidAuth,
-            'TTL':           '86400',
-          },
-          body: new TextEncoder().encode(payload),
-        })
+        const controller = new AbortController()
+        const fetchTimeout = setTimeout(() => controller.abort(), 30000)
+        let res: Response
+        try {
+          res = await fetch(sub.endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type':  'application/octet-stream',
+              'Authorization': vapidAuth,
+              'TTL':           '86400',
+            },
+            signal: controller.signal,
+            body: new TextEncoder().encode(payload),
+          })
+        } finally {
+          clearTimeout(fetchTimeout)
+        }
         if (res.ok || res.status === 201) { sent++ }
         else if (res.status === 410 || res.status === 404) {
           // Suscripción expirada — eliminar
@@ -91,7 +111,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, sent, failed })
   } catch (e: any) {
-    console.error('push/send error:', e.message)
+    logger.error('push/send error', {}, e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -1,36 +1,30 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse, NextRequest } from 'next/server'
-
-// Rate limiting en memoria — máx 5 registros por IP en 15 minutos
-const registrationAttempts = new Map<string, { count: number; resetAt: number }>()
-const RATE_LIMIT = 5
-const RATE_WINDOW_MS = 15 * 60 * 1000
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now()
-  const record = registrationAttempts.get(ip)
-  if (!record || now > record.resetAt) {
-    registrationAttempts.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS })
-    return true
-  }
-  if (record.count >= RATE_LIMIT) return false
-  record.count++
-  return true
-}
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizeEmail, sanitizeName, sanitizeString, sanitizePhone } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
     // Rate limiting por IP
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
-    if (!checkRateLimit(ip)) {
-      return NextResponse.json({ error: 'Demasiados intentos. Espera 15 minutos.' }, { status: 429 })
-    }
+    const rl = rateLimitByIp(req, RATE_LIMITS.auth, 'auth:register')
+    if (rl.blocked) return rl.response
 
-    const { businessName, businessType, email, password, phone, name } = await req.json()
-    if (!businessName || !email || !password)
+    const body = await req.json()
+    const businessName = sanitizeString(body.businessName, 200)
+    const businessType = sanitizeString(body.businessType, 50)
+    const email = sanitizeEmail(body.email)
+    const password = body.password
+    const phone = sanitizePhone(body.phone)
+    const name = sanitizeName(body.name)
+
+    if (!businessName || !email || !password) {
+      logger.warn('Register: missing fields', { email: email || 'empty' })
       return NextResponse.json({ error: 'Nombre, email y contraseña son obligatorios' }, { status: 400 })
-    if (password.length < 8)
-      return NextResponse.json({ error: 'La contraseña debe tener al menos 8 caracteres' }, { status: 400 })
+    }
+    if (typeof password !== 'string' || password.length < 8 || password.length > 128) {
+      return NextResponse.json({ error: 'La contraseña debe tener entre 8 y 128 caracteres' }, { status: 400 })
+    }
 
     const admin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -47,7 +41,7 @@ export async function POST(req: NextRequest) {
       .from('tenants')
       .insert({
         name: businessName, slug, type: businessType || 'restaurante',
-        email, phone: phone || null,
+        email, phone: phone || null as string | null,
         plan: 'trial', active: true,
         free_calls_limit: 10, free_calls_used: 0,
         onboarding_complete: false, onboarding_step: 1,
@@ -71,8 +65,10 @@ export async function POST(req: NextRequest) {
       full_name: name || businessName,
       email: email.trim().toLowerCase(),
     }).eq('id', userData.user.id)
+    logger.info('Register: new tenant created', { tenantId: tenant.id, slug })
     return NextResponse.json({ success: true, tenantId: tenant.id, slug })
   } catch (e: any) {
+    logger.error('Register: unexpected error', {}, e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

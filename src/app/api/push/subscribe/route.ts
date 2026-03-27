@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuth } from '@/lib/api-auth'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,6 +16,9 @@ const admin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.api, 'push:subscribe')
+    if (rl.blocked) return rl.response
+
     const auth = await requireAuth(req)
     if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status || 401 })
     if (!auth.tenantId) return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 403 })
@@ -34,7 +39,7 @@ export async function POST(req: NextRequest) {
     if (error) throw error
     return NextResponse.json({ ok: true })
   } catch (e: any) {
-    console.error('push/subscribe error:', e.message)
+    logger.error('push/subscribe error', {}, e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -42,6 +47,9 @@ export async function POST(req: NextRequest) {
 // DELETE — eliminar suscripción
 export async function DELETE(req: NextRequest) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.api, 'push:unsubscribe')
+    if (rl.blocked) return rl.response
+
     const auth = await requireAuth(req)
     if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: 401 })
 

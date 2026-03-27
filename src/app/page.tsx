@@ -131,7 +131,9 @@ function DemoWidget() {
         <span style={{fontSize:14,fontWeight:600,color:'#E8EEF6'}}>Habla con tu futura recepcionista</span>
       </div>
       <p style={{fontSize:13,color:'rgba(255,255,255,0.45)',marginBottom:20}}>Pulsa el botón y habla como si llamaras a un negocio. Pide una reserva, pregunta precios, cambia una cita. Haz lo que harías con una persona real.</p>
-      <div ref={widgetRef} dangerouslySetInnerHTML={{__html:'<elevenlabs-convai agent-id="agent_0701kkw2sdx5fp685xp6ckngf6zj"></elevenlabs-convai>'}}/>
+      <div ref={widgetRef}>
+        {loaded && <div dangerouslySetInnerHTML={{__html:`<elevenlabs-convai agent-id="${process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID || ''}"></elevenlabs-convai>`}}/>}
+      </div>
       <p style={{fontSize:11,color:'rgba(255,255,255,0.2)',marginTop:12}}>Conversación real con IA · Sin registro · Gratis</p>
     </div>
   )

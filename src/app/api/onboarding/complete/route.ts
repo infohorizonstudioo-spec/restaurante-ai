@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { provisionElevenAgent } from "@/lib/provision-agent"
 import { requireAuth } from "@/lib/api-auth"
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 export const dynamic = "force-dynamic"
 
@@ -22,6 +24,9 @@ const supabase = createClient(
  */
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.api, 'onboarding:complete')
+    if (rl.blocked) return rl.response
+
     const auth = await requireAuth(req)
     if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
@@ -221,8 +226,10 @@ export async function POST(req: NextRequest) {
     // ── 7. PROVISION AI AGENT ───────────────────────────────────────────────
     const provision = await provisionElevenAgent(tenant_id)
 
+    logger.info('Onboarding complete', { tenantId: tenant_id })
     return NextResponse.json({ success: true, agent_id: provision.agent_id })
   } catch (err: any) {
+    logger.error('Onboarding complete: error', {}, err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

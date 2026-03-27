@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuth } from '@/lib/api-auth'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizeString, sanitizeName, sanitizePhone, sanitizePositiveInt } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,6 +17,9 @@ const admin = createClient(
  */
 export async function GET(req: Request) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.api, 'consultations:get')
+    if (rl.blocked) return rl.response
+
     const auth = await requireAuth(req)
     if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     const tenantId = auth.tenantId
@@ -43,28 +49,42 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.api, 'consultations:post')
+    if (rl.blocked) return rl.response
+
+    const auth = await requireAuth(req)
+    if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
     const body = await req.json()
     const {
-      tenant_id, patient_name, patient_phone, consultation_type,
+      patient_name, patient_phone, consultation_type,
       symptoms, is_urgency = false, duration_minutes,
       appointment_date, appointment_time, notes, call_sid,
     } = body
+    const tenant_id = auth.tenantId
 
-    if (!tenant_id) return NextResponse.json({ error: 'tenant_id required' }, { status: 400 })
-    if (!patient_name && !patient_phone) return NextResponse.json({ error: 'patient_name or patient_phone required' }, { status: 400 })
+    const safeName = patient_name ? sanitizeName(patient_name) : null
+    const safePhone = patient_phone ? sanitizePhone(patient_phone) : null
+    if (!safeName && !safePhone) return NextResponse.json({ error: 'patient_name or patient_phone required' }, { status: 400 })
+
+    const safeSymptoms = symptoms ? sanitizeString(symptoms, 2000) : null
+    const safeNotes = notes ? sanitizeString(notes, 2000) : null
+    const safeConsultationType = consultation_type ? sanitizeString(consultation_type, 100) : null
+    const safeDuration = duration_minutes ? sanitizePositiveInt(duration_minutes, 1440) : null
+    if (duration_minutes && !safeDuration) return NextResponse.json({ error: 'duration_minutes must be a positive number' }, { status: 400 })
 
     const { data: consultation, error } = await admin.from('consultation_events').insert({
       tenant_id,
-      patient_name: patient_name || null,
-      patient_phone: patient_phone || null,
-      consultation_type: consultation_type || null,
-      symptoms: symptoms || null,
+      patient_name: safeName,
+      patient_phone: safePhone,
+      consultation_type: safeConsultationType,
+      symptoms: safeSymptoms,
       is_urgency: !!is_urgency,
-      duration_minutes: duration_minutes ? parseInt(String(duration_minutes)) : null,
+      duration_minutes: safeDuration,
       appointment_date: appointment_date || null,
       appointment_time: appointment_time || null,
-      notes: notes || null,
-      call_sid: call_sid || null,
+      notes: safeNotes,
+      call_sid: call_sid ? sanitizeString(call_sid, 100) : null,
       status: 'collecting',
     }).select().single()
 
@@ -80,9 +100,16 @@ export async function POST(req: Request) {
  */
 export async function PATCH(req: Request) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.api, 'consultations:patch')
+    if (rl.blocked) return rl.response
+
+    const auth = await requireAuth(req)
+    if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    const tenant_id = auth.tenantId
+
     const body = await req.json()
-    const { id, tenant_id } = body
-    if (!id || !tenant_id) return NextResponse.json({ error: 'id and tenant_id required' }, { status: 400 })
+    const { id } = body
+    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
     const validStatuses = ['collecting', 'confirmed', 'completed', 'cancelled', 'escalated', 'no_show']
     if (body.status && !validStatuses.includes(body.status)) {

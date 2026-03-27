@@ -4,21 +4,59 @@
  * Normalizes to IncomingMessage and calls the channel engine.
  */
 import { NextRequest, NextResponse } from 'next/server'
+import twilio from 'twilio'
 import { processMessage } from '@/lib/channel-engine'
 import { stripWhatsAppPrefix } from '@/lib/phone-utils'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizeForLLM } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    // Twilio sends form-urlencoded
-    const formData = await req.formData()
-    const body: Record<string, string> = {}
-    formData.forEach((value, key) => { body[key] = value.toString() })
+    const rl = rateLimitByIp(req, RATE_LIMITS.webhook, 'whatsapp:webhook')
+    if (rl.blocked) return rl.response
+
+    // --- Twilio signature validation ---
+    const twilioSignature = req.headers.get('x-twilio-signature')
+    const authToken = process.env.TWILIO_AUTH_TOKEN
+    const url = `${process.env.NEXT_PUBLIC_APP_URL}/api/whatsapp/webhook`
+
+    if (!twilioSignature || !authToken) {
+      logger.security('WhatsApp webhook: missing signature or auth token')
+      return new NextResponse('<Response></Response>', {
+        status: 401, headers: { 'Content-Type': 'text/xml' },
+      })
+    }
+
+    // Clone the request body for validation (need raw text for Twilio validation)
+    const rawBody = await req.text()
+    const params = Object.fromEntries(new URLSearchParams(rawBody))
+
+    const isValid = twilio.validateRequest(authToken, twilioSignature, url, params)
+    if (!isValid) {
+      logger.security('WhatsApp webhook: invalid signature')
+      return new NextResponse('<Response></Response>', {
+        status: 403, headers: { 'Content-Type': 'text/xml' },
+      })
+    }
+
+    // Verify AccountSid matches our account
+    const accountSid = params.AccountSid || params['AccountSid']
+    if (process.env.TWILIO_ACCOUNT_SID && accountSid !== process.env.TWILIO_ACCOUNT_SID) {
+      logger.security('WhatsApp webhook: AccountSid mismatch')
+      return new NextResponse('<Response></Response>', {
+        status: 403, headers: { 'Content-Type': 'text/xml' },
+      })
+    }
+
+    // Parse validated body
+    const body: Record<string, string> = params
 
     const from = stripWhatsAppPrefix(body.From || '')
     const to = stripWhatsAppPrefix(body.To || '')
-    const messageBody = body.Body || ''
+    const messageBody = sanitizeForLLM(body.Body || '')
     const messageSid = body.MessageSid || body.SmsMessageSid || ''
     const numMedia = parseInt(body.NumMedia || '0')
 
@@ -68,7 +106,7 @@ export async function POST(req: NextRequest) {
     })
 
     if (!result.success) {
-      console.error('[whatsapp-webhook] Processing failed:', result.error)
+      logger.error('WhatsApp webhook processing failed', { from, error: result.error })
     }
 
     // Always return 200 with empty TwiML — response is sent via API, not TwiML
@@ -76,7 +114,7 @@ export async function POST(req: NextRequest) {
       status: 200, headers: { 'Content-Type': 'text/xml' },
     })
   } catch (err: any) {
-    console.error('[whatsapp-webhook] Error:', err?.message || err)
+    logger.error('WhatsApp webhook failed', {}, err)
     return new NextResponse('<Response></Response>', {
       status: 200, headers: { 'Content-Type': 'text/xml' },
     })

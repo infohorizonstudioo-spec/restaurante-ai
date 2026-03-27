@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-auth'
-import { rateLimit, getRateLimitKey } from '@/lib/rate-limit'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizePhone, sanitizeString } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,14 +13,19 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(req: NextRequest) {
   try {
-    const rl = rateLimit(getRateLimitKey(req), 10, 60000)
-    if (!rl.ok) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    const rl = rateLimitByIp(req, RATE_LIMITS.messaging, 'sms:send')
+    if (rl.blocked) return rl.response
 
     const auth = await requireAuth(req)
     if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-    const { to, message, type } = await req.json()
+    const body = await req.json()
+    const to = sanitizePhone(body.to)
+    const message = sanitizeString(body.message, 1600)
+    const type = body.type
     if (!to || !message) return NextResponse.json({ error: 'to and message required' }, { status: 400 })
+
+    logger.info('SMS send request', { tenantId: auth.tenantId, to, type })
 
     const accountSid = process.env.TWILIO_ACCOUNT_SID
     const authToken = process.env.TWILIO_AUTH_TOKEN
@@ -30,18 +37,26 @@ export async function POST(req: NextRequest) {
     }
 
     const twilioAuth = Buffer.from(`${accountSid}:${authToken}`).toString('base64')
-    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${twilioAuth}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        From: fromNumber,
-        To: to,
-        Body: message,
-      }).toString(),
-    })
+    const controller = new AbortController()
+    const fetchTimeout = setTimeout(() => controller.abort(), 30000)
+    let res: Response
+    try {
+      res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${twilioAuth}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        signal: controller.signal,
+        body: new URLSearchParams({
+          From: fromNumber,
+          To: to,
+          Body: message,
+        }).toString(),
+      })
+    } finally {
+      clearTimeout(fetchTimeout)
+    }
 
     const data = await res.json()
     if (res.ok) {
@@ -50,6 +65,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, sent: false, reason: data.message || 'SMS failed' })
     }
   } catch (err) {
+    logger.error('SMS send failed', {}, err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

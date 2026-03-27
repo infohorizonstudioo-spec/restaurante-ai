@@ -1,6 +1,11 @@
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+
 export const runtime = 'edge'
 
 export async function GET(req: Request) {
+  const rl = rateLimitByIp(req, RATE_LIMITS.api, 'tts')
+  if (rl.blocked) return rl.response
+
   const { searchParams } = new URL(req.url)
   const text = searchParams.get('t') || 'Hola'
   const voiceId = process.env.ELEVENLABS_VOICE_ID || 'ERYLdjEaddaiN9sDjaMX'

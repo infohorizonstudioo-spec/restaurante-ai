@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { resolveTemplate } from '@/lib/templates'
 import { requireAuth } from '@/lib/api-auth'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizeString, sanitizeName, sanitizePhone, sanitizePositiveInt } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,6 +15,9 @@ const admin = createClient(
 // GET /api/orders?limit=50&page=0
 export async function GET(req: Request) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.api, 'orders:get')
+    if (rl.blocked) return rl.response
+
     const auth = await requireAuth(req)
     if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     const tenantId = auth.tenantId
@@ -35,10 +41,16 @@ export async function GET(req: Request) {
 // POST /api/orders — crear pedido desde el panel
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
-    const { tenant_id, customer_name, customer_phone, order_type = 'mesa', notes, items = [], total_estimate = 0 } = body
+    const rl = rateLimitByIp(req, RATE_LIMITS.api, 'orders:post')
+    if (rl.blocked) return rl.response
 
-    if (!tenant_id) return NextResponse.json({ error: 'tenant_id required' }, { status: 400 })
+    const auth = await requireAuth(req)
+    if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    const tenant_id = auth.tenantId
+
+    const body = await req.json()
+    const { customer_name, customer_phone, order_type = 'mesa', notes, items = [], total_estimate = 0 } = body
+
     if (!customer_name) return NextResponse.json({ error: 'customer_name required' }, { status: 400 })
 
     // Verificar que el tenant tiene plan Pro o Business (pedidos es feature premium)
@@ -52,11 +64,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Módulo de pedidos no disponible para este tipo de negocio' }, { status: 403 })
     }
 
+    const safeName = sanitizeName(customer_name)
+    const safePhone = customer_phone ? sanitizePhone(customer_phone) : null
+    const safeNotes = notes ? sanitizeString(notes, 1000) : null
+
+    if (!safeName) return NextResponse.json({ error: 'customer_name invalid' }, { status: 400 })
+
     const { data: order, error } = await admin.from('order_events').insert({
-      tenant_id, customer_name,
-      customer_phone: customer_phone || null,
+      tenant_id, customer_name: safeName,
+      customer_phone: safePhone,
       order_type,
-      notes: notes || null,
+      notes: safeNotes,
       items: items || [],
       total_estimate: parseFloat(String(total_estimate)) || 0,
       status: 'collecting',
@@ -72,8 +90,15 @@ export async function POST(req: Request) {
 // PATCH /api/orders — actualizar estado de pedido
 export async function PATCH(req: Request) {
   try {
-    const { id, tenant_id, status, notes } = await req.json()
-    if (!id || !tenant_id) return NextResponse.json({ error: 'id y tenant_id requeridos' }, { status: 400 })
+    const rl = rateLimitByIp(req, RATE_LIMITS.api, 'orders:patch')
+    if (rl.blocked) return rl.response
+
+    const auth = await requireAuth(req)
+    if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    const tenant_id = auth.tenantId
+
+    const { id, status, notes } = await req.json()
+    if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
 
     const validStatuses = ['collecting', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled']
     if (status && !validStatuses.includes(status)) {

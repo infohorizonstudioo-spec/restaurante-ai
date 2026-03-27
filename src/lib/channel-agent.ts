@@ -13,6 +13,8 @@ import {
   updateOrderTool,
   addToWaitlistTool,
 } from './agent-tools'
+import { sanitizeForLLM, sanitizeName, sanitizePhone, sanitizeDate, sanitizeTime, sanitizePositiveInt, sanitizeString } from './sanitize'
+import { logger } from './logger'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' })
 
@@ -127,9 +129,28 @@ const TOOLS: Anthropic.Tool[] = [
   },
 ]
 
+// ── Sanitize tool inputs from Claude (defense in depth) ─────
+function sanitizeToolInput(name: string, input: any): any {
+  const safe = { ...input }
+  // Sanitize common fields across all tools
+  if (safe.customer_name) safe.customer_name = sanitizeName(safe.customer_name)
+  if (safe.customer_phone) safe.customer_phone = sanitizePhone(safe.customer_phone)
+  if (safe.date) safe.date = sanitizeDate(safe.date)
+  if (safe.new_date) safe.new_date = sanitizeDate(safe.new_date)
+  if (safe.time) safe.time = sanitizeTime(safe.time)
+  if (safe.new_time) safe.new_time = sanitizeTime(safe.new_time)
+  if (safe.party_size) safe.party_size = sanitizePositiveInt(safe.party_size, 500)
+  if (safe.new_party_size) safe.new_party_size = sanitizePositiveInt(safe.new_party_size, 500)
+  if (safe.notes) safe.notes = sanitizeString(safe.notes, 500)
+  if (safe.zone) safe.zone = sanitizeString(safe.zone, 100)
+  if (safe.reason) safe.reason = sanitizeString(safe.reason, 500)
+  return safe
+}
+
 // ── Execute a tool call ──────────────────────────────────────
 async function executeTool(tenantId: string, name: string, input: any, source: string): Promise<any> {
-  const params = { ...input, tenant_id: tenantId }
+  const sanitizedInput = sanitizeToolInput(name, input)
+  const params = { ...sanitizedInput, tenant_id: tenantId }
 
   switch (name) {
     case 'check_availability':
@@ -222,6 +243,18 @@ const TONE_INSTRUCTIONS: Record<string, string> = {
   casual: `Tono informal y natural. Como hablar con un colega o un conocido. "Claro", "sin problema", "te lo apunto". Pero siempre con respeto y profesionalidad de fondo.`,
 }
 
+// ── Sanitize a name for prompt interpolation (strip newlines + limit length) ──
+function safeName(val: unknown, maxLen = 100): string {
+  if (typeof val !== 'string') return ''
+  return sanitizeForLLM(val).replace(/[\r\n]+/g, ' ').trim().slice(0, maxLen)
+}
+
+// ── Sanitize longer context for prompt interpolation ──
+function safeContext(val: unknown, maxLen = 500): string {
+  if (typeof val !== 'string') return ''
+  return sanitizeForLLM(val).trim().slice(0, maxLen)
+}
+
 // ── Build system prompt ──────────────────────────────────────
 function buildSystemPrompt(params: {
   channel: string
@@ -235,7 +268,7 @@ function buildSystemPrompt(params: {
   const btl = businessTypeLogic
 
   const today = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-  const actionName = btl.action_name || 'gestión' // "reserva" | "cita" | "sesión" | "clase" | "visita"
+  const actionName = safeName(btl.action_name, 50) || 'gestión' // "reserva" | "cita" | "sesión" | "clase" | "visita"
 
   // Replace {ACTION} placeholder in channel instructions with business-specific term
   const channelInstr = (CHANNEL_INSTRUCTIONS[channel] || CHANNEL_INSTRUCTIONS.whatsapp).replace(/\{ACTION\}/g, actionName)
@@ -263,11 +296,15 @@ function buildSystemPrompt(params: {
     cafeteria: `Eres quien atiende en la cafetería. Cercano, ágil, natural. Hablas de reservas, carta, eventos y pedidos para llevar. Tono: informal y acogedor.`,
   }
 
-  const typeContext = TYPE_CONTEXT[bc.business_type] || `Eres una persona real que trabaja en ${bc.business_name}. Atiendes a los clientes con naturalidad, como alguien que lleva tiempo aquí.`
+  // Sanitize user-controlled names for prompt interpolation
+  const safeBusinessName = safeName(bc.business_name) || 'el negocio'
+  const safeAgentName = safeName(bc.agent_name) || 'la persona que atiende'
+
+  const typeContext = TYPE_CONTEXT[bc.business_type] || `Eres una persona real que trabaja en ${safeBusinessName}. Atiendes a los clientes con naturalidad, como alguien que lleva tiempo aquí.`
 
   return `═══ QUIÉN ERES ═══
 ${typeContext}
-Tu nombre es ${bc.agent_name || 'la persona que atiende'}. Trabajas en ${bc.business_name}.
+Tu nombre es ${safeAgentName}. Trabajas en ${safeBusinessName}.
 
 ═══ REGLA FUNDAMENTAL: ERES UNA PERSONA REAL ═══
 Eres una persona de carne y hueso que trabaja en este negocio. NO eres un bot, NO eres un asistente virtual, NO eres una IA. Eres alguien que atiende aquí, que conoce el sitio, que quiere ayudar.
@@ -356,33 +393,33 @@ Si no hay nada más que decir → no preguntes. Cierra natural.
 ${today}
 
 ═══ INFORMACIÓN DEL NEGOCIO ═══
-${bc.business_information || 'No disponible'}
+${safeContext(bc.business_information, 1000) || 'No disponible'}
 
 HORARIOS:
-${typeof bc.hours_var === 'object' ? JSON.stringify(bc.hours_var) : bc.hours_var || 'Consultar'}
+${typeof bc.hours_var === 'object' ? safeContext(JSON.stringify(bc.hours_var), 500) : safeContext(bc.hours_var) || 'Consultar'}
 
-SERVICIOS${btl.catalog_label ? ' / ' + btl.catalog_label.toUpperCase() : ''}:
-${(bc.services_var || bc.catalog_var || bc.menu_var || []).join(', ') || 'Disponible bajo petición'}
+SERVICIOS${btl.catalog_label ? ' / ' + safeName(btl.catalog_label, 50).toUpperCase() : ''}:
+${(bc.services_var || bc.catalog_var || bc.menu_var || []).map((s: unknown) => safeName(s, 200)).filter(Boolean).join(', ') || 'Disponible bajo petición'}
 
 REGLAS:
-${JSON.stringify(bc.rules_var || {})}
+${safeContext(JSON.stringify(bc.rules_var || {}), 500)}
 
 FAQs:
-${(bc.faqs_var || []).join('\n') || 'No disponible'}
+${(bc.faqs_var || []).map((f: unknown) => safeContext(f, 300)).filter(Boolean).join('\n') || 'No disponible'}
 
-═══ FLUJO DE TRABAJO (${btl.sector || bc.business_type}) ═══
-Acción principal: ${btl.action_name || 'gestión'}
-Campos requeridos: ${(btl.required_fields || []).join(', ')}
-Campos opcionales: ${(btl.optional_fields || []).join(', ')}
-Pasos: ${(btl.flow || []).join(' → ')}
-${btl.urgency_keywords ? `Palabras de urgencia: ${btl.urgency_keywords.join(', ')}` : ''}
-${btl.urgency_action ? `Si detectas urgencia: ${btl.urgency_action}` : ''}
-${btl.crisis_keywords ? `Palabras de crisis: ${btl.crisis_keywords.join(', ')}` : ''}
-${btl.crisis_action ? `Si detectas crisis: ${btl.crisis_action}` : ''}
+═══ FLUJO DE TRABAJO (${safeName(btl.sector, 50) || safeName(bc.business_type, 50)}) ═══
+Acción principal: ${actionName}
+Campos requeridos: ${(btl.required_fields || []).map((f: unknown) => safeName(f, 50)).filter(Boolean).join(', ')}
+Campos opcionales: ${(btl.optional_fields || []).map((f: unknown) => safeName(f, 50)).filter(Boolean).join(', ')}
+Pasos: ${(btl.flow || []).map((f: unknown) => safeName(f, 100)).filter(Boolean).join(' → ')}
+${btl.urgency_keywords ? `Palabras de urgencia: ${btl.urgency_keywords.map((k: unknown) => safeName(k, 50)).filter(Boolean).join(', ')}` : ''}
+${btl.urgency_action ? `Si detectas urgencia: ${safeContext(btl.urgency_action, 200)}` : ''}
+${btl.crisis_keywords ? `Palabras de crisis: ${btl.crisis_keywords.map((k: unknown) => safeName(k, 50)).filter(Boolean).join(', ')}` : ''}
+${btl.crisis_action ? `Si detectas crisis: ${safeContext(btl.crisis_action, 200)}` : ''}
 
-${customerContext ? `═══ CONTEXTO DEL CLIENTE ═══\n${customerContext}` : ''}
+${customerContext ? `═══ CONTEXTO DEL CLIENTE ═══\n${safeContext(customerContext, 500)}` : ''}
 
-${bc.memory_var?.owner_rules?.length ? `═══ REGLAS DEL PROPIETARIO ═══\n${bc.memory_var.owner_rules.join('\n')}` : ''}
+${bc.memory_var?.owner_rules?.length ? `═══ REGLAS DEL PROPIETARIO ═══\n${bc.memory_var.owner_rules.map((r: unknown) => safeContext(r, 300)).filter(Boolean).join('\n')}` : ''}
 
 ═══ INSTRUCCIONES OPERATIVAS ═══
 - SIEMPRE llama a check_availability ANTES de crear una reserva/cita
@@ -391,8 +428,8 @@ ${bc.memory_var?.owner_rules?.length ? `═══ REGLAS DEL PROPIETARIO ══�
 - Si el cliente pregunta algo que no puedes resolver → escalate_to_human o sugiere llamar al negocio
 - Responde SIEMPRE en el idioma del cliente
 - NO inventes información que no esté en el contexto del negocio
-- Usa la terminología correcta: "${btl.action_name || 'gestión'}" (no digas "reserva" si es una cita, sesión o clase)
-- NUNCA te presentes como bot, IA, o asistente virtual — eres ${bc.agent_name || 'una persona'} que trabaja en ${bc.business_name}`
+- Usa la terminología correcta: "${actionName}" (no digas "reserva" si es una cita, sesión o clase)
+- NUNCA te presentes como bot, IA, o asistente virtual — eres ${safeAgentName} que trabaja en ${safeBusinessName}`
 }
 
 // ── Main agent function ──────────────────────────────────────
@@ -422,6 +459,16 @@ export async function processWithAgent(params: {
 
   const source = `${channel}_agent`
 
+  // Sanitize customer input to prevent prompt injection
+  const safeCustomerMessage = sanitizeForLLM(customerMessage)
+  if (safeCustomerMessage !== customerMessage) {
+    logger.security('prompt_injection_attempt_sanitized', {
+      channel, tenantId,
+      originalLength: customerMessage.length,
+      sanitizedLength: safeCustomerMessage.length,
+    })
+  }
+
   // Enrich customer context with smart intelligence
   let enrichedCustomerContext = customerContext || ''
   if (customerPhone) {
@@ -447,7 +494,7 @@ export async function processWithAgent(params: {
       role: m.role as 'user' | 'assistant',
       content: m.content,
     })),
-    { role: 'user', content: customerMessage },
+    { role: 'user', content: safeCustomerMessage },
   ]
 
   const actions: { type: string; params: any; result: any }[] = []
@@ -517,7 +564,7 @@ export async function processWithAgent(params: {
   try {
     const { classifyInteraction, learnFromInteraction } = await import('./intelligence-engine')
     const classification = classifyInteraction({
-      text: customerMessage, business_type: businessContext?.type || 'otro',
+      text: safeCustomerMessage, business_type: businessContext?.type || 'otro',
       party_size: actions.find(a => a.params?.party_size)?.params?.party_size,
     })
     learnFromInteraction({

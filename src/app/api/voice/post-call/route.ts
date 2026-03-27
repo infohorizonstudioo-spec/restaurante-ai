@@ -6,8 +6,10 @@ import { getBusinessKnowledge, buildKnowledgeContext } from '@/lib/business-know
 import { resolveTemplate } from '@/lib/templates'
 import { createNotification } from '@/lib/notifications'
 import { learnFromCall, getTenantMemory, buildMemoryContext, getAdaptiveThresholds } from '@/lib/tenant-learning'
-import { makeDecision } from '@/lib/agent-decision'
+import { makeDecision, TypeRules } from '@/lib/agent-decision'
 import { classifyInteraction, generateSummary, learnFromInteraction } from '@/lib/intelligence-engine'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -276,6 +278,9 @@ async function getTranscript(callSid: string, tenantId: string): Promise<string>
 }
 
 export async function POST(req: Request) {
+  const rl = rateLimitByIp(req, RATE_LIMITS.agent, 'voice:post-call')
+  if (rl.blocked) return rl.response
+
   const t0 = Date.now()
   let callSid = '', tenantId = '', callerPhone = ''
 
@@ -420,14 +425,17 @@ export async function POST(req: Request) {
 
     // ── Construir decisión desde análisis ──────────────────────────────────
     // Use the real decision engine instead of ad-hoc confidence
-    const decisionResult = makeDecision({
-      tenant_type: templateType,
-      party_size: analysis.details?.party_size || 2,
-      date: analysis.details?.date || new Date(Date.now() + 86400000).toISOString().slice(0, 10),
-      time: analysis.details?.time || '20:00',
-      notes: analysis.summary || '',
-      is_new_customer: true,
-      rules: effectiveRules,
+    const decisionResult = await makeDecision({
+      tenantId,
+      type: templateType,
+      input: {
+        party_size: analysis.details?.party_size || 2,
+        date: analysis.details?.date || new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+        time: analysis.details?.time || '20:00',
+        notes: analysis.summary || '',
+        is_new_customer: true,
+      },
+      rules: effectiveRules as TypeRules,
     })
     const confidence = decisionResult.confidence
     const specialFlags = decisionResult.flags || []
@@ -746,12 +754,13 @@ export async function POST(req: Request) {
       try {
         await admin.rpc('complete_call_session', {
           p_call_sid: callSid, p_tenant_id: tenantId,
-          p_summary: 'Error en procesamiento: ' + e.message?.slice(0,100),
+          p_summary: 'Error en procesamiento automático',
           p_intent: 'otro', p_source: 'twilio',
           p_action_required: 'Revisar llamada manualmente',
         })
       } catch { /* best effort */ }
     }
-    return NextResponse.json({ ok: true, error: e.message }) // siempre 200
+    logger.error('Post-call processing error', { callSid, tenantId }, e)
+    return NextResponse.json({ ok: true, error: 'Processing error' }) // siempre 200
   }
 }

@@ -3,6 +3,9 @@ import { createClient } from "@supabase/supabase-js"
 import { validateAgentKey } from "@/lib/agent-auth"
 import { createNotification } from "@/lib/notifications"
 import { learnFromCall } from "@/lib/tenant-learning"
+import { rateLimitByIp, RATE_LIMITS } from "@/lib/rate-limit"
+import { sanitizeUUID, sanitizeName, sanitizePhone, sanitizeString } from "@/lib/sanitize"
+import { logger } from "@/lib/logger"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,15 +16,28 @@ export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.agent, 'agent:save-summary')
+    if (rl.blocked) return rl.response
+
     if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-    const { tenant_id, customer_name, caller_phone, intent, summary, conversation_id } = await req.json()
+    const body = await req.json()
+
+    const tenant_id = sanitizeUUID(body.tenant_id)
+    const customer_name = body.customer_name ? sanitizeName(body.customer_name) : null
+    const caller_phone = body.caller_phone ? sanitizePhone(body.caller_phone) : null
+    const intent = sanitizeString(body.intent, 50) || 'consulta'
+    const summary = sanitizeString(body.summary, 5000)
+    const conversation_id = body.conversation_id ? sanitizeString(body.conversation_id, 100) : null
+
     if (!tenant_id || !summary) {
       return NextResponse.json({ error: "tenant_id and summary required" }, { status: 400 })
     }
 
-    const phone = caller_phone || null
-    const name = customer_name || null
-    const callIntent = intent || 'consulta'
+    logger.info('agent:save-summary', { tenant_id })
+
+    const phone = caller_phone
+    const name = customer_name
+    const callIntent = intent
 
     // Determinar estado de decisión según intent
     const decisionMap: Record<string, string> = {
@@ -118,6 +134,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, call_id: call?.id || null })
   } catch (err) {
+    logger.error('agent:save-summary', {}, err)
     return NextResponse.json({ error: "internal error" }, { status: 500 })
   }
 }

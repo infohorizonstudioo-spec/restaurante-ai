@@ -83,7 +83,12 @@ export default function PreciosPage() {
         body: JSON.stringify({ plan: planId }),
       })
       const d = await res.json()
-      if (d.url) window.location.href = d.url
+      if (d.url) {
+        try {
+          const u = new URL(d.url)
+          if (u.hostname === 'checkout.stripe.com') window.location.href = d.url
+        } catch {}
+      }
       else setError(d.error || 'Error al procesar el pago. Inténtalo de nuevo.')
     } catch (e: any) {
       setError(e.message || 'Error de conexión')

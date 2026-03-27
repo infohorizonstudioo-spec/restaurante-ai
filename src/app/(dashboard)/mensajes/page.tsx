@@ -125,7 +125,7 @@ export default function MensajesPage() {
       setReplyText('')
       loadMessages(selected.id)
     } catch {
-      toast.push({ title: tx('Error'), body: tx('No se pudo enviar el mensaje'), type: 'message', priority: 'error', icon: '⚠️' })
+      toast.push({ title: tx('Error'), body: tx('No se pudo enviar el mensaje'), type: 'message', priority: 'critical', icon: '⚠️' })
     } finally {
       setSending(false)
     }
@@ -145,7 +145,7 @@ export default function MensajesPage() {
       setSelected({ ...selected, status: newStatus })
       loadConversations(tid)
     } catch {
-      toast.push({ title: tx('Error'), body: tx('No se pudo completar la acción'), type: 'message', priority: 'error', icon: '⚠️' })
+      toast.push({ title: tx('Error'), body: tx('No se pudo completar la acción'), type: 'message', priority: 'critical', icon: '⚠️' })
     }
   }
 

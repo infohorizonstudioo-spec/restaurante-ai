@@ -13,7 +13,9 @@
  */
 
 import { createClient } from "@supabase/supabase-js"
+import { sanitizeForLLM } from "./sanitize"
 import { getVoiceConfig } from "@/lib/elevenlabs"
+import { logger } from "@/lib/logger"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -324,10 +326,13 @@ function buildPrompt(params: {
   memory: string
 }): string {
   const {
-    agent_name, business_name, business_type,
+    agent_name: rawAgentName, business_name: rawBusinessName, business_type,
     business_information, hours, services, menu,
     prices, policies, faqs, rules, memory
   } = params
+
+  const agent_name = sanitizeForLLM(rawAgentName).slice(0, 100)
+  const business_name = sanitizeForLLM(rawBusinessName).slice(0, 100)
 
   const flow = PROMPT_BASE[business_type] || PROMPT_BASE.otro
 
@@ -491,7 +496,8 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
       memory: memoryLines.join(". "),
     })
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://restaurante-ai.vercel.app'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    if (!appUrl) throw new Error('NEXT_PUBLIC_APP_URL is not configured')
     const agentApiKey = process.env.AGENT_API_KEY || ''
 
     const reqHeaders = { "Content-Type": "application/json", ...(agentApiKey ? { "x-agent-key": agentApiKey } : {}) }
@@ -802,7 +808,7 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
 
     return { success: true, agent_id: agentId }
   } catch (err: any) {
-    // provision error
-    return { success: false, error: err.message }
+    logger.error('Provision agent failed', { tenantId }, err)
+    return { success: false, error: 'Provisioning failed' }
   }
 }

@@ -177,7 +177,7 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
   const up = (k:string,v:any) => setF(p=>({...p,[k]:v}))
 
   // Auto-save on change (debounced)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => {
     timerRef.current = setTimeout(() => onSave(f), 600)
     return () => clearTimeout(timerRef.current)
@@ -467,7 +467,7 @@ export default function MesasPage() {
   const panStart = useRef({x:0,y:0,ox:0,oy:0})
   const svgRef = useRef<SVGSVGElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
-  const saveTimer = useRef<ReturnType<typeof setTimeout>>()
+  const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Zone color map
   const zoneColorMap = useMemo(() => {

@@ -4,7 +4,11 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAuth } from '@/lib/api-auth'
 import { sendSms, sendWhatsApp } from '@/lib/agent-tools'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizeString, sanitizePhone, sanitizeEmail } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,10 +19,21 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    const { tenant_id, channel, to } = await req.json()
-    if (!tenant_id || !channel || !to) {
-      return NextResponse.json({ error: 'tenant_id, channel, and to required' }, { status: 400 })
+    const rl = rateLimitByIp(req, RATE_LIMITS.messaging, 'channels:test')
+    if (rl.blocked) return rl.response
+
+    const auth = await requireAuth(req)
+    if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+    const body = await req.json()
+    const tenant_id = auth.tenantId
+    const channel = sanitizeString(body.channel, 20)
+    const to = channel === 'email' ? sanitizeEmail(body.to) : sanitizePhone(body.to)
+    if (!channel || !to) {
+      return NextResponse.json({ error: 'channel and to required' }, { status: 400 })
     }
+
+    logger.info('Channel test request', { tenant_id, channel, to })
 
     const { data: tenant } = await supabase.from('tenants')
       .select('name, agent_name, email_address').eq('id', tenant_id).maybeSingle()
@@ -56,6 +71,7 @@ export async function POST(req: NextRequest) {
         : `No se pudo enviar. Verifica la configuración de ${channel}.`,
     })
   } catch (err) {
+    logger.error('Channel test failed', {}, err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

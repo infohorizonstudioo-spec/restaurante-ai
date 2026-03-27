@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-02-24.acacia' })
@@ -37,6 +39,9 @@ function getPlanFromEvent(obj: any): string | null {
 }
 
 export async function POST(req: Request) {
+  const rl = rateLimitByIp(req, RATE_LIMITS.webhook, 'stripe:webhook')
+  if (rl.blocked) return rl.response
+
   const stripe = getStripe()
   const admin  = getAdmin()
   const body = await req.text()
@@ -49,7 +54,7 @@ export async function POST(req: Request) {
   try {
     event = stripe.webhooks.constructEvent(body, sig, secret)
   } catch (e: any) {
-    console.error('Webhook signature failed:', e.message)
+    logger.security('Stripe webhook: invalid signature', { error: e.message })
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
@@ -169,9 +174,9 @@ export async function POST(req: Request) {
       }
     }
   } catch (e: any) {
-    console.error('Webhook handler error:', event.type, e.message)
+    logger.error('Stripe webhook handler error', { eventType: event.type }, e)
     // No retornar 500 a Stripe para evitar reintentos infinitos en errores no críticos
-    return NextResponse.json({ received: true, warning: e.message })
+    return NextResponse.json({ received: true, warning: 'processing error' })
   }
 
   return NextResponse.json({ received: true })

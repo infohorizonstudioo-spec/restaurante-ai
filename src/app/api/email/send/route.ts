@@ -6,6 +6,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { agentResponseEmail } from '@/lib/email-templates'
 import { requireAuth } from '@/lib/api-auth'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizeEmail, sanitizeString } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,14 +19,23 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.messaging, 'email:send')
+    if (rl.blocked) return rl.response
+
     const auth = await requireAuth(req)
     if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
     const tenant_id = auth.tenantId
-    const { conversation_id, to, subject, content } = await req.json()
+    const body = await req.json()
+    const conversation_id = body.conversation_id
+    const to = sanitizeEmail(body.to)
+    const subject = sanitizeString(body.subject, 200)
+    const content = sanitizeString(body.content, 5000)
     if (!to || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    logger.info('Email send request', { tenantId: tenant_id, to })
 
     const resendKey = process.env.RESEND_API_KEY
     if (!resendKey) {
@@ -41,20 +53,28 @@ export async function POST(req: NextRequest) {
       responseContent: content,
     })
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: fromAddr,
-        to,
-        subject: subject || 'Respuesta de ' + (tenant?.name || 'tu negocio'),
-        html: htmlBody,
-        text: content,
-      }),
-    })
+    const controller = new AbortController()
+    const fetchTimeout = setTimeout(() => controller.abort(), 30000)
+    let res: Response
+    try {
+      res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          from: fromAddr,
+          to,
+          subject: subject || 'Respuesta de ' + (tenant?.name || 'tu negocio'),
+          html: htmlBody,
+          text: content,
+        }),
+      })
+    } finally {
+      clearTimeout(fetchTimeout)
+    }
 
     const resData = await res.json()
 
@@ -75,6 +95,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: res.ok, emailId: resData?.id })
   } catch (err) {
+    logger.error('Email send failed', {}, err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

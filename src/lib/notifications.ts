@@ -4,6 +4,7 @@
  * - target_url para navegación directa desde la campanita
  */
 import { createClient } from '@supabase/supabase-js'
+import { logger } from './logger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -94,6 +95,6 @@ export async function createNotification(params: CreateNotificationParams): Prom
       read:               false,
     })
   } catch (e: any) {
-    console.error('createNotification error:', e.message)
+    logger.error('createNotification error', {}, e)
   }
 }

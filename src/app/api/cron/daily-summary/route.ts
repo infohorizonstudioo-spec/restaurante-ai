@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { summarizeDay } from '@/lib/summary-engine'
 import { getBusinessRecommendations } from '@/lib/intelligence-engine'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
+import { timingSafeEqual } from 'crypto'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,9 +18,17 @@ export const dynamic = 'force-dynamic'
  * Generates structured daily summaries and sends SMS to each business owner.
  */
 export async function GET(req: Request) {
+  const rl = rateLimitByIp(req, RATE_LIMITS.cron, 'cron:daily-summary')
+  if (rl.blocked) return rl.response
+
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) return NextResponse.json({ error: 'not configured' }, { status: 503 })
-  if (req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
+  const authHeader = req.headers.get('authorization') || ''
+  const expectedHeader = `Bearer ${cronSecret}`
+  const a = Buffer.from(authHeader)
+  const b = Buffer.from(expectedHeader)
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    logger.security('Cron daily-summary: unauthorized attempt')
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
@@ -90,7 +101,7 @@ export async function GET(req: Request) {
     } catch {} // non-blocking
 
     msg = msg.slice(0, 320) // SMS limit with concatenation
-    msg += `\nPanel: https://restaurante-ai.vercel.app/panel`
+    msg += `\nPanel: ${process.env.NEXT_PUBLIC_APP_URL || 'https://reservo.ai'}/panel`
 
     try {
       const twilioAuth = Buffer.from(`${accountSid}:${authToken}`).toString('base64')

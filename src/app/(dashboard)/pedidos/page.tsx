@@ -245,7 +245,7 @@ export default function PedidosPage() {
       body: JSON.stringify({ id, tenant_id: tid, status })
     })
     if (!res.ok) {
-      toast.push({ title: L.title, body: locale === 'en' ? 'Error updating status' : locale === 'fr' ? 'Erreur de mise à jour' : locale === 'pt' ? 'Erro ao atualizar' : 'Error al actualizar estado', type: 'order', priority: 'error', icon: '⚠️' })
+      toast.push({ title: L.title, body: locale === 'en' ? 'Error updating status' : locale === 'fr' ? 'Erreur de mise à jour' : locale === 'pt' ? 'Erro ao atualizar' : 'Error al actualizar estado', type: 'order', priority: 'critical', icon: '⚠️' })
       return
     }
     const sm = ORDER_STATUS[status]
@@ -269,14 +269,14 @@ export default function PedidosPage() {
       })
       const d = await r.json()
       if (!r.ok || !d.order) {
-        toast.push({ title: L.title, body: locale === 'en' ? 'Error creating order' : locale === 'fr' ? 'Erreur lors de la création' : locale === 'pt' ? 'Erro ao criar pedido' : 'Error al crear pedido', type: 'order', priority: 'error', icon: '⚠️' })
+        toast.push({ title: L.title, body: locale === 'en' ? 'Error creating order' : locale === 'fr' ? 'Erreur lors de la création' : locale === 'pt' ? 'Erro ao criar pedido' : 'Error al crear pedido', type: 'order', priority: 'critical', icon: '⚠️' })
         return
       }
       setModal(d.order)
       toast.push({ title: L.title, body: locale === 'en' ? 'Order created' : locale === 'fr' ? 'Commande créée' : locale === 'pt' ? 'Pedido criado' : 'Pedido creado', type: 'order', priority: 'info', icon: '✅' })
       if (tid) load(tid)
     } catch {
-      toast.push({ title: L.title, body: locale === 'en' ? 'Error creating order' : locale === 'fr' ? 'Erreur lors de la création' : locale === 'pt' ? 'Erro ao criar pedido' : 'Error al crear pedido', type: 'order', priority: 'error', icon: '⚠️' })
+      toast.push({ title: L.title, body: locale === 'en' ? 'Error creating order' : locale === 'fr' ? 'Erreur lors de la création' : locale === 'pt' ? 'Erro ao criar pedido' : 'Error al crear pedido', type: 'order', priority: 'critical', icon: '⚠️' })
     }
   }
 

@@ -6,19 +6,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { processMessage } from '@/lib/channel-engine'
 import { agentResponseEmail } from '@/lib/email-templates'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizeString } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.webhook, 'email:webhook')
+    if (rl.blocked) return rl.response
+
+    // Verify webhook secret if configured
+    const webhookSecret = process.env.EMAIL_WEBHOOK_SECRET
+    if (webhookSecret) {
+      const headerSecret = req.headers.get('x-webhook-secret')
+      if (headerSecret !== webhookSecret) {
+        logger.security('Email webhook: invalid or missing x-webhook-secret')
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      }
+    }
+
     const body = await req.json()
 
     // Resend inbound email webhook format
-    const from = body.from || body.sender || ''
-    const to = Array.isArray(body.to) ? body.to[0] : (body.to || body.recipient || '')
-    const subject = body.subject || ''
+    const from = sanitizeString(body.from || body.sender || '', 254)
+    const to = sanitizeString(Array.isArray(body.to) ? body.to[0] : (body.to || body.recipient || ''), 254)
+    const subject = sanitizeString(body.subject || '', 500)
     const textContent = body.text || body.stripped_text || ''
     const htmlContent = body.html || ''
+
+    logger.info('Email webhook received', { from, to, subject })
 
     if (!from || !to) {
       return NextResponse.json({ error: 'Missing from/to' }, { status: 400 })
@@ -72,27 +90,36 @@ export async function POST(req: NextRequest) {
           responseContent: result.responseContent,
         })
 
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${resendKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: fromAddr.includes('@') ? fromAddr : `noreply@reservo.ai`,
-            to: from,
-            subject: replySubject,
-            html: htmlBody,
-            text: result.responseContent,
-            headers: metadata.messageId ? { 'In-Reply-To': metadata.messageId } : undefined,
-          }),
-        }).catch(err => console.error('[email-send] Error:', err))
+        const controller = new AbortController()
+        const fetchTimeout = setTimeout(() => controller.abort(), 30000)
+        try {
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${resendKey}`,
+              'Content-Type': 'application/json',
+            },
+            signal: controller.signal,
+            body: JSON.stringify({
+              from: fromAddr.includes('@') ? fromAddr : `noreply@reservo.ai`,
+              to: from,
+              subject: replySubject,
+              html: htmlBody,
+              text: result.responseContent,
+              headers: metadata.messageId ? { 'In-Reply-To': metadata.messageId } : undefined,
+            }),
+          })
+        } catch (err) {
+          logger.error('[email-send] Error', {}, err)
+        } finally {
+          clearTimeout(fetchTimeout)
+        }
       }
     }
 
     return NextResponse.json({ received: true, processed: result.success, conversationId: result.conversationId })
   } catch (err: any) {
-    console.error('[email-webhook] Error:', err?.message || err)
+    logger.error('Email webhook failed', {}, err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

@@ -47,7 +47,12 @@ export default function FacturacionPage() {
       const {data:{user}} = await supabase.auth.getUser(); if(!user) return
       const res = await fetch('/api/stripe/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan,tenant_id:tid,user_id:user.id})})
       const d = await res.json()
-      if(d.url) window.location.href=d.url
+      if (d.url) {
+        try {
+          const u = new URL(d.url)
+          if (u.hostname === 'checkout.stripe.com') window.location.href = d.url
+        } catch {}
+      }
       else setUpgradeError(d.error||tx('Error al procesar el pago'))
     } catch(e:any){ setUpgradeError(e.message||tx('Error de conexión')) }
     finally{setUpgrading(false)}

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuth } from '@/lib/api-auth'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,6 +11,9 @@ const admin = createClient(
 )
 
 export async function GET(req: NextRequest) {
+  const rl = rateLimitByIp(req, RATE_LIMITS.agent, 'voice:rules:get')
+  if (rl.blocked) return rl.response
+
   const auth = await requireAuth(req)
   if (!auth.ok || !auth.tenantId) return NextResponse.json([], { status: 401 })
 
@@ -41,6 +46,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimitByIp(req, RATE_LIMITS.agent, 'voice:rules:post')
+  if (rl.blocked) return rl.response
+
   const auth = await requireAuth(req)
   if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 

@@ -45,8 +45,8 @@ export function usePushNotifications() {
           body: JSON.stringify({ subscription: sub.toJSON() }),
           credentials: 'include',
         })
-      } catch (e) {
-        console.error('Push subscription error:', e)
+      } catch {
+        // silently ignore
       }
     }
     return result as PushStatus
@@ -67,8 +67,8 @@ export function usePushNotifications() {
         await sub.unsubscribe()
         setStatus('default')
       }
-    } catch (e) {
-      console.error('Push unsubscribe error:', e)
+    } catch {
+      // silently ignore
     }
   }, [])
 

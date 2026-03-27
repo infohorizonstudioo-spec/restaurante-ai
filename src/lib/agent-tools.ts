@@ -9,6 +9,7 @@ import { resolveTemplate } from './templates'
 import { makeDecision } from './agent-decision'
 import { scheduleReminders, cancelReminders } from './reminder-engine'
 import { classifyInteraction, detectConflicts, generateSummary, learnFromInteraction } from './intelligence-engine'
+import { logger } from './logger'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,7 +32,7 @@ export async function sendSms(to: string, body: string): Promise<boolean> {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      console.error('Twilio SMS error:', err.code, err.message)
+      logger.error('Twilio SMS error', { code: err.code, message: err.message })
       return false
     }
     return true
@@ -56,7 +57,7 @@ export async function sendWhatsApp(to: string, body: string): Promise<boolean> {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      console.error('Twilio SMS error:', err.code, err.message)
+      logger.error('Twilio WhatsApp error', { code: err.code, message: err.message })
       return false
     }
     return true

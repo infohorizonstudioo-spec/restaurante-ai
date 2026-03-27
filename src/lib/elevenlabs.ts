@@ -4,6 +4,7 @@
  * No duplica lógica — se adapta completamente a la arquitectura existente.
  */
 import { resolveTemplate } from '@/lib/templates'
+import { sanitizeForLLM } from '@/lib/sanitize'
 
 export interface ElevenLabsConfig {
   voice_id: string
@@ -43,7 +44,8 @@ export async function createConversation(params: {
   // El agentContext ya viene del template — no duplicamos lógica
   const tmpl   = resolveTemplate(params.businessType)
   const config = getVoiceConfig(params.businessType)
-  const prompt = tmpl.agentContext + `\n\nNegocio: ${params.tenantName}. Habla siempre en español. Sé natural y conciso.`
+  const safeName = sanitizeForLLM(params.tenantName).slice(0, 100)
+  const prompt = tmpl.agentContext + `\n\nNegocio: ${safeName}. Habla siempre en español. Sé natural y conciso.`
 
   const res = await fetch('https://api.elevenlabs.io/v1/convai/conversations', {
     method: 'POST',
@@ -53,7 +55,7 @@ export async function createConversation(params: {
       conversation_config_override: {
         agent: {
           prompt: { prompt },
-          first_message: `Hola, soy la recepcionista virtual de ${params.tenantName}. ¿En qué puedo ayudarte?`,
+          first_message: `Hola, soy la recepcionista virtual de ${safeName}. ¿En qué puedo ayudarte?`,
         },
         tts: {
           voice_id:        config.voice_id,

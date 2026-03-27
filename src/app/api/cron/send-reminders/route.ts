@@ -6,6 +6,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendDueReminders, scheduleReminders } from '@/lib/reminder-engine'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
+import { timingSafeEqual } from 'crypto'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,9 +18,17 @@ const admin = createClient(
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: Request) {
+  const rl = rateLimitByIp(req, RATE_LIMITS.cron, 'cron:send-reminders')
+  if (rl.blocked) return rl.response
+
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) return NextResponse.json({ error: 'not configured' }, { status: 503 })
-  if (req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
+  const authHeader = req.headers.get('authorization') || ''
+  const expectedHeader = `Bearer ${cronSecret}`
+  const a = Buffer.from(authHeader)
+  const b = Buffer.from(expectedHeader)
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    logger.security('Cron send-reminders: unauthorized attempt')
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 

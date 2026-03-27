@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizeString, sanitizeName, sanitizePhone } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,6 +14,9 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.api, 'tenant:update')
+    if (rl.blocked) return rl.response
+
     // Auth: verify the token and get tenant_id
     const authHeader = req.headers.get('authorization') || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
@@ -45,7 +51,20 @@ export async function POST(req: NextRequest) {
       'agent_config', 'reservation_config', 'business_hours', 'business_description',
     ]
     for (const key of SAFE_FIELDS) {
-      if (updates[key] !== undefined) allowed[key] = updates[key]
+      if (updates[key] !== undefined) {
+        // Sanitize string fields
+        if (typeof updates[key] === 'string') {
+          if (key === 'name' || key === 'agent_name') {
+            allowed[key] = sanitizeName(updates[key])
+          } else if (key === 'agent_phone' || key === 'transfer_phone') {
+            allowed[key] = sanitizePhone(updates[key])
+          } else {
+            allowed[key] = sanitizeString(updates[key], 2000)
+          }
+        } else {
+          allowed[key] = updates[key]
+        }
+      }
     }
 
     if (Object.keys(allowed).length === 0) {
@@ -60,8 +79,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'update failed', detail: error.code }, { status: 500 })
     }
 
+    logger.info('Tenant update', { tenantId: profile.tenant_id, fields: Object.keys(allowed) })
     return NextResponse.json({ ok: true, updated: Object.keys(allowed) })
   } catch (e: any) {
+    logger.error('Tenant update: unexpected error', {}, e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

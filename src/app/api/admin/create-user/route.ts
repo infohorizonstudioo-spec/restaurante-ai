@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizeEmail, sanitizeName, sanitizeUUID } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,18 +22,29 @@ async function verifySuperadmin(req: Request): Promise<boolean> {
 
 export async function POST(req: Request) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.admin, 'admin:create-user')
+    if (rl.blocked) return rl.response
+
     // SEGURIDAD: verificar que es superadmin
     const isSuperadmin = await verifySuperadmin(req)
     if (!isSuperadmin) {
+      logger.security('Unauthorized create-user attempt')
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const { email, password, name, tenantId, role = 'client' } = await req.json()
+    const body = await req.json()
+    const email = sanitizeEmail(body.email)
+    const password = body.password
+    const name = sanitizeName(body.name)
+    const tenantId = sanitizeUUID(body.tenantId)
+    const VALID_ROLES = ['client', 'staff', 'superadmin']
+    const role = VALID_ROLES.includes(body.role) ? body.role : 'client'
+
     if (!email || !password || !tenantId) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
     }
-    if (password.length < 8) {
-      return NextResponse.json({ error: 'Contraseña mínimo 8 caracteres' }, { status: 400 })
+    if (typeof password !== 'string' || password.length < 8 || password.length > 128) {
+      return NextResponse.json({ error: 'Contraseña debe tener entre 8 y 128 caracteres' }, { status: 400 })
     }
 
     const { data: userData, error: userError } = await admin.auth.admin.createUser({
@@ -46,8 +60,10 @@ export async function POST(req: Request) {
       .eq('id', userData.user.id)
     if (profileError) return NextResponse.json({ error: 'Internal server error' }, { status: 400 })
 
+    logger.info('Admin: user created', { userId: userData.user.id, tenantId, role })
     return NextResponse.json({ success: true, userId: userData.user.id })
   } catch (e: any) {
+    logger.error('Admin create-user: unexpected error', {}, e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

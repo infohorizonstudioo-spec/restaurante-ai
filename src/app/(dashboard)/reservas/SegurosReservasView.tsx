@@ -11,7 +11,7 @@ import { RESERVATION_STATUS } from '@/lib/status-config'
 const DAYS = ['DO','LU','MA','MI','JU','VI','SA']
 
 const TIPO_SEGURO_STYLES: Record<string,{bg:string;color:string;label:string}> = {
-  auto:    {bg:C.navyDim, color:C.navy, label:'Auto'},
+  auto:    {bg:C.blueDim, color:C.blue, label:'Auto'},
   hogar:   {bg:'rgba(52,211,153,0.10)', color:C.green, label:'Hogar'},
   salud:   {bg:C.violetDim, color:C.violet, label:'Salud'},
   vida:    {bg:C.amberDim, color:C.amber, label:'Vida'},
@@ -20,7 +20,7 @@ const TIPO_SEGURO_STYLES: Record<string,{bg:string;color:string;label:string}> =
 }
 
 const MOTIVO_STYLES: Record<string,{bg:string;color:string;label:string}> = {
-  nueva_poliza: {bg:C.navyDim, color:C.navy, label:'Nueva póliza'},
+  nueva_poliza: {bg:C.blueDim, color:C.blue, label:'Nueva póliza'},
   siniestro:    {bg:C.redDim, color:C.red, label:'Siniestro'},
   renovacion:   {bg:C.greenDim, color:C.green, label:'Renovación'},
   consulta:     {bg:'rgba(255,255,255,0.06)', color:C.text2, label:'Consulta'},
@@ -144,10 +144,10 @@ export default function SegurosReservasView() {
           const count = reservas.filter(r=>(r.date||r.reservation_date)===iso).length
           const isSel = iso===selected, isToday = iso===today
           return (
-            <button key={iso} onClick={()=>setSelected(iso)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',padding:'10px 4px',background:'none',border:'none',cursor:'pointer',borderBottom:isSel?`2px solid ${C.navy}`:`2px solid transparent`,transition:'all 0.12s'}}>
-              <span style={{fontSize:10,color:isToday?C.navy:C.text3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>{DAYS[d.getDay()]}</span>
-              <span style={{fontSize:16,fontWeight:isSel?700:500,color:isSel?C.navy:isToday?C.navy:C.text,marginTop:1}}>{d.getDate()}</span>
-              {count>0&&<span style={{width:18,height:18,borderRadius:'50%',background:isSel?C.navy:`rgba(255,255,255,0.08)`,color:isSel?'#fff':C.text2,fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',marginTop:2}}>{count}</span>}
+            <button key={iso} onClick={()=>setSelected(iso)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',padding:'10px 4px',background:'none',border:'none',cursor:'pointer',borderBottom:isSel?`2px solid ${C.blue}`:`2px solid transparent`,transition:'all 0.12s'}}>
+              <span style={{fontSize:10,color:isToday?C.blue:C.text3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>{DAYS[d.getDay()]}</span>
+              <span style={{fontSize:16,fontWeight:isSel?700:500,color:isSel?C.blue:isToday?C.blue:C.text,marginTop:1}}>{d.getDate()}</span>
+              {count>0&&<span style={{width:18,height:18,borderRadius:'50%',background:isSel?C.blue:`rgba(255,255,255,0.08)`,color:isSel?'#fff':C.text2,fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',marginTop:2}}>{count}</span>}
             </button>
           )
         })}
@@ -158,8 +158,8 @@ export default function SegurosReservasView() {
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'8px 24px',display:'flex',gap:6,overflowX:'auto'}}>
         {([['todos','Todos','📋'],['auto','Auto','🚗'],['hogar','Hogar','🏠'],['salud','Salud','🏥'],['vida','Vida','❤️'],['empresa','Empresa','🏢']] as [TipoFilter,string,string][]).map(([key,label,icon])=>(
           <button key={key} onClick={()=>setTipoFilter(key)}
-            style={{padding:'5px 12px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${tipoFilter===key?C.navy+'40':C.border}`,
-              background:tipoFilter===key?C.navyDim:'transparent',color:tipoFilter===key?C.navy:C.text2,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}}>
+            style={{padding:'5px 12px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${tipoFilter===key?C.blue+'40':C.border}`,
+              background:tipoFilter===key?C.blueDim:'transparent',color:tipoFilter===key?C.blue:C.text2,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}}>
             {icon} {tx(label)}
           </button>
         ))}
@@ -186,7 +186,7 @@ export default function SegurosReservasView() {
             <div key={r.id} onClick={()=>setModal(r)} style={{background:C.surface,border:`1px solid ${isSiniestro?C.red+'40':C.border}`,borderRadius:12,padding:'14px 16px',marginBottom:10,cursor:'pointer',display:'flex',alignItems:'center',gap:12,transition:'all 0.12s'}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.surface2;(e.currentTarget as HTMLElement).style.borderColor=isSiniestro?C.red+'60':C.borderMd}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=C.surface;(e.currentTarget as HTMLElement).style.borderColor=isSiniestro?C.red+'40':C.border}}>
-              <div style={{width:42,height:42,borderRadius:'50%',background:isSiniestro?C.redDim:C.navyDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,color:isSiniestro?C.red:C.navy,flexShrink:0}}>
+              <div style={{width:42,height:42,borderRadius:'50%',background:isSiniestro?C.redDim:C.blueDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,color:isSiniestro?C.red:C.blue,flexShrink:0}}>
                 {name[0]?.toUpperCase()||'?'}
               </div>
               <div style={{flex:1,minWidth:0}}>

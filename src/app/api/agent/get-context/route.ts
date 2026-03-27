@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { validateAgentKey } from "@/lib/agent-auth"
+import { rateLimitByIp, RATE_LIMITS } from "@/lib/rate-limit"
+import { sanitizeUUID } from "@/lib/sanitize"
+import { logger } from "@/lib/logger"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -451,9 +454,16 @@ export async function buildBusinessContext(tenant_id: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.agent, 'agent:get-context')
+    if (rl.blocked) return rl.response
+
     if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-    const { tenant_id } = await req.json()
+    const body = await req.json()
+
+    const tenant_id = sanitizeUUID(body.tenant_id)
     if (!tenant_id) return NextResponse.json({ error: "tenant_id required" }, { status: 400 })
+
+    logger.info('agent:get-context', { tenant_id })
 
     const result = await buildBusinessContext(tenant_id)
     if (!result) return NextResponse.json({ error: "tenant not found" }, { status: 404 })
@@ -464,6 +474,7 @@ export async function POST(req: NextRequest) {
       summary: "Negocio: " + result.business_context.business_name + " | Tipo: " + result.business_context.business_type + " | Logica: " + JSON.stringify(result.business_type_logic) + " | Contexto: " + JSON.stringify(result.business_context)
     })
   } catch (err) {
+    logger.error('agent:get-context', {}, err)
     return NextResponse.json({ error: "internal error" }, { status: 500 })
   }
 }

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuth } from '@/lib/api-auth'
-import { rateLimit, getRateLimitKey } from '@/lib/rate-limit'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizePhone, sanitizeString, sanitizeName } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,15 +25,18 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(req: NextRequest) {
   try {
-    const rl = rateLimit(getRateLimitKey(req), 5, 60000)
-    if (!rl.ok) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    const rl = rateLimitByIp(req, RATE_LIMITS.agent, 'voice:outbound')
+    if (rl.blocked) return rl.response
 
     const auth = await requireAuth(req)
     if (!auth.ok || !auth.tenantId) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
 
-    const { phone_number, reason, customer_name } = await req.json()
+    const body = await req.json()
+    const phone_number = sanitizePhone(body.phone_number)
+    const reason = sanitizeString(body.reason, 100)
+    const customer_name = sanitizeName(body.customer_name)
     if (!phone_number) {
       return NextResponse.json({ error: 'phone_number required' }, { status: 400 })
     }
@@ -67,20 +72,28 @@ export async function POST(req: NextRequest) {
     const firstMessage = greetings[reason] || greetings.general
 
     // Iniciar llamada saliente via ElevenLabs
-    const res = await fetch('https://api.elevenlabs.io/v1/convai/twilio/outbound_call', {
-      method: 'POST',
-      headers: { 'xi-api-key': EL_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        agent_id: agentId,
-        agent_phone_number_id: tenant.agent_phone,
-        to_number: phone_number,
-        conversation_config_override: {
-          agent: {
-            first_message: firstMessage,
+    const controller = new AbortController()
+    const fetchTimeout = setTimeout(() => controller.abort(), 30000)
+    let res: Response
+    try {
+      res = await fetch('https://api.elevenlabs.io/v1/convai/twilio/outbound_call', {
+        method: 'POST',
+        headers: { 'xi-api-key': EL_KEY, 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          agent_id: agentId,
+          agent_phone_number_id: tenant.agent_phone,
+          to_number: phone_number,
+          conversation_config_override: {
+            agent: {
+              first_message: firstMessage,
+            }
           }
-        }
+        })
       })
-    })
+    } finally {
+      clearTimeout(fetchTimeout)
+    }
 
     if (!res.ok) {
       const err = await res.text()

@@ -13,6 +13,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { resolveCustomer } from './customer-resolver'
+import { logger } from './logger'
 import { normalizePhone } from './phone-utils'
 import { buildBusinessContext, BUSINESS_TYPE_LOGIC } from '@/app/api/agent/get-context/route'
 import { processWithAgent, type AgentResponse } from './channel-agent'
@@ -78,6 +79,7 @@ export async function processMessage(msg: IncomingMessage): Promise<ProcessResul
         // Extract slug from email: {slug}@inbox.reservo.ai
         const toAddr = msg.to.toLowerCase()
         const slug = toAddr.split('@')[0]
+        if (!/^[a-z0-9._-]+$/i.test(slug)) return { success: false, error: 'Invalid email' }
         const { data } = await supabase.from('tenants')
           .select('id, name, type, plan, agent_name, language, email_address, channels_enabled, plan_messages_used, plan_messages_included')
           .or(`email_address.eq.${toAddr},slug.eq.${slug}`)
@@ -339,7 +341,7 @@ export async function processMessage(msg: IncomingMessage): Promise<ProcessResul
       agentResponse,
     }
   } catch (err: any) {
-    console.error('[channel-engine] Error:', err?.message || err)
+    logger.error('[channel-engine] Error', {}, err)
     return { success: false, error: err?.message || 'Internal processing error' }
   }
 }

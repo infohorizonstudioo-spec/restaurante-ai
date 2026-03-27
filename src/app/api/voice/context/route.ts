@@ -1,10 +1,23 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { validateAgentKey } from "@/lib/agent-auth"
 import { resolveTemplate } from "@/lib/templates"
 import { BUSINESS_TYPE_LOGIC } from "@/app/api/agent/get-context/route"
 import { buildSmartCustomerContext, getDemandForecast } from "@/lib/smart-context"
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 export const dynamic = "force-dynamic"
+
+/** Escape SQL LIKE wildcards to prevent pattern injection in ilike() filters */
+function escapeLike(str: string): string {
+  return str.replace(/[%_\\]/g, '\\$&')
+}
+
+/** Validate that a cleaned phone contains only digits and optional leading + */
+function isSafePhone(phone: string): boolean {
+  return /^\+?[0-9]+$/.test(phone)
+}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,6 +33,11 @@ const DEFAULTS = {
 }
 
 export async function POST(req: NextRequest) {
+  if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+
+  const rl = rateLimitByIp(req, RATE_LIMITS.agent, 'voice:context')
+  if (rl.blocked) return rl.response
+
   try {
     const body = await req.json()
     // Extract phone numbers from ElevenLabs payload
@@ -60,12 +78,14 @@ export async function POST(req: NextRequest) {
     let customerContext = ''
     if (callerPhone && tenant) {
       const cleanPhone = callerPhone.replace(/[^0-9+]/g, '')
-      if (cleanPhone.length >= 7) {
+      if (cleanPhone.length >= 7 && isSafePhone(cleanPhone)) {
+        const phoneWithPlus = cleanPhone.startsWith('+') ? cleanPhone : '+' + cleanPhone
+        const phoneWithoutPlus = cleanPhone.replace(/^\+/, '')
         const { data: customer } = await supabase
           .from('customers')
           .select('name, phone, total_reservations')
           .eq('tenant_id', tenant.id)
-          .or(`phone.eq.${cleanPhone},phone.eq.+${cleanPhone.replace(/^\+/, '')}`)
+          .or(`phone.eq.${phoneWithPlus},phone.eq.${phoneWithoutPlus}`)
           .limit(1)
 
         if (customer?.[0]) {
@@ -85,7 +105,7 @@ export async function POST(req: NextRequest) {
             .select('content, memory_type')
             .eq('tenant_id', tenant.id)
             .eq('memory_type', 'preference')
-            .ilike('content', `%${c.name || ''}%`)
+            .ilike('content', `%${escapeLike(c.name || '')}%`)
             .limit(5)
 
           const isHospitality = ['restaurante', 'bar', 'cafeteria'].includes(businessType)

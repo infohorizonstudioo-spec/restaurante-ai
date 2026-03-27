@@ -1,0 +1,64 @@
+COMPLETADO
+
+Security hardening applied to 30 API route files:
+
+AUTH (RATE_LIMITS.auth):
+- src/app/api/auth/register/route.ts
+- src/app/api/auth/reset-password/route.ts
+
+TENANT (RATE_LIMITS.api):
+- src/app/api/tenant/update/route.ts
+- src/app/api/tenant/set-language/route.ts
+- src/app/api/tenant/alert-rules/route.ts
+- src/app/api/tenant/reminders/route.ts
+
+ADMIN (RATE_LIMITS.admin):
+- src/app/api/admin/create-user/route.ts
+- src/app/api/admin/update-plan/route.ts
+- src/app/api/admin/setup-twilio-webhook/route.ts
+- src/app/api/admin/sync-agent/route.ts
+
+BILLING (RATE_LIMITS.api):
+- src/app/api/billing/usage/route.ts
+- src/app/api/billing/summary/route.ts
+
+STRIPE (RATE_LIMITS.webhook / RATE_LIMITS.api):
+- src/app/api/stripe/checkout/route.ts
+- src/app/api/stripe/webhook/route.ts
+
+CRON (RATE_LIMITS.cron):
+- src/app/api/cron/send-reminders/route.ts
+- src/app/api/cron/check-reminders/route.ts
+- src/app/api/cron/daily-summary/route.ts
+- src/app/api/cron/update-date/route.ts
+
+OTHER (RATE_LIMITS.api / RATE_LIMITS.messaging):
+- src/app/api/decide/route.ts
+- src/app/api/orders/route.ts
+- src/app/api/export/route.ts
+- src/app/api/insights/route.ts
+- src/app/api/customer-scores/route.ts
+- src/app/api/noshow-predictions/route.ts
+- src/app/api/peak-prediction/route.ts
+- src/app/api/recommendations/route.ts
+- src/app/api/consultations/route.ts
+- src/app/api/push/send/route.ts
+- src/app/api/push/subscribe/route.ts
+- src/app/api/onboarding/complete/route.ts
+
+VOICE (RATE_LIMITS.agent):
+- src/app/api/voice/post-call/route.ts
+- src/app/api/voice/context/route.ts
+- src/app/api/voice/knowledge/route.ts
+- src/app/api/voice/outbound/route.ts
+- src/app/api/voice/reservation/route.ts
+- src/app/api/voice/rules/route.ts
+- src/app/api/voice/update-agent-name/route.ts
+
+Changes per file:
+1. Rate limiting via rateLimitByIp() added at the top of each handler
+2. Input sanitization via sanitize functions for emails, names, phones, UUIDs, strings
+3. Structured logging via logger for errors, security events, and key actions
+4. Replaced console.log/error with logger calls
+5. All existing auth checks preserved
+6. No business logic changed

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuth } from '@/lib/api-auth'
-import { rateLimit, getRateLimitKey } from '@/lib/rate-limit'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-02-24.acacia' })
@@ -22,8 +23,8 @@ const PLANS: Record<string, { priceId: string; name: string; calls: number; rate
 }
 
 export async function POST(req: Request) {
-  const rl = rateLimit(getRateLimitKey(req), 5, 60000)
-  if (!rl.ok) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  const rl = rateLimitByIp(req, RATE_LIMITS.api, 'stripe:checkout')
+  if (rl.blocked) return rl.response
 
   // Verificar autenticación
   const auth = await requireAuth(req)
@@ -70,8 +71,10 @@ export async function POST(req: Request) {
       allow_promotion_codes: true,
     })
 
+    logger.info('Stripe: checkout session created', { tenantId: auth.tenantId, plan })
     return NextResponse.json({ url: session.url, session_id: session.id })
   } catch (e: any) {
+    logger.error('Stripe checkout: error', {}, e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

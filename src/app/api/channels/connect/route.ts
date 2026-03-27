@@ -5,7 +5,11 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAuth } from '@/lib/api-auth'
 import { normalizePhone } from '@/lib/phone-utils'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizeString, sanitizePhone } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,10 +20,22 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    const { tenant_id, channel, phone, email_slug } = await req.json()
-    if (!tenant_id || !channel) {
-      return NextResponse.json({ error: 'tenant_id and channel required' }, { status: 400 })
+    const rl = rateLimitByIp(req, RATE_LIMITS.api, 'channels:connect')
+    if (rl.blocked) return rl.response
+
+    const auth = await requireAuth(req)
+    if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+    const body = await req.json()
+    const tenant_id = auth.tenantId
+    const channel = sanitizeString(body.channel, 20)
+    const phone = body.phone
+    const email_slug = sanitizeString(body.email_slug, 50)
+    if (!channel) {
+      return NextResponse.json({ error: 'channel required' }, { status: 400 })
     }
+
+    logger.info('Channel connect request', { tenant_id, channel })
 
     if (channel === 'whatsapp') {
       // WhatsApp connection: save phone number and enable channel
@@ -119,6 +135,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: 'Invalid channel' }, { status: 400 })
   } catch (err) {
+    logger.error('Channel connect failed', {}, err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

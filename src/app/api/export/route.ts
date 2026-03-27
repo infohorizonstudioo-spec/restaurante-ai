@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuth } from '@/lib/api-auth'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,6 +17,9 @@ export const dynamic = 'force-dynamic'
  * Exports tenant data as CSV for download.
  */
 export async function GET(req: NextRequest) {
+  const rl = rateLimitByIp(req, RATE_LIMITS.api, 'export')
+  if (rl.blocked) return rl.response
+
   const auth = await requireAuth(req)
   if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 

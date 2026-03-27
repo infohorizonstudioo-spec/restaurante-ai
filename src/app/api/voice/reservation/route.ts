@@ -1,5 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { validateAgentKey } from '@/lib/agent-auth'
+import { sanitizeString, sanitizeName, sanitizePhone, sanitizeDate, sanitizeTime, sanitizePositiveInt, sanitizeUUID } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,14 +20,22 @@ const admin = createClient(
 // 5 mesas distintas. El lock se libera al hacer commit, no antes.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.agent, 'voice:reservation')
+    if (rl.blocked) return rl.response
+
+    if (!validateAgentKey(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
     const body = await req.json()
-    const {
-      tenant_id, customer_name, customer_phone = '',
-      reservation_date, reservation_time, party_size,
-      zone_preference = '', notes = ''
-    } = body
+    const tenant_id = sanitizeUUID(body.tenant_id)
+    const customer_name = sanitizeName(body.customer_name) || body.customer_name
+    const customer_phone = sanitizePhone(body.customer_phone) || ''
+    const reservation_date = sanitizeDate(body.reservation_date) || body.reservation_date
+    const reservation_time = sanitizeTime(body.reservation_time) || body.reservation_time
+    const party_size = body.party_size
+    const zone_preference = sanitizeString(body.zone_preference || '', 100)
+    const notes = sanitizeString(body.notes || '', 500)
 
     if (!tenant_id || !customer_name || !reservation_date || !reservation_time || !party_size) {
       return NextResponse.json({ success: false, error: 'Faltan datos obligatorios.' }, { status: 400 })
@@ -88,7 +100,7 @@ export async function POST(req: Request) {
       }
     })
   } catch (e: any) {
-    console.error('Reservation error:', e.message)
+    logger.error('Voice reservation error', {}, e)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
 }

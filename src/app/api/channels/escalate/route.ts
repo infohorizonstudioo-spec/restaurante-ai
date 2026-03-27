@@ -6,6 +6,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuth } from '@/lib/api-auth'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizeUUID, sanitizeString } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,15 +17,22 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.api, 'channels:escalate')
+    if (rl.blocked) return rl.response
+
     const auth = await requireAuth(req)
     if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-    const { conversationId, action } = await req.json()
+    const body = await req.json()
+    const conversationId = sanitizeUUID(body.conversationId)
+    const action = sanitizeString(body.action, 20)
     const tenantId = auth.tenantId
 
     if (!conversationId) {
       return NextResponse.json({ error: 'Missing conversationId' }, { status: 400 })
     }
+
+    logger.info('Channel escalate request', { tenantId, conversationId, action })
 
     // Verify conversation belongs to tenant
     const { data: conv } = await supabase.from('conversations')
@@ -71,6 +81,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    logger.error('Channel escalate failed', {}, err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

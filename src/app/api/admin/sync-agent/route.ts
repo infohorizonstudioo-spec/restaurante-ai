@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { sanitizeUUID } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 export const dynamic = "force-dynamic"
 
@@ -8,9 +11,32 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+async function verifySuperadmin(req: Request): Promise<boolean> {
+  const authHeader = req.headers.get('authorization') || ''
+  const token = authHeader.replace('Bearer ', '')
+  if (!token) return false
+  const { data: { user }, error } = await supabase.auth.getUser(token)
+  if (error || !user) return false
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  return (profile as any)?.role === 'superadmin'
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { tenant_id, el_key, agent_id: reqAgentId } = await req.json()
+    const rl = rateLimitByIp(req, RATE_LIMITS.admin, 'admin:sync-agent')
+    if (rl.blocked) return rl.response
+
+    // SEGURIDAD: verificar que es superadmin
+    const isSuperadmin = await verifySuperadmin(req)
+    if (!isSuperadmin) {
+      logger.security('Unauthorized sync-agent attempt')
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const tenant_id = sanitizeUUID(body.tenant_id)
+    const el_key = body.el_key
+    const reqAgentId = body.agent_id
     if (!tenant_id) {
       return NextResponse.json({ error: "tenant_id required" }, { status: 400 })
     }
@@ -77,18 +103,26 @@ Si preguntan por la carta o precios contesta con lo que sabes. Si preguntan algo
       return NextResponse.json({ error: "ELEVENLABS keys not configured. Pass el_key and agent_id in body or set env vars." }, { status: 503 })
     }
 
-    const elRes = await fetch(`https://api.elevenlabs.io/v1/convai/agents/${agentId}`, {
-      method: "PATCH",
-      headers: { "xi-api-key": elKey, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversation_config: {
-          agent: {
-            first_message: `Hola buenas, ${businessName}, digame.`,
-            prompt: { prompt: prompt }
+    const controller = new AbortController()
+    const fetchTimeout = setTimeout(() => controller.abort(), 30000)
+    let elRes: Response
+    try {
+      elRes = await fetch(`https://api.elevenlabs.io/v1/convai/agents/${agentId}`, {
+        method: "PATCH",
+        headers: { "xi-api-key": elKey, "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          conversation_config: {
+            agent: {
+              first_message: `Hola buenas, ${businessName}, digame.`,
+              prompt: { prompt: prompt }
+            }
           }
-        }
+        })
       })
-    })
+    } finally {
+      clearTimeout(fetchTimeout)
+    }
 
     if (!elRes.ok) {
       const err = await elRes.text()
@@ -104,7 +138,7 @@ Si preguntan por la carta o precios contesta con lo que sabes. Si preguntan algo
     })
 
   } catch (e: any) {
-    // sync-agent error
+    logger.error('Admin sync-agent: error', {}, e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

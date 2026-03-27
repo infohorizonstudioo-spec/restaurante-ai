@@ -188,7 +188,7 @@ function DefaultClientesView() {
                             if (!res.ok) throw new Error()
                             toast.push({ title: tx('Llamando...'), body: selected.name, type: 'call', priority: 'info', icon: '📞' })
                           } catch {
-                            toast.push({ title: tx('Error'), body: tx('No se pudo realizar la llamada'), type: 'call', priority: 'error', icon: '⚠️' })
+                            toast.push({ title: tx('Error'), body: tx('No se pudo realizar la llamada'), type: 'call', priority: 'critical', icon: '⚠️' })
                           }
                         }}
                         style={{fontSize:11, padding:'3px 10px', borderRadius:7, border:`1px solid rgba(45,212,191,0.25)`, background:'rgba(45,212,191,0.10)', color:'#2DD4BF', cursor:'pointer', fontFamily:'inherit', fontWeight:500, flexShrink:0}}>

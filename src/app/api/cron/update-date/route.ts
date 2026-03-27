@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
+import { timingSafeEqual } from 'crypto'
 
 /**
  * CRON: Actualiza la fecha en el prompt de TODOS los agentes ElevenLabs.
@@ -19,11 +22,18 @@ const EL_KEY = process.env.ELEVENLABS_API_KEY
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: Request) {
+  const rl = rateLimitByIp(req, RATE_LIMITS.cron, 'cron:update-date')
+  if (rl.blocked) return rl.response
+
   // Verificar que viene de Vercel Cron (o de nosotros)
   const authHeader = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) return NextResponse.json({ error: 'not configured' }, { status: 503 })
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  const expectedHeader = `Bearer ${cronSecret}`
+  const a = Buffer.from(authHeader || '')
+  const b = Buffer.from(expectedHeader)
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    logger.security('Cron update-date: unauthorized attempt')
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
