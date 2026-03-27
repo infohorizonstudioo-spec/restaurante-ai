@@ -13,8 +13,8 @@ const supabase = createClient(
 
 // Default response when no tenant found
 const DEFAULTS = {
-  business_name: "Restaurante",
-  agent_name: "Recepcionista",
+  business_name: "Tu negocio",
+  agent_name: "Recepción",
   business_info: "Sin informacion disponible.",
   tenant_id: "",
 }
@@ -50,6 +50,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ dynamic_variables: DEFAULTS })
     }
 
+    // Business type context (needed early for customer recognition)
+    const businessType = tenant.type || 'otro'
+    const tmpl = resolveTemplate(businessType)
+    const typeLogic = BUSINESS_TYPE_LOGIC[businessType] || BUSINESS_TYPE_LOGIC.otro
+    const bookingTerm = tmpl.labels.reserva.toLowerCase()
+
     // ── Customer recognition ──────────────────────────────────────────────
     let customerContext = ''
     if (callerPhone && tenant) {
@@ -82,46 +88,49 @@ export async function POST(req: NextRequest) {
             .ilike('content', `%${c.name || ''}%`)
             .limit(5)
 
+          const isHospitality = ['restaurante', 'bar', 'cafeteria'].includes(businessType)
           const parts = [`Este cliente se llama ${c.name || 'desconocido'}`]
 
           if (c.total_reservations && c.total_reservations >= 3) {
-            parts.push(`Es habitual — ha venido ${c.total_reservations} veces`)
+            parts.push(`Es habitual — lleva ${c.total_reservations} ${bookingTerm}s`)
           } else if (c.total_reservations === 1) {
-            parts.push('Ha venido una vez antes')
+            parts.push(`Ha tenido una ${bookingTerm} antes`)
           }
 
           if (recentRes && recentRes.length > 0) {
             const lr = recentRes[0]
-            parts.push(`La última vez vino el ${lr.date} a las ${(lr.time||'').slice(0,5)} para ${lr.people} personas`)
+            parts.push(`La última ${bookingTerm} fue el ${lr.date} a las ${(lr.time||'').slice(0,5)}${lr.people > 1 ? ` para ${lr.people} personas` : ''}`)
 
             // Detect patterns
             if (recentRes.length >= 2) {
               const samePeople = recentRes.every(r => r.people === recentRes[0].people)
-              if (samePeople) parts.push(`Siempre reserva para ${recentRes[0].people}`)
+              if (samePeople && recentRes[0].people > 1) parts.push(`Siempre pide ${bookingTerm} para ${recentRes[0].people}`)
 
               const sameTime = recentRes.filter(r => (r.time||'').slice(0,2) === (recentRes[0].time||'').slice(0,2)).length >= 2
-              if (sameTime) parts.push(`Suele venir a las ${(recentRes[0].time||'').slice(0,5)}`)
+              if (sameTime) parts.push(`Suele pedir hora a las ${(recentRes[0].time||'').slice(0,5)}`)
             }
 
-            // Check for allergies or special notes
-            const allNotes = recentRes.map(r => r.notes || '').join(' ').toLowerCase()
-            if (allNotes.includes('alergi') || allNotes.includes('celiac') || allNotes.includes('vegeta') || allNotes.includes('vegan') || allNotes.includes('intoler') || allNotes.includes('sin gluten') || allNotes.includes('sin lactosa') || allNotes.includes('halal') || allNotes.includes('kosher')) {
-              parts.push('IMPORTANTE: tiene restricciones alimentarias — revisa notas de sus reservas anteriores')
+            // Check for allergies or special notes (hospitality only)
+            if (isHospitality) {
+              const allNotes = recentRes.map(r => r.notes || '').join(' ').toLowerCase()
+              if (allNotes.includes('alergi') || allNotes.includes('celiac') || allNotes.includes('vegeta') || allNotes.includes('vegan') || allNotes.includes('intoler') || allNotes.includes('sin gluten') || allNotes.includes('sin lactosa') || allNotes.includes('halal') || allNotes.includes('kosher')) {
+                parts.push('IMPORTANTE: tiene restricciones alimentarias — revisa notas anteriores')
+              }
             }
 
             // No-show history
             const noShows = recentRes.filter(r => r.status === 'no_show').length
-            if (noShows >= 2) parts.push(`⚠ Ojo: no se presentó ${noShows} veces — considera pedir confirmación`)
+            if (noShows >= 2) parts.push(`Ojo: no se presentó ${noShows} veces — pídele confirmación`)
             else if (noShows === 1) parts.push(`Nota: no se presentó 1 vez`)
           }
 
           // Add learned preferences
           if (memories && memories.length > 0) {
             const prefs = memories.map(m => m.content).join('. ')
-            parts.push(`Preferencias detectadas: ${prefs}`)
+            parts.push(`Preferencias: ${prefs}`)
           }
 
-          if ((c as any).vip) parts.push('Es cliente VIP — trátalo especialmente bien')
+          if ((c as any).vip) parts.push('Es VIP — trátalo especialmente bien')
 
           customerContext = parts.join('. ') + '.'
         }
@@ -132,8 +141,8 @@ export async function POST(req: NextRequest) {
     try {
       const today = new Date().toISOString().slice(0, 10)
       const [smartCtx, forecast] = await Promise.all([
-        buildSmartCustomerContext(tenant.id, callerPhone, today),
-        getDemandForecast(tenant.id, today),
+        buildSmartCustomerContext(tenant.id, callerPhone, today, undefined, undefined, businessType),
+        getDemandForecast(tenant.id, today, businessType),
       ])
       if (smartCtx.contextText) customerContext += smartCtx.contextText
       if (forecast) customerContext += '\n' + forecast
@@ -162,12 +171,6 @@ export async function POST(req: NextRequest) {
     const currentDate = now.toLocaleDateString('es-ES', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     })
-
-    // Business type context for ElevenLabs agent
-    const businessType = tenant.type || 'otro'
-    const tmpl = resolveTemplate(businessType)
-    const typeLogic = BUSINESS_TYPE_LOGIC[businessType] || BUSINESS_TYPE_LOGIC.otro
-    const bookingTerm = tmpl.labels.reserva.toLowerCase() // "reserva" | "cita" | "sesión" | "clase"
 
     // Return dynamic variables for ElevenLabs
     return NextResponse.json({

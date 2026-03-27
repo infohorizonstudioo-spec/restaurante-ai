@@ -1,6 +1,7 @@
 /**
- * Builds SMS messages for different reservation events.
+ * Builds SMS messages for different reservation/booking events.
  * Returns the message text — does NOT send (that's the API's job).
+ * Adapts terminology per business type (reserva/cita/sesión/clase).
  */
 
 export function buildReservationSms(params: {
@@ -10,23 +11,27 @@ export function buildReservationSms(params: {
   time: string
   people: number
   status: 'confirmed' | 'cancelled' | 'reminder'
+  bookingLabel?: string // "reserva" | "cita" | "sesión" | "clase" | "visita"
 }): string {
   const { businessName, customerName, date, time, people, status } = params
+  const label = params.bookingLabel || 'reserva'
 
   const dateStr = new Date(date + 'T12:00:00').toLocaleDateString('es-ES', {
     weekday: 'long', day: 'numeric', month: 'long'
   })
 
+  const peopleStr = people > 1 ? `, ${people} personas` : ''
+
   if (status === 'confirmed') {
-    return `✅ ${businessName}: Hola ${customerName}, tu reserva está confirmada para el ${dateStr} a las ${time}, ${people} persona${people !== 1 ? 's' : ''}. ¡Te esperamos!`
+    return `${businessName}: Hola ${customerName}, confirmada tu ${label} para el ${dateStr} a las ${time}${peopleStr}. ¡Te esperamos!`
   }
   if (status === 'cancelled') {
-    return `❌ ${businessName}: Hola ${customerName}, tu reserva del ${dateStr} a las ${time} ha sido cancelada. Si necesitas algo, llámanos.`
+    return `${businessName}: Hola ${customerName}, tu ${label} del ${dateStr} a las ${time} queda cancelada. Cualquier cosa, llámanos.`
   }
   if (status === 'reminder') {
-    return `📅 ${businessName}: Hola ${customerName}, te recordamos tu reserva para mañana a las ${time}, ${people} persona${people !== 1 ? 's' : ''}. ¡Te esperamos!`
+    return `${businessName}: Hola ${customerName}, mañana tienes ${label} a las ${time}${peopleStr}. ¡Te esperamos!`
   }
-  return `${businessName}: Hola ${customerName}, actualización sobre tu reserva del ${dateStr} a las ${time}.`
+  return `${businessName}: Hola ${customerName}, te escribimos por tu ${label} del ${dateStr} a las ${time}.`
 }
 
 export function buildOrderSms(params: {
@@ -39,13 +44,13 @@ export function buildOrderSms(params: {
   const { businessName, customerName, orderType, total, status } = params
 
   if (status === 'confirmed') {
-    return `✅ ${businessName}: Hola ${customerName}, tu pedido (${total.toFixed(2)}€) para ${orderType} está confirmado. Te avisamos cuando esté listo.`
+    return `${businessName}: Hola ${customerName}, tu pedido (${total.toFixed(2)}€) para ${orderType} está confirmado. Te avisamos cuando esté listo.`
   }
   if (status === 'ready') {
-    return `🍽️ ${businessName}: ¡${customerName}, tu pedido está listo! Puedes pasar a recogerlo.`
+    return `${businessName}: ${customerName}, tu pedido está listo. Puedes pasar a recogerlo cuando quieras.`
   }
   if (status === 'delivering') {
-    return `🚗 ${businessName}: ${customerName}, tu pedido va en camino. ¡Llegará en breve!`
+    return `${businessName}: ${customerName}, tu pedido va en camino. Llega en breve.`
   }
-  return `${businessName}: Actualización de tu pedido, ${customerName}.`
+  return `${businessName}: Hola ${customerName}, te escribimos por tu pedido.`
 }

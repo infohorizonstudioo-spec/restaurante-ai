@@ -159,7 +159,7 @@ export async function checkAvailabilityTool(params: {
     if (result.available) {
       // Smart tip: warn if almost full
       const capacityWarning = result.slots_remaining <= 1
-        ? ' Queda muy poco hueco — confírmalo rápido antes de que se llene.'
+        ? ' Queda muy poco — confírmalo rápido.'
         : result.slots_remaining <= 2
         ? ' Quedan pocas plazas a esa hora.'
         : ''
@@ -180,10 +180,10 @@ export async function checkAvailabilityTool(params: {
       success: true, available: false, waitlist_available: true,
       reason: result.reason, message: result.message, alternatives, next_available_day: nextDayMessage,
       suggestion: alternatives.length > 0
-        ? `No hay sitio a las ${time}. Puedes ofrecerle las ${alternatives[0]}${alternatives[1] ? ' o las ' + alternatives[1] : ''}.`
+        ? `No hay disponibilidad a las ${time}. Puedes ofrecerle las ${alternatives[0]}${alternatives[1] ? ' o las ' + alternatives[1] : ''}.`
         : nextDayMessage
-          ? `Hoy no queda sitio. ${nextDayMessage}`
-          : `Hoy no hay hueco para ${size} personas. Sugiérele probar otro día.`,
+          ? `Hoy no queda hueco. ${nextDayMessage}`
+          : `Hoy no hay hueco${size > 1 ? ` para ${size}` : ''}. Sugiérele probar otro día.`,
     }
   }
 
@@ -205,7 +205,7 @@ export async function checkAvailabilityTool(params: {
     const nextDay = await findNextAvailableDay(tenant_id, date, size, cfg, zones, tables)
     return {
       success: true, available: false, waitlist_available: true,
-      message: `No queda disponibilidad para ${size} personas el ${formatDateES(date)}.`,
+      message: `No queda disponibilidad${size > 1 ? ` para ${size} personas` : ''} el ${formatDateES(date)}.`,
       available_slots: [], best_slots: [],
       suggestion: nextDay
         ? `Hoy no hay hueco. El día más cercano es el ${formatDateES(nextDay.date)} a las ${nextDay.slot}.`
@@ -257,8 +257,8 @@ export async function createReservationTool(params: {
       reason: availability.reason, message: availability.message,
       alternatives: availability.alternatives,
       suggestion: availability.alternatives.length > 0
-        ? `No hay sitio a las ${finalTime}. Alternativas: ${availability.alternatives.join(', ')}.`
-        : `No hay disponibilidad el ${finalDate} a las ${finalTime} para ${finalPartySize} personas.`,
+        ? `No hay disponibilidad a las ${finalTime}. Alternativas: ${availability.alternatives.join(', ')}.`
+        : `No hay disponibilidad el ${finalDate} a las ${finalTime}${finalPartySize > 1 ? ` para ${finalPartySize} personas` : ''}.`,
     }
   }
 
@@ -402,8 +402,8 @@ export async function createReservationTool(params: {
     const bizName = tenantName || 'Tu negocio'
     const dateStr = formatDateES(finalDate)
     const smsBody = finalStatus === 'confirmada'
-      ? `✅ ${bizName}: Hola ${customer_name}, tu ${bLabel.singular} está confirmada para el ${dateStr} a las ${finalTime}${finalPartySize > 1 ? `, ${finalPartySize} personas` : ''}. ¡Te esperamos!`
-      : `📋 ${bizName}: Hola ${customer_name}, tu ${bLabel.singular} para el ${dateStr} a las ${finalTime}${finalPartySize > 1 ? ` (${finalPartySize}p)` : ''} está pendiente de confirmación. Te avisamos enseguida.`
+      ? `${bizName}: Hola ${customer_name}, confirmada tu ${bLabel.singular} para el ${dateStr} a las ${finalTime}${finalPartySize > 1 ? `, ${finalPartySize} personas` : ''}. ¡Te esperamos!`
+      : `${bizName}: Hola ${customer_name}, tu ${bLabel.singular} para el ${dateStr} a las ${finalTime}${finalPartySize > 1 ? ` (${finalPartySize}p)` : ''} está pendiente de confirmación. Te avisamos enseguida.`
     sendSms(customer_phone, smsBody).catch(() => {})
   }
 
@@ -425,13 +425,13 @@ export async function createReservationTool(params: {
   return {
     success: true, reservation_id: reservation?.id || null,
     customer_name, date: finalDate, time: finalTime, party_size: finalPartySize,
-    table: assignedTableId ? `Mesa asignada${assignedTableInfo}` : null,
+    table: assignedTableId ? `${tmpl.labels.unit?.singular || 'Espacio'} asignado${assignedTableInfo}` : null,
     status: finalStatus === 'confirmada' ? 'confirmed' : 'pending_review',
     decision_flags: decision.flags,
     decision_confidence: decision.confidence,
     message: finalStatus === 'confirmada'
-      ? `${bLabel.singular.charAt(0).toUpperCase() + bLabel.singular.slice(1)} confirmada para ${customer_name} el ${finalDate} a las ${finalTime}, ${finalPartySize} persona${finalPartySize !== 1 ? 's' : ''}${assignedTableInfo}.`
-      : `${bLabel.singular.charAt(0).toUpperCase() + bLabel.singular.slice(1)} registrada para ${customer_name} el ${finalDate} a las ${finalTime}, ${finalPartySize} persona${finalPartySize !== 1 ? 's' : ''}. Pendiente de confirmación por el negocio.`,
+      ? `${bLabel.singular.charAt(0).toUpperCase() + bLabel.singular.slice(1)} confirmada para ${customer_name} el ${finalDate} a las ${finalTime}${finalPartySize > 1 ? `, ${finalPartySize} personas` : ''}${assignedTableInfo}.`
+      : `${bLabel.singular.charAt(0).toUpperCase() + bLabel.singular.slice(1)} registrada para ${customer_name} el ${finalDate} a las ${finalTime}${finalPartySize > 1 ? `, ${finalPartySize} personas` : ''}. Pendiente de confirmación.`,
   }
 }
 
@@ -468,8 +468,8 @@ export async function cancelReservationTool(params: {
     return {
       success: false, found: false,
       message: customer_phone
-        ? `No encuentro ninguna reserva activa con el teléfono ${customer_phone}.`
-        : `No encuentro ninguna reserva a nombre de ${customer_name}.`,
+        ? `No encuentro ninguna ${bLabel.singular} activa con ese teléfono.`
+        : `No encuentro ninguna ${bLabel.singular} a nombre de ${customer_name}.`,
       suggestion: 'Pregúntale si puede dar más datos: nombre, fecha, o teléfono con el que reservó.',
     }
   }
@@ -487,11 +487,13 @@ export async function cancelReservationTool(params: {
     await supabase.from('tables').update({ status: 'libre' }).eq('id', toCancel.table_id)
   }
 
+  // Get business name for SMS
+  const { data: tenantInfo } = await supabase.from('tenants').select('name').eq('id', tenant_id).maybeSingle()
+  const bizName = tenantInfo?.name || 'Tu negocio'
+
   // SMS to cancelled customer
   if (toCancel.customer_phone) {
-    const { data: tenantInfo } = await supabase.from('tenants').select('name').eq('id', tenant_id).maybeSingle()
-    const bizName = tenantInfo?.name || 'Tu negocio'
-    sendSms(toCancel.customer_phone, `❌ ${bizName}: ${toCancel.customer_name}, tu ${bLabel.singular} del ${dateStr} a las ${time} ha sido cancelada. Si necesitas algo, llámanos.`).catch(() => {})
+    sendSms(toCancel.customer_phone, `${bizName}: ${toCancel.customer_name}, tu ${bLabel.singular} del ${dateStr} a las ${time} queda cancelada. Cualquier cosa, llámanos.`).catch(() => {})
   }
 
   // Notify waitlist
@@ -501,7 +503,7 @@ export async function cancelReservationTool(params: {
     .order('created_at').limit(1).maybeSingle()
 
   if (waitlisted?.customer_phone) {
-    sendSms(waitlisted.customer_phone, `🎉 ¡Buenas noticias, ${waitlisted.customer_name}! Ha quedado un hueco el ${dateStr}. Llámanos para confirmar tu ${bLabel.singular}.`).catch(() => {})
+    sendSms(waitlisted.customer_phone, `${bizName}: ${waitlisted.customer_name}, ha quedado hueco el ${dateStr}. Llámanos para confirmar tu ${bLabel.singular}.`).catch(() => {})
     await supabase.from('waitlist').update({ status: 'notified' }).eq('id', waitlisted.id)
   }
 
@@ -519,7 +521,7 @@ export async function cancelReservationTool(params: {
   return {
     success: true, cancelled_id: toCancel.id,
     customer_name: toCancel.customer_name, date: toCancel.date, time, people: toCancel.people,
-    message: `Cancelada la ${bLabel.singular} de ${toCancel.customer_name} para el ${dateStr} a las ${time}, ${toCancel.people} personas.`,
+    message: `Cancelada la ${bLabel.singular} de ${toCancel.customer_name} para el ${dateStr} a las ${time}${toCancel.people > 1 ? `, ${toCancel.people} personas` : ''}.`,
     waitlist_notified: !!waitlisted,
   }
 }
@@ -577,8 +579,8 @@ export async function modifyReservationTool(params: {
       success: false, available: false, message: availability.message,
       alternatives: availability.alternatives,
       suggestion: availability.alternatives.length > 0
-        ? `No hay sitio a las ${finalTime}. Alternativas: ${availability.alternatives.join(', ')}.`
-        : `No hay disponibilidad el ${finalDate} a las ${finalTime} para ${finalPeople} personas.`,
+        ? `No hay disponibilidad a las ${finalTime}. Alternativas: ${availability.alternatives.join(', ')}.`
+        : `No hay disponibilidad el ${finalDate} a las ${finalTime}${finalPeople > 1 ? ` para ${finalPeople} personas` : ''}.`,
     }
   }
 
@@ -615,14 +617,14 @@ export async function modifyReservationTool(params: {
   await supabase.from('notifications').insert({
     tenant_id, type: 'reservation_modified',
     title: `Modificación — ${original.customer_name}`,
-    body: `${original.customer_name} cambió su reserva del ${oldDateStr} ${oldTime} → ${newDateStr} ${finalTime} (${finalPeople}p)`,
+    body: `${original.customer_name} cambió su ${bLabel.singular} del ${oldDateStr} ${oldTime} → ${newDateStr} ${finalTime}${finalPeople > 1 ? ` (${finalPeople}p)` : ''}`,
     read: false,
   })
 
   const phone = original.customer_phone || customer_phone
   if (phone) {
     const bizName = tenantName || 'Tu negocio'
-    sendSms(phone, `${bizName}: Hola ${original.customer_name}, tu ${bLabel.singular} ha sido modificada: ${newDateStr} a las ${finalTime}, ${finalPeople} personas. Te esperamos!`).catch(() => {})
+    sendSms(phone, `${bizName}: Hola ${original.customer_name}, tu ${bLabel.singular} queda cambiada: ${newDateStr} a las ${finalTime}${finalPeople > 1 ? `, ${finalPeople} personas` : ''}. ¡Te esperamos!`).catch(() => {})
   }
 
   // Re-schedule reminders
@@ -633,7 +635,7 @@ export async function modifyReservationTool(params: {
     success: true, reservation_id: original.id, customer_name: original.customer_name,
     old: { date: original.date, time: oldTime, people: original.people },
     new: { date: finalDate, time: finalTime, people: finalPeople },
-    message: `${bLabel.singular.charAt(0).toUpperCase() + bLabel.singular.slice(1)} modificada: ${original.customer_name}, ahora el ${newDateStr} a las ${finalTime}, ${finalPeople} personas.`,
+    message: `${bLabel.singular.charAt(0).toUpperCase() + bLabel.singular.slice(1)} modificada: ${original.customer_name}, ahora el ${newDateStr} a las ${finalTime}${finalPeople > 1 ? `, ${finalPeople} personas` : ''}.`,
   }
 }
 
@@ -672,7 +674,7 @@ export async function getMenuTool(params: { tenant_id: string }) {
   return {
     success: true, source: 'business_knowledge', items: grouped,
     note: Object.keys(grouped).length === 0
-      ? 'No hay carta disponible. Indica al cliente que consulte en el local o por la web.' : undefined,
+      ? 'No hay información de servicios disponible. Sugiérele que contacte directamente con el negocio.' : undefined,
   }
 }
 
@@ -713,8 +715,8 @@ export async function updateOrderTool(params: {
       const total = data?.total_estimate || 0
       const orderT = order_type || 'recoger'
       const smsBody = orderT === 'domicilio'
-        ? `✅ ${bizName}: Hola ${customer_name}, tu pedido (${total.toFixed(2)}€) para envío a domicilio está confirmado. ¡Lo preparamos ya!`
-        : `✅ ${bizName}: Hola ${customer_name}, tu pedido (${total.toFixed(2)}€) está confirmado. Te avisamos cuando esté listo para recoger.`
+        ? `${bizName}: Hola ${customer_name}, tu pedido (${total.toFixed(2)}€) a domicilio está confirmado. Lo preparamos ya.`
+        : `${bizName}: Hola ${customer_name}, tu pedido (${total.toFixed(2)}€) está confirmado. Te avisamos cuando esté listo.`
       sendSms(customer_phone, smsBody).catch(() => {})
     }
 

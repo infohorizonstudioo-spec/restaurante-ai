@@ -123,8 +123,8 @@ export default function ReservasPage() {
                 to: phone,
                 type: status === 'confirmada' ? 'reservation_confirmed' : 'reservation_cancelled',
                 message: status === 'confirmada'
-                  ? `✅ ${r.customer_name}, tu reserva está confirmada: ${r.date || r.reservation_date} a las ${(r.time || r.reservation_time || '').slice(0,5)}, ${r.people || r.party_size || 1} personas. ¡Te esperamos!`
-                  : `❌ ${r.customer_name}, tu reserva del ${r.date || r.reservation_date} a las ${(r.time || r.reservation_time || '').slice(0,5)} ha sido cancelada. Si necesitas algo, llámanos.`
+                  ? `${r.customer_name}, confirmada tu ${(L?.reserva || 'reserva').toLowerCase()} para el ${r.date || r.reservation_date} a las ${(r.time || r.reservation_time || '').slice(0,5)}${(r.people || r.party_size || 1) > 1 ? `, ${r.people || r.party_size} personas` : ''}. ¡Te esperamos!`
+                  : `${r.customer_name}, tu ${(L?.reserva || 'reserva').toLowerCase()} del ${r.date || r.reservation_date} a las ${(r.time || r.reservation_time || '').slice(0,5)} queda cancelada. Cualquier cosa, llámanos.`
               })
             }).catch(() => {
               toast.push({ title: 'No se pudo enviar el SMS de confirmación', type: 'sms_error', priority: 'warning', icon: '⚠️' })
@@ -147,7 +147,7 @@ export default function ReservasPage() {
                   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess2.data.session.access_token },
                   body: JSON.stringify({
                     to: waitlisted.customer_phone,
-                    message: `🎉 Ha quedado un hueco el ${resDate}. Llámanos para confirmar tu reserva.`
+                    message: `Ha quedado hueco el ${resDate}. Llámanos para confirmar tu ${(L?.reserva || 'reserva').toLowerCase()}.`
                   })
                 }).catch(() => {
                   toast.push({ title: 'No se pudo notificar al cliente en lista de espera', type: 'sms_error', priority: 'warning', icon: '⚠️' })

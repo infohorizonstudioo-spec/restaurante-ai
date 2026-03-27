@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const fromAddr = tenant?.email_address || 'noreply@reservo.ai'
     const htmlBody = agentResponseEmail({
       businessName: tenant?.name || 'Tu negocio',
-      agentName: tenant?.agent_name || 'Asistente Virtual',
+      agentName: tenant?.agent_name || 'Atención al cliente',
       responseContent: content,
     })
 

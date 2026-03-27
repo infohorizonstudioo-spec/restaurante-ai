@@ -88,7 +88,7 @@ export default function NuevaReservaPage() {
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
             body: JSON.stringify({
               to: form.customer_phone,
-              message: `✅ ${L?.reserva || 'Reserva'} confirmada: ${form.customer_name}, ${dateStr} a las ${form.time}, ${form.people} personas. ¡Te esperamos!`
+              message: `${form.customer_name}, confirmada tu ${(L?.reserva || 'reserva').toLowerCase()} para el ${dateStr} a las ${form.time}${form.people > 1 ? `, ${form.people} personas` : ''}. ¡Te esperamos!`
             })
           }).catch(() => {
             toast.push({ title: 'Reserva creada, pero no se pudo enviar el SMS', type: 'sms_error', priority: 'warning', icon: '⚠️' })

@@ -1,13 +1,13 @@
 /**
  * RESERVO.AI — Smart Context Engine
- * Generates hyper-intelligent context for the AI agent.
- * Makes the agent smarter than a human receptionist by:
+ * Generates intelligent context for the AI agent, adapted per business type.
  * - Predicting customer behavior
- * - Optimizing table/slot utilization
- * - Detecting revenue opportunities
+ * - Optimizing slot utilization
+ * - Detecting opportunities
  * - Proactive problem prevention
  */
 import { createClient } from '@supabase/supabase-js'
+import { resolveTemplate } from './templates'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,20 +20,37 @@ interface SmartInsight {
   priority: number // 1=highest
 }
 
+// ── Business-type aware terminology ──
+function getTerms(businessType?: string) {
+  const tmpl = resolveTemplate(businessType || 'otro')
+  const bookingLabel = tmpl.labels.reserva?.toLowerCase() || 'reserva'
+  const clientLabel = tmpl.labels.cliente?.toLowerCase() || 'cliente'
+
+  // Hospitality types where "personas", "mesa", "carta" make sense
+  const isHospitality = ['restaurante', 'bar', 'cafeteria'].includes(businessType || '')
+  // Health types where extra care/discretion is needed
+  const isHealth = ['clinica_dental', 'clinica_medica', 'veterinaria', 'fisioterapia', 'psicologia'].includes(businessType || '')
+
+  return { bookingLabel, clientLabel, isHospitality, isHealth, businessType: businessType || 'otro' }
+}
+
 /**
- * Build intelligent context for a specific customer call.
- * This goes beyond simple history — it provides actionable intelligence.
+ * Build intelligent context for a specific customer interaction.
+ * Adapts language and insights per business type.
  */
 export async function buildSmartCustomerContext(
   tenantId: string,
   customerPhone: string,
   requestedDate?: string,
   requestedTime?: string,
-  partySize?: number
+  partySize?: number,
+  businessType?: string
 ): Promise<{ insights: SmartInsight[]; contextText: string }> {
   const insights: SmartInsight[] = []
   const cleanPhone = customerPhone.replace(/[^0-9+]/g, '')
   if (cleanPhone.length < 7) return { insights, contextText: '' }
+
+  const terms = getTerms(businessType)
 
   // Parallel data fetch for speed
   const [customerRes, allResRes, callsRes, noShowsRes] = await Promise.all([
@@ -68,24 +85,30 @@ export async function buildSmartCustomerContext(
   const totalRes = customer?.total_reservations || reservations.length
 
   if (!customer && reservations.length === 0) {
-    // New customer — provide onboarding intelligence
     insights.push({
       type: 'proactive', priority: 2,
-      text: 'Es un cliente nuevo. Sé especialmente atenta y asegúrate de que se lleve buena impresión. Pregunta nombre con naturalidad.'
+      text: `Es la primera vez que contacta. Trátalo bien, pregúntale el nombre de forma natural y haz que se sienta bienvenido.`
     })
     return { insights, contextText: buildContextText(insights) }
   }
 
   // ═══ PATTERN DETECTION ═══
 
-  // 1. Party size consistency
+  // 1. Party size consistency (mainly relevant for hospitality, but also groups in other types)
   const sizes = reservations.map(r => r.people).filter(Boolean)
   const mostCommonSize = mode(sizes)
-  if (sizes.length >= 2 && mostCommonSize) {
-    insights.push({
-      type: 'preference', priority: 3,
-      text: `Siempre viene para ${mostCommonSize} personas. Si pide reserva, ofrécele directamente: "¿para ${mostCommonSize} como siempre?"`
-    })
+  if (sizes.length >= 2 && mostCommonSize && mostCommonSize > 1) {
+    if (terms.isHospitality) {
+      insights.push({
+        type: 'preference', priority: 3,
+        text: `Siempre viene para ${mostCommonSize} personas. Si pide ${terms.bookingLabel}, ofrécele directamente: "¿para ${mostCommonSize} como siempre?"`
+      })
+    } else {
+      insights.push({
+        type: 'preference', priority: 3,
+        text: `Suele pedir ${terms.bookingLabel} para ${mostCommonSize} personas.`
+      })
+    }
   }
 
   // 2. Time preference
@@ -94,7 +117,7 @@ export async function buildSmartCustomerContext(
   if (hours.length >= 2 && mostCommonHour) {
     insights.push({
       type: 'preference', priority: 3,
-      text: `Suele venir a las ${mostCommonHour}. Si pregunta por hora, sugiérele esa primero.`
+      text: `Suele ${terms.isHospitality ? 'venir' : 'tener ' + terms.bookingLabel} a las ${mostCommonHour}. Si pregunta por hora, sugiérele esa primero.`
     })
   }
 
@@ -107,7 +130,7 @@ export async function buildSmartCustomerContext(
   if (days.length >= 3 && mostCommonDay) {
     insights.push({
       type: 'preference', priority: 4,
-      text: `Suele venir los ${mostCommonDay}s.`
+      text: `Suele ${terms.isHospitality ? 'venir' : 'pedir ' + terms.bookingLabel} los ${mostCommonDay}s.`
     })
   }
 
@@ -117,29 +140,24 @@ export async function buildSmartCustomerContext(
   if (noShowCount >= 3) {
     insights.push({
       type: 'warning', priority: 1,
-      text: `⚠ ALTO RIESGO: Este cliente NO se ha presentado ${noShowCount} veces. Pídele confirmación por teléfono el día anterior. Si es para grupo grande, considera pedir señal.`
+      text: `Ojo, este ${terms.clientLabel} no se ha presentado ${noShowCount} veces. Pídele confirmación el día antes.${terms.isHospitality && (partySize && partySize >= 4) ? ' Si es grupo grande, plantea pedir señal.' : ''}`
     })
   } else if (noShowCount >= 1) {
     const rate = totalRes > 0 ? noShowCount / totalRes : 0
     if (rate > 0.2) {
       insights.push({
         type: 'warning', priority: 2,
-        text: `Ojo: no se presentó ${noShowCount} de ${totalRes} veces (${Math.round(rate * 100)}%). Envía recordatorio SMS el día antes.`
+        text: `Ojo: no se presentó ${noShowCount} de ${totalRes} veces (${Math.round(rate * 100)}%). Envía recordatorio el día antes.`
       })
     }
   }
 
   // 5. Cancellation pattern
   const cancels = reservations.filter(r => r.status === 'cancelada' || r.status === 'cancelled')
-  const lastMinuteCancels = cancels.filter(r => {
-    const resDate = new Date(r.date + 'T12:00:00')
-    // We don't have cancel timestamp, but if last reservation was cancelled, flag it
-    return true
-  })
   if (cancels.length >= 2 && totalRes > 0 && cancels.length / totalRes > 0.3) {
     insights.push({
       type: 'warning', priority: 3,
-      text: `Cancela con frecuencia (${cancels.length} de ${totalRes}). Confirma que está seguro antes de crear la reserva.`
+      text: `Cancela con frecuencia (${cancels.length} de ${totalRes}). Confirma que está seguro antes de crear la ${terms.bookingLabel}.`
     })
   }
 
@@ -149,7 +167,7 @@ export async function buildSmartCustomerContext(
   if (customer?.vip) {
     insights.push({
       type: 'proactive', priority: 1,
-      text: 'Es cliente VIP — dale prioridad absoluta. Si hay poca disponibilidad, búscale hueco como sea. Trátalo con especial cariño.'
+      text: `Es VIP — dale prioridad. Si hay poca disponibilidad, búscale hueco como sea. Trátalo especialmente bien.`
     })
   }
 
@@ -157,33 +175,33 @@ export async function buildSmartCustomerContext(
   if (totalRes >= 10) {
     insights.push({
       type: 'proactive', priority: 2,
-      text: `Es uno de los clientes más fieles (${totalRes} visitas). Hazle sentir especial. Si vuelve después de tiempo, dile algo como "cuánto tiempo sin verte, ¿eh?"`
+      text: `Lleva ${totalRes} ${terms.bookingLabel}s — es de los fieles. Trátalo como tal, con confianza.`
     })
   } else if (totalRes >= 5) {
     insights.push({
       type: 'proactive', priority: 4,
-      text: `Ya lleva ${totalRes} visitas. Es un habitual — trátalo como tal.`
+      text: `Ya lleva ${totalRes} ${terms.bookingLabel}s. Es habitual — trátalo como tal.`
     })
   }
 
-  // ═══ REVENUE OPTIMIZATION ═══
+  // ═══ OPTIMIZATION (business-type specific) ═══
 
-  // 8. Upsell opportunity: small party in big slot
-  if (partySize && partySize <= 2 && requestedTime) {
+  // 8. Upsell opportunity: small party in peak hour (hospitality only)
+  if (terms.isHospitality && partySize && partySize <= 2 && requestedTime) {
     const hour = parseInt(requestedTime.split(':')[0])
     if (hour >= 20 && hour <= 22) {
       insights.push({
         type: 'optimization', priority: 5,
-        text: 'Reserva pequeña en hora punta. Si hay mesa en barra o zona rápida, ofrécela para liberar mesas grandes.'
+        text: `${terms.bookingLabel} pequeña en hora punta. Si hay sitio en barra o zona rápida, ofrécela para liberar mesas grandes.`
       })
     }
   }
 
-  // 9. Large group opportunity
-  if (partySize && partySize >= 6) {
+  // 9. Large group opportunity (hospitality only)
+  if (terms.isHospitality && partySize && partySize >= 6) {
     insights.push({
       type: 'upsell', priority: 3,
-      text: `Grupo de ${partySize} — ofrece menú de grupo si existe. Pregunta si es celebración especial para preparar algo.`
+      text: `Grupo de ${partySize} — ofrece menú de grupo si existe. Pregunta si es celebración especial.`
     })
   }
 
@@ -194,7 +212,7 @@ export async function buildSmartCustomerContext(
   if (lastCall && lastCall.decision_status === 'needs_human_attention') {
     insights.push({
       type: 'warning', priority: 1,
-      text: 'La última vez que llamó hubo un problema que requirió atención especial. Sé extra cuidadosa y pregunta si todo bien.'
+      text: `La última vez que contactó hubo un problema. Sé especialmente atento y pregunta si se resolvió bien.`
     })
   }
 
@@ -204,33 +222,46 @@ export async function buildSmartCustomerContext(
     if (daysSince > 60 && totalRes >= 3) {
       insights.push({
         type: 'proactive', priority: 2,
-        text: `Vuelve después de ${Math.round(daysSince)} días sin venir. Dale la bienvenida cálidamente: "cuánto tiempo, ¿eh? me alegro de que vuelvas".`
+        text: `Vuelve después de ${Math.round(daysSince)} días. Dale la bienvenida con naturalidad — que note que te alegras de que vuelva.`
       })
     }
   }
 
-  // 12. Dietary/allergy persistence
-  const allNotes = reservations.map(r => r.notes || '').join(' ').toLowerCase()
-  const dietaryFlags: string[] = []
-  if (allNotes.includes('alergi') || allNotes.includes('intoler')) dietaryFlags.push('alergias/intolerancias')
-  if (allNotes.includes('celiac') || allNotes.includes('sin gluten')) dietaryFlags.push('celíaco/sin gluten')
-  if (allNotes.includes('vegeta')) dietaryFlags.push('vegetariano')
-  if (allNotes.includes('vegan')) dietaryFlags.push('vegano')
-  if (allNotes.includes('sin lactosa')) dietaryFlags.push('sin lactosa')
-  if (allNotes.includes('halal')) dietaryFlags.push('halal')
-  if (allNotes.includes('kosher')) dietaryFlags.push('kosher')
+  // 12. Dietary/allergy persistence (hospitality only — doesn't apply to clinics/gyms)
+  if (terms.isHospitality) {
+    const allNotes = reservations.map(r => r.notes || '').join(' ').toLowerCase()
+    const dietaryFlags: string[] = []
+    if (allNotes.includes('alergi') || allNotes.includes('intoler')) dietaryFlags.push('alergias/intolerancias')
+    if (allNotes.includes('celiac') || allNotes.includes('sin gluten')) dietaryFlags.push('celíaco/sin gluten')
+    if (allNotes.includes('vegeta')) dietaryFlags.push('vegetariano')
+    if (allNotes.includes('vegan')) dietaryFlags.push('vegano')
+    if (allNotes.includes('sin lactosa')) dietaryFlags.push('sin lactosa')
+    if (allNotes.includes('halal')) dietaryFlags.push('halal')
+    if (allNotes.includes('kosher')) dietaryFlags.push('kosher')
 
-  if (dietaryFlags.length > 0) {
-    insights.push({
-      type: 'warning', priority: 1,
-      text: `🚨 RESTRICCIONES ALIMENTARIAS: ${dietaryFlags.join(', ')}. Menciónalo siempre: "te pongo nota de ${dietaryFlags[0]} como siempre, ¿vale?"`
-    })
+    if (dietaryFlags.length > 0) {
+      insights.push({
+        type: 'warning', priority: 1,
+        text: `IMPORTANTE — tiene ${dietaryFlags.join(', ')}. Apúntalo en la ${terms.bookingLabel}. Si es habitual, menciónalo con naturalidad.`
+      })
+    }
   }
 
-  // 13. Weekend demand prediction
+  // 13. Special notes persistence (non-hospitality — check for relevant patterns)
+  if (!terms.isHospitality) {
+    const allNotes = reservations.map(r => r.notes || '').join(' ').toLowerCase()
+    if (allNotes.length > 10) {
+      insights.push({
+        type: 'preference', priority: 4,
+        text: `Tiene notas en ${terms.bookingLabel}s anteriores. Revísalas por si hay algo relevante.`
+      })
+    }
+  }
+
+  // 14. Weekend/peak demand prediction
   if (requestedDate) {
     const dayOfWeek = new Date(requestedDate + 'T12:00:00').getDay()
-    if (dayOfWeek === 5 || dayOfWeek === 6) { // Friday/Saturday
+    if (dayOfWeek === 5 || dayOfWeek === 6) {
       const { count: weekendCount } = await supabase
         .from('reservations')
         .select('id', { count: 'exact', head: true })
@@ -241,7 +272,7 @@ export async function buildSmartCustomerContext(
       if ((weekendCount || 0) > 5) {
         insights.push({
           type: 'optimization', priority: 2,
-          text: `Día de alta demanda (${weekendCount} reservas ya). Si pide hora punta, avísale de que va a estar lleno y sugiere llegar puntual.`
+          text: `Día con mucha demanda (${weekendCount} ${terms.bookingLabel}s ya). Gestiona bien los huecos disponibles.`
         })
       }
     }
@@ -259,8 +290,10 @@ export async function buildSmartCustomerContext(
  */
 export async function getDemandForecast(
   tenantId: string,
-  date: string
+  date: string,
+  businessType?: string
 ): Promise<string> {
+  const terms = getTerms(businessType)
   const dayOfWeek = new Date(date + 'T12:00:00').getDay()
 
   // Get historical data for same day of week (last 8 weeks)
@@ -281,7 +314,6 @@ export async function getDemandForecast(
   if (!historical || historical.length < 3) return ''
 
   const avgReservations = Math.round(historical.length / historicalDates.length)
-  const avgPeople = Math.round(historical.reduce((s, r) => s + (r.people || 2), 0) / historical.length)
 
   // Find peak hours
   const hourCounts: Record<string, number> = {}
@@ -293,7 +325,7 @@ export async function getDemandForecast(
 
   const dayNames = ['domingos', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados']
 
-  return `PREVISIÓN PARA HOY: Los ${dayNames[dayOfWeek]} suele haber unas ${avgReservations} reservas de media ${avgPeople} personas. La hora más demandada es las ${peakHour}:00. Gestiona las horas punta con cuidado.`
+  return `PREVISIÓN: Los ${dayNames[dayOfWeek]} suele haber unas ${avgReservations} ${terms.bookingLabel}s. La hora más demandada es las ${peakHour}:00. Gestiona bien los huecos.`
 }
 
 // ── Utility ──
@@ -312,6 +344,6 @@ function mode<T>(arr: T[]): T | null {
 
 function buildContextText(insights: SmartInsight[]): string {
   if (insights.length === 0) return ''
-  return '\nINTELIGENCIA SOBRE ESTE CLIENTE:\n' +
+  return '\nLO QUE SABES DE ESTE CLIENTE:\n' +
     insights.map(i => `• ${i.text}`).join('\n')
 }

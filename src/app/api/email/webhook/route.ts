@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
         // Build HTML email
         const htmlBody = agentResponseEmail({
           businessName: fromAddr.split('@')[0] || 'Reservo.AI',
-          agentName: 'Asistente Virtual',
+          agentName: (result as any).agentName || 'Atención al cliente',
           responseContent: result.responseContent,
         })
 

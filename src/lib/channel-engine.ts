@@ -273,7 +273,7 @@ export async function processMessage(msg: IncomingMessage): Promise<ProcessResul
       customerContext += `Nombre: ${cd.name}. `
     }
     if (cd.vip) customerContext += 'Es cliente VIP. '
-    if (cd.total_reservations) customerContext += `Ha hecho ${cd.total_reservations} reservas. `
+    if (cd.total_reservations) customerContext += `Lleva ${cd.total_reservations} visitas. `
     if (cd.notes) customerContext += `Notas: ${cd.notes}. `
 
     // ── 10. Call Claude agent ──────────────────────────────────
