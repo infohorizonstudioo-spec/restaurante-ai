@@ -11,6 +11,17 @@ export async function learnFromCall(params: {
   content: string
   confidence?: number
 }): Promise<void> {
+  // Deduplicate: don't insert if same content exists recently (last 24h)
+  const { count } = await supabase
+    .from('business_memory')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', params.tenantId)
+    .eq('memory_type', params.memoryType)
+    .eq('content', params.content)
+    .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+
+  if ((count || 0) > 0) return // Already learned this recently
+
   await supabase.from('business_memory').insert({
     tenant_id: params.tenantId,
     memory_type: params.memoryType,
@@ -41,31 +52,41 @@ export function getAdaptiveThresholds(memories: any[]): { confidenceThreshold: n
     return { confidenceThreshold: 0.7, autoConfirmEnabled: true, largeGroupThreshold: 8 }
   }
 
-  // Analyze correction patterns to adjust confidence
-  const corrections = memories.filter(m => m.memory_type === 'correction')
-  const patterns = memories.filter(m => m.memory_type === 'pattern')
+  const now = Date.now()
+
+  // Apply temporal decay: memories older than 30 days get reduced weight
+  const weightedMemories = memories.map(m => {
+    const age = (now - new Date(m.created_at).getTime()) / (1000 * 60 * 60 * 24)
+    const decay = age > 90 ? 0.3 : age > 30 ? 0.6 : 1.0
+    return { ...m, weight: (m.confidence || 0.8) * decay }
+  })
+
+  // Analyze correction patterns with weights
+  const corrections = weightedMemories.filter(m => m.memory_type === 'correction')
+  const recentCorrections = corrections.filter(m => m.weight > 0.5)
+  const patterns = weightedMemories.filter(m => m.memory_type === 'pattern')
 
   let confidenceThreshold = 0.7
 
-  // If there are many corrections (agent was wrong often), raise the threshold
-  if (corrections.length >= 5) {
-    confidenceThreshold = 0.82  // Be more cautious
-  } else if (corrections.length >= 3) {
+  // If there are many RECENT corrections, raise threshold
+  if (recentCorrections.length >= 5) {
+    confidenceThreshold = 0.82
+  } else if (recentCorrections.length >= 3) {
     confidenceThreshold = 0.76
   }
 
-  // If patterns show high success rate, lower the threshold slightly
-  const confirmedPatterns = patterns.filter(p => p.content?.includes('confirmed'))
-  const totalPatterns = patterns.length
-  if (totalPatterns > 10 && confirmedPatterns.length / totalPatterns > 0.8) {
-    confidenceThreshold = Math.max(0.6, confidenceThreshold - 0.05)  // More trusting
+  // If patterns show high success rate, lower threshold
+  const confirmedPatterns = patterns.filter(p => p.content?.includes('confirmed') && p.weight > 0.5)
+  const recentPatterns = patterns.filter(p => p.weight > 0.5)
+  if (recentPatterns.length > 10 && confirmedPatterns.length / recentPatterns.length > 0.8) {
+    confidenceThreshold = Math.max(0.6, confidenceThreshold - 0.05)
   }
 
-  // Auto-confirm: disable if too many corrections
-  const autoConfirmEnabled = corrections.length < 8
+  // Auto-confirm: disable only if RECENT corrections are high
+  const autoConfirmEnabled = recentCorrections.length < 8
 
-  // Large group threshold: check if there are large_group flags
-  const largeGroupMemories = memories.filter(m => m.content?.includes('large_group'))
+  // Large group threshold from recent memory
+  const largeGroupMemories = weightedMemories.filter(m => m.content?.includes('large_group') && m.weight > 0.5)
   const largeGroupThreshold = largeGroupMemories.length >= 3 ? 6 : 8
 
   return { confidenceThreshold, autoConfirmEnabled, largeGroupThreshold }

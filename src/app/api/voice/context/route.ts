@@ -104,13 +104,14 @@ export async function POST(req: NextRequest) {
 
             // Check for allergies or special notes
             const allNotes = recentRes.map(r => r.notes || '').join(' ').toLowerCase()
-            if (allNotes.includes('alergi') || allNotes.includes('celiac') || allNotes.includes('vegeta') || allNotes.includes('vegan')) {
+            if (allNotes.includes('alergi') || allNotes.includes('celiac') || allNotes.includes('vegeta') || allNotes.includes('vegan') || allNotes.includes('intoler') || allNotes.includes('sin gluten') || allNotes.includes('sin lactosa') || allNotes.includes('halal') || allNotes.includes('kosher')) {
               parts.push('IMPORTANTE: tiene restricciones alimentarias — revisa notas de sus reservas anteriores')
             }
 
             // No-show history
             const noShows = recentRes.filter(r => r.status === 'no_show').length
-            if (noShows > 0) parts.push(`Ojo: no se presentó ${noShows} vez/veces antes`)
+            if (noShows >= 2) parts.push(`⚠ Ojo: no se presentó ${noShows} veces — considera pedir confirmación`)
+            else if (noShows === 1) parts.push(`Nota: no se presentó 1 vez`)
           }
 
           // Add learned preferences
@@ -133,10 +134,16 @@ export async function POST(req: NextRequest) {
       .eq("tenant_id", tenant.id)
 
     // Build business info string
-    const info = (kb || [])
-      .map(k => k.content)
-      .join(". ")
-      .slice(0, 1500) || "Sin informacion adicional."
+    const grouped = (kb || []).reduce((acc: Record<string,string[]>, k: any) => {
+      const cat = k.category || 'general'
+      if (!acc[cat]) acc[cat] = []
+      acc[cat].push(k.content)
+      return acc
+    }, {})
+    const info = Object.entries(grouped)
+      .map(([cat, items]) => `[${cat.toUpperCase()}]\n${items.join('\n')}`)
+      .join('\n\n')
+      .slice(0, 3000) || "Sin informacion adicional."
 
     // Fecha actual en español (se inyecta en cada llamada, nunca hardcodeada)
     const now = new Date()

@@ -306,9 +306,14 @@ export async function processWithAgent(params: {
     channel, businessContext, businessTypeLogic, responseTone, customerContext,
   })
 
+  // Rolling window: keep last 20 messages to fit in context
+  const recentHistory = conversationHistory.length > 20
+    ? conversationHistory.slice(-20)
+    : conversationHistory
+
   // Build messages array: history + current message
   const messages: Anthropic.MessageParam[] = [
-    ...conversationHistory.map(m => ({
+    ...recentHistory.map(m => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
     })),
@@ -323,7 +328,8 @@ export async function processWithAgent(params: {
   for (let i = 0; i < 5; i++) {
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
+      max_tokens: 1500,
+      temperature: 0.3,
       system: systemPrompt,
       tools: TOOLS,
       messages: currentMessages,
