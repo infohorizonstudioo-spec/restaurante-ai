@@ -240,10 +240,14 @@ export default function PedidosPage() {
   const activos = orders.filter(o => !['delivered', 'cancelled'].includes(o.status))
 
   async function cambiarEstado(id: string, status: string) {
-    await fetch('/api/orders', {
+    const res = await fetch('/api/orders', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, tenant_id: tid, status })
     })
+    if (!res.ok) {
+      toast.push({ title: L.title, body: locale === 'en' ? 'Error updating status' : locale === 'fr' ? 'Erreur de mise à jour' : locale === 'pt' ? 'Erro ao atualizar' : 'Error al actualizar estado', type: 'order', priority: 'error', icon: '⚠️' })
+      return
+    }
     const sm = ORDER_STATUS[status]
     toast.push({ title: SL[status] || status, body: L.statusUpdated, type: 'order', priority: 'info', icon: sm?.icon || '✅' })
     setModal(null)

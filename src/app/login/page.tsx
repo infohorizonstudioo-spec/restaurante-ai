@@ -245,8 +245,8 @@ export default function LoginPage() {
 
           <p style={{ marginTop:24, fontSize:11, color:'#49566A', textAlign:'center', lineHeight:1.6 }}>
             Al entrar aceptas los{' '}
-            <a href="#" style={{ color:'#8895A7' }}>Términos de servicio</a> y la{' '}
-            <a href="#" style={{ color:'#8895A7' }}>Política de privacidad</a>
+            <a href="/terminos" style={{ color:'#8895A7' }}>Términos de servicio</a> y la{' '}
+            <a href="/privacidad" style={{ color:'#8895A7' }}>Política de privacidad</a>
           </p>
         </div>
       </div>

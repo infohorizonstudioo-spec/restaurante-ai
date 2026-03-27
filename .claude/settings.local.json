@@ -146,7 +146,9 @@
       "Bash(do echo:*)",
       "Read(//c/Users/krush/restaurante-ai/**)",
       "Bash(done)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(wc -l /c/Users/krush/restaurante-ai/src/app/\\\\\\(dashboard\\\\\\)/*/*View.tsx)",
+      "Bash(ls -la /c/Users/krush/restaurante-ai/src/app/\\\\\\(dashboard\\\\\\)/dashboard/)"
     ]
   }
 }

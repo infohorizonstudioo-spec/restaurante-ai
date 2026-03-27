@@ -1,5 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { supabase } from '@/lib/supabase'
+import { getSessionTenant } from '@/lib/session-cache'
 import NotifBell from '@/components/NotifBell'
 import { useTenant } from '@/contexts/TenantContext'
 
@@ -42,9 +44,38 @@ export default function PeluProductosView() {
   const [servicios, setServicios] = useState<Servicio[]>(MOCK_SERVICIOS)
   const [filter, setFilter] = useState<string>('all')
   const [modal, setModal] = useState<Servicio | null | 'new'>(null)
+  const [tid, setTid] = useState<string|null>(null)
 
   const isPelu = tenant?.type === 'peluqueria'
   const accent = isPelu ? C.violet : C.text2
+
+  const loadServices = useCallback(async (tenantId: string) => {
+    const { data } = await supabase
+      .from('menu_items')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('active', true)
+      .order('category')
+      .order('sort_order')
+    if (data && data.length > 0) {
+      setServicios(data.map((d: any) => ({
+        id: d.id,
+        nombre: d.name || d.nombre || '',
+        categoria: d.category || d.categoria || 'corte',
+        precio: d.price || d.precio || 0,
+        duracion: d.duration || d.duracion || 30,
+      })))
+    }
+  }, [])
+
+  useEffect(() => {
+    (async () => {
+      const sess = await getSessionTenant()
+      if (!sess) return
+      setTid(sess.tenantId)
+      await loadServices(sess.tenantId)
+    })()
+  }, [loadServices])
 
   const filtered = filter === 'all' ? servicios : servicios.filter(s => s.categoria === filter)
 
@@ -54,13 +85,28 @@ export default function PeluProductosView() {
     return acc
   }, {})
 
-  function handleSave(data: Omit<Servicio, 'id'>) {
+  async function handleSave(data: Omit<Servicio, 'id'>) {
+    if (!tid) return
     if (modal === 'new') {
-      setServicios(prev => [...prev, { ...data, id: Date.now().toString() }])
-    } else if (modal) {
+      const { data: inserted } = await supabase.from('menu_items').insert({
+        name: data.nombre, category: data.categoria, price: data.precio,
+        duration: data.duracion, tenant_id: tid, active: true
+      }).select('id').maybeSingle()
+      if (inserted) setServicios(prev => [...prev, { ...data, id: inserted.id }])
+    } else if (modal && typeof modal === 'object') {
+      await supabase.from('menu_items').update({
+        name: data.nombre, category: data.categoria, price: data.precio,
+        duration: data.duracion, updated_at: new Date().toISOString()
+      }).eq('id', modal.id)
       setServicios(prev => prev.map(s => s.id === modal.id ? { ...s, ...data } : s))
     }
     setModal(null)
+  }
+
+  async function handleDelete(id: string) {
+    if (!tid) return
+    await supabase.from('menu_items').update({ active: false }).eq('id', id)
+    setServicios(prev => prev.filter(s => s.id !== id))
   }
 
   return (
@@ -157,6 +203,7 @@ export default function PeluProductosView() {
         <ServicioModal
           item={modal === 'new' ? null : modal}
           onSave={handleSave}
+          onDelete={handleDelete}
           onClose={() => setModal(null)}
           accent={accent}
         />
@@ -165,9 +212,10 @@ export default function PeluProductosView() {
   )
 }
 
-function ServicioModal({ item, onSave, onClose, accent }: {
+function ServicioModal({ item, onSave, onDelete, onClose, accent }: {
   item: Servicio | null
   onSave: (d: Omit<Servicio, 'id'>) => void
+  onDelete: (id: string) => void
   onClose: () => void
   accent: string
 }) {
@@ -228,6 +276,9 @@ function ServicioModal({ item, onSave, onClose, accent }: {
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+            {item && (
+              <button onClick={() => { onDelete(item.id); onClose() }} style={{ padding: '11px 16px', background: C.redDim, border: `1px solid ${C.red}33`, borderRadius: 10, cursor: 'pointer', color: C.red, fontSize: 13, fontFamily: 'inherit', fontWeight: 600 }}>Eliminar</button>
+            )}
             <button onClick={onClose} style={{ flex: 1, padding: '11px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 10, cursor: 'pointer', color: C.text2, fontSize: 13, fontFamily: 'inherit' }}>Cancelar</button>
             <button onClick={submit} disabled={!nombre.trim() || !precio || !duracion} style={{
               flex: 2, padding: '11px', background: `linear-gradient(135deg,${accent},${accent === C.violet ? '#8B5CF6' : '#6B7280'})`,

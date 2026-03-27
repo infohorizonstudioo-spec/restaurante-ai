@@ -177,13 +177,19 @@ function DefaultClientesView() {
                       <p style={{fontSize:13,color:C.text2}}>{selected.phone}{selected.email?' · '+selected.email:''}</p>
                       {selected.phone && (
                         <button onClick={async () => {
-                          const sess = await supabase.auth.getSession()
-                          if (!sess.data.session) return
-                          await fetch('/api/voice/outbound', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
-                            body: JSON.stringify({ phone_number: selected.phone, reason: 'callback', customer_name: selected.name })
-                          })
+                          try {
+                            const sess = await supabase.auth.getSession()
+                            if (!sess.data.session) return
+                            const res = await fetch('/api/voice/outbound', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
+                              body: JSON.stringify({ phone_number: selected.phone, reason: 'callback', customer_name: selected.name })
+                            })
+                            if (!res.ok) throw new Error()
+                            toast.push({ title: tx('Llamando...'), body: selected.name, type: 'call', priority: 'info', icon: '📞' })
+                          } catch {
+                            toast.push({ title: tx('Error'), body: tx('No se pudo realizar la llamada'), type: 'call', priority: 'error', icon: '⚠️' })
+                          }
                         }}
                         style={{fontSize:11, padding:'3px 10px', borderRadius:7, border:`1px solid rgba(45,212,191,0.25)`, background:'rgba(45,212,191,0.10)', color:'#2DD4BF', cursor:'pointer', fontFamily:'inherit', fontWeight:500, flexShrink:0}}>
                           📞 {tx('Llamar')}
