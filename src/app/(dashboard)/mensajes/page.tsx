@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import { C } from '@/lib/colors'
+import { useToast } from '@/components/NotificationToast'
 
 const CHANNEL_META: Record<string, { icon: string; color: string; label: string }> = {
   whatsapp: { icon: '💬', color: '#25D366', label: 'WhatsApp' },
@@ -35,6 +36,7 @@ type Message = {
 
 export default function MensajesPage() {
   const { tenant, t, tx } = useTenant()
+  const toast = useToast()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [selected, setSelected] = useState<Conversation | null>(null)
@@ -107,21 +109,26 @@ export default function MensajesPage() {
       : selected.channel === 'email' ? '/api/email/send'
       : '/api/sms/send'
 
-    await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tenant_id: tid,
-        conversation_id: selected.id,
-        to: selected.from_identifier,
-        content: replyText,
-        subject: selected.metadata?.subject ? `Re: ${selected.metadata.subject}` : undefined,
-      }),
-    }).catch(() => {})
-
-    setReplyText('')
-    setSending(false)
-    loadMessages(selected.id)
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: tid,
+          conversation_id: selected.id,
+          to: selected.from_identifier,
+          content: replyText,
+          subject: selected.metadata?.subject ? `Re: ${selected.metadata.subject}` : undefined,
+        }),
+      })
+      if (!res.ok) throw new Error()
+      setReplyText('')
+      loadMessages(selected.id)
+    } catch {
+      toast.push({ title: tx('Error'), body: tx('No se pudo enviar el mensaje'), type: 'message', priority: 'error', icon: '⚠️' })
+    } finally {
+      setSending(false)
+    }
   }
 
   // ── Escalation actions ─────────────────────────────────────

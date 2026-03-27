@@ -5,6 +5,7 @@ import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader, PageSkeleton } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import { getCommonStrings, getStatusLabel } from '@/lib/i18n'
+import { useToast } from '@/components/NotificationToast'
 
 // ── Traducciones humanas de estados ──────────────────────────────────────
 function getDecisionLabel(status: string, name: string, txFn: (s:string)=>string): string {
@@ -114,6 +115,7 @@ function fmt(sec:number|null) {
 export default function LlamadasPage() {
   const { t, tx, tenant: tenantCtx } = useTenant()
   const cs = getCommonStrings(t.locale)
+  const toast = useToast()
   const agentName = tenantCtx?.agent_name || 'Sofía'
   const [calls,setCalls]       = useState<any[]>([])
   const [loading,setLoading]   = useState(true)
@@ -190,6 +192,7 @@ export default function LlamadasPage() {
         setFeedbackDone(prev => new Set(prev).add(callSid))
         setCorrecting(null)
         setFeedbackNote('')
+        toast.push({ title: tx('Corrección guardada'), body: agentName + ' ' + tx('tendrá esto en cuenta la próxima vez'), type: 'agent', priority: 'info', icon: '✓' })
         if (data.suggestions?.length > 0) setSuggestions(data.suggestions)
       }
     } catch(e) {

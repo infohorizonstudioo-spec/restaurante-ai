@@ -463,6 +463,7 @@ export default function MesasPage() {
   const [showLibrary,setShowLibrary] = useState(true)
   const [panOffset,setPanOffset]   = useState({x:0,y:0})
   const [isPanning,setIsPanning]   = useState(false)
+  const [saveStatus,setSaveStatus] = useState<'idle'|'saving'|'saved'>('idle')
   const panStart = useRef({x:0,y:0,ox:0,oy:0})
   const svgRef = useRef<SVGSVGElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -568,10 +569,12 @@ export default function MesasPage() {
 
   async function saveTable(id:string,updates:Partial<TableItem>) {
     setTables(prev=>prev.map(t=>t.id===id?{...t,...updates}:t))
-    // Debounced save to DB
+    setSaveStatus('saving')
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(async()=>{
       await supabase.from('tables').update({...updates, zone_id:updates.zone_id||null}).eq('id',id)
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus('idle'), 1500)
     }, 400)
   }
 
@@ -823,8 +826,10 @@ export default function MesasPage() {
       <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexShrink:0,zIndex:20}}>
         <div style={{display:'flex',alignItems:'center',gap:14}}>
           <div>
-            <h1 style={{fontSize:15,fontWeight:700,color:C.text}}>
+            <h1 style={{fontSize:15,fontWeight:700,color:C.text,display:'flex',alignItems:'center',gap:8}}>
               {tx('Diseñador de espacio')}
+              {saveStatus === 'saving' && <span style={{ fontSize:11, color:'#F0A84E', fontWeight:600 }}>{tx('Guardando...')}</span>}
+              {saveStatus === 'saved' && <span style={{ fontSize:11, color:'#34D399', fontWeight:600 }}>✓ {tx('Guardado')}</span>}
             </h1>
             <p style={{fontSize:10,color:C.muted,marginTop:1}}>
               {tables.length} {unitP.toLowerCase()} · {zones.length} {zonesLabel.toLowerCase()}

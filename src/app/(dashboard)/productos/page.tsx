@@ -174,7 +174,7 @@ export default function ProductosPage() {
             }, {})
           ).map(([cat, catItems]) => (
             <div key={cat} style={{ marginBottom:20 }}>
-              <p style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:10 }}>{cat}</p>
+              <p style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:10 }}>{tx(cat)}</p>
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 {(catItems as any[]).map(item => {
                   const cfg = AVAIL_CFG[item.availability_type as AvailType] || AVAIL_CFG.always_available
@@ -289,7 +289,7 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: {
             <div>
               <label style={lbl}>{tx('Categoría').toUpperCase()}</label>
               <select className="rz-inp" value={form.category} onChange={e => up('category', e.target.value)} style={{ cursor:'pointer' }}>
-                {CATEGORIES.map(c => <option key={c} value={c} style={{ background:C.card }}>{c}</option>)}
+                {CATEGORIES.map(c => <option key={c} value={c} style={{ background:C.card }}>{tx(c)}</option>)}
               </select>
             </div>
             <div>
