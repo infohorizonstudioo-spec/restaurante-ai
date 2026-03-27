@@ -1099,6 +1099,49 @@ export function getSecurityStats(): SecurityStats {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// PERSISTENCE HELPERS — export state for cold-start recovery
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Returns all currently blocked IPs with their expiry and strike count */
+export function getBlockedIPs(): Array<{ ip: string; until: number; strikes: number }> {
+  const result: Array<{ ip: string; until: number; strikes: number }> = []
+  const now = Date.now()
+  for (const [ip, profile] of attackers) {
+    if (profile.blockUntil > now) {
+      result.push({ ip, until: profile.blockUntil, strikes: profile.strikeCount })
+    }
+  }
+  return result
+}
+
+/** Returns learned patterns with sufficient confidence for persistence */
+export function getLearnedPatternsExport(): Array<{ pattern: string; type: string; confidence: number; matchCount: number }> {
+  return learnedPatterns
+    .filter(p => p.confidence >= 0.5)
+    .map(p => ({ pattern: p.pattern, type: p.type, confidence: p.confidence, matchCount: p.matchCount }))
+}
+
+/** Restore a blocked IP from persisted state (skips expired entries) */
+export function restoreBlockedIP(ip: string, until: number, strikes: number): void {
+  const now = Date.now()
+  if (until <= now) return // expired, don't restore
+  const profile = getProfile(ip, `restored_${ip}`)
+  profile.blockUntil = until
+  profile.strikeCount = strikes
+}
+
+/** Restore a learned pattern from persisted state (deduplicates) */
+export function restoreLearnedPattern(pattern: string, type: string, confidence: number, matchCount: number): void {
+  const exists = learnedPatterns.some(p => p.pattern === pattern)
+  if (exists) return
+  learnedPatterns.push({
+    pattern, type, confidence, matchCount,
+    createdAt: Date.now(),
+    source: 'restored',
+  })
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // L8: DECEPTION RESPONSES
 // ═══════════════════════════════════════════════════════════════════════════
 

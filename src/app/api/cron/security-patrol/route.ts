@@ -6,8 +6,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
-import { getSecurityStats } from '@/lib/security-guardian'
+import {
+  getSecurityStats,
+  getBlockedIPs,
+  getLearnedPatternsExport,
+  restoreBlockedIP,
+  restoreLearnedPattern,
+} from '@/lib/security-guardian'
 import { checkIntegrity, getSnapshotHistory } from '@/lib/integrity-monitor'
+import { persistState, loadState } from '@/lib/security-persistence'
 import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
 import { timingSafeEqual } from 'crypto'
 
@@ -35,6 +42,33 @@ export async function GET(req: NextRequest) {
   }
 
   const results: Record<string, any> = { timestamp: new Date().toISOString(), checks: {} }
+
+  // 1b. COLD-START RECOVERY — restore persisted guardian state
+  try {
+    const persisted = await loadState()
+    if (persisted) {
+      let restoredIPs = 0
+      let restoredPatterns = 0
+      for (const entry of persisted.blockedIPs) {
+        restoreBlockedIP(entry.ip, entry.until, entry.strikes)
+        restoredIPs++
+      }
+      for (const p of persisted.learnedPatterns) {
+        restoreLearnedPattern(p.pattern, p.type, p.confidence, p.matchCount)
+        restoredPatterns++
+      }
+      if (restoredIPs > 0 || restoredPatterns > 0) {
+        logger.info('Security state restored from persistence', {
+          blockedIPs: restoredIPs,
+          learnedPatterns: restoredPatterns,
+          stateAge: persisted.lastUpdated,
+        })
+        results.restored = { blockedIPs: restoredIPs, learnedPatterns: restoredPatterns }
+      }
+    }
+  } catch (e) {
+    logger.error('Failed to restore security state', {}, e)
+  }
 
   // 2. INTEGRITY CHECK — detect suspicious database records
 
@@ -168,6 +202,19 @@ export async function GET(req: NextRequest) {
 
   results.status = hasIssues ? 'issues_found' : 'all_clear'
   results.nextPatrol = new Date(Date.now() + 5 * 60_000).toISOString()
+
+  // 8. PERSIST STATE — save guardian state for cold-start recovery
+  try {
+    await persistState({
+      blockedIPs: getBlockedIPs(),
+      learnedPatterns: getLearnedPatternsExport(),
+      lastUpdated: new Date().toISOString(),
+    })
+    results.persisted = true
+  } catch (e) {
+    logger.error('Failed to persist security state', {}, e)
+    results.persisted = false
+  }
 
   return NextResponse.json(results)
 }
