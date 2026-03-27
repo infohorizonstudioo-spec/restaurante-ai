@@ -46,6 +46,22 @@ export async function POST(req: NextRequest) {
 
   const { rules, patterns } = await req.json()
 
+  // Validate critical rule values
+  if (rules) {
+    if (rules.max_auto_party_size !== undefined) {
+      rules.max_auto_party_size = Math.max(1, Math.min(50, parseInt(rules.max_auto_party_size) || 6))
+    }
+    if (rules.min_confidence_to_confirm !== undefined) {
+      rules.min_confidence_to_confirm = Math.max(0.3, Math.min(1.0, parseFloat(rules.min_confidence_to_confirm) || 0.7))
+    }
+    if (rules.large_group_min !== undefined) {
+      rules.large_group_min = Math.max(2, Math.min(100, parseInt(rules.large_group_min) || 8))
+    }
+    if (rules.advance_booking_max_days !== undefined) {
+      rules.advance_booking_max_days = Math.max(1, Math.min(365, parseInt(rules.advance_booking_max_days) || 60))
+    }
+  }
+
   const upserts: { tenant_id: string; rule_key: string; rule_value: string }[] = []
 
   if (rules && typeof rules === 'object') {

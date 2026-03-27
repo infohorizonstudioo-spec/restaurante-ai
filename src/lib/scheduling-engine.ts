@@ -205,6 +205,22 @@ export function checkSlotAvailability(input: SlotCheckInput, _depth = 0): SlotCh
   const { time, party_size, zone_name, cfg, existing_reservations, tables, zones } = input
   const trace: string[] = []
 
+  // PASO 0 — ¿Es día cerrado?
+  if (input.date && cfg.service_hours?.closed_days?.length) {
+    const dayOfWeek = new Date(input.date + 'T12:00:00').getDay()
+    if (cfg.service_hours.closed_days.includes(dayOfWeek)) {
+      trace.push(`[0] Día cerrado (${dayOfWeek}) — no se aceptan reservas`)
+      return {
+        available: false, reason: 'outside_service_hours',
+        alternatives: [], slot_reservations: 0, slot_people: 0,
+        slots_remaining: 0, people_remaining: 0,
+        message: 'Este día el negocio está cerrado.',
+        trace,
+      }
+    }
+    trace.push(`[0] Día ${input.date} abierto ✓`)
+  }
+
   // PASO 1 — ¿Es una franja válida?
   if (!isValidSlot(time, cfg)) {
     const validSlots = generateSlots(cfg)

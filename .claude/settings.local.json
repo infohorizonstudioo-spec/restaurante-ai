@@ -141,7 +141,11 @@
       "Bash(head -100 /c/Users/krush/restaurante-ai/src/app/\\\\\\(dashboard\\\\\\)/mesas/page.tsx)",
       "Bash(head -100 /c/Users/krush/restaurante-ai/src/app/\\\\\\(dashboard\\\\\\)/configuracion/page.tsx)",
       "Bash(git log:*)",
-      "Bash(cat -A \"C:/Users/krush/restaurante-ai/src/app/\\(dashboard\\)/reservas/BarbeReservasView.tsx\")"
+      "Bash(cat -A \"C:/Users/krush/restaurante-ai/src/app/\\(dashboard\\)/reservas/BarbeReservasView.tsx\")",
+      "Bash(for file:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Users/krush/restaurante-ai/**)",
+      "Bash(done)"
     ]
   }
 }

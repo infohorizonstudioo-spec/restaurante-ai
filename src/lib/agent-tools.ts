@@ -99,10 +99,14 @@ async function findNextAvailableDay(
   cfg: any, zones: any[], tables: any[]
 ): Promise<{ date: string; slot: string } | null> {
   const allSlots = generateSlots(cfg)
-  for (let i = 1; i <= 7; i++) {
+  const maxDays = Math.min(cfg.advance_booking_max_days || 14, 14)
+  for (let i = 1; i <= maxDays; i++) {
     const d = new Date(fromDate + 'T12:00:00')
     d.setDate(d.getDate() + i)
     const checkDate = d.toISOString().slice(0, 10)
+
+    // Skip closed days
+    if (cfg.service_hours?.closed_days?.includes(d.getDay())) continue
 
     const { data: dayRes } = await supabase.from('reservations')
       .select('time,people,party_size,zone_id,table_id')
@@ -212,9 +216,13 @@ export async function createReservationTool(params: {
   source?: string;
 }) {
   const { tenant_id, customer_name, customer_phone, zone, service_type, order_items } = params
-  const finalDate = params.date || new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+  const tomorrow = new Date(new Date().toISOString().slice(0, 10) + 'T12:00:00')
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const finalDate = params.date || tomorrow.toISOString().slice(0, 10)
   const finalTime = params.time || '20:00'
   const finalPartySize = params.party_size || params.people || 1
+  if (finalPartySize < 1) return { success: false, error: 'El número de personas debe ser al menos 1' }
+  if (finalPartySize > 50) return { success: false, error: 'Para grupos de más de 50 personas, contacta directamente con el negocio' }
   const notesStr = [params.notes, service_type, order_items ? "Pedido: " + order_items : null].filter(Boolean).join(' | ')
   const source = params.source || 'voice_agent'
 

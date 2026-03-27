@@ -6,6 +6,7 @@ import { getBusinessKnowledge, buildKnowledgeContext } from '@/lib/business-know
 import { resolveTemplate } from '@/lib/templates'
 import { createNotification } from '@/lib/notifications'
 import { learnFromCall, getTenantMemory, buildMemoryContext, getAdaptiveThresholds } from '@/lib/tenant-learning'
+import { makeDecision } from '@/lib/agent-decision'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -417,17 +418,22 @@ export async function POST(req: Request) {
     }
 
     // ── Construir decisión desde análisis ──────────────────────────────────
-    const confidence = analysis.intent === 'consulta' ? 0.6 : 0.8
-    const specialFlags: string[] = []
-    if (analysis.details?.party_size >= 8) specialFlags.push('large_group')
-    if (analysis.details?.is_urgency) specialFlags.push('out_of_policy')
-    if (confidence < (effectiveRules.min_confidence_to_confirm || 0.7)) specialFlags.push('low_confidence')
+    // Use the real decision engine instead of ad-hoc confidence
+    const decisionResult = makeDecision({
+      tenant_type: templateType,
+      party_size: analysis.details?.party_size || 2,
+      date: analysis.details?.date || new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+      time: analysis.details?.time || '20:00',
+      notes: analysis.summary || '',
+      is_new_customer: true,
+      rules: effectiveRules,
+    })
+    const confidence = decisionResult.confidence
+    const specialFlags = decisionResult.flags || []
 
-    const threshold = effectiveRules.min_confidence_to_confirm || 0.7
     const isBookingIntent = analysis.intent === 'reserva' || analysis.intent === 'pedido'
-    const decisionStatus = isBookingIntent && confidence >= threshold
-      ? 'confirmed'
-      : analysis.intent === 'cancelacion' ? 'cancelled'
+    const decisionStatus = analysis.intent === 'cancelacion' ? 'cancelled'
+      : isBookingIntent ? decisionResult.status
       : confidence < 0.55 ? 'needs_human_attention'
       : 'pending_review'
 
@@ -508,6 +514,7 @@ export async function POST(req: Request) {
         const resDate = tomorrow.toISOString().slice(0,10)
         const resTime = timeMatch ? `${timeMatch[1].padStart(2,'0')}:${timeMatch[2]}` : '20:00'
         const people  = peopleMatch ? parseInt(peopleMatch[1]) : (decision.details?.party_size || 2)
+        if (people < 1 || people > 50) return // Invalid party size
 
         await admin.rpc('create_reservation_atomic', {
           p_tenant_id:     tenantId,
