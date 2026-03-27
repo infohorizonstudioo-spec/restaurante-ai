@@ -393,6 +393,20 @@ export async function processWithAgent(params: {
   else if (actions.some(a => a.type === 'check_availability')) intent = 'consulta'
   else if (actions.some(a => a.type === 'get_menu_or_services')) intent = 'consulta'
 
+  // ── Post-interaction: classify and learn (non-blocking) ──
+  try {
+    const { classifyInteraction, learnFromInteraction } = await import('./intelligence-engine')
+    const classification = classifyInteraction({
+      text: customerMessage, business_type: businessContext?.type || 'otro',
+      party_size: actions.find(a => a.params?.party_size)?.params?.party_size,
+    })
+    learnFromInteraction({
+      tenant_id: tenantId, type: (intent as any) || classification.type,
+      classification, customer_phone: customerPhone,
+      outcome: actions.some(a => a.type === 'escalate_to_human') ? 'escalated' : 'success',
+    }).catch(() => {})
+  } catch { /* non-critical */ }
+
   return {
     content: finalResponse || 'Lo siento, no he podido procesar tu mensaje. ¿Puedes intentarlo de nuevo?',
     intent,
