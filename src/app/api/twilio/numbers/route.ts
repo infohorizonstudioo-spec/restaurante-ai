@@ -37,12 +37,12 @@ export async function POST(req: Request) {
 
   try {
     const auth = Buffer.from(`${TWILIO_SID}:${TWILIO_TOKEN}`).toString('base64')
-    // VoiceUrl → ElevenLabs gestiona la llamada
+    // VoiceUrl → nuestro endpoint contesta sin ring y conecta a ElevenLabs
     // StatusCallback → nuestro post-call para guardar resultado
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${req.headers.get('host')}`
     const body = new URLSearchParams({
       PhoneNumber: phoneNumber,
-      VoiceUrl: 'https://api.us.elevenlabs.io/twilio/inbound_call',
+      VoiceUrl: `${appUrl}/api/voice/inbound`,
       VoiceMethod: 'POST',
       StatusCallback: `${appUrl}/api/voice/post-call`,
       StatusCallbackMethod: 'POST',

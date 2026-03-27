@@ -39,6 +39,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'NEXT_PUBLIC_APP_URL not set' }, { status: 503 })
   }
 
+  // Apunta a nuestro handler que descuelga sin ring y conecta a ElevenLabs
   const WEBHOOK_URL = `${APP_URL}/api/voice/inbound`
 
   try {

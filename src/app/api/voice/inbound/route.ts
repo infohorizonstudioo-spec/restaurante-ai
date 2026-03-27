@@ -1,0 +1,99 @@
+/**
+ * RESERVO.AI — Inbound Voice Handler
+ *
+ * Twilio llama aquí cuando entra una llamada.
+ * Responde INMEDIATAMENTE con TwiML que:
+ * 1. Descuelga sin ring (no hay <Dial> ni <Ring>)
+ * 2. Conecta vía <Stream> o <Connect> a ElevenLabs
+ *
+ * Esto elimina el sonido de "primmm" que oye el cliente.
+ */
+import { NextResponse } from 'next/server'
+import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
+
+export async function POST(req: Request) {
+  const rl = rateLimitByIp(req, RATE_LIMITS.webhook, 'voice:inbound')
+  if (rl.blocked) return rl.response
+
+  try {
+    const body = await req.text()
+    const params = new URLSearchParams(body)
+    const callerPhone = params.get('From') || ''
+    const calledNumber = params.get('To') || ''
+    const callSid = params.get('CallSid') || ''
+
+    logger.info('Inbound call received', { callSid, from: callerPhone, to: calledNumber })
+
+    // Buscar el agente ElevenLabs asociado a este número
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    // Limpiar número para buscar en DB (puede venir como +34612... o 612...)
+    const cleanNumber = calledNumber.replace(/\s/g, '')
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('id,el_agent_id,agent_name,name')
+      .or(`agent_phone.eq.${cleanNumber},agent_phone.eq.${cleanNumber.replace('+', '')}`)
+      .maybeSingle()
+
+    const agentId = tenant?.el_agent_id || process.env.ELEVENLABS_AGENT_ID || ''
+
+    if (!agentId) {
+      // Sin agente configurado: mensaje de disculpa
+      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say language="es-ES" voice="Polly.Lucia">Lo sentimos, este número no tiene un agente configurado. Por favor, inténtelo más tarde.</Say>
+  <Hangup/>
+</Response>`
+      return new NextResponse(twiml, {
+        headers: { 'Content-Type': 'text/xml' },
+      })
+    }
+
+    // Registrar la llamada en DB
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${req.headers.get('host')}`
+
+    if (tenant?.id) {
+      void supabase.from('calls').insert({
+        tenant_id: tenant.id,
+        call_sid: callSid,
+        caller_phone: callerPhone,
+        status: 'activa',
+        intent: 'pendiente',
+        started_at: new Date().toISOString(),
+        session_state: 'escuchando',
+      })
+    }
+
+    // TwiML: Descuelga INMEDIATAMENTE y conecta a ElevenLabs
+    // <Connect> + <ConversationRelay> es el método oficial de ElevenLabs con Twilio
+    // Esto evita cualquier ring/tono de llamada
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Connect>
+    <ConversationRelay url="wss://api.elevenlabs.io/v1/convai/twilio/audio" dtmfDetection="true">
+      <Parameter name="agent_id" value="${agentId}" />
+    </ConversationRelay>
+  </Connect>
+</Response>`
+
+    return new NextResponse(twiml, {
+      headers: { 'Content-Type': 'text/xml' },
+    })
+  } catch (err) {
+    logger.error('Inbound voice error', {}, err)
+    // Fallback TwiML
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say language="es-ES">Perdona, ha habido un problemilla técnico. Inténtalo en un momento.</Say>
+  <Hangup/>
+</Response>`
+    return new NextResponse(twiml, {
+      headers: { 'Content-Type': 'text/xml' },
+    })
+  }
+}

@@ -121,6 +121,7 @@ export async function middleware(request: NextRequest) {
   // API webhooks → pasar sin auth (son llamadas externas verificadas internamente)
   if (
     pathname.startsWith('/api/voice/webhook') ||
+    pathname.startsWith('/api/voice/inbound') ||
     pathname.startsWith('/api/twilio/webhook') ||
     pathname.startsWith('/api/stripe/webhook') ||
     pathname.startsWith('/api/whatsapp/webhook') ||

@@ -743,12 +743,16 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
         asr: {
           quality: "high",
           provider: "elevenlabs",
-          keywords: [],
+          language: "es",
+          keywords: [
+            "reserva", "reservar", "mesa", "cita", "personas",
+            "hora", "cancelar", "pedido", "terraza", "interior",
+          ],
         },
         turn: {
           mode: "turn",
-          turn_timeout: 1.5,
-          turn_eagerness: "eager",
+          turn_timeout: 2.5,
+          turn_eagerness: "balanced",
           speculative_turn: true,
         },
         tts: {
@@ -757,7 +761,7 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
           stability: voiceConfig.stability,
           similarity_boost: voiceConfig.similarity_boost,
           optimize_streaming_latency: 4,
-          speed: 1.12,
+          speed: 1.05,
           expressive_mode: true,
         }
       },
