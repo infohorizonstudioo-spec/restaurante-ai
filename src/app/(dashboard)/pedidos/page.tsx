@@ -2,7 +2,7 @@
 import NotifBell from '@/components/NotifBell'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { PageLoader, PageSkeleton, Modal } from '@/components/ui'
+import { PageSkeleton } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import Link from 'next/link'
 import { useToast } from '@/components/NotificationToast'
@@ -11,28 +11,51 @@ import { useToast } from '@/components/NotificationToast'
 const STATUS_FLOW = ['collecting','confirmed','preparing','ready','delivered'] as const
 type OrderStatus = typeof STATUS_FLOW[number] | 'cancelled'
 
-const STATUS_META: Record<string, { color: string; label: string; icon: string }> = {
-  collecting:  { color: '#F0A84E', label: 'Recogiendo',  icon: '📝' },
-  confirmed:   { color: '#60A5FA', label: 'Confirmado',  icon: '✅' },
-  preparing:   { color: '#FBB53F', label: 'Preparando',  icon: '🍳' },
-  ready:       { color: '#34D399', label: 'Listo',       icon: '🔔' },
-  delivered:   { color: '#8895A7', label: 'Entregado',   icon: '✔️' },
-  cancelled:   { color: '#F87171', label: 'Cancelado',   icon: '✖️' },
+const STATUS_COLORS: Record<string, { color: string; icon: string }> = {
+  collecting:  { color: '#F0A84E', icon: '📝' },
+  confirmed:   { color: '#2DD4BF', icon: '✅' },
+  preparing:   { color: '#FBB53F', icon: '🍳' },
+  ready:       { color: '#34D399', icon: '🔔' },
+  delivered:   { color: '#8895A7', icon: '✔️' },
+  cancelled:   { color: '#F87171', icon: '✖️' },
+}
+const STATUS_LABELS: Record<string, Record<string, string>> = {
+  es: { collecting:'Tomando pedido', confirmed:'Confirmado', preparing:'Preparando', ready:'Listo', delivered:'Entregado', cancelled:'Cancelado' },
+  en: { collecting:'Taking order', confirmed:'Confirmed', preparing:'Preparing', ready:'Ready', delivered:'Delivered', cancelled:'Cancelled' },
+  fr: { collecting:'Prise de commande', confirmed:'Confirmé', preparing:'En préparation', ready:'Prêt', delivered:'Livré', cancelled:'Annulé' },
+  pt: { collecting:'Recebendo pedido', confirmed:'Confirmado', preparing:'Preparando', ready:'Pronto', delivered:'Entregue', cancelled:'Cancelado' },
 }
 
 const ORDER_TYPES = ['todos','recoger','domicilio','mesa'] as const
-const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
-  recoger:   { label: 'Recoger',   icon: '🥡' },
-  domicilio: { label: 'Domicilio', icon: '🛵' },
-  mesa:      { label: 'Mesa',      icon: '🍽️' },
+const TYPE_ICONS: Record<string, string> = { recoger: '🥡', domicilio: '🛵', mesa: '🍽️' }
+const TYPE_TRANSLATIONS: Record<string, Record<string, string>> = {
+  es: { todos:'Todos', recoger:'Recoger', domicilio:'Domicilio', mesa:'Mesa' },
+  en: { todos:'All', recoger:'Pickup', domicilio:'Delivery', mesa:'Dine-in' },
+  fr: { todos:'Tous', recoger:'À emporter', domicilio:'Livraison', mesa:'Sur place' },
+  pt: { todos:'Todos', recoger:'Retirar', domicilio:'Entrega', mesa:'Mesa' },
 }
 
-function timeAgo(dateStr: string): string {
+/* ── Localized helpers ─────────────────────────────────────────────── */
+const TIME_AGO: Record<string, { lt1: string; min: string; h: string; d: string }> = {
+  es: { lt1: 'hace <1 min', min: 'hace {n} min', h: 'hace {n}h', d: 'hace {n}d' },
+  en: { lt1: '<1 min ago', min: '{n} min ago', h: '{n}h ago', d: '{n}d ago' },
+  fr: { lt1: 'il y a <1 min', min: 'il y a {n} min', h: 'il y a {n}h', d: 'il y a {n}j' },
+  pt: { lt1: 'há <1 min', min: 'há {n} min', h: 'há {n}h', d: 'há {n}d' },
+}
+function timeAgo(dateStr: string, locale: string = 'es'): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
-  if (diff < 60) return 'hace <1 min'
-  if (diff < 3600) { const m = Math.floor(diff / 60); return `hace ${m} min` }
-  if (diff < 86400) { const h = Math.floor(diff / 3600); return `hace ${h}h` }
-  const d = Math.floor(diff / 86400); return `hace ${d}d`
+  const L = TIME_AGO[locale] || TIME_AGO.es
+  if (diff < 60) return L.lt1
+  if (diff < 3600) return L.min.replace('{n}', String(Math.floor(diff / 60)))
+  if (diff < 86400) return L.h.replace('{n}', String(Math.floor(diff / 3600)))
+  return L.d.replace('{n}', String(Math.floor(diff / 86400)))
+}
+
+const NEXT_LABELS: Record<string, Record<string, string>> = {
+  es: { confirmed:'Confirmar', preparing:'Preparar', ready:'Marcar listo', delivered:'Entregado' },
+  en: { confirmed:'Confirm', preparing:'Prepare', ready:'Mark ready', delivered:'Delivered' },
+  fr: { confirmed:'Confirmer', preparing:'Préparer', ready:'Marquer prêt', delivered:'Livré' },
+  pt: { confirmed:'Confirmar', preparing:'Preparar', ready:'Marcar pronto', delivered:'Entregue' },
 }
 
 function nextStatus(current: string): string | null {
@@ -41,16 +64,74 @@ function nextStatus(current: string): string | null {
   return STATUS_FLOW[idx + 1]
 }
 
-function nextLabel(current: string): string {
+function nextLabel(current: string, locale: string = 'es'): string {
   const ns = nextStatus(current)
   if (!ns) return ''
-  const map: Record<string, string> = {
-    confirmed: 'Confirmar',
-    preparing: 'Preparar',
-    ready: 'Marcar listo',
-    delivered: 'Entregado',
-  }
-  return map[ns] || STATUS_META[ns]?.label || ''
+  return (NEXT_LABELS[locale] || NEXT_LABELS.es)[ns] || ''
+}
+
+/* ── Localized UI strings ──────────────────────────────────────────── */
+const UI: Record<string, Record<string, string>> = {
+  es: {
+    title: 'Pedidos', active: 'activos', total: 'total', newOrder: '+ Nuevo pedido',
+    noOrders: 'Sin pedidos todavía',
+    noOrdersDesc: 'Los pedidos de tus clientes aparecerán aquí en tiempo real cuando lleguen por llamada, WhatsApp o tu carta digital.',
+    createManual: '+ Crear pedido manual', table: 'Mesa', pickup: 'Recogida:',
+    call: 'Llamar', products: 'Productos', totalLabel: 'Total',
+    changeStatus: 'Cambiar estado', cancelOrder: 'Cancelar pedido',
+    created: 'Creado:', updated: 'Actualizado:', statusUpdated: 'Estado actualizado',
+    moduleUnavailable: 'Módulo no disponible',
+    moduleDesc: 'El módulo de pedidos está diseñado para negocios de hostelería.',
+    backToPanel: 'Volver al panel',
+    orderMgmt: 'Gestión de pedidos',
+    orderMgmtDesc: 'Gestiona pedidos locales, para llevar y delivery desde tu panel. Disponible en el plan Pro y Business.',
+    viewPlans: 'Ver planes →',
+  },
+  en: {
+    title: 'Orders', active: 'active', total: 'total', newOrder: '+ New order',
+    noOrders: 'No orders yet',
+    noOrdersDesc: 'Your customers\' orders will appear here in real time when they come in via call, WhatsApp or your digital menu.',
+    createManual: '+ Create manual order', table: 'Table', pickup: 'Pickup:',
+    call: 'Call', products: 'Products', totalLabel: 'Total',
+    changeStatus: 'Change status', cancelOrder: 'Cancel order',
+    created: 'Created:', updated: 'Updated:', statusUpdated: 'Status updated',
+    moduleUnavailable: 'Module unavailable',
+    moduleDesc: 'The orders module is designed for hospitality businesses.',
+    backToPanel: 'Back to dashboard',
+    orderMgmt: 'Order management',
+    orderMgmtDesc: 'Manage dine-in, takeaway and delivery orders from your dashboard. Available on Pro and Business plans.',
+    viewPlans: 'View plans →',
+  },
+  fr: {
+    title: 'Commandes', active: 'actives', total: 'total', newOrder: '+ Nouvelle commande',
+    noOrders: 'Pas encore de commandes',
+    noOrdersDesc: 'Les commandes de vos clients apparaîtront ici en temps réel via appel, WhatsApp ou votre carte digitale.',
+    createManual: '+ Créer commande manuelle', table: 'Table', pickup: 'Retrait :',
+    call: 'Appeler', products: 'Produits', totalLabel: 'Total',
+    changeStatus: 'Changer le statut', cancelOrder: 'Annuler la commande',
+    created: 'Créé :', updated: 'Mis à jour :', statusUpdated: 'Statut mis à jour',
+    moduleUnavailable: 'Module non disponible',
+    moduleDesc: 'Le module de commandes est conçu pour les entreprises de restauration.',
+    backToPanel: 'Retour au tableau de bord',
+    orderMgmt: 'Gestion des commandes',
+    orderMgmtDesc: 'Gérez les commandes sur place, à emporter et en livraison. Disponible sur les plans Pro et Business.',
+    viewPlans: 'Voir les plans →',
+  },
+  pt: {
+    title: 'Pedidos', active: 'ativos', total: 'total', newOrder: '+ Novo pedido',
+    noOrders: 'Sem pedidos ainda',
+    noOrdersDesc: 'Os pedidos dos seus clientes aparecerão aqui em tempo real quando chegarem por chamada, WhatsApp ou carta digital.',
+    createManual: '+ Criar pedido manual', table: 'Mesa', pickup: 'Recolha:',
+    call: 'Ligar', products: 'Produtos', totalLabel: 'Total',
+    changeStatus: 'Mudar estado', cancelOrder: 'Cancelar pedido',
+    created: 'Criado:', updated: 'Atualizado:', statusUpdated: 'Estado atualizado',
+    moduleUnavailable: 'Módulo não disponível',
+    moduleDesc: 'O módulo de pedidos é destinado a negócios de hotelaria.',
+    backToPanel: 'Voltar ao painel',
+    orderMgmt: 'Gestão de pedidos',
+    orderMgmtDesc: 'Gerencie pedidos locais, para levar e entrega a partir do painel. Disponível no plano Pro e Business.',
+    viewPlans: 'Ver planos →',
+  },
 }
 
 export default function PedidosPage() {
@@ -63,7 +144,11 @@ export default function PedidosPage() {
   const [modal, setModal] = useState<any | null>(null)
   const modalRef = useRef<any | null>(null)
   const [, setTick] = useState(0)
-  const { template } = useTenant()
+  const { template, t } = useTenant()
+  const locale = t?.locale || 'es'
+  const SL = STATUS_LABELS[locale] || STATUS_LABELS.es
+  const TL = TYPE_TRANSLATIONS[locale] || TYPE_TRANSLATIONS.es
+  const L = UI[locale] || UI.es
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const load = useCallback(async (tenantId: string) => {
@@ -78,18 +163,17 @@ export default function PedidosPage() {
       if (!user) return
       const { data: p } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle()
       if (!p?.tenant_id) return
-      const { data: t } = await supabase.from('tenants').select('plan').eq('id', p.tenant_id).maybeSingle()
-      setPlan(t?.plan || 'free')
+      const { data: tn } = await supabase.from('tenants').select('plan').eq('id', p.tenant_id).maybeSingle()
+      setPlan(tn?.plan || 'free')
       setTid(p.tenant_id)
       await load(p.tenant_id)
       setLoading(false)
     })()
   }, [load])
 
-  // Keep modalRef in sync with modal state (avoids stale closure in RT handler)
   useEffect(() => { modalRef.current = modal }, [modal])
 
-  // Tick every 30s to keep "hace X min" timers fresh
+  // Tick every 30s to keep time-ago timers fresh
   useEffect(() => {
     const iv = setInterval(() => setTick(t => t + 1), 30000)
     return () => clearInterval(iv)
@@ -105,7 +189,6 @@ export default function PedidosPage() {
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, (payload) => {
         load(tid)
-        // Update modal if viewing the same order (read from ref to avoid stale closure)
         if (modalRef.current && payload.new && (payload.new as any).id === modalRef.current.id) {
           setModal(payload.new)
         }
@@ -127,19 +210,16 @@ export default function PedidosPage() {
 
   if (loading) return <PageSkeleton variant="list"/>
 
-  // GUARDIA: pedidos solo disponible para hostelería
+  // Guard: orders only available for hospitality
   if (template && !template.hasOrders) {
     return (
       <div style={{ background: '#0C1018', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ textAlign: 'center', maxWidth: 400 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🚫</div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#E8EEF6', marginBottom: 8 }}>Módulo no disponible</h2>
-          <p style={{ fontSize: 14, color: '#8895A7', lineHeight: 1.6, marginBottom: 24 }}>
-            El módulo de pedidos no aplica para <strong>{template.label}</strong>.<br />
-            Este módulo está diseñado para negocios de hostelería.
-          </p>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#E8EEF6', marginBottom: 8 }}>{L.moduleUnavailable}</h2>
+          <p style={{ fontSize: 14, color: '#8895A7', lineHeight: 1.6, marginBottom: 24 }}>{L.moduleDesc}</p>
           <Link href="/panel" style={{ padding: '10px 24px', fontSize: 14, fontWeight: 600, color: 'white', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', borderRadius: 9, textDecoration: 'none' }}>
-            Volver al panel
+            {L.backToPanel}
           </Link>
         </div>
       </div>
@@ -154,10 +234,10 @@ export default function PedidosPage() {
         <div style={{ width: 64, height: 64, borderRadius: 16, background: 'linear-gradient(135deg,#F0A84E,#E8923A)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 24px rgba(240,168,78,0.25)' }}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="#0C1018"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
         </div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#E8EEF6', marginBottom: 10 }}>Gestión de pedidos</h2>
-        <p style={{ fontSize: 14, color: '#8895A7', lineHeight: 1.6, marginBottom: 24 }}>Gestiona pedidos locales, para llevar y delivery desde tu panel. Disponible en el plan Pro y Business.</p>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#E8EEF6', marginBottom: 10 }}>{L.orderMgmt}</h2>
+        <p style={{ fontSize: 14, color: '#8895A7', lineHeight: 1.6, marginBottom: 24 }}>{L.orderMgmtDesc}</p>
         <Link href="/precios" style={{ display: 'inline-block', padding: '12px 28px', fontSize: 14, fontWeight: 600, color: '#0C1018', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', borderRadius: 10, textDecoration: 'none', boxShadow: '0 4px 16px rgba(240,168,78,0.3)' }}>
-          Ver planes →
+          {L.viewPlans}
         </Link>
       </div>
     </div>
@@ -171,8 +251,8 @@ export default function PedidosPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, tenant_id: tid, status })
     })
-    const sm = STATUS_META[status]
-    toast.push({ title: sm?.label || status, body: 'Estado del pedido actualizado', type: 'order', priority: 'info', icon: sm?.icon || '✅' })
+    const sm = STATUS_COLORS[status]
+    toast.push({ title: SL[status] || status, body: L.statusUpdated, type: 'order', priority: 'info', icon: sm?.icon || '✅' })
     setModal(null)
     if (tid) load(tid)
   }
@@ -185,26 +265,37 @@ export default function PedidosPage() {
 
   async function nuevoOrder() {
     if (!tid) return
-    const r = await fetch('/api/orders', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tenant_id: tid, customer_name: 'Nuevo pedido', order_type: 'mesa' })
-    })
-    const d = await r.json()
-    if (d.order) setModal(d.order)
-    if (tid) load(tid)
+    try {
+      const r = await fetch('/api/orders', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tid, customer_name: locale === 'en' ? 'New order' : locale === 'fr' ? 'Nouvelle commande' : locale === 'pt' ? 'Novo pedido' : 'Nuevo pedido', order_type: 'mesa' })
+      })
+      const d = await r.json()
+      if (!r.ok || !d.order) {
+        toast.push({ title: L.title, body: locale === 'en' ? 'Error creating order' : locale === 'fr' ? 'Erreur lors de la création' : locale === 'pt' ? 'Erro ao criar pedido' : 'Error al crear pedido', type: 'order', priority: 'error', icon: '⚠️' })
+        return
+      }
+      setModal(d.order)
+      toast.push({ title: L.title, body: locale === 'en' ? 'Order created' : locale === 'fr' ? 'Commande créée' : locale === 'pt' ? 'Pedido criado' : 'Pedido creado', type: 'order', priority: 'info', icon: '✅' })
+      if (tid) load(tid)
+    } catch {
+      toast.push({ title: L.title, body: locale === 'en' ? 'Error creating order' : locale === 'fr' ? 'Erreur lors de la création' : locale === 'pt' ? 'Erro ao criar pedido' : 'Error al crear pedido', type: 'order', priority: 'error', icon: '⚠️' })
+    }
   }
+
+  const localeTag = locale === 'en' ? 'en-GB' : locale === 'fr' ? 'fr-FR' : locale === 'pt' ? 'pt-PT' : 'es-ES'
 
   return (
     <div style={{ background: '#0C1018', minHeight: '100vh' }}>
       {/* ── Header ────────────────────────────────────────────── */}
       <div style={{ background: '#131920', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20 }}>
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 700, color: '#E8EEF6', letterSpacing: '-0.02em' }}>Pedidos</h1>
-          <p style={{ fontSize: 12, color: '#49566A', marginTop: 2 }}>{activos.length} activos · {orders.length} total</p>
+          <h1 style={{ fontSize: 16, fontWeight: 700, color: '#E8EEF6', letterSpacing: '-0.02em' }}>{L.title}</h1>
+          <p style={{ fontSize: 12, color: '#49566A', marginTop: 2 }}>{activos.length} {L.active} · {orders.length} {L.total}</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button onClick={nuevoOrder} style={{ padding: '9px 18px', fontSize: 13, fontWeight: 700, color: '#0C1018', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', border: 'none', borderRadius: 9, cursor: 'pointer', boxShadow: '0 2px 12px rgba(240,168,78,0.25)' }}>
-            + Nuevo pedido
+            {L.newOrder}
           </button>
           <NotifBell />
         </div>
@@ -212,16 +303,16 @@ export default function PedidosPage() {
 
       {/* ── Filter bar ────────────────────────────────────────── */}
       <div style={{ background: '#131920', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '0 24px', display: 'flex', gap: 0 }}>
-        {ORDER_TYPES.map(t => (
-          <button key={t} onClick={() => setTipoFilter(t)} style={{
+        {ORDER_TYPES.map(tp => (
+          <button key={tp} onClick={() => setTipoFilter(tp)} style={{
             padding: '10px 16px', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer',
-            borderBottom: tipoFilter === t ? '2px solid #F0A84E' : '2px solid transparent',
-            color: tipoFilter === t ? '#F0A84E' : '#8895A7',
-            fontWeight: tipoFilter === t ? 600 : 400, fontFamily: 'inherit', textTransform: 'capitalize'
+            borderBottom: tipoFilter === tp ? '2px solid #F0A84E' : '2px solid transparent',
+            color: tipoFilter === tp ? '#F0A84E' : '#8895A7',
+            fontWeight: tipoFilter === tp ? 600 : 400, fontFamily: 'inherit', textTransform: 'capitalize'
           }}>
-            {t === 'todos'
-              ? 'Todos (' + orders.length + ')'
-              : (TYPE_LABELS[t]?.icon || '') + ' ' + (TYPE_LABELS[t]?.label || t) + ' (' + orders.filter(o => o.order_type === t).length + ')'
+            {tp === 'todos'
+              ? (TL.todos || 'Todos') + ' (' + orders.length + ')'
+              : (TYPE_ICONS[tp] || '') + ' ' + (TL[tp] || tp) + ' (' + orders.filter(o => o.order_type === tp).length + ')'
             }
           </button>
         ))}
@@ -233,11 +324,11 @@ export default function PedidosPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 10, marginBottom: 20 }}>
             {(['collecting', 'confirmed', 'preparing', 'ready'] as const).map(s => {
               const cnt = orders.filter(o => o.status === s).length
-              const sm = STATUS_META[s]
+              const sm = STATUS_COLORS[s]
               return (
                 <div key={s} style={{ background: '#1A2230', border: '1px solid ' + sm.color + '33', borderRadius: 12, padding: '12px 16px' }}>
                   <p style={{ fontSize: 22, fontWeight: 700, color: sm.color }}>{cnt}</p>
-                  <p style={{ fontSize: 12, color: sm.color, fontWeight: 600 }}>{sm.icon} {sm.label}</p>
+                  <p style={{ fontSize: 12, color: sm.color, fontWeight: 600 }}>{sm.icon} {SL[s]}</p>
                 </div>
               )
             })}
@@ -251,16 +342,17 @@ export default function PedidosPage() {
               <div style={{ width: 64, height: 64, background: 'linear-gradient(135deg,rgba(240,168,78,0.10),rgba(240,168,78,0.04))', borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, border: '1px solid rgba(240,168,78,0.12)' }}>🛍️</div>
               <div style={{ position: 'absolute', inset: -8, borderRadius: 24, border: '1px dashed rgba(240,168,78,0.12)', pointerEvents: 'none' }}/>
             </div>
-            <p style={{ fontSize: 15, fontWeight: 700, color: '#E8EEF6', marginBottom: 8 }}>Sin pedidos todavía</p>
-            <p style={{ fontSize: 13, color: '#8895A7', lineHeight: 1.6, maxWidth: 320, margin: '0 auto 20px' }}>Los pedidos de tus clientes aparecerán aquí en tiempo real cuando lleguen por llamada, WhatsApp o tu carta digital.</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: '#E8EEF6', marginBottom: 8 }}>{L.noOrders}</p>
+            <p style={{ fontSize: 13, color: '#8895A7', lineHeight: 1.6, maxWidth: 320, margin: '0 auto 20px' }}>{L.noOrdersDesc}</p>
             <button onClick={nuevoOrder} style={{ padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#0C1018', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', border: 'none', borderRadius: 9, cursor: 'pointer' }}>
-              + Crear pedido manual
+              {L.createManual}
             </button>
           </div>
         ) : filtered.map(o => {
-          const sm = STATUS_META[o.status] || STATUS_META.collecting
+          const sm = STATUS_COLORS[o.status] || STATUS_COLORS.collecting
           const items = Array.isArray(o.items) ? o.items : []
-          const typeInfo = TYPE_LABELS[o.order_type] || { label: o.order_type || 'Otro', icon: '📦' }
+          const typeIcon = TYPE_ICONS[o.order_type] || '📦'
+          const typeLabel = TL[o.order_type] || o.order_type || ''
           const total = o.total_estimate || 0
           const ns = nextStatus(o.status)
           const address = extractAddress(o)
@@ -277,15 +369,15 @@ export default function PedidosPage() {
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                 {/* Icon */}
                 <div style={{ width: 38, height: 38, borderRadius: 10, background: sm.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>
-                  {typeInfo.icon}
+                  {typeIcon}
                 </div>
                 {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
                     <p style={{ fontSize: 14, fontWeight: 600, color: '#E8EEF6' }}>{o.customer_name}</p>
-                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, background: sm.color + '18', color: sm.color, fontWeight: 700 }}>{sm.label}</span>
-                    <span style={{ fontSize: 10, color: '#49566A' }}>{typeInfo.label}</span>
-                    {o.table_id && <span style={{ fontSize: 10, color: '#60A5FA', fontWeight: 600 }}>Mesa {o.table_id}</span>}
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, background: sm.color + '18', color: sm.color, fontWeight: 700 }}>{SL[o.status] || o.status}</span>
+                    <span style={{ fontSize: 10, color: '#49566A' }}>{typeLabel}</span>
+                    {o.table_id && <span style={{ fontSize: 10, color: '#60A5FA', fontWeight: 600 }}>{L.table} {o.table_id}</span>}
                   </div>
                   {/* Items preview */}
                   {items.length > 0 && (
@@ -307,13 +399,13 @@ export default function PedidosPage() {
                   {/* Time */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
                     <span style={{ fontSize: 11, color: o.status === 'collecting' || o.status === 'confirmed' ? '#F0A84E' : '#49566A', fontWeight: o.status === 'collecting' ? 600 : 400 }}>
-                      {timeAgo(o.created_at)}
+                      {timeAgo(o.created_at, locale)}
                     </span>
                     <span style={{ fontSize: 11, color: '#49566A' }}>
-                      {new Date(o.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(o.created_at).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     {o.pickup_time && (
-                      <span style={{ fontSize: 11, color: '#A78BFA', fontWeight: 600 }}>Recogida: {o.pickup_time}</span>
+                      <span style={{ fontSize: 11, color: '#A78BFA', fontWeight: 600 }}>{L.pickup} {o.pickup_time}</span>
                     )}
                   </div>
                 </div>
@@ -325,12 +417,12 @@ export default function PedidosPage() {
                       onClick={(e) => { e.stopPropagation(); avanzarEstado(o.id, o.status) }}
                       style={{
                         padding: '5px 12px', fontSize: 11, fontWeight: 600, borderRadius: 7,
-                        border: '1px solid ' + (STATUS_META[ns]?.color || '#F0A84E') + '44',
-                        background: (STATUS_META[ns]?.color || '#F0A84E') + '18',
-                        color: STATUS_META[ns]?.color || '#F0A84E',
+                        border: '1px solid ' + (STATUS_COLORS[ns]?.color || '#F0A84E') + '44',
+                        background: (STATUS_COLORS[ns]?.color || '#F0A84E') + '18',
+                        color: STATUS_COLORS[ns]?.color || '#F0A84E',
                         cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap'
                       }}>
-                      {nextLabel(o.status)} →
+                      {nextLabel(o.status, locale)} →
                     </button>
                   )}
                 </div>
@@ -350,13 +442,13 @@ export default function PedidosPage() {
             </div>
             <div style={{ padding: '20px 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: (STATUS_META[modal.status]?.color || '#8895A7') + '18', color: STATUS_META[modal.status]?.color || '#8895A7', fontWeight: 700 }}>
-                {STATUS_META[modal.status]?.icon} {STATUS_META[modal.status]?.label || modal.status}
+              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: (STATUS_COLORS[modal.status]?.color || '#8895A7') + '18', color: STATUS_COLORS[modal.status]?.color || '#8895A7', fontWeight: 700 }}>
+                {STATUS_COLORS[modal.status]?.icon} {SL[modal.status] || modal.status}
               </span>
               <span style={{ fontSize: 11, color: '#49566A' }}>
-                {(TYPE_LABELS[modal.order_type]?.icon || '📦') + ' ' + (TYPE_LABELS[modal.order_type]?.label || modal.order_type)}
+                {(TYPE_ICONS[modal.order_type] || '📦') + ' ' + (TL[modal.order_type] || modal.order_type)}
               </span>
-              {modal.table_id && <span style={{ fontSize: 11, color: '#60A5FA', fontWeight: 600 }}>Mesa {modal.table_id}</span>}
+              {modal.table_id && <span style={{ fontSize: 11, color: '#60A5FA', fontWeight: 600 }}>{L.table} {modal.table_id}</span>}
             </div>
 
             {/* Customer info */}
@@ -374,7 +466,7 @@ export default function PedidosPage() {
                     })
                   }}
                     style={{ fontSize: 11, padding: '4px 10px', borderRadius: 7, border: '1px solid rgba(45,212,191,0.3)', background: 'rgba(45,212,191,0.08)', color: '#2DD4BF', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
-                    Llamar
+                    {L.call}
                   </button>
                 </div>
               )}
@@ -382,7 +474,7 @@ export default function PedidosPage() {
                 <p style={{ fontSize: 13, color: '#2DD4BF' }}>📍 {extractAddress(modal)}</p>
               )}
               {modal.pickup_time && (
-                <p style={{ fontSize: 13, color: '#A78BFA' }}>🕐 Recogida: {modal.pickup_time}</p>
+                <p style={{ fontSize: 13, color: '#A78BFA' }}>🕐 {L.pickup} {modal.pickup_time}</p>
               )}
               {modal.notes && (
                 <p style={{ fontSize: 13, color: '#C4CDD8' }}>📝 {modal.notes}</p>
@@ -392,7 +484,7 @@ export default function PedidosPage() {
             {/* Items list */}
             {Array.isArray(modal.items) && modal.items.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: '#49566A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Productos</p>
+                <p style={{ fontSize: 11, fontWeight: 700, color: '#49566A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{L.products}</p>
                 <div style={{ background: '#1A2230', borderRadius: 10, overflow: 'hidden' }}>
                   {modal.items.map((item: any, idx: number) => (
                     <div key={idx} style={{
@@ -413,7 +505,7 @@ export default function PedidosPage() {
                   {/* Total row */}
                   {(modal.total_estimate || 0) > 0 && (
                     <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', background: '#0C1018', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                      <p style={{ fontSize: 13, color: '#E8EEF6', fontWeight: 700 }}>Total</p>
+                      <p style={{ fontSize: 13, color: '#E8EEF6', fontWeight: 700 }}>{L.totalLabel}</p>
                       <p style={{ fontSize: 15, color: '#34D399', fontWeight: 700 }}>{(modal.total_estimate || 0).toFixed(2)}€</p>
                     </div>
                   )}
@@ -423,10 +515,10 @@ export default function PedidosPage() {
 
             {/* Status flow buttons */}
             <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: '#49566A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Cambiar estado</p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#49566A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{L.changeStatus}</p>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {STATUS_FLOW.map(s => {
-                  const sm = STATUS_META[s]
+                  const sm = STATUS_COLORS[s]
                   if (!sm) return null
                   const isActive = modal.status === s
                   const idx = STATUS_FLOW.indexOf(s)
@@ -441,7 +533,7 @@ export default function PedidosPage() {
                       cursor: 'pointer', fontFamily: 'inherit',
                       opacity: isPast ? 0.5 : 1,
                     }}>
-                      {sm.icon} {sm.label}
+                      {sm.icon} {SL[s]}
                     </button>
                   )
                 })}
@@ -453,16 +545,16 @@ export default function PedidosPage() {
                   border: '1px solid #F8717144', background: '#F8717118', color: '#F87171',
                   cursor: 'pointer', fontFamily: 'inherit'
                 }}>
-                  ✖️ Cancelar pedido
+                  ✖️ {L.cancelOrder}
                 </button>
               )}
             </div>
 
             {/* Timestamps */}
             <div style={{ fontSize: 11, color: '#49566A', display: 'flex', gap: 16 }}>
-              <span>Creado: {new Date(modal.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+              <span>{L.created} {new Date(modal.created_at).toLocaleString(localeTag, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
               {modal.updated_at && modal.updated_at !== modal.created_at && (
-                <span>Actualizado: {new Date(modal.updated_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                <span>{L.updated} {new Date(modal.updated_at).toLocaleString(localeTag, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
               )}
             </div>
             </div>

@@ -66,14 +66,13 @@ const FLAG_LABELS: Record<string,string> = {
   tow_required:'Necesita grúa', return_request:'Devolución',
 }
 // Opciones en lenguaje humano para corregir lo que hizo Sofía
-const CORRECTION_OPTIONS = [
-  {value:'confirmed',             label:'✅ Sí, quedó bien confirmado'},
-  {value:'pending_review',        label:'👁 Quiero revisarlo yo'},
-  {value:'cancelled',             label:'✕ El cliente canceló'},
-  {value:'needs_human_attention', label:'⚠️ Necesita mi atención urgente'},
+const CORRECTION_KEYS = [
+  {value:'confirmed',             key:'Sí, quedó bien confirmado', icon:'✅'},
+  {value:'pending_review',        key:'Quiero revisarlo yo', icon:'👁'},
+  {value:'cancelled',             key:'El cliente canceló', icon:'✕'},
+  {value:'needs_human_attention', key:'Necesita mi atención urgente', icon:'⚠️'},
 ]
-// Traducción de intenciones detectadas
-const INTENT_LABELS: Record<string,string> = {
+const INTENT_KEYS: Record<string,string> = {
   reserva: 'hacer una reserva', pedido: 'hacer un pedido',
   cancelacion: 'cancelar', consulta: 'preguntar algo', otro: 'otro asunto',
 }
@@ -256,7 +255,7 @@ export default function LlamadasPage() {
         ) : groups.map(([date,dayCalls]) => (
           <div key={date} style={{marginBottom:20}}>
             <p style={{fontSize:10, fontWeight:700, color:C.text3, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:10}}>
-              {date===today ? tx('HOY') : new Date(date+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'}).toUpperCase()}
+              {date===today ? tx('HOY') : new Date(date+'T12:00:00').toLocaleDateString(t.locale === 'en' ? 'en-GB' : t.locale === 'fr' ? 'fr-FR' : t.locale === 'pt' ? 'pt-PT' : 'es-ES',{weekday:'long',day:'numeric',month:'long'}).toUpperCase()}
               <span style={{marginLeft:8, fontWeight:400}}>({dayCalls.length})</span>
             </p>
             <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden'}}>
@@ -282,7 +281,7 @@ export default function LlamadasPage() {
                         {call.summary ? <p style={{fontSize:12, color:C.text2, lineHeight:1.5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{call.summary}</p> : <p style={{fontSize:12, color:C.text3}}>{tx('Sin resumen')}</p>}
                       </div>
                       <div style={{flexShrink:0, textAlign:'right'}}>
-                        <p style={{fontSize:11, color:C.text3}}>{(call.started_at||call.created_at) ? new Date(call.started_at||call.created_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : ''}</p>
+                        <p style={{fontSize:11, color:C.text3}}>{(call.started_at||call.created_at) ? new Date(call.started_at||call.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : ''}</p>
                         {dur&&<p style={{fontFamily:'var(--rz-mono)', fontSize:11, color:C.text3, marginTop:2}}>{dur}</p>}
                       </div>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.text3} strokeWidth="2" style={{flexShrink:0, transform:expanded?'rotate(180deg)':'none', transition:'transform 0.2s'}}><path d="M19 9l-7 7-7-7"/></svg>
@@ -330,10 +329,10 @@ export default function LlamadasPage() {
                                 💭 {call.reasoning_label}
                               </p>
                             )}
-                            {/* Detalles técnicos — ocultos por defecto, solo para curiosos */}
+                            {/* Decision steps — hidden by default */}
                             {(call.decision_trace?.length > 0) && (
                               <details style={{marginTop:8}}>
-                                <summary style={{fontSize:10, color:C.text3, cursor:'pointer', userSelect:'none' as const}}>{tx('Ver detalles técnicos')}</summary>
+                                <summary style={{fontSize:10, color:C.text3, cursor:'pointer', userSelect:'none' as const}}>{tx('Ver paso a paso')}</summary>
                                 <div style={{marginTop:6, display:'flex', flexDirection:'column', gap:4}}>
                                   {call.decision_trace.map((step:any,i:number)=>(
                                     <div key={i} style={{display:'flex', gap:8, alignItems:'baseline', fontSize:11}}>
@@ -355,11 +354,11 @@ export default function LlamadasPage() {
                               <p style={{fontSize:12, fontWeight:700, color:C.amber, marginBottom:6}}>{tx('¿Qué pasó realmente con esta llamada?')}</p>
                               <p style={{fontSize:11, color:C.text3, marginBottom:10}}>{tx('Elige la opción correcta y') + ' ' + agentName + ' ' + tx('aprenderá para la próxima vez.')}</p>
                               <div style={{display:'flex', flexWrap:'wrap', gap:6, marginBottom:10}}>
-                                {CORRECTION_OPTIONS.map(opt=>(
+                                {CORRECTION_KEYS.map(opt=>(
                                   <button key={opt.value} onClick={()=>sendFeedback(call.call_sid, opt.value)}
                                     disabled={feedbackLoading}
                                     style={{fontSize:12, padding:'7px 14px', borderRadius:9, border:'1px solid rgba(240,168,78,0.3)', background:'rgba(240,168,78,0.07)', color:C.amber, fontWeight:600, cursor:'pointer', fontFamily:'inherit', opacity:feedbackLoading?0.5:1}}>
-                                    {opt.label}
+                                    {opt.icon} {tx(opt.key)}
                                   </button>
                                 ))}
                               </div>
@@ -375,7 +374,7 @@ export default function LlamadasPage() {
                             <p style={{fontSize:11, color:C.green}}>✓ {tx('Listo') + ' — ' + agentName + ' ' + tx('tendrá esto en cuenta la próxima vez')}</p>
                           ) : (
                             <div style={{display:'flex',alignItems:'center',gap:0}}>
-                              {call.caller_phone && call.caller_phone !== 'Número oculto' && (
+                              {call.caller_phone && call.caller_phone !== 'anonymous' && call.caller_phone !== 'unknown' && (
                                 <button onClick={async () => {
                                   const sess = await supabase.auth.getSession()
                                   if (!sess.data.session) return
@@ -400,7 +399,7 @@ export default function LlamadasPage() {
                         {/* Intención del cliente — en lenguaje humano */}
                         {call.intent && call.intent !== 'consulta' &&
                           <p style={{fontSize:12, color:C.text3, marginTop:4}}>
-                            {tx('El cliente quería:')} <strong style={{color:C.text2}}>{INTENT_LABELS[call.intent]||call.intent}</strong>
+                            {tx('El cliente quería:')} <strong style={{color:C.text2}}>{tx(INTENT_KEYS[call.intent]||call.intent)}</strong>
                           </p>
                         }
                         {call.transcript&&<details style={{marginTop:8}}><summary style={{fontSize:12, color:C.text3, cursor:'pointer'}}>{tx('Ver la conversación completa')}</summary><p style={{fontSize:12, color:C.text2, lineHeight:1.6, marginTop:8, whiteSpace:'pre-wrap', background:C.surface3, padding:'10px', borderRadius:8}}>{call.transcript}</p></details>}

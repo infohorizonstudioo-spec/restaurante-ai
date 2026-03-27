@@ -44,11 +44,11 @@ function DefaultClientesView() {
   const [editNotes,setEditNotes] = useState('')
   const [editVip,setEditVip] = useState(false)
   const [scores,setScores] = useState<Record<string,any>>({})
-  const { template, t } = useTenant()
+  const { template, t, tx } = useTenant()
   const cs = getCommonStrings(t.locale)
 
   const L = template?.labels
-  const clientesLabel = L?.clientes || 'Clientes'
+  const clientesLabel = L?.clientes || tx('Clientes')
 
   const load = useCallback(async (tenantId:string) => {
     const {data} = await supabase.from('customers').select('*')
@@ -109,10 +109,10 @@ function DefaultClientesView() {
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,position:'sticky',top:0,zIndex:20}}>
         <div>
           <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{clientesLabel}</h1>
-          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{clientes.length} registrados</p>
+          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{clientes.length} {tx('registrados')}</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={'Buscar '+clientesLabel.toLowerCase()+'…'}
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tx('Buscar')+' '+clientesLabel.toLowerCase()+'…'}
             style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:220,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
           <NotifBell/>
         </div>
@@ -127,7 +127,7 @@ function DefaultClientesView() {
                 <div style={{position:'absolute',inset:-8,borderRadius:24,border:'1px dashed rgba(240,168,78,0.12)',pointerEvents:'none'}}/>
               </div>
               <p style={{fontSize:15,fontWeight:700,color:C.text,marginBottom:8}}>{cs.noClients}</p>
-              <p style={{fontSize:13,color:C.text2,lineHeight:1.6,maxWidth:260,margin:'0 auto'}}>{clientesLabel} que contacten al agente aparecerán aquí automáticamente.</p>
+              <p style={{fontSize:13,color:C.text2,lineHeight:1.6,maxWidth:260,margin:'0 auto'}}>{clientesLabel} {tx('se mostrarán automáticamente cuando entren.')}</p>
             </div>
           ) : filtered.map(c => (
             <div key={c.id} onClick={()=>openClient(c)} style={{padding:'12px 16px',cursor:'pointer',borderBottom:`1px solid ${C.border}`,background:selected?.id===c.id?C.surface2:'transparent',transition:'background 0.1s'}}
@@ -143,11 +143,11 @@ function DefaultClientesView() {
                     {c.vip&&<span style={{fontSize:9,fontWeight:700,color:C.yellow,background:C.yellowDim,padding:'1px 5px',borderRadius:4}}>{t.clients.vip}</span>}
                     {scores[c.id]&&<span style={{fontSize:9,fontWeight:700,color:scores[c.id].color,background:scores[c.id].color+'18',padding:'1px 5px',borderRadius:4}}>{scores[c.id].score}</span>}
                   </div>
-                  <p style={{fontSize:11,color:C.text3,marginTop:1}}>{c.phone||c.email||'Sin contacto'}</p>
+                  <p style={{fontSize:11,color:C.text3,marginTop:1}}>{c.phone||c.email||tx('Sin contacto')}</p>
                 </div>
                 <div style={{textAlign:'right' as const,flexShrink:0}}>
                   <p style={{fontFamily:'var(--rz-mono)',fontSize:11,fontWeight:600,color:scores[c.id]?.color||C.text2}}>{c.total_reservations||c.total_visits||0}</p>
-                  {c.last_visit&&<p style={{fontSize:10,color:C.text3,marginTop:1}}>{new Date(c.last_visit).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</p>}
+                  {c.last_visit&&<p style={{fontSize:10,color:C.text3,marginTop:1}}>{new Date(c.last_visit).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</p>}
                 </div>
               </div>
             </div>
@@ -158,7 +158,7 @@ function DefaultClientesView() {
           {!selected ? (
             <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',color:C.text3}}>
               <div style={{width:64,height:64,borderRadius:'50%',background:C.amberDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,marginBottom:14}}>👤</div>
-              <p style={{fontSize:14,color:C.text3}}>Selecciona un cliente para ver su historial</p>
+              <p style={{fontSize:14,color:C.text3}}>{tx('Selecciona un cliente para ver su historial')}</p>
             </div>
           ) : (
             <>
@@ -182,7 +182,7 @@ function DefaultClientesView() {
                           })
                         }}
                         style={{fontSize:11, padding:'3px 10px', borderRadius:7, border:`1px solid rgba(45,212,191,0.25)`, background:'rgba(45,212,191,0.10)', color:'#2DD4BF', cursor:'pointer', fontFamily:'inherit', fontWeight:500, flexShrink:0}}>
-                          📞 Llamar
+                          📞 {tx('Llamar')}
                         </button>
                       )}
                     </div>
@@ -190,9 +190,9 @@ function DefaultClientesView() {
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
                   {[
-                    {label:'Visitas',value:selected.total_reservations||selected.total_visits||0},
-                    {label:'Última visita',value:selected.last_visit?new Date(selected.last_visit).toLocaleDateString('es-ES',{day:'numeric',month:'short'}):'—'},
-                    {label:'Total gastado',value:selected.total_spent?selected.total_spent+'€':'—'},
+                    {label:tx('Visitas'),value:selected.total_reservations||selected.total_visits||0},
+                    {label:tx('Última visita'),value:selected.last_visit?new Date(selected.last_visit).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'—'},
+                    {label:tx('Total gastado'),value:selected.total_spent?selected.total_spent+'€':'—'},
                   ].map(m=>(
                     <div key={m.label} style={{background:C.surface2,borderRadius:9,padding:'10px 14px'}}>
                       <p style={{fontSize:10,color:C.text3,fontWeight:600,textTransform:'uppercase' as const,letterSpacing:'0.06em',marginBottom:3}}>{m.label}</p>
@@ -202,8 +202,8 @@ function DefaultClientesView() {
                 </div>
                 {selected.notes&&<p style={{marginTop:12,fontSize:13,color:C.text2,background:C.surface2,padding:'8px 12px',borderRadius:9}}>📝 {selected.notes}</p>}
                 <div style={{marginTop:14,background:C.surface2,borderRadius:9,padding:14}}>
-                  <label style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase' as const,letterSpacing:'0.06em',display:'block',marginBottom:6}}>Notas</label>
-                  <textarea value={editNotes} onChange={e=>setEditNotes(e.target.value)} placeholder="Añadir notas sobre este cliente…"
+                  <label style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase' as const,letterSpacing:'0.06em',display:'block',marginBottom:6}}>{tx('Notas')}</label>
+                  <textarea value={editNotes} onChange={e=>setEditNotes(e.target.value)} placeholder={tx('Añadir notas sobre este cliente…')}
                     style={{width:'100%',minHeight:60,resize:'vertical',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:7,padding:'8px 10px',color:C.text,fontSize:13,fontFamily:'inherit',outline:'none'}}/>
                   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:10}}>
                     <button onClick={()=>setEditVip(!editVip)} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 12px',borderRadius:7,border:`1px solid ${editVip?C.yellow:C.border}`,background:editVip?C.yellowDim:'transparent',color:editVip?C.yellow:C.text3,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'all 0.12s'}}>
@@ -215,8 +215,8 @@ function DefaultClientesView() {
                   </div>
                 </div>
               </div>
-              <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:10}}>Historial</p>
-              {loadingH ? <div style={{textAlign:'center' as const,padding:20,color:C.text3}}>Cargando...</div>
+              <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:10}}>{tx('Historial')}</p>
+              {loadingH ? <div style={{textAlign:'center' as const,padding:20,color:C.text3}}>{tx('Cargando...')}</div>
               : historial.length===0 ? <p style={{fontSize:13,color:C.text3,padding:'20px 0'}}>{cs.noActivity}</p>
               : historial.map((h,i)=>(
                 <div key={i} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:'12px 14px',marginBottom:8,display:'flex',gap:10,transition:'background 0.12s'}}
@@ -226,12 +226,12 @@ function DefaultClientesView() {
                   <div style={{flex:1}}>
                     {h._type==='reserva' ? (
                       <>
-                        <p style={{fontSize:13,fontWeight:500,color:C.text}}>{(h.date||h.reservation_date)?.slice(0,10)} a las {(h.time||h.reservation_time||'').slice(0,5)}</p>
+                        <p style={{fontSize:13,fontWeight:500,color:C.text}}>{(h.date||h.reservation_date)?.slice(0,10)} {tx('a las')} {(h.time||h.reservation_time||'').slice(0,5)}</p>
                         <p style={{fontSize:11,color:C.text3,marginTop:1}}>{h.status}</p>
                       </>
                     ) : (
                       <>
-                        <p style={{fontSize:13,fontWeight:500,color:C.text}}>{h.summary||'Llamada'}</p>
+                        <p style={{fontSize:13,fontWeight:500,color:C.text}}>{h.summary||tx('Llamada')}</p>
                         <p style={{fontSize:11,color:C.text3,marginTop:1}}>{(h.started_at||'').slice(0,10)}</p>
                       </>
                     )}

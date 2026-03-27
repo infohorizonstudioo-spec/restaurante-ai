@@ -12,12 +12,12 @@ const CHANNEL_META: Record<string, { icon: string; color: string; label: string 
   voice:    { icon: '📞', color: '#2DD4BF', label: 'Llamada' },
 }
 
-const STATUS_META: Record<string, { color: string; label: string }> = {
-  active:    { color: C.green, label: 'Activa' },
-  escalated: { color: C.red, label: 'Escalada' },
-  closed:    { color: C.text3, label: 'Cerrada' },
-  pending:   { color: C.yellow, label: 'Pendiente' },
-  archived:  { color: C.text3, label: 'Archivada' },
+const STATUS_META_KEYS: Record<string, { color: string; key: string }> = {
+  active:    { color: C.green, key: 'Activa' },
+  escalated: { color: C.red, key: 'Escalada' },
+  closed:    { color: C.text3, key: 'Cerrada' },
+  pending:   { color: C.yellow, key: 'Pendiente' },
+  archived:  { color: C.text3, key: 'Archivada' },
 }
 
 type Conversation = {
@@ -156,7 +156,7 @@ export default function MensajesPage() {
   const timeAgo = (ts: string) => {
     const diff = Date.now() - new Date(ts).getTime()
     const mins = Math.floor(diff / 60000)
-    if (mins < 1) return 'ahora'
+    if (mins < 1) return tx('ahora mismo')
     if (mins < 60) return `${mins}m`
     const hrs = Math.floor(mins / 60)
     if (hrs < 24) return `${hrs}h`
@@ -183,7 +183,7 @@ export default function MensajesPage() {
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {[
               { key: 'all', label: tx('Todos'), count: conversations.length },
-              ...(escalatedCount > 0 ? [{ key: 'escalated', label: 'Escaladas', count: escalatedCount }] : []),
+              ...(escalatedCount > 0 ? [{ key: 'escalated', label: tx('Escaladas'), count: escalatedCount }] : []),
               ...Object.entries(CHANNEL_META).filter(([k]) => channelCounts[k]).map(([k, v]) => ({
                 key: k, label: v.label, count: channelCounts[k] || 0,
               })),
@@ -215,9 +215,9 @@ export default function MensajesPage() {
             </div>
           ) : filtered.map(conv => {
             const ch = CHANNEL_META[conv.channel] || CHANNEL_META.sms
-            const st = STATUS_META[conv.status] || STATUS_META.closed
+            const stk = STATUS_META_KEYS[conv.status] || STATUS_META_KEYS.closed
             const isSelected = selected?.id === conv.id
-            const customerName = conv.customer?.name || conv.from_identifier || 'Desconocido'
+            const customerName = conv.customer?.name || conv.from_identifier || tx('Sin contacto')
 
             return (
               <div key={conv.id} onClick={() => selectConversation(conv)} style={{
@@ -235,12 +235,12 @@ export default function MensajesPage() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
                   <span style={{ color: C.text2, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
-                    {conv.status === 'escalated' ? `⚠️ ${conv.escalated_reason || 'Escalada'}` : conv.summary || conv.intent || ch.label}
+                    {conv.status === 'escalated' ? `⚠️ ${conv.escalated_reason || tx('Escalada')}` : conv.summary || conv.intent || ch.label}
                   </span>
                   <span style={{
                     fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
-                    color: st.color, background: st.color + '18',
-                  }}>{st.label}</span>
+                    color: stk.color, background: stk.color + '18',
+                  }}>{tx(stk.key)}</span>
                 </div>
               </div>
             )
@@ -288,14 +288,14 @@ export default function MensajesPage() {
                     padding: '8px 16px', borderRadius: 8, border: 'none',
                     background: C.green, color: '#000', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                   }}>
-                    Reanudar IA
+                    {tx('Reanudar IA')}
                   </button>
                 ) : selected.status === 'active' ? (
                   <button onClick={() => handleEscalation('escalate')} style={{
                     padding: '8px 16px', borderRadius: 8, border: `1px solid ${C.border}`,
                     background: 'transparent', color: C.text2, fontSize: 12, cursor: 'pointer',
                   }}>
-                    Tomar control
+                    {tx('Tomar control')}
                   </button>
                 ) : null}
                 <button onClick={() => handleEscalation(selected.status === 'closed' ? 'resume' : 'close')} style={{
@@ -317,7 +317,7 @@ export default function MensajesPage() {
                 <span style={{ fontSize: 16 }}>⚠️</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ color: C.red, fontSize: 13, fontWeight: 700 }}>
-                    Conversacion escalada — La IA esta pausada
+                    {tx('Conversación escalada — La IA está pausada')}
                   </div>
                   {selected.escalated_reason && (
                     <div style={{ color: C.text2, fontSize: 12, marginTop: 2 }}>
@@ -329,7 +329,7 @@ export default function MensajesPage() {
                   padding: '6px 14px', borderRadius: 6, border: 'none',
                   background: C.green, color: '#000', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                 }}>
-                  Reanudar IA
+                  {tx('Reanudar IA')}
                 </button>
               </div>
             )}
@@ -353,7 +353,7 @@ export default function MensajesPage() {
                       borderBottomLeftRadius: isAgent ? 16 : 4,
                     }}>
                       {isSystem && (
-                        <div style={{ fontSize: 10, color: C.text3, marginBottom: 4, fontWeight: 600 }}>SISTEMA</div>
+                        <div style={{ fontSize: 10, color: C.text3, marginBottom: 4, fontWeight: 600 }}>{tx('Sistema')}</div>
                       )}
                       <div style={{
                         color: C.text, fontSize: 14, lineHeight: 1.5,
@@ -364,7 +364,7 @@ export default function MensajesPage() {
                       <div style={{
                         fontSize: 10, color: C.text3, marginTop: 6, textAlign: isAgent ? 'right' : 'left',
                       }}>
-                        {new Date(msg.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         {isAgent && msg.status && (
                           <span style={{ marginLeft: 6 }}>
                             {msg.status === 'delivered' ? '✓✓' : msg.status === 'read' ? '✓✓' : msg.status === 'sent' ? '✓' : msg.status === 'failed' ? '✗' : ''}
