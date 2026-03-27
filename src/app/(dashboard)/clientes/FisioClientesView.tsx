@@ -7,18 +7,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import { getStatusLabel } from '@/lib/i18n'
 
 import { C } from "@/lib/colors"
-
-const STATUS_STYLES:Record<string,{bg:string;color:string;label:string}> = {
-  confirmada: {bg:C.greenDim,  color:C.green,  label:'Confirmada'},
-  confirmed:  {bg:C.greenDim,  color:C.green,  label:'Confirmada'},
-  pendiente:  {bg:C.yellowDim, color:C.yellow, label:'Pendiente'},
-  pending:    {bg:C.yellowDim, color:C.yellow, label:'Pendiente'},
-  pending_review:{bg:C.violetDim,color:C.violet,label:'Revisión'},
-  cancelada:  {bg:C.redDim,    color:C.red,    label:'Cancelada'},
-  cancelled:  {bg:C.redDim,    color:C.red,    label:'Cancelada'},
-  completada: {bg:C.amberDim,  color:C.amber,  label:'Completada'},
-  completed:  {bg:C.amberDim,  color:C.amber,  label:'Completada'},
-}
+import { RESERVATION_STATUS as STATUS_STYLES } from '@/lib/status-config'
 
 export default function FisioClientesView() {
   const [clientes,setClientes] = useState<any[]>([])
