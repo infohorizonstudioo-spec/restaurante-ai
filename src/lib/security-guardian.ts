@@ -127,11 +127,11 @@ const TARPIT_DELAYS = [0, 2000, 5000, 10000, 30000, 60000]
 const CLEANUP_INTERVAL    = 5 * 60_000
 const MAX_PROFILES        = 100_000
 const MAX_LEARNED         = 5_000
-const BURST_WINDOW        = 8_000
-const BURST_THRESHOLD     = 15
+const BURST_WINDOW        = 10_000
+const BURST_THRESHOLD     = 60    // SPAs hacen 20-30 requests en page load
 const MAX_BODY_SIZE       = 1_048_576
-const RECON_PATH_THRESHOLD = 10
-const BOT_INTERVAL_THRESHOLD = 50  // ms — humanos no hacen requests cada <50ms
+const RECON_PATH_THRESHOLD = 50   // usuarios normales navegan 20-30 paths fácilmente
+const BOT_INTERVAL_THRESHOLD = 15 // ms — solo bots reales hacen requests cada <15ms
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HONEYPOT PATHS — rutas trampa expandidas
@@ -220,20 +220,23 @@ const XSS_PATTERNS: RegExp[] = [
   /javascript\s*:/i, /vbscript\s*:/i, /livescript\s*:/i,
   /data\s*:\s*text\/html/i, /data\s*:\s*image\/svg/i,
   /<iframe[\s>]/i, /<object[\s>]/i, /<embed[\s>]/i, /<applet[\s>]/i,
-  /<svg[\s>][\s\S]{0,200}on\w+\s*=/i, /<img[\s>][\s\S]{0,200}on\w+\s*=/i,
-  /<input[\s>][\s\S]{0,200}on\w+\s*=/i, /<body[\s>][\s\S]{0,200}on\w+\s*=/i,
-  /<video[\s>][\s\S]{0,200}on\w+\s*=/i, /<audio[\s>][\s\S]{0,200}on\w+\s*=/i,
-  /<details[\s>][\s\S]{0,200}on\w+\s*=/i, /<marquee[\s>][\s\S]{0,200}on\w+\s*=/i,
-  /\beval\s*\(/i, /\bsetTimeout\s*\(\s*['"`]/i, /\bsetInterval\s*\(\s*['"`]/i,
+  /<svg[\s>][\s\S]{0,200}on(load|error|click|mouseover)\s*=/i,
+  /<img[\s>][\s\S]{0,200}on(load|error)\s*=/i,
+  /<input[\s>][\s\S]{0,200}on(focus|blur|change)\s*=/i,
+  /<body[\s>][\s\S]{0,200}on(load|error)\s*=/i,
+  /\bon(error|load|click|mouseover|focus|blur|submit|reset|change|input|keydown|keyup|mousedown|mouseup|contextmenu|dblclick|drag|drop|unload|beforeunload|hashchange|popstate|resize|scroll)\s*=/i,
+  /\beval\s*\(\s*['"`\[]/i,  // solo eval( seguido de string/array — no "evaluate()"
+  /\bsetTimeout\s*\(\s*['"`]/i, /\bsetInterval\s*\(\s*['"`]/i,
   /\bdocument\s*\.\s*(cookie|write|writeln|location|domain|referrer)/i,
   /\bwindow\s*\.\s*(location|open|eval|execScript)/i,
   /expression\s*\(/i, /url\s*\(\s*['"]?\s*javascript/i,
   /<base[\s>]/i, /<form[\s>][\s\S]{0,200}action\s*=/i,
-  /\balert\s*\(/i, /\bprompt\s*\(/i, /\bconfirm\s*\(/i,
+  /\balert\s*\(\s*['"`\d]/i,  // solo alert( seguido de string/número — no texto normal
+  /\bprompt\s*\(\s*['"`]/i, /\bconfirm\s*\(\s*['"`]/i,
   /String\.fromCharCode/i, /\bdocument\s*\[\s*['"]cookie['"]\]/i,
   /\.\s*innerHTML\s*=/i, /\.\s*outerHTML\s*=/i,
-  /\bconstructor\s*\[\s*['"]prototype['"]\]/i, // prototype pollution
-  /__proto__/i, /\bconstructor\s*\.\s*constructor/i,
+  /\bconstructor\s*\[\s*['"]prototype['"]\]/i,
+  /__proto__\s*[=:]/i, /\bconstructor\s*\.\s*constructor/i,
 ]
 
 const PATH_TRAVERSAL_PATTERNS: RegExp[] = [
@@ -510,7 +513,7 @@ function detectAttackPhase(profile: AttackerProfile): AttackPhase {
   if (threats.size > 2) return 'weaponization' // probando múltiples vectores
 
   // Reconocimiento — mapeando la aplicación
-  if (profile.isRecon || profile.pathsProbed.size > 8) return 'reconnaissance'
+  if (profile.isRecon || (profile.pathsProbed.size > 40 && profile.totalThreats > 0)) return 'reconnaissance'
   if (threats.has('honeypot-triggered')) return 'reconnaissance'
   if (profile.methodsUsed.size > 3) return 'reconnaissance'
 
@@ -687,7 +690,7 @@ function detectBurst(ip: string): boolean {
 
 function detectRecon(profile: AttackerProfile): boolean {
   if (profile.pathsProbed.size > RECON_PATH_THRESHOLD) return true
-  if (profile.userAgents.size > 5) return true
+  if (profile.userAgents.size > 10) return true  // cambiando UA constantemente
   const nf = notFoundTracker.get(profile.ip)
   if (nf && nf.count > 8) return true
   return false
@@ -845,7 +848,7 @@ export function analyzeRequest(req: Request, body?: string): ThreatAssessment {
 
   // ── L2.2: USER-AGENT ──
   if (!ua.trim()) {
-    score += 15; threats.push('empty-ua')
+    score += 5; threats.push('empty-ua')  // bajo — muchos clientes legítimos no envían UA
   } else if (matchesAny(ua, SUSPICIOUS_UA_PATTERNS)) {
     score += 30; threats.push('attack-tool-ua')
   }
@@ -941,8 +944,9 @@ export function analyzeRequest(req: Request, body?: string): ThreatAssessment {
   }
 
   // Multi-method probing
-  if (profile.methodsUsed.size > 4) {
-    score += 15; threats.push('method-probing')
+  // Solo marcar si usa >6 métodos (REST normal usa GET/POST/PUT/PATCH/DELETE/OPTIONS)
+  if (profile.methodsUsed.size > 6) {
+    score += 10; threats.push('method-probing')
   }
 
   // Multi-vector attack — usa múltiples tipos de ataque = más peligroso

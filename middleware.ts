@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { validateEnv } from '@/lib/env'
 import { analyzeRequest, isBlocked, getDeceptionResponse, record404 } from '@/lib/security-guardian'
+import { getBlockPage } from '@/lib/block-page'
 
 // Validate required env vars on cold start in production
 if (process.env.NODE_ENV === 'production') {
@@ -62,8 +63,17 @@ export async function middleware(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-real-ip') || '0.0.0.0'
 
-  // Fast path: IP ya bloqueada → respuesta inmediata
+  // Fast path: IP ya bloqueada → página de bloqueo intimidante
   if (isBlocked(ip)) {
+    const assessment = { score: 100, blocked: true, threats: ['blocked'], ip, action: 'block' as const, tarpitMs: 0, fingerprint: 'cached', attackPhase: 'none' as const, riskLevel: 'critical' as const }
+    // APIs reciben JSON, navegadores reciben la página de bloqueo
+    const accept = request.headers.get('accept') || ''
+    if (accept.includes('text/html')) {
+      return new NextResponse(getBlockPage(assessment), {
+        status: 403,
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+      })
+    }
     return new NextResponse(JSON.stringify({ error: 'Forbidden' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' },
@@ -82,22 +92,25 @@ export async function middleware(request: NextRequest) {
     })
   }
 
-  // Bloqueado: acceso denegado
+  // Bloqueado: página intimidante para navegadores, JSON para APIs
   if (assessment.blocked) {
+    const accept = request.headers.get('accept') || ''
+    if (accept.includes('text/html')) {
+      return new NextResponse(getBlockPage(assessment), {
+        status: 403,
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+      })
+    }
     return new NextResponse(JSON.stringify({ error: 'Forbidden' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' },
     })
   }
 
-  // Tarpit: ralentizar al atacante (el delay se aplica en el edge via headers)
-  // Vercel Edge no soporta sleep(), pero enviamos headers para tracking
+  // Tarpit: el atacante queda marcado, próximo intento será bloqueado
   if (assessment.action === 'tarpit' && assessment.tarpitMs > 0) {
-    const response = NextResponse.next()
-    response.headers.set('X-Security-Delay', String(assessment.tarpitMs))
-    response.headers.set('X-Content-Type-Options', 'nosniff')
-    // No bloqueamos — dejamos pasar pero el atacante queda marcado
-    // Su próximo intento será bloqueado (escalamiento progresivo)
+    // No bloqueamos aún — dejamos pasar pero el escalamiento progresivo
+    // garantiza que el siguiente intento sospechoso será bloqueado
   }
 
   // API webhooks → pasar sin auth (son llamadas externas verificadas internamente)
