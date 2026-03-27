@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { summarizeDay } from '@/lib/summary-engine'
+import { getBusinessRecommendations } from '@/lib/intelligence-engine'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -78,6 +79,15 @@ export async function GET(req: Request) {
     if (summary.pending_actions.length > 0) {
       msg += `Pendiente: ${summary.pending_actions[0]}\n`
     }
+
+    // Business recommendations from intelligence engine
+    try {
+      const recommendations = await getBusinessRecommendations(t.id)
+      const topRec = recommendations.filter(r => r.priority >= 4).slice(0, 1)
+      for (const rec of topRec) {
+        msg += `💡 ${rec.title}\n`
+      }
+    } catch {} // non-blocking
 
     msg = msg.slice(0, 320) // SMS limit with concatenation
     msg += `\nPanel: https://restaurante-ai.vercel.app/panel`

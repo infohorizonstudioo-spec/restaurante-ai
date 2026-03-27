@@ -8,6 +8,7 @@ import { parseReservationConfig, checkSlotAvailability, generateSlots } from './
 import { resolveTemplate } from './templates'
 import { makeDecision } from './agent-decision'
 import { scheduleReminders, cancelReminders } from './reminder-engine'
+import { classifyInteraction, detectConflicts, generateSummary, learnFromInteraction } from './intelligence-engine'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -276,6 +277,13 @@ export async function createReservationTool(params: {
     }
   }
 
+  // 2b. Detect conflicts
+  const conflicts = await detectConflicts({ tenant_id, customer_phone, customer_name, date: finalDate, time: finalTime, party_size: finalPartySize })
+  if (conflicts.conflicts.some(c => c.severity === 'critical')) {
+    const critical = conflicts.conflicts.find(c => c.severity === 'critical')!
+    return { success: false, conflict: true, message: critical.description, suggestion: critical.suggested_action }
+  }
+
   // 3. Upsert customer
   let customerId: string | null = null
   if (customer_phone) {
@@ -403,6 +411,16 @@ export async function createReservationTool(params: {
   if (reservation?.id) {
     scheduleReminders(reservation.id).catch(() => {})
   }
+
+  // Learn from this interaction
+  const classification = classifyInteraction({
+    text: notesStr, party_size: finalPartySize,
+    business_type: tenantType, business_rules: {},
+  })
+  learnFromInteraction({
+    tenant_id, type: 'reserva', classification,
+    customer_phone, outcome: 'success',
+  }).catch(() => {}) // non-blocking
 
   return {
     success: true, reservation_id: reservation?.id || null,

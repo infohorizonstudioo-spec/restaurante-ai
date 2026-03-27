@@ -145,7 +145,8 @@
       "Bash(for file:*)",
       "Bash(do echo:*)",
       "Read(//c/Users/krush/restaurante-ai/**)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(git stash:*)"
     ]
   }
 }

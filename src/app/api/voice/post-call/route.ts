@@ -7,6 +7,7 @@ import { resolveTemplate } from '@/lib/templates'
 import { createNotification } from '@/lib/notifications'
 import { learnFromCall, getTenantMemory, buildMemoryContext, getAdaptiveThresholds } from '@/lib/tenant-learning'
 import { makeDecision } from '@/lib/agent-decision'
+import { classifyInteraction, generateSummary, learnFromInteraction } from '@/lib/intelligence-engine'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -437,6 +438,12 @@ export async function POST(req: Request) {
       : confidence < 0.55 ? 'needs_human_attention'
       : 'pending_review'
 
+    // Classify interaction for priority and risk
+    const classification = classifyInteraction({
+      text: transcript || '', business_type: templateType,
+      party_size: analysis.details?.party_size,
+    })
+
     const decision = {
       status:           decisionStatus,
       intent:           analysis.intent,
@@ -451,6 +458,12 @@ export async function POST(req: Request) {
       applied_rule:     null as string | null,
       knowledge_source: knowledgeSource,
       decision_trace:   [] as any[],
+    }
+
+    // Override decision status if classification demands escalation
+    if (classification.requires_human && decisionStatus === 'confirmed') {
+      // Intelligence engine detected something the decision engine missed
+      decision.applied_rule = 'intelligence_override: ' + classification.reasoning
     }
 
     // ── Guardar en DB (atómico, idempotente) ────────────────────────────────
@@ -540,7 +553,7 @@ export async function POST(req: Request) {
             title:     '⚠ Llamada requiere atención',
             body:      `${name} — ${decision.summary || 'Revisa esta llamada'}`,
             call_sid:  key,
-            priority:  'warning',
+            priority:  classification.priority === 'critical' ? 'critical' : 'warning',
           })
         } else if (decision.status === 'pending_review') {
           await createNotification({
