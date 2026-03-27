@@ -135,7 +135,7 @@ export default function InmoReservasView() {
                   {(modal.date || modal.reservation_date)?.slice(0, 10)} · {(modal.time || modal.reservation_time || '').slice(0, 5)}
                 </p>
               </div>
-              <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: C.text3 }}>×</button>
+              <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: C.text3 }} aria-label="Cerrar">×</button>
             </div>
             {modal.customer_phone && <p style={{ fontSize: 13, color: C.text2, marginBottom: 8 }}>📞 {modal.customer_phone}</p>}
             {extractProperty(modal) !== '—' && <p style={{ fontSize: 13, color: C.text2, marginBottom: 8 }}>🏠 {extractProperty(modal)}</p>}

@@ -132,7 +132,7 @@ export default function PsicoReservasView() {
 
       {/* Week nav */}
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'0 24px',display:'flex',alignItems:'stretch'}}>
-        <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()-7);return n})} style={{padding:'12px',background:'none',border:'none',cursor:'pointer',color:C.text3,fontSize:18}}>‹</button>
+        <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()-7);return n})} style={{padding:'12px',background:'none',border:'none',cursor:'pointer',color:C.text3,fontSize:18}} aria-label="Anterior">‹</button>
         {week.map(d => {
           const iso = d.toISOString().slice(0,10)
           const count = reservas.filter(r=>(r.date||r.reservation_date)===iso).length
@@ -145,7 +145,7 @@ export default function PsicoReservasView() {
             </button>
           )
         })}
-        <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n})} style={{padding:'12px',background:'none',border:'none',cursor:'pointer',color:C.text3,fontSize:18}}>›</button>
+        <button onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n})} style={{padding:'12px',background:'none',border:'none',cursor:'pointer',color:C.text3,fontSize:18}} aria-label="Siguiente">›</button>
       </div>
 
       {/* Status filter */}
@@ -208,7 +208,7 @@ export default function PsicoReservasView() {
                   {(modal.date||modal.reservation_date)?.slice(0,10)} · {(modal.time||modal.reservation_time||'').slice(0,5)}
                 </p>
               </div>
-              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:C.text3}}>×</button>
+              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:C.text3}} aria-label="Cerrar">×</button>
             </div>
             {modal.customer_phone&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>{tx('Tel')}: {modal.customer_phone}</p>}
             {(() => { const t = parseTerapeutaFromNotes(modal.notes, modal.table_name); return t ? <p style={{fontSize:13,color:C.text2,marginBottom:8}}>{tx('Terapeuta')}: {t}</p> : null })()}

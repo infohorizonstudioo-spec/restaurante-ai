@@ -228,9 +228,9 @@ export default function AgendaPage() {
             <p style={{fontSize:11,color:C.muted,marginTop:2}}>{weekLabel}</p>
           </div>
           <div style={{display:'flex',gap:6,alignItems:'center'}}>
-            <button className="nav-btn" onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()-7);return n})}>‹</button>
+            <button className="nav-btn" onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()-7);return n})} aria-label="Anterior">‹</button>
             <button className="today-btn" onClick={()=>{setBase(new Date());setMobileDay(()=>{const d=new Date().getDay();return d===0?6:d-1})}}>{tx('Hoy')}</button>
-            <button className="nav-btn" onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n})}>›</button>
+            <button className="nav-btn" onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n})} aria-label="Siguiente">›</button>
           </div>
         </div>
         <div style={{display:'flex',gap:10,alignItems:'center'}}>

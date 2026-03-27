@@ -62,7 +62,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id:string) =>
       </div>
       {toast.priority !== 'critical' && (
         <button onClick={e=>{ e.stopPropagation(); setVisible(false); setTimeout(()=>onRemove(toast.id),300) }}
-          style={{ background:'none', border:'none', color:'#49566A', cursor:'pointer', fontSize:16, padding:0, flexShrink:0, marginTop:-2 }}>✕</button>
+          style={{ background:'none', border:'none', color:'#49566A', cursor:'pointer', fontSize:16, padding:0, flexShrink:0, marginTop:-2 }} aria-label="Cerrar">✕</button>
       )}
     </div>
   )

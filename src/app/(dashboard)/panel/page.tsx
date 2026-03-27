@@ -671,7 +671,7 @@ export default function PanelPage() {
             <p style={{ fontSize:12, color:'rgba(255,255,255,0.8)' }}>{_tx('Para')} {orderAlert.type} · {_tx('Toca para ver en pedidos')}</p>
           </div>
           <span style={{ fontSize:13, color:'rgba(255,255,255,0.6)', marginLeft:'auto' }}>→ {_tx('Ver pedidos')}</span>
-          <button onClick={e => { e.stopPropagation(); setOrderAlert(null) }} style={{ background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8, padding:'4px 10px', color:'white', cursor:'pointer', fontSize:14, marginLeft:8 }}>✕</button>
+          <button onClick={e => { e.stopPropagation(); setOrderAlert(null) }} style={{ background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8, padding:'4px 10px', color:'white', cursor:'pointer', fontSize:14, marginLeft:8 }} aria-label="Cerrar">✕</button>
         </div>
       )}
 

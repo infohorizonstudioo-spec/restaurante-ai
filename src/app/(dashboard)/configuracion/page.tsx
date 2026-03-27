@@ -402,9 +402,9 @@ export default function ConfiguracionPage() {
                   <p style={{fontSize:11,color:C.muted,marginTop:2}}>{tx('Cuántas reservas/citas puedes atender a la vez')}</p>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
-                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_reservations_per_slot:Math.max(1,s.max_new_reservations_per_slot-1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>−</button>
+                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_reservations_per_slot:Math.max(1,s.max_new_reservations_per_slot-1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}} aria-label="Menos">−</button>
                   <span style={{fontSize:18,fontWeight:700,color:C.amber,minWidth:32,textAlign:'center'}}>{schedCfg.max_new_reservations_per_slot}</span>
-                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_reservations_per_slot:Math.min(50,s.max_new_reservations_per_slot+1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>+</button>
+                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_reservations_per_slot:Math.min(50,s.max_new_reservations_per_slot+1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}} aria-label="Más">+</button>
                 </div>
               </div>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -413,9 +413,9 @@ export default function ConfiguracionPage() {
                   <p style={{fontSize:11,color:C.muted,marginTop:2}}>{tx('Total de personas que caben en una misma franja horaria')}</p>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
-                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_people_per_slot:Math.max(1,s.max_new_people_per_slot-1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>−</button>
+                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_people_per_slot:Math.max(1,s.max_new_people_per_slot-1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}} aria-label="Menos">−</button>
                   <span style={{fontSize:18,fontWeight:700,color:C.amber,minWidth:32,textAlign:'center'}}>{schedCfg.max_new_people_per_slot}</span>
-                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_people_per_slot:Math.min(100,s.max_new_people_per_slot+1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>+</button>
+                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_people_per_slot:Math.min(100,s.max_new_people_per_slot+1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}} aria-label="Más">+</button>
                 </div>
               </div>
             </div>
@@ -568,7 +568,7 @@ export default function ConfiguracionPage() {
                 <div key={step} className="flow-chip" style={{background:C.amberDim,border:`1px solid ${C.amber}44`,color:C.amber}}>
                   <span style={{fontSize:10,fontWeight:700,color:C.muted}}>{i+1}</span>
                   <span>{step}</span>
-                  <button onClick={()=>setCfg(c=>({...c,conversation_flow:c.conversation_flow.filter(s=>s!==step)}))} style={{background:'none',border:'none',color:C.muted,cursor:'pointer',fontSize:12,padding:0,lineHeight:1}}>×</button>
+                  <button onClick={()=>setCfg(c=>({...c,conversation_flow:c.conversation_flow.filter(s=>s!==step)}))} style={{background:'none',border:'none',color:C.muted,cursor:'pointer',fontSize:12,padding:0,lineHeight:1}} aria-label="Cerrar">×</button>
                 </div>
               ))}
             </div>

@@ -8,6 +8,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import PeluProductosView from './PeluProductosView'
 import BarbeProductosView from './BarbeProductosView'
 import { C } from '@/lib/colors'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 
 const AVAIL_CFG = {
   always_available: { label:'Siempre disponible', color:C.green,  bg:C.greenDim,  icon:'✓' },
@@ -218,7 +219,7 @@ export default function ProductosPage() {
                       {/* Acciones */}
                       <div style={{ display:'flex', gap:6, flexShrink:0, position:'relative' }}>
                         <button onClick={() => setModal(item)} style={{ padding:'6px 12px', fontSize:12, fontWeight:600, background:'rgba(255,255,255,0.04)', border:`1px solid ${C.border}`, borderRadius:8, cursor:'pointer', color:C.sub, fontFamily:'inherit' }}>{tx('Editar')}</button>
-                        <button onClick={() => setDeleteConfirm(item.id)} style={{ padding:'6px 10px', fontSize:12, background:C.redDim, border:`1px solid ${C.red}33`, borderRadius:8, cursor:'pointer', color:C.red, fontFamily:'inherit' }}>✕</button>
+                        <button onClick={() => setDeleteConfirm(item.id)} style={{ padding:'6px 10px', fontSize:12, background:C.redDim, border:`1px solid ${C.red}33`, borderRadius:8, cursor:'pointer', color:C.red, fontFamily:'inherit' }} aria-label="Cerrar">✕</button>
                         {deleteConfirm===item.id&&(
                           <div style={{position:'absolute',right:0,top:'100%',marginTop:6,background:C.card,border:`1px solid ${C.red}44`,borderRadius:10,padding:'10px 14px',zIndex:20,width:220,boxShadow:'0 8px 24px rgba(0,0,0,0.4)'}}>
                             <p style={{fontSize:12,color:C.red,marginBottom:8}}>{tx('Eliminar')} "{item.name}"?</p>
@@ -246,6 +247,7 @@ export default function ProductosPage() {
 
 
 function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: { item: any | null, onSave: (d: any) => void, onClose: () => void, categories: string[], tx?:(s:string)=>string }) {
+  const focusRef = useFocusTrap(onClose)
   const CATEGORIES = categories
   const [form, setForm] = useState({
     id:                   item?.id || undefined,
@@ -280,10 +282,10 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: {
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }} onClick={onClose}>
-      <div style={{ background:C.card, borderRadius:16, padding:24, width:'100%', maxWidth:480, maxHeight:'90vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.7)' }} onClick={e => e.stopPropagation()}>
+      <div ref={focusRef} style={{ background:C.card, borderRadius:16, padding:24, width:'100%', maxWidth:480, maxHeight:'90vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.7)' }} onClick={e => e.stopPropagation()}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
           <p style={{ fontSize:16, fontWeight:700, color:C.text }}>{item ? tx('Editar producto') : tx('Nuevo producto')}</p>
-          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:C.muted }}>✕</button>
+          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:C.muted }} aria-label="Cerrar">✕</button>
         </div>
 
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>

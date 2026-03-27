@@ -189,7 +189,7 @@ function ServicioModal({ item, onSave, onClose, accent }: {
       <div style={{ background: C.surface, borderRadius: 16, padding: 24, width: '100%', maxWidth: 440, boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <p style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{item ? 'Editar servicio' : 'Nuevo servicio'}</p>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.text3 }}>×</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.text3 }} aria-label="Cerrar">×</button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

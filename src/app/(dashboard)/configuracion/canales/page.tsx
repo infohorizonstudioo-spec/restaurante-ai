@@ -141,7 +141,7 @@ export default function CanalesPage() {
           <button onClick={() => setMessage(null)} style={{
             float: 'right', background: 'none', border: 'none', color: 'inherit',
             cursor: 'pointer', fontSize: 16,
-          }}>✕</button>
+          }} aria-label="Cerrar">✕</button>
         </div>
       )}
 

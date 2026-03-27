@@ -154,7 +154,7 @@ export default function AdminPage() {
         </div>
 
         {msg&&<div style={{padding:'10px 16px',borderRadius:10,marginBottom:16,background:msg.startsWith('✅')?C.greenDim:C.redDim,border:`1px solid ${msg.startsWith('✅')?C.green:C.red}30`,fontSize:13,color:msg.startsWith('✅')?C.green:C.red,display:'flex',justifyContent:'space-between'}}>
-          <span>{msg}</span><button onClick={()=>setMsg('')} style={{background:'none',border:'none',color:'inherit',cursor:'pointer',fontSize:16}}>✕</button>
+          <span>{msg}</span><button onClick={()=>setMsg('')} style={{background:'none',border:'none',color:'inherit',cursor:'pointer',fontSize:16}} aria-label="Cerrar">✕</button>
         </div>}
 
         {/* TABS */}
@@ -286,7 +286,7 @@ export default function AdminPage() {
           <div style={{background:C.surface2,border:`1px solid ${C.borderMd}`,borderRadius:16,padding:'24px',width:'100%',maxWidth:440,display:'flex',flexDirection:'column',gap:14}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <p style={{fontSize:15,fontWeight:700,color:C.text}}>Nuevo negocio</p>
-              <button onClick={()=>setShowModal(false)} style={{background:'none',border:'none',color:C.text3,cursor:'pointer',fontSize:20}}>✕</button>
+              <button onClick={()=>setShowModal(false)} style={{background:'none',border:'none',color:C.text3,cursor:'pointer',fontSize:20}} aria-label="Cerrar">✕</button>
             </div>
             {([{l:'Nombre *',k:'name',t:'text'},{l:'Slug URL',k:'slug',t:'text'},{l:'Email',k:'email',t:'email'},{l:'Teléfono',k:'phone',t:'tel'}] as const).map(f=>(
               <div key={f.k}>

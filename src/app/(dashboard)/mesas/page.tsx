@@ -202,7 +202,7 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
       {/* Header */}
       <div style={{padding:'14px 16px',borderBottom:`1px solid ${C.border}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <p style={{fontSize:13,fontWeight:700,color:C.text}}>{unitS} {table.number}</p>
-        <button onClick={onClose} style={{background:'none',border:'none',fontSize:16,cursor:'pointer',color:C.muted,padding:4}}>✕</button>
+        <button onClick={onClose} style={{background:'none',border:'none',fontSize:16,cursor:'pointer',color:C.muted,padding:4}} aria-label="Cerrar">✕</button>
       </div>
 
       <div style={{padding:'14px 16px',display:'flex',flexDirection:'column',gap:14,flex:1}}>
@@ -222,9 +222,9 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
         <div>
           <label style={lbl}>{isRoom?tx('Aforo'):tx('Capacidad')}</label>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
-            <button onClick={()=>up('capacity',Math.max(1,f.capacity-1))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.sub,fontSize:16,cursor:'pointer',fontFamily:'inherit'}}>−</button>
+            <button onClick={()=>up('capacity',Math.max(1,f.capacity-1))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.sub,fontSize:16,cursor:'pointer',fontFamily:'inherit'}} aria-label="Menos">−</button>
             <span style={{fontSize:18,fontWeight:800,color:C.amber,minWidth:30,textAlign:'center'}}>{f.capacity}</span>
-            <button onClick={()=>up('capacity',Math.min(100,f.capacity+1))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.sub,fontSize:16,cursor:'pointer',fontFamily:'inherit'}}>+</button>
+            <button onClick={()=>up('capacity',Math.min(100,f.capacity+1))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.sub,fontSize:16,cursor:'pointer',fontFamily:'inherit'}} aria-label="Más">+</button>
             <span style={{fontSize:11,color:C.muted,marginLeft:4}}>{tx('personas')}</span>
           </div>
         </div>
@@ -926,9 +926,9 @@ export default function MesasPage() {
                   background:snapEnabled?'rgba(45,212,191,0.08)':'transparent',
                   color:snapEnabled?C.teal:C.sub,
                 }}>⊞ Grid</button>
-                <button onClick={()=>setZoom(z=>Math.max(0.3,z-0.15))} style={{padding:'3px 7px',fontSize:12,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:5,color:C.sub,cursor:'pointer'}}>−</button>
+                <button onClick={()=>setZoom(z=>Math.max(0.3,z-0.15))} style={{padding:'3px 7px',fontSize:12,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:5,color:C.sub,cursor:'pointer'}} aria-label="Menos">−</button>
                 <span style={{fontSize:10,color:C.muted,minWidth:32,textAlign:'center'}}>{Math.round(zoom*100)}%</span>
-                <button onClick={()=>setZoom(z=>Math.min(3,z+0.15))} style={{padding:'3px 7px',fontSize:12,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:5,color:C.sub,cursor:'pointer'}}>+</button>
+                <button onClick={()=>setZoom(z=>Math.min(3,z+0.15))} style={{padding:'3px 7px',fontSize:12,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:5,color:C.sub,cursor:'pointer'}} aria-label="Más">+</button>
                 <button onClick={()=>{setZoom(1);setPanOffset({x:0,y:0})}} style={{padding:'3px 7px',fontSize:10,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:5,color:C.sub,cursor:'pointer',fontFamily:'inherit'}}>Fit</button>
                 <div style={{width:1,height:16,background:C.border}}/>
                 <button onClick={undo} disabled={undoStack.length===0} style={{

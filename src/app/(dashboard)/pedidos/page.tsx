@@ -427,11 +427,11 @@ export default function PedidosPage() {
 
       {/* ── Order detail modal ────────────────────────────────── */}
       {modal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 16 }} onClick={() => setModal(null)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 16 }} onClick={() => setModal(null)} onKeyDown={e => { if (e.key === 'Escape') setModal(null) }} tabIndex={-1} ref={el => { if (el) el.focus() }}>
           <div style={{ background: '#131920', border: '1px solid rgba(255,255,255,0.11)', borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
               <p style={{ fontSize: 15, fontWeight: 700, color: '#E8EEF6' }}>{modal.customer_name}</p>
-              <button onClick={() => setModal(null)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#49566A' }}>&times;</button>
+              <button onClick={() => setModal(null)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#49566A' }} aria-label="Cerrar">&times;</button>
             </div>
             <div style={{ padding: '20px 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>

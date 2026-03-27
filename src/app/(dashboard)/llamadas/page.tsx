@@ -235,7 +235,7 @@ export default function LlamadasPage() {
                 </p>
               ))}
             </div>
-            <button onClick={()=>setSuggestions([])} style={{background:'none',border:'none',color:C.text3,cursor:'pointer',fontSize:16,flexShrink:0}}>✕</button>
+            <button onClick={()=>setSuggestions([])} style={{background:'none',border:'none',color:C.text3,cursor:'pointer',fontSize:16,flexShrink:0}} aria-label="Cerrar">✕</button>
           </div>
         )}
         {groups.length===0 ? (

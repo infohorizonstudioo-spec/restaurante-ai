@@ -97,7 +97,7 @@ export default function HelpButton() {
             {/* Header */}
             <div style={{ padding:'16px 20px', borderBottom:`1px solid ${C.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <h2 style={{ fontSize:15, fontWeight:700, color:C.text }}>💡 {tx('Ayuda')}</h2>
-              <button onClick={() => setOpen(false)} style={{ background:'none', border:'none', color:C.muted, fontSize:20, cursor:'pointer' }}>✕</button>
+              <button onClick={() => setOpen(false)} style={{ background:'none', border:'none', color:C.muted, fontSize:20, cursor:'pointer' }} aria-label="Cerrar">✕</button>
             </div>
 
             {/* Tabs */}
