@@ -6,19 +6,12 @@ import { PageSkeleton } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import Link from 'next/link'
 import { useToast } from '@/components/NotificationToast'
+import { ORDER_STATUS } from '@/lib/status-config'
 
 /* ── Status flow (matches agent update-order) ──────────────────────── */
 const STATUS_FLOW = ['collecting','confirmed','preparing','ready','delivered'] as const
 type OrderStatus = typeof STATUS_FLOW[number] | 'cancelled'
 
-const STATUS_COLORS: Record<string, { color: string; icon: string }> = {
-  collecting:  { color: '#F0A84E', icon: '📝' },
-  confirmed:   { color: '#2DD4BF', icon: '✅' },
-  preparing:   { color: '#FBB53F', icon: '🍳' },
-  ready:       { color: '#34D399', icon: '🔔' },
-  delivered:   { color: '#8895A7', icon: '✔️' },
-  cancelled:   { color: '#F87171', icon: '✖️' },
-}
 const STATUS_LABELS: Record<string, Record<string, string>> = {
   es: { collecting:'Tomando pedido', confirmed:'Confirmado', preparing:'Preparando', ready:'Listo', delivered:'Entregado', cancelled:'Cancelado' },
   en: { collecting:'Taking order', confirmed:'Confirmed', preparing:'Preparing', ready:'Ready', delivered:'Delivered', cancelled:'Cancelled' },
@@ -251,7 +244,7 @@ export default function PedidosPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, tenant_id: tid, status })
     })
-    const sm = STATUS_COLORS[status]
+    const sm = ORDER_STATUS[status]
     toast.push({ title: SL[status] || status, body: L.statusUpdated, type: 'order', priority: 'info', icon: sm?.icon || '✅' })
     setModal(null)
     if (tid) load(tid)
@@ -324,7 +317,7 @@ export default function PedidosPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 10, marginBottom: 20 }}>
             {(['collecting', 'confirmed', 'preparing', 'ready'] as const).map(s => {
               const cnt = orders.filter(o => o.status === s).length
-              const sm = STATUS_COLORS[s]
+              const sm = ORDER_STATUS[s]
               return (
                 <div key={s} style={{ background: '#1A2230', border: '1px solid ' + sm.color + '33', borderRadius: 12, padding: '12px 16px' }}>
                   <p style={{ fontSize: 22, fontWeight: 700, color: sm.color }}>{cnt}</p>
@@ -349,7 +342,7 @@ export default function PedidosPage() {
             </button>
           </div>
         ) : filtered.map(o => {
-          const sm = STATUS_COLORS[o.status] || STATUS_COLORS.collecting
+          const sm = ORDER_STATUS[o.status] || ORDER_STATUS.collecting
           const items = Array.isArray(o.items) ? o.items : []
           const typeIcon = TYPE_ICONS[o.order_type] || '📦'
           const typeLabel = TL[o.order_type] || o.order_type || ''
@@ -417,9 +410,9 @@ export default function PedidosPage() {
                       onClick={(e) => { e.stopPropagation(); avanzarEstado(o.id, o.status) }}
                       style={{
                         padding: '5px 12px', fontSize: 11, fontWeight: 600, borderRadius: 7,
-                        border: '1px solid ' + (STATUS_COLORS[ns]?.color || '#F0A84E') + '44',
-                        background: (STATUS_COLORS[ns]?.color || '#F0A84E') + '18',
-                        color: STATUS_COLORS[ns]?.color || '#F0A84E',
+                        border: '1px solid ' + (ORDER_STATUS[ns]?.color || '#F0A84E') + '44',
+                        background: (ORDER_STATUS[ns]?.color || '#F0A84E') + '18',
+                        color: ORDER_STATUS[ns]?.color || '#F0A84E',
                         cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap'
                       }}>
                       {nextLabel(o.status, locale)} →
@@ -442,8 +435,8 @@ export default function PedidosPage() {
             </div>
             <div style={{ padding: '20px 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: (STATUS_COLORS[modal.status]?.color || '#8895A7') + '18', color: STATUS_COLORS[modal.status]?.color || '#8895A7', fontWeight: 700 }}>
-                {STATUS_COLORS[modal.status]?.icon} {SL[modal.status] || modal.status}
+              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: (ORDER_STATUS[modal.status]?.color || '#8895A7') + '18', color: ORDER_STATUS[modal.status]?.color || '#8895A7', fontWeight: 700 }}>
+                {ORDER_STATUS[modal.status]?.icon} {SL[modal.status] || modal.status}
               </span>
               <span style={{ fontSize: 11, color: '#49566A' }}>
                 {(TYPE_ICONS[modal.order_type] || '📦') + ' ' + (TL[modal.order_type] || modal.order_type)}
@@ -518,7 +511,7 @@ export default function PedidosPage() {
               <p style={{ fontSize: 11, fontWeight: 700, color: '#49566A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{L.changeStatus}</p>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {STATUS_FLOW.map(s => {
-                  const sm = STATUS_COLORS[s]
+                  const sm = ORDER_STATUS[s]
                   if (!sm) return null
                   const isActive = modal.status === s
                   const idx = STATUS_FLOW.indexOf(s)

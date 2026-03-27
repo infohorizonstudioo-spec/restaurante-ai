@@ -188,7 +188,7 @@ function DefaultClientesView() {
                     </div>
                   </div>
                 </div>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:12}}>
                   {[
                     {label:tx('Visitas'),value:selected.total_reservations||selected.total_visits||0},
                     {label:tx('Última visita'),value:selected.last_visit?new Date(selected.last_visit).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'—'},

@@ -932,6 +932,10 @@ const TX: Record<string, Record<string, string>> = {
   'Tasaciones': {en:'Appraisals',fr:'Estimations',pt:'Avaliações'},
   'General': {en:'General',fr:'Général',pt:'Geral'},
   'Productos': {en:'Products',fr:'Produits',pt:'Produtos'},
+  // Form validation
+  'Campo obligatorio': {en:'Required field',fr:'Champ obligatoire',pt:'Campo obrigatório'},
+  'Precio no válido': {en:'Invalid price',fr:'Prix non valide',pt:'Preço inválido'},
+  'Mínimo 1': {en:'Minimum 1',fr:'Minimum 1',pt:'Mínimo 1'},
 }
 
 export function tx(text: string, locale: string): string {

@@ -131,7 +131,7 @@ export default function ProductosPage() {
       <div style={{ maxWidth:900, margin:'0 auto', padding:'20px 24px' }}>
 
         {/* KPIs del día */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:20 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:10, marginBottom:20 }}>
           {([
             { label:tx('Disponibles hoy'), value:available, color:C.green, bg:C.greenDim },
             { label:tx('Agotados hoy'), value:soldOut, color:C.red, bg:C.redDim },
@@ -259,11 +259,17 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: {
     price:                item?.price || '',
     sort_order:           item?.sort_order || 0,
   })
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const up = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
   const lbl = { fontSize:11, fontWeight:600, color:'#8895A7', letterSpacing:'0.03em', display:'block', marginBottom:5 }
 
   function submit() {
-    if (!form.name.trim()) return
+    const errors: Record<string, string> = {}
+    if (!form.name.trim()) errors.name = tx('Campo obligatorio')
+    if (form.price && (isNaN(Number(form.price)) || Number(form.price) < 0)) errors.price = tx('Precio no válido')
+    if (form.availability_type === 'limited_daily' && form.daily_limit && (isNaN(Number(form.daily_limit)) || Number(form.daily_limit) < 1)) errors.daily_limit = tx('Mínimo 1')
+    setFormErrors(errors)
+    if (Object.keys(errors).length > 0) return
     onSave({
       ...form,
       daily_limit: form.daily_limit ? parseInt(String(form.daily_limit)) : null,
@@ -284,7 +290,8 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: {
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
             <div style={{ gridColumn:'1/-1' }}>
               <label style={lbl}>{tx('Nombre').toUpperCase()} *</label>
-              <input className="rz-inp" value={form.name} onChange={e => up('name', e.target.value)} placeholder={tx('Nombre del producto')} />
+              <input className="rz-inp" value={form.name} onChange={e => { up('name', e.target.value); formErrors.name && setFormErrors(f => ({...f, name: ''})) }} placeholder={tx('Nombre del producto')} />
+              {formErrors.name && <p style={{ fontSize:11, color:C.red, marginTop:3 }}>{formErrors.name}</p>}
             </div>
             <div>
               <label style={lbl}>{tx('Categoría').toUpperCase()}</label>
@@ -294,7 +301,8 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: {
             </div>
             <div>
               <label style={lbl}>{tx('Precio').toUpperCase()} (€)</label>
-              <input className="rz-inp" type="number" value={form.price} onChange={e => up('price', e.target.value)} placeholder="28.50" />
+              <input className="rz-inp" type="number" value={form.price} onChange={e => { up('price', e.target.value); formErrors.price && setFormErrors(f => ({...f, price: ''})) }} placeholder="28.50" />
+              {formErrors.price && <p style={{ fontSize:11, color:C.red, marginTop:3 }}>{formErrors.price}</p>}
             </div>
             <div style={{ gridColumn:'1/-1' }}>
               <label style={lbl}>{tx('Descripción').toUpperCase()} ({tx('opcional')})</label>
@@ -323,7 +331,8 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: {
           {form.availability_type === 'limited_daily' && (
             <div>
               <label style={lbl}>{tx('Límite diario').toUpperCase()}</label>
-              <input className="rz-inp" type="number" min={1} value={form.daily_limit} onChange={e => up('daily_limit', e.target.value)} placeholder="Ej: 5" />
+              <input className="rz-inp" type="number" min={1} value={form.daily_limit} onChange={e => { up('daily_limit', e.target.value); formErrors.daily_limit && setFormErrors(f => ({...f, daily_limit: ''})) }} placeholder="Ej: 5" />
+              {formErrors.daily_limit && <p style={{ fontSize:11, color:C.red, marginTop:3 }}>{formErrors.daily_limit}</p>}
               <p style={{ fontSize:11, color:C.muted, marginTop:4 }}>{tx('Se dejará de ofrecer cuando se alcance este límite')}</p>
             </div>
           )}

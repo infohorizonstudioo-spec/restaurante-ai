@@ -148,7 +148,7 @@ export default function NuevaReservaPage() {
           </div>
 
           {/* Fecha + Hora */}
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14}}>
+          <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:14}}>
             <div>
               <label style={label}>{tx('FECHA')} *</label>
               <input type="date" className="rz-inp" style={{...inp, colorScheme:'dark'}} value={form.date} onChange={e=>up('date',e.target.value)}/>

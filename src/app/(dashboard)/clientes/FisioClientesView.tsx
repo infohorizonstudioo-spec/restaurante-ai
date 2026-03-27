@@ -155,7 +155,7 @@ export default function FisioClientesView() {
                     <p style={{fontSize:13,color:C.text2,marginTop:1}}>{selected.phone}{selected.email?' · '+selected.email:''}</p>
                   </div>
                 </div>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:12}}>
                   {[
                     {label:tx('Sesiones'),value:sessionCount[selected.id]||0},
                     {label:tx('Última sesión'),value:selected.last_visit?new Date(selected.last_visit).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'—'},

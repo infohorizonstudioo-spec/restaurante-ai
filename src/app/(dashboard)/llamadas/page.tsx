@@ -6,6 +6,7 @@ import { PageLoader, PageSkeleton } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import { getCommonStrings, getStatusLabel } from '@/lib/i18n'
 import { useToast } from '@/components/NotificationToast'
+import { DECISION_STATUS } from '@/lib/status-config'
 
 // ── Traducciones humanas de estados ──────────────────────────────────────
 function getDecisionLabel(status: string, name: string, txFn: (s:string)=>string): string {
@@ -19,15 +20,6 @@ function getDecisionLabel(status: string, name: string, txFn: (s:string)=>string
     incomplete: txFn('Sin información suficiente'),
   }
   return map[status] || status
-}
-const DECISION_CFG: Record<string,{color:string;bg:string;icon:string}> = {
-  confirmed:             {color:'#4ADE80', bg:'rgba(74,222,128,0.10)',  icon:'✅'},
-  pending_review:        {color:'#FBB53F', bg:'rgba(251,181,63,0.10)',  icon:'👁'},
-  modified:              {color:'#60A5FA', bg:'rgba(96,165,250,0.10)',  icon:'✏️'},
-  cancelled:             {color:'#F87171', bg:'rgba(248,113,113,0.10)', icon:'✕'},
-  rejected:              {color:'#F87171', bg:'rgba(248,113,113,0.10)', icon:'✕'},
-  needs_human_attention: {color:'#F0A84E', bg:'rgba(240,168,78,0.12)',  icon:'⚠️'},
-  incomplete:            {color:'#8895A7', bg:'rgba(136,149,167,0.10)', icon:'❓'},
 }
 function getFlagLabel(flag: string, name: string, txFn: (s:string)=>string): string {
   const map: Record<string,string> = {
@@ -302,7 +294,7 @@ export default function LlamadasPage() {
                             <p style={{fontSize:10, fontWeight:700, color:C.text3, marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em'}}>{tx('Lo que hizo')} {agentName}</p>
                             <div style={{display:'flex', flexWrap:'wrap', gap:6, alignItems:'center'}}>
                               {call.decision_status&&(()=>{
-                                const dcfg = DECISION_CFG[call.decision_status]
+                                const dcfg = DECISION_STATUS[call.decision_status]
                                 return dcfg ? (
                                   <span style={{fontSize:12, padding:'4px 12px', borderRadius:8, background:dcfg.bg, color:dcfg.color, fontWeight:700}}>
                                     {dcfg.icon} {getDecisionLabel(call.decision_status, agentName, tx)}

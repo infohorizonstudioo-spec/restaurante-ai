@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useTenant } from '@/contexts/TenantContext'
 import { parseReservationConfig, ReservationConfig } from '@/lib/scheduling-engine'
 import { PageLoader } from '@/components/ui'
+import { RESERVATION_STATUS } from '@/lib/status-config'
 import NotifBell from '@/components/NotifBell'
 import Link from 'next/link'
 
@@ -44,16 +45,6 @@ function buildHoursFromConfig(cfg?: ReservationConfig): number[] {
   return Array.from({length: maxH - minH + 1}, (_, i) => i + minH)
 }
 
-const STATUS_CFG: Record<string,{color:string;bg:string;label:string}> = {
-  confirmada: {color:'#34d399',bg:'rgba(52,211,153,0.12)',label:'Confirmada'},
-  confirmed:  {color:'#34d399',bg:'rgba(52,211,153,0.12)',label:'Confirmada'},
-  pendiente:  {color:'#fbbf24',bg:'rgba(251,191,36,0.12)', label:'Pendiente'},
-  pending:    {color:'#fbbf24',bg:'rgba(251,191,36,0.12)', label:'Pendiente'},
-  cancelada:  {color:'#f87171',bg:'rgba(248,113,113,0.12)',label:'Cancelada'},
-  cancelled:  {color:'#f87171',bg:'rgba(248,113,113,0.12)',label:'Cancelada'},
-  completada: {color:'#818cf8',bg:'rgba(129,140,248,0.12)',label:'Completada'},
-  completed:  {color:'#818cf8',bg:'rgba(129,140,248,0.12)',label:'Completada'},
-}
 
 function getWeekDays(base: Date): Date[] {
   const d = new Date(base)
@@ -69,7 +60,7 @@ function _fmtDate(d:Date){ return `${d.getDate()} ${cap(fmtMonth(d))} ${d.getFul
 
 // ── Tooltip flotante ──────────────────────────────────────────────────────
 function ResTooltip({r, tx}: {r:any, anchorRef?: React.RefObject<HTMLDivElement>, tx:(s:string)=>string}) {
-  const cfg = STATUS_CFG[r.status] || STATUS_CFG.confirmada
+  const cfg = RESERVATION_STATUS[r.status] || RESERVATION_STATUS.confirmada
   const ppl = r.people || r.party_size || 1
   return (
     <div style={{
@@ -110,7 +101,7 @@ function Row({icon,text,muted}:{icon:string,text:string,muted?:boolean}) {
 
 // ── Bloque de reserva en la celda ─────────────────────────────────────────
 function ResBlock({r, onHover, onLeave, tx}: {r:any, onHover:(e:React.MouseEvent,r:any)=>void, onLeave:()=>void, tx:(s:string)=>string}) {
-  const cfg = STATUS_CFG[r.status] || STATUS_CFG.confirmada
+  const cfg = RESERVATION_STATUS[r.status] || RESERVATION_STATUS.confirmada
   const ppl = r.people || r.party_size || 1
   const time = fmtTime(r.time || r.reservation_time || '')
   return (
@@ -334,7 +325,7 @@ export default function AgendaPage() {
             {Object.entries({confirmada:'#34d399',pendiente:'#fbbf24',completada:'#818cf8'}).map(([k,c])=>(
               <div key={k} style={{display:'flex',alignItems:'center',gap:6}}>
                 <div style={{width:10,height:10,borderRadius:'50%',background:c}}/>
-                <span style={{fontSize:11,color:C.muted,textTransform:'capitalize'}}>{tx(STATUS_CFG[k]?.label||k)}</span>
+                <span style={{fontSize:11,color:C.muted,textTransform:'capitalize'}}>{tx(RESERVATION_STATUS[k]?.label||k)}</span>
               </div>
             ))}
           </div>

@@ -6,19 +6,9 @@ import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 
 import { C } from "@/lib/colors"
+import { RESERVATION_STATUS } from '@/lib/status-config'
 
 const DAYS = ['DO','LU','MA','MI','JU','VI','SA']
-const STATUS_STYLES:Record<string,{bg:string;color:string;label:string}> = {
-  confirmada: {bg:C.greenDim,  color:C.green,  label:'Confirmada'},
-  confirmed:  {bg:C.greenDim,  color:C.green,  label:'Confirmada'},
-  pendiente:  {bg:'rgba(251,181,63,0.10)',color:C.yellow,label:'Pendiente'},
-  pending:    {bg:'rgba(251,181,63,0.10)',color:C.yellow,label:'Pendiente'},
-  pending_review:{bg:C.violetDim,color:C.violet,label:'Revisión'},
-  cancelada:  {bg:C.redDim,    color:C.red,    label:'Cancelada'},
-  cancelled:  {bg:C.redDim,    color:C.red,    label:'Cancelada'},
-  completada: {bg:C.amberDim,  color:C.amber,  label:'Completada'},
-  completed:  {bg:C.amberDim,  color:C.amber,  label:'Completada'},
-}
 
 type SessionType = 'primera_visita' | 'seguimiento' | 'urgente' | 'valoracion' | 'normal'
 
@@ -168,7 +158,7 @@ export default function FisioReservasView() {
           <button key={f} onClick={()=>setStatusFilter(f)}
             style={{padding:'5px 12px',fontSize:11,fontWeight:600,borderRadius:7,border:`1px solid ${statusFilter===f?C.teal:C.border}`,
               background:statusFilter===f?C.tealDim:'transparent',color:statusFilter===f?C.teal:C.text3,cursor:'pointer',fontFamily:'inherit',textTransform:'capitalize'}}>
-            {tx(f === 'todos' ? 'Todos' : STATUS_STYLES[f]?.label || f)}
+            {tx(f === 'todos' ? 'Todos' : RESERVATION_STATUS[f]?.label || f)}
           </button>
         ))}
       </div>
@@ -181,7 +171,7 @@ export default function FisioReservasView() {
             <p style={{fontSize:13,color:C.text3}}>{tx('No hay citas de fisioterapia para el día seleccionado.')}</p>
           </div>
         ) : filtered.map((r)=>{
-          const ss = STATUS_STYLES[r.status]||STATUS_STYLES.pendiente
+          const ss = RESERVATION_STATUS[r.status]||RESERVATION_STATUS.pendiente
           const time = r.time||r.reservation_time||''
           const name = r.customer_name||tx('Sin nombre')
           const session = classifySession(r.notes)
@@ -232,10 +222,10 @@ export default function FisioReservasView() {
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>
               {['confirmada','pendiente','cancelada','completada'].map(s=>(
                 <button key={s} onClick={()=>updateStatus(modal.id,s)}
-                  style={{padding:'7px 14px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${STATUS_STYLES[s]?.color||C.border}40`,
-                    background: modal.status===s ? STATUS_STYLES[s]?.bg||C.surface2 : 'transparent',
-                    color: STATUS_STYLES[s]?.color||C.text2,cursor:'pointer',fontFamily:'inherit'}}>
-                  {tx(STATUS_STYLES[s]?.label||s)}
+                  style={{padding:'7px 14px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${RESERVATION_STATUS[s]?.color||C.border}40`,
+                    background: modal.status===s ? RESERVATION_STATUS[s]?.bg||C.surface2 : 'transparent',
+                    color: RESERVATION_STATUS[s]?.color||C.text2,cursor:'pointer',fontFamily:'inherit'}}>
+                  {tx(RESERVATION_STATUS[s]?.label||s)}
                 </button>
               ))}
             </div>

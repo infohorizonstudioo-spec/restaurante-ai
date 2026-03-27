@@ -18,19 +18,9 @@ import InmoReservasView from './InmoReservasView'
 import AcademiaClasesView from './AcademiaClasesView'
 import Link from 'next/link'
 import { C } from '@/lib/colors'
+import { RESERVATION_STATUS } from '@/lib/status-config'
 
 const DAYS = ['DO','LU','MA','MI','JU','VI','SA']
-const STATUS_STYLES:Record<string,{bg:string;color:string;label:string}> = {
-  confirmada: {bg:C.greenDim,  color:C.green,  label:'Confirmada'},
-  confirmed:  {bg:C.greenDim,  color:C.green,  label:'Confirmada'},
-  pendiente:  {bg:'rgba(251,181,63,0.10)',color:C.yellow,label:'Pendiente'},
-  pending:    {bg:'rgba(251,181,63,0.10)',color:C.yellow,label:'Pendiente'},
-  cancelada:  {bg:C.redDim,    color:C.red,    label:'Cancelada'},
-  cancelled:  {bg:C.redDim,    color:C.red,    label:'Cancelada'},
-  completada: {bg:C.amberDim,  color:C.amber,  label:'Completada'},
-  completed:  {bg:C.amberDim,  color:C.amber,  label:'Completada'},
-  no_show:    {bg:'rgba(251,146,63,0.10)',color:'#FB923C',label:'No presentado'},
-}
 
 function getWeek(base: Date) {
   const d = new Date(base)
@@ -217,7 +207,7 @@ export default function ReservasPage() {
             <Link href="/reservas/nueva" style={{padding:'9px 20px',fontSize:13,fontWeight:600,color:'#0C1018',background:'linear-gradient(135deg,#F0A84E,#E8923A)',borderRadius:9,textDecoration:'none',display:'inline-block'}}>+ Crear {L?.reserva?.toLowerCase()||'reserva'}</Link>
           </div>
         ) : filtered.map((r,i)=>{
-          const ss = STATUS_STYLES[r.status]||STATUS_STYLES.pendiente
+          const ss = RESERVATION_STATUS[r.status]||RESERVATION_STATUS.pendiente
           const time = r.time||r.reservation_time||''
           const name = r.customer_name||tx('Sin nombre')
           const people = r.people||r.party_size||1
@@ -264,9 +254,9 @@ export default function ReservasPage() {
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>
               {['confirmada','pendiente','cancelada','completada','no_show'].map(s=>(
                 <button key={s} onClick={()=>updateStatus(modal.id,s)}
-                  style={{padding:'7px 14px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${STATUS_STYLES[s]?.color||C.border}40`,
-                    background: modal.status===s ? STATUS_STYLES[s]?.bg||C.surface2 : 'transparent',
-                    color: STATUS_STYLES[s]?.color||C.text2,cursor:'pointer',fontFamily:'inherit'}}>
+                  style={{padding:'7px 14px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${RESERVATION_STATUS[s]?.color||C.border}40`,
+                    background: modal.status===s ? RESERVATION_STATUS[s]?.bg||C.surface2 : 'transparent',
+                    color: RESERVATION_STATUS[s]?.color||C.text2,cursor:'pointer',fontFamily:'inherit'}}>
                   {getStatusLabel(s, t.locale)}
                 </button>
               ))}

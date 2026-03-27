@@ -79,7 +79,7 @@ export default function PeluProductosView() {
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px 24px' }}>
         {/* KPIs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: 10, marginBottom: 20 }}>
           {CATEGORIAS.map(cat => {
             const st = CAT_STYLES[cat]
             const count = servicios.filter(s => s.categoria === cat).length

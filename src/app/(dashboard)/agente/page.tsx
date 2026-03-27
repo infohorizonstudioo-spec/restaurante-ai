@@ -191,7 +191,7 @@ export default function AgentePage() {
               <h2 style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:4 }}>{tx('¿Qué puede hacer sola?')}</h2>
               <p style={{ fontSize:12, color:C.text3, marginBottom:18 }}>{tx('Decide cuánta libertad tiene tu recepcionista para tomar decisiones sin consultarte.')}</p>
 
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
                 {/* Max group size */}
                 <div>
                   <label style={{ fontSize:12, color:C.text2, fontWeight:600, display:'block', marginBottom:6 }}>{tx('Acepta grupos de hasta...')}</label>

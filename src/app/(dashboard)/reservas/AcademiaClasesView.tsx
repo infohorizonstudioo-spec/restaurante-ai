@@ -6,19 +6,9 @@ import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 
 import { C } from "@/lib/colors"
+import { RESERVATION_STATUS } from '@/lib/status-config'
 
 const DAYS = ['DO','LU','MA','MI','JU','VI','SA']
-
-const STATUS_STYLES:Record<string,{bg:string;color:string;label:string}> = {
-  confirmada: {bg:C.greenDim,  color:C.green,  label:'Confirmada'},
-  confirmed:  {bg:C.greenDim,  color:C.green,  label:'Confirmada'},
-  pendiente:  {bg:'rgba(251,181,63,0.10)',color:C.yellow,label:'Pendiente'},
-  pending:    {bg:'rgba(251,181,63,0.10)',color:C.yellow,label:'Pendiente'},
-  cancelada:  {bg:C.redDim,    color:C.red,    label:'Cancelada'},
-  cancelled:  {bg:C.redDim,    color:C.red,    label:'Cancelada'},
-  completada: {bg:C.amberDim,  color:C.amber,  label:'Completada'},
-  completed:  {bg:C.amberDim,  color:C.amber,  label:'Completada'},
-}
 
 const LEVEL_STYLES:Record<string,{bg:string;color:string}> = {
   principiante: {bg:C.greenDim, color:C.green},
@@ -150,7 +140,7 @@ export default function AcademiaClasesView() {
             <p style={{fontSize:13,color:C.text3}}>{tx('No hay clases programadas para el día seleccionado.')}</p>
           </div>
         ) : filtered.map(r=>{
-          const ss = STATUS_STYLES[r.status]||STATUS_STYLES.pendiente
+          const ss = RESERVATION_STATUS[r.status]||RESERVATION_STATUS.pendiente
           const time = r.time||r.reservation_time||''
           const studentName = r.customer_name||tx('Sin nombre')
           const subject = extractSubject(r)
@@ -218,10 +208,10 @@ export default function AcademiaClasesView() {
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>
               {['confirmada','pendiente','cancelada','completada'].map(s=>(
                 <button key={s} onClick={()=>updateStatus(modal.id,s)}
-                  style={{padding:'7px 14px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${STATUS_STYLES[s]?.color||C.border}40`,
-                    background: modal.status===s ? STATUS_STYLES[s]?.bg||C.surface2 : 'transparent',
-                    color: STATUS_STYLES[s]?.color||C.text2,cursor:'pointer',fontFamily:'inherit'}}>
-                  {tx(STATUS_STYLES[s]?.label||s)}
+                  style={{padding:'7px 14px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${RESERVATION_STATUS[s]?.color||C.border}40`,
+                    background: modal.status===s ? RESERVATION_STATUS[s]?.bg||C.surface2 : 'transparent',
+                    color: RESERVATION_STATUS[s]?.color||C.text2,cursor:'pointer',fontFamily:'inherit'}}>
+                  {tx(RESERVATION_STATUS[s]?.label||s)}
                 </button>
               ))}
             </div>

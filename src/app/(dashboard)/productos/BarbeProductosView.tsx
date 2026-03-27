@@ -68,7 +68,7 @@ export default function BarbeProductosView() {
 
       <div style={{maxWidth:900,margin:'0 auto',padding:'20px 24px'}}>
         {/* KPIs */}
-        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:20}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:10,marginBottom:20}}>
           {CATEGORIES.map(cat=>{
             const cs = CATEGORY_STYLES[cat]
             const count = MOCK_SERVICES.filter(s=>s.category===cat).length

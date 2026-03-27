@@ -5,21 +5,9 @@ import { useTenant } from '@/contexts/TenantContext'
 import { PageLoader } from '@/components/ui'
 
 import { C } from "@/lib/colors"
+import { INMO_STATUS } from '@/lib/status-config'
 
 type FilterRange = 'hoy' | 'semana' | 'todas'
-
-const STATUS_STYLES: Record<string,{bg:string;color:string;label:string}> = {
-  programada:  {bg:C.tealDim,   color:C.teal,  label:'Programada'},
-  confirmada:  {bg:C.greenDim,  color:C.green, label:'Confirmada'},
-  confirmed:   {bg:C.greenDim,  color:C.green, label:'Confirmada'},
-  pendiente:   {bg:C.amberDim,  color:C.amber, label:'Pendiente'},
-  pending:     {bg:C.amberDim,  color:C.amber, label:'Pendiente'},
-  realizada:   {bg:C.greenDim,  color:C.green, label:'Realizada'},
-  completed:   {bg:C.greenDim,  color:C.green, label:'Realizada'},
-  completada:  {bg:C.greenDim,  color:C.green, label:'Realizada'},
-  cancelada:   {bg:C.redDim,    color:C.red,   label:'Cancelada'},
-  cancelled:   {bg:C.redDim,    color:C.red,   label:'Cancelada'},
-}
 
 export default function InmoReservasView() {
   const [visitas, setVisitas] = useState<any[]>([])
@@ -108,7 +96,7 @@ export default function InmoReservasView() {
             <p style={{ fontSize: 13, color: C.text3 }}>{tx('Las visitas agendadas por el agente aparecerán aquí.')}</p>
           </div>
         ) : visitas.map(r => {
-          const ss = STATUS_STYLES[r.status] || STATUS_STYLES.pendiente
+          const ss = INMO_STATUS[r.status] || INMO_STATUS.pendiente
           const time = r.time || r.reservation_time || ''
           const name = r.customer_name || tx('Sin nombre')
           const property = extractProperty(r)
@@ -156,8 +144,8 @@ export default function InmoReservasView() {
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
               {['programada', 'confirmada', 'realizada', 'cancelada'].map(s => (
                 <button key={s} onClick={() => updateStatus(modal.id, s)}
-                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: `1px solid ${STATUS_STYLES[s]?.color || C.border}40`, background: modal.status === s ? STATUS_STYLES[s]?.bg || C.surface2 : 'transparent', color: STATUS_STYLES[s]?.color || C.text2, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  {tx(STATUS_STYLES[s]?.label||s)}
+                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: `1px solid ${INMO_STATUS[s]?.color || C.border}40`, background: modal.status === s ? INMO_STATUS[s]?.bg || C.surface2 : 'transparent', color: INMO_STATUS[s]?.color || C.text2, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  {tx(INMO_STATUS[s]?.label||s)}
                 </button>
               ))}
             </div>

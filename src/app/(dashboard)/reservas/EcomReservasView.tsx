@@ -6,17 +6,7 @@ import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 
 import { C } from "@/lib/colors"
-
-const STATUS_STYLES: Record<string,{bg:string;color:string;label:string}> = {
-  nuevo:      {bg:C.amberDim,   color:C.amber,  label:'Nuevo'},
-  confirmado: {bg:C.greenDim,   color:C.green,  label:'Confirmado'},
-  enviado:    {bg:'rgba(96,165,250,0.10)', color:C.blue, label:'Enviado'},
-  entregado:  {bg:'rgba(45,212,191,0.10)', color:C.teal, label:'Entregado'},
-  cancelado:  {bg:C.redDim,     color:C.red,    label:'Cancelado'},
-  pendiente:  {bg:'rgba(251,181,63,0.10)', color:C.yellow, label:'Pendiente'},
-  confirmada: {bg:C.greenDim,   color:C.green,  label:'Confirmada'},
-  completada: {bg:C.amberDim,   color:C.amber,  label:'Completada'},
-}
+import { ECOM_STATUS } from '@/lib/status-config'
 
 export default function EcomReservasView() {
   const { tenant, template, tx } = useTenant()
@@ -94,7 +84,7 @@ export default function EcomReservasView() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
             {(['nuevo', 'confirmado', 'enviado', 'entregado'] as const).map(s => {
               const cnt = pedidos.filter(p => p.status === s).length
-              const ss = STATUS_STYLES[s]
+              const ss = ECOM_STATUS[s]
               return (
                 <div key={s} style={{ background: C.surface, border: `1px solid ${ss.color}33`, borderRadius: 12, padding: '12px 16px' }}>
                   <p style={{ fontSize: 22, fontWeight: 700, color: ss.color }}>{cnt}</p>
@@ -115,7 +105,7 @@ export default function EcomReservasView() {
             <p style={{ fontSize: 13, color: C.text3 }}>{tx('Los pedidos aparecerán aquí en tiempo real.')}</p>
           </div>
         ) : filtered.map(p => {
-          const ss = STATUS_STYLES[p.status] || STATUS_STYLES.nuevo
+          const ss = ECOM_STATUS[p.status] || ECOM_STATUS.nuevo
           return (
             <div key={p.id} onClick={() => setModal(p)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px', marginBottom: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'all 0.12s' }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = C.surface2; (e.currentTarget as HTMLElement).style.borderColor = C.borderMd }}
@@ -160,7 +150,7 @@ export default function EcomReservasView() {
               <p style={{ fontSize: 11, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{tx('Estado')}</p>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {['nuevo', 'confirmado', 'enviado', 'entregado', 'cancelado'].map(s => {
-                  const ss = STATUS_STYLES[s]
+                  const ss = ECOM_STATUS[s]
                   if (!ss) return null
                   return (
                     <button key={s} onClick={() => updateStatus(modal.id, s)}
