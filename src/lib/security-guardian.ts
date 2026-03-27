@@ -216,7 +216,7 @@ const SQL_PATTERNS: RegExp[] = [
 ]
 
 const XSS_PATTERNS: RegExp[] = [
-  /<script[\s>]/i, /<\/script>/i, /\bon\w{2,15}\s*=/i,
+  /<script[\s>]/i, /<\/script>/i, /<[^>]+\bon\w{2,15}\s*=/i,
   /javascript\s*:/i, /vbscript\s*:/i, /livescript\s*:/i,
   /data\s*:\s*text\/html/i, /data\s*:\s*image\/svg/i,
   /<iframe[\s>]/i, /<object[\s>]/i, /<embed[\s>]/i, /<applet[\s>]/i,
@@ -237,6 +237,7 @@ const XSS_PATTERNS: RegExp[] = [
   /\.\s*innerHTML\s*=/i, /\.\s*outerHTML\s*=/i,
   /\bconstructor\s*\[\s*['"]prototype['"]\]/i,
   /__proto__\s*[=:]/i, /\bconstructor\s*\.\s*constructor/i,
+  /\bfetch\s*\(\s*['"`]/i,  // fetch("url") — exfiltración de datos
 ]
 
 const PATH_TRAVERSAL_PATTERNS: RegExp[] = [
@@ -274,7 +275,7 @@ const CMD_INJECTION_PATTERNS: RegExp[] = [
 ]
 
 const PROMPT_INJECTION_PATTERNS: RegExp[] = [
-  /\bsystem\s*:\s*/i, /\bignore\s+(previous|above|all|prior|every)\s+(instructions?|rules?|context|prompt)/i,
+  /\bsystem\s*:\s*/i, /\bignore\s+(all\s+)?(previous|above|prior|every)?\s*(instructions?|rules?|context|prompt|guidelines)/i,
   /\byou\s+are\s+now\s+/i, /\bforget\s+(your|all|previous|everything|every)/i,
   /\bact\s+as\s+(a|an|if|though|my)/i, /\bpretend\s+(to\s+be|you\s+are|you're|that)/i,
   /\bdisregard\s+(all|previous|your|the|any|every)/i, /\bnew\s+instructions?\s*:/i,
@@ -853,7 +854,12 @@ export function analyzeRequest(req: Request, body?: string): ThreatAssessment {
     score += 30; threats.push('attack-tool-ua')
   }
 
-  // ── L2.3: PATTERN ANALYSIS ──
+  // ── L2.3: CRLF in URL ──
+  if (matchesAny(urlPath, HEADER_INJECTION_PATTERNS)) {
+    score += 50; threats.push('header-injection')
+  }
+
+  // ── L2.4: PATTERN ANALYSIS ──
   const fullText = body ? `${urlPath} ${body}` : urlPath
 
   // Multi-layer decode before scanning
@@ -867,7 +873,7 @@ export function analyzeRequest(req: Request, body?: string): ThreatAssessment {
   // SQL injection
   const sqlHits = countMatches(scanText, SQL_PATTERNS)
   if (sqlHits > 0) {
-    const sqlScore = Math.min(25 + sqlHits * 12, 60)
+    const sqlScore = Math.min(30 + sqlHits * 15, 70)
     score += sqlScore; threats.push('sqli')
     if (body) learnPattern(body, 'sqli', 'pattern-match')
   }
@@ -875,7 +881,7 @@ export function analyzeRequest(req: Request, body?: string): ThreatAssessment {
   // XSS
   const xssHits = countMatches(scanText, XSS_PATTERNS)
   if (xssHits > 0) {
-    const xssScore = Math.min(25 + xssHits * 12, 60)
+    const xssScore = Math.min(30 + xssHits * 15, 70)
     score += xssScore; threats.push('xss')
     if (body) learnPattern(body, 'xss', 'pattern-match')
   }
@@ -906,7 +912,7 @@ export function analyzeRequest(req: Request, body?: string): ThreatAssessment {
     profile.payloadSizes.push(body.length)
   }
 
-  // ── L2.4: HEADER ANALYSIS ──
+  // ── L2.5: HEADER ANALYSIS ──
   const headerResult = analyzeHeaders(req)
   score += headerResult.score
   threats.push(...headerResult.threats)

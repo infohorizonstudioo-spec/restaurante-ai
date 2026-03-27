@@ -58,14 +58,17 @@ export function sanitizeEmail(input: unknown): string {
   return emailRegex.test(trimmed) ? trimmed : ''
 }
 
-/** Sanitiza fecha (YYYY-MM-DD) */
+/** Sanitiza fecha (YYYY-MM-DD) — valida que el día exista realmente */
 export function sanitizeDate(input: unknown): string {
   if (typeof input !== 'string') return ''
-  const match = input.trim().match(/^(\d{4}-\d{2}-\d{2})$/)
+  const match = input.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (!match) return ''
-  const d = new Date(match[1])
+  const [, y, m, day] = match
+  const d = new Date(Number(y), Number(m) - 1, Number(day))
   if (isNaN(d.getTime())) return ''
-  return match[1]
+  // Verificar que la fecha no fue ajustada por JS (ej: Feb 30 → Mar 2)
+  if (d.getFullYear() !== Number(y) || d.getMonth() !== Number(m) - 1 || d.getDate() !== Number(day)) return ''
+  return `${y}-${m}-${day}`
 }
 
 /** Sanitiza hora (HH:MM) */

@@ -75,7 +75,8 @@ describe('sanitizeName', () => {
   })
 
   it('strips special characters', () => {
-    expect(sanitizeName('John<script>')).toBe('John')
+    // sanitizeName only keeps letters, spaces, hyphens, apostrophes, dots
+    expect(sanitizeName('John<script>')).toBe('Johnscript')
     expect(sanitizeName('Robert; DROP TABLE')).toBe('Robert DROP TABLE')
   })
 

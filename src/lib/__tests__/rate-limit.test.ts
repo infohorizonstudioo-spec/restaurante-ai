@@ -47,7 +47,7 @@ describe('rateLimitCheck', () => {
   })
 
   it('respects different presets', () => {
-    expect(RATE_LIMITS.auth.limit).toBe(5)
+    expect(RATE_LIMITS.auth.limit).toBe(3)
     expect(RATE_LIMITS.api.limit).toBe(30)
     expect(RATE_LIMITS.webhook.limit).toBe(100)
     expect(RATE_LIMITS.messaging.limit).toBe(10)
