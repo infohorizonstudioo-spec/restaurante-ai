@@ -32,7 +32,7 @@ export default function InmoClientesView() {
   const [historial, setHistorial] = useState<any[]>([])
   const [loadingH, setLoadingH] = useState(false)
   const [tid, setTid] = useState<string|null>(null)
-  const { tenant } = useTenant()
+  const { tenant, tx } = useTenant()
   const cs = getCommonStrings('es')
 
   const load = useCallback(async (tenantId: string) => {
@@ -89,10 +89,10 @@ export default function InmoClientesView() {
       {/* Header */}
       <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, position: 'sticky', top: 0, zIndex: 20 }}>
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }}>Leads / Clientes</h1>
-          <p style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>{clientes.length} registrados</p>
+          <h1 style={{ fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }}>{tx('Leads / Clientes')}</h1>
+          <p style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>{clientes.length} {tx('registrados')}</p>
         </div>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar leads…"
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tx('Buscar leads…')}
           style={{ padding: '8px 14px', fontSize: 13, border: `1px solid ${C.borderMd}`, borderRadius: 9, outline: 'none', width: 220, background: C.surface2, color: C.text, fontFamily: 'inherit' }} />
       </div>
 
@@ -102,8 +102,8 @@ export default function InmoClientesView() {
           {filtered.length === 0 ? (
             <div style={{ padding: '60px 24px', textAlign: 'center' }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>🏠</div>
-              <p style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>Sin leads</p>
-              <p style={{ fontSize: 13, color: C.text3 }}>Los clientes que contacten al agente aparecerán aquí.</p>
+              <p style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>{tx('Sin leads')}</p>
+              <p style={{ fontSize: 13, color: C.text3 }}>{tx('Los clientes que contacten al agente aparecerán aquí.')}</p>
             </div>
           ) : filtered.map(c => {
             const info = parseLeadInfo(c.notes)
@@ -122,12 +122,12 @@ export default function InmoClientesView() {
                       <span style={{ fontSize: 9, fontWeight: 700, color: status.color, background: status.bg, padding: '1px 6px', borderRadius: 4 }}>{status.label}</span>
                     </div>
                     <p style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>
-                      {c.phone || c.email || 'Sin contacto'}
+                      {c.phone || c.email || tx('Sin contacto')}
                       {info.busca ? ` · ${info.busca}` : ''}
                     </p>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    {c.last_visit && <p style={{ fontSize: 10, color: C.text3 }}>{new Date(c.last_visit).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</p>}
+                    {c.last_visit && <p style={{ fontSize: 10, color: C.text3 }}>{new Date(c.last_visit).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</p>}
                   </div>
                 </div>
               </div>
@@ -140,7 +140,7 @@ export default function InmoClientesView() {
           {!selected ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: C.text3 }}>
               <div style={{ width: 64, height: 64, borderRadius: '50%', background: C.amberDim, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, marginBottom: 14 }}>🏠</div>
-              <p style={{ fontSize: 14, color: C.text3 }}>Selecciona un lead para ver su ficha</p>
+              <p style={{ fontSize: 14, color: C.text3 }}>{tx('Selecciona un lead para ver su ficha')}</p>
             </div>
           ) : (
             <>
@@ -159,9 +159,9 @@ export default function InmoClientesView() {
                   {(() => {
                     const info = parseLeadInfo(selected.notes)
                     return [
-                      { label: 'Busca', value: info.busca || '—' },
-                      { label: 'Presupuesto', value: info.presupuesto || '—' },
-                      { label: 'Última interacción', value: selected.last_visit ? new Date(selected.last_visit).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : '—' },
+                      { label: tx('Busca'), value: info.busca || '—' },
+                      { label: tx('Presupuesto'), value: info.presupuesto || '—' },
+                      { label: tx('Última interacción'), value: selected.last_visit ? new Date(selected.last_visit).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '—' },
                     ].map(m => (
                       <div key={m.label} style={{ background: C.surface2, borderRadius: 9, padding: '10px 14px' }}>
                         <p style={{ fontSize: 10, color: C.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{m.label}</p>
@@ -174,8 +174,8 @@ export default function InmoClientesView() {
               </div>
 
               {/* History */}
-              <p style={{ fontSize: 10, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Historial de contactos y visitas</p>
-              {loadingH ? <div style={{ textAlign: 'center', padding: 20, color: C.text3 }}>Cargando...</div>
+              <p style={{ fontSize: 10, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{tx('Historial de contactos y visitas')}</p>
+              {loadingH ? <div style={{ textAlign: 'center', padding: 20, color: C.text3 }}>{tx('Cargando...')}</div>
                 : historial.length === 0 ? <p style={{ fontSize: 13, color: C.text3, padding: '20px 0' }}>{cs.noActivity}</p>
                 : historial.map((h, i) => (
                   <div key={i} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', marginBottom: 8, display: 'flex', gap: 10, transition: 'background 0.12s' }}
@@ -192,7 +192,7 @@ export default function InmoClientesView() {
                         </>
                       ) : (
                         <>
-                          <p style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{h.summary || 'Llamada'}</p>
+                          <p style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{h.summary || tx('Llamada')}</p>
                           <p style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>{(h.started_at || '').slice(0, 10)}</p>
                         </>
                       )}

@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useTenant } from '@/contexts/TenantContext'
 import { PageLoader } from '@/components/ui'
-import { getStatusLabel } from '@/lib/i18n'
 
 import { C } from "@/lib/colors"
 
@@ -28,7 +27,7 @@ export default function InmoReservasView() {
   const [tid, setTid] = useState<string|null>(null)
   const [filter, setFilter] = useState<FilterRange>('hoy')
   const [modal, setModal] = useState<any|null>(null)
-  const { tenant } = useTenant()
+  const { tenant, tx } = useTenant()
 
   const load = useCallback(async (tenantId: string) => {
     const today = new Date().toISOString().slice(0,10)
@@ -60,7 +59,7 @@ export default function InmoReservasView() {
 
   useEffect(() => {
     if (!tid) return
-    const ch = supabase.channel('inmo-visitas-rt')
+    const ch = supabase.channel('inmo-visitas-rt-' + tid)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations', filter: 'tenant_id=eq.' + tid }, () => load(tid))
       .subscribe()
     return () => { supabase.removeChannel(ch) }
@@ -87,14 +86,14 @@ export default function InmoReservasView() {
       {/* Header */}
       <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, position: 'sticky', top: 0, zIndex: 20 }}>
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }}>Visitas</h1>
+          <h1 style={{ fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }}>{tx('Visitas')}</h1>
           <p style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>{visitas.length} visita{visitas.length !== 1 ? 's' : ''} {filter === 'hoy' ? 'hoy' : filter === 'semana' ? 'esta semana' : 'en total'}</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {(['hoy', 'semana', 'todas'] as FilterRange[]).map(f => (
             <button key={f} onClick={() => { setFilter(f); setLoading(true) }}
               style={{ padding: '6px 14px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: `1px solid ${filter === f ? C.amber + '60' : C.border}`, background: filter === f ? C.amberDim : 'transparent', color: filter === f ? C.amber : C.text2, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize' }}>
-              {f === 'semana' ? 'Esta semana' : f === 'todas' ? 'Todas' : 'Hoy'}
+              {f === 'semana' ? tx('Esta semana') : f === 'todas' ? tx('Todas') : tx('Hoy')}
             </button>
           ))}
         </div>
@@ -105,13 +104,13 @@ export default function InmoReservasView() {
         {visitas.length === 0 ? (
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: '60px 24px', textAlign: 'center' }}>
             <div style={{ fontSize: 36, marginBottom: 10 }}>🔑</div>
-            <p style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 4 }}>Sin visitas programadas</p>
-            <p style={{ fontSize: 13, color: C.text3 }}>Las visitas agendadas por el agente aparecerán aquí.</p>
+            <p style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 4 }}>{tx('Sin visitas programadas')}</p>
+            <p style={{ fontSize: 13, color: C.text3 }}>{tx('Las visitas agendadas por el agente aparecerán aquí.')}</p>
           </div>
         ) : visitas.map(r => {
           const ss = STATUS_STYLES[r.status] || STATUS_STYLES.pendiente
           const time = r.time || r.reservation_time || ''
-          const name = r.customer_name || 'Sin nombre'
+          const name = r.customer_name || tx('Sin nombre')
           const property = extractProperty(r)
           return (
             <div key={r.id} onClick={() => setModal(r)}
@@ -129,7 +128,7 @@ export default function InmoReservasView() {
                 </p>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                <span style={{ fontSize: 10, padding: '3px 9px', borderRadius: 8, background: ss.bg, color: ss.color, fontWeight: 700, border: `1px solid ${ss.color}25`, flexShrink: 0 }}>{getStatusLabel(r.status, 'es')}</span>
+                <span style={{ fontSize: 10, padding: '3px 9px', borderRadius: 8, background: ss.bg, color: ss.color, fontWeight: 700, border: `1px solid ${ss.color}25`, flexShrink: 0 }}>{tx(ss.label)}</span>
                 {r.customer_phone && <p style={{ fontSize: 11, color: C.text3 }}>{r.customer_phone}</p>}
               </div>
             </div>
@@ -143,7 +142,7 @@ export default function InmoReservasView() {
           <div style={{ background: C.surface, border: `1px solid ${C.borderMd}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 440, boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div>
-                <p style={{ fontSize: 18, fontWeight: 700, color: C.text }}>{modal.customer_name || 'Sin nombre'}</p>
+                <p style={{ fontSize: 18, fontWeight: 700, color: C.text }}>{modal.customer_name || tx('Sin nombre')}</p>
                 <p style={{ fontSize: 13, color: C.text2, marginTop: 2 }}>
                   {(modal.date || modal.reservation_date)?.slice(0, 10)} · {(modal.time || modal.reservation_time || '').slice(0, 5)}
                 </p>
@@ -153,12 +152,12 @@ export default function InmoReservasView() {
             {modal.customer_phone && <p style={{ fontSize: 13, color: C.text2, marginBottom: 8 }}>📞 {modal.customer_phone}</p>}
             {extractProperty(modal) !== '—' && <p style={{ fontSize: 13, color: C.text2, marginBottom: 8 }}>🏠 {extractProperty(modal)}</p>}
             {modal.notes && <p style={{ fontSize: 13, color: C.text2, marginBottom: 16 }}>📝 {modal.notes}</p>}
-            {modal.source === 'voice_agent' && <p style={{ fontSize: 12, color: C.violet, marginBottom: 16, background: C.violetDim, padding: '6px 10px', borderRadius: 8 }}>📞 Visita creada por el agente de voz</p>}
+            {modal.source === 'voice_agent' && <p style={{ fontSize: 12, color: C.violet, marginBottom: 16, background: C.violetDim, padding: '6px 10px', borderRadius: 8 }}>📞 {tx('Visita creada por el agente de voz')}</p>}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
               {['programada', 'confirmada', 'realizada', 'cancelada'].map(s => (
                 <button key={s} onClick={() => updateStatus(modal.id, s)}
                   style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: `1px solid ${STATUS_STYLES[s]?.color || C.border}40`, background: modal.status === s ? STATUS_STYLES[s]?.bg || C.surface2 : 'transparent', color: STATUS_STYLES[s]?.color || C.text2, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  {getStatusLabel(s, 'es')}
+                  {tx(STATUS_STYLES[s]?.label||s)}
                 </button>
               ))}
             </div>

@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
-import { getStatusLabel } from '@/lib/i18n'
 
 import { C } from "@/lib/colors"
 
@@ -20,7 +19,7 @@ const STATUS_STYLES: Record<string,{bg:string;color:string;label:string}> = {
 }
 
 export default function EcomReservasView() {
-  const { tenant, template } = useTenant()
+  const { tenant, template, tx } = useTenant()
   const L = template?.labels
   const [loading, setLoading] = useState(true)
   const [pedidos, setPedidos] = useState<any[]>([])
@@ -50,7 +49,7 @@ export default function EcomReservasView() {
 
   useEffect(() => {
     if (!tid) return
-    const ch = supabase.channel('ecom-pedidos-rt')
+    const ch = supabase.channel('ecom-pedidos-rt-' + tid)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations', filter: 'tenant_id=eq.' + tid }, () => load(tid))
       .subscribe()
     return () => { supabase.removeChannel(ch) }
@@ -99,7 +98,7 @@ export default function EcomReservasView() {
               return (
                 <div key={s} style={{ background: C.surface, border: `1px solid ${ss.color}33`, borderRadius: 12, padding: '12px 16px' }}>
                   <p style={{ fontSize: 22, fontWeight: 700, color: ss.color }}>{cnt}</p>
-                  <p style={{ fontSize: 12, color: ss.color, fontWeight: 600 }}>{getStatusLabel(s, 'es')}</p>
+                  <p style={{ fontSize: 12, color: ss.color, fontWeight: 600 }}>{tx(ss.label)}</p>
                 </div>
               )
             })}
@@ -113,7 +112,7 @@ export default function EcomReservasView() {
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: '60px 24px', textAlign: 'center' }}>
             <div style={{ fontSize: 36, marginBottom: 10 }}>🛍️</div>
             <p style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 4 }}>{L?.emptyReservas || 'Sin pedidos'}</p>
-            <p style={{ fontSize: 13, color: C.text3 }}>Los pedidos aparecerán aquí en tiempo real.</p>
+            <p style={{ fontSize: 13, color: C.text3 }}>{tx('Los pedidos aparecerán aquí en tiempo real.')}</p>
           </div>
         ) : filtered.map(p => {
           const ss = STATUS_STYLES[p.status] || STATUS_STYLES.nuevo
@@ -126,14 +125,14 @@ export default function EcomReservasView() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{p.customer_name || 'Sin nombre'}</p>
-                  <span style={{ fontSize: 10, padding: '3px 9px', borderRadius: 8, background: ss.bg, color: ss.color, fontWeight: 700, border: `1px solid ${ss.color}25`, flexShrink: 0 }}>{getStatusLabel(p.status, 'es')}</span>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{p.customer_name || tx('Sin nombre')}</p>
+                  <span style={{ fontSize: 10, padding: '3px 9px', borderRadius: 8, background: ss.bg, color: ss.color, fontWeight: 700, border: `1px solid ${ss.color}25`, flexShrink: 0 }}>{tx(ss.label)}</span>
                 </div>
                 {p.notes && <p style={{ fontSize: 12, color: C.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.notes}</p>}
                 {p.customer_phone && <p style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>📞 {p.customer_phone}</p>}
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <p style={{ fontSize: 11, color: C.text3 }}>{p.date || (p.created_at ? new Date(p.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : '')}</p>
+                <p style={{ fontSize: 11, color: C.text3 }}>{p.date || (p.created_at ? new Date(p.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' }) : '')}</p>
                 {p.time && <p style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>{p.time.slice(0, 5)}</p>}
               </div>
             </div>
@@ -147,7 +146,7 @@ export default function EcomReservasView() {
           <div style={{ background: C.surface, border: `1px solid ${C.borderMd}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 440, boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div>
-                <p style={{ fontSize: 18, fontWeight: 700, color: C.text }}>{modal.customer_name || 'Sin nombre'}</p>
+                <p style={{ fontSize: 18, fontWeight: 700, color: C.text }}>{modal.customer_name || tx('Sin nombre')}</p>
                 <p style={{ fontSize: 13, color: C.text2, marginTop: 2 }}>
                   {modal.date || ''} {modal.time ? '· ' + modal.time.slice(0, 5) : ''}
                 </p>
@@ -156,9 +155,9 @@ export default function EcomReservasView() {
             </div>
             {modal.customer_phone && <p style={{ fontSize: 13, color: C.text2, marginBottom: 8 }}>📞 {modal.customer_phone}</p>}
             {modal.notes && <p style={{ fontSize: 13, color: C.text2, marginBottom: 16 }}>📝 {modal.notes}</p>}
-            {modal.source === 'voice_agent' && <p style={{ fontSize: 12, color: C.violet, marginBottom: 16, background: C.violetDim, padding: '6px 10px', borderRadius: 8 }}>📞 Pedido creado por el agente de voz</p>}
+            {modal.source === 'voice_agent' && <p style={{ fontSize: 12, color: C.violet, marginBottom: 16, background: C.violetDim, padding: '6px 10px', borderRadius: 8 }}>📞 {tx('Pedido creado por el agente de voz')}</p>}
             <div>
-              <p style={{ fontSize: 11, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Estado</p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{tx('Estado')}</p>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {['nuevo', 'confirmado', 'enviado', 'entregado', 'cancelado'].map(s => {
                   const ss = STATUS_STYLES[s]
@@ -168,7 +167,7 @@ export default function EcomReservasView() {
                       style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: `1px solid ${ss.color}40`,
                         background: modal.status === s ? ss.bg : 'transparent',
                         color: ss.color, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      {getStatusLabel(s, 'es')}
+                      {tx(ss.label)}
                     </button>
                   )
                 })}

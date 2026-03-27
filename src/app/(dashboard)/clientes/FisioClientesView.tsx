@@ -30,7 +30,7 @@ export default function FisioClientesView() {
   const [futureCitas,setFutureCitas] = useState<Record<string,boolean>>({})
   const [loadingH,setLoadingH] = useState(false)
   const [tid,setTid]           = useState<string|null>(null)
-  const { template } = useTenant()
+  const { template, tx } = useTenant()
   const L = template?.labels
 
   const load = useCallback(async (tenantId:string) => {
@@ -88,11 +88,11 @@ export default function FisioClientesView() {
     <div style={{background:C.bg,minHeight:'100vh',display:'flex',flexDirection:'column'}}>
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,position:'sticky',top:0,zIndex:20}}>
         <div>
-          <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>Pacientes — Fisioterapia</h1>
-          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{clientes.length} registrados</p>
+          <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{tx('Pacientes — Fisioterapia')}</h1>
+          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{clientes.length} {tx('registrados')}</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder='Buscar pacientes…'
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tx('Buscar pacientes…')}
             style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:220,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
           <NotifBell/>
         </div>
@@ -104,8 +104,8 @@ export default function FisioClientesView() {
           {filtered.length===0 ? (
             <div style={{padding:'60px 24px',textAlign:'center'}}>
               <div style={{fontSize:36,marginBottom:10}}>🦴</div>
-              <p style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>Sin pacientes</p>
-              <p style={{fontSize:13,color:C.text3}}>Los pacientes que contacten aparecerán aquí.</p>
+              <p style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>{tx('Sin pacientes')}</p>
+              <p style={{fontSize:13,color:C.text3}}>{tx('Los pacientes que contacten aparecerán aquí.')}</p>
             </div>
           ) : filtered.map(c => {
             const sessions = sessionCount[c.id] || 0
@@ -122,13 +122,13 @@ export default function FisioClientesView() {
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:'flex',alignItems:'center',gap:6}}>
                       <p style={{fontSize:13,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name}</p>
-                      {active&&<span style={{fontSize:9,fontWeight:700,color:C.green,background:C.greenDim,padding:'1px 5px',borderRadius:4}}>Activo</span>}
+                      {active&&<span style={{fontSize:9,fontWeight:700,color:C.green,background:C.greenDim,padding:'1px 5px',borderRadius:4}}>{tx('Activo')}</span>}
                     </div>
-                    <p style={{fontSize:11,color:C.text3,marginTop:1}}>{c.phone||c.email||'Sin contacto'}</p>
+                    <p style={{fontSize:11,color:C.text3,marginTop:1}}>{c.phone||c.email||tx('Sin contacto')}</p>
                   </div>
                   <div style={{textAlign:'right',flexShrink:0}}>
                     <p style={{fontFamily:'var(--rz-mono)',fontSize:11,fontWeight:600,color:C.text2}}>{sessions} ses.</p>
-                    {c.last_visit&&<p style={{fontSize:10,color:C.text3,marginTop:1}}>{new Date(c.last_visit).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</p>}
+                    {c.last_visit&&<p style={{fontSize:10,color:C.text3,marginTop:1}}>{new Date(c.last_visit).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</p>}
                   </div>
                 </div>
               </div>
@@ -141,7 +141,7 @@ export default function FisioClientesView() {
           {!selected ? (
             <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',color:C.text3}}>
               <div style={{width:64,height:64,borderRadius:'50%',background:C.tealDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,marginBottom:14}}>🦴</div>
-              <p style={{fontSize:14,color:C.text3}}>Selecciona un paciente para ver su historial</p>
+              <p style={{fontSize:14,color:C.text3}}>{tx('Selecciona un paciente para ver su historial')}</p>
             </div>
           ) : (
             <>
@@ -157,9 +157,9 @@ export default function FisioClientesView() {
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
                   {[
-                    {label:'Sesiones',value:sessionCount[selected.id]||0},
-                    {label:'Última sesión',value:selected.last_visit?new Date(selected.last_visit).toLocaleDateString('es-ES',{day:'numeric',month:'short'}):'—'},
-                    {label:'Estado',value:futureCitas[selected.id]?'Tratamiento activo':'Sin citas'},
+                    {label:tx('Sesiones'),value:sessionCount[selected.id]||0},
+                    {label:tx('Última sesión'),value:selected.last_visit?new Date(selected.last_visit).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'—'},
+                    {label:tx('Estado'),value:futureCitas[selected.id]?tx('Tratamiento activo'):tx('Sin citas')},
                   ].map(m=>(
                     <div key={m.label} style={{background:C.surface2,borderRadius:9,padding:'10px 14px'}}>
                       <p style={{fontSize:10,color:C.text3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:3}}>{m.label}</p>
@@ -167,12 +167,12 @@ export default function FisioClientesView() {
                     </div>
                   ))}
                 </div>
-                {selected.notes&&<p style={{marginTop:12,fontSize:13,color:C.text2,background:C.surface2,padding:'8px 12px',borderRadius:9}}>Notas: {selected.notes}</p>}
+                {selected.notes&&<p style={{marginTop:12,fontSize:13,color:C.text2,background:C.surface2,padding:'8px 12px',borderRadius:9}}>{tx('Notas')}: {selected.notes}</p>}
               </div>
 
-              <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Historial de sesiones</p>
-              {loadingH ? <div style={{textAlign:'center',padding:20,color:C.text3}}>Cargando...</div>
-              : historial.length===0 ? <p style={{fontSize:13,color:C.text3,padding:'20px 0'}}>Sin sesiones registradas.</p>
+              <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>{tx('Historial de sesiones')}</p>
+              {loadingH ? <div style={{textAlign:'center',padding:20,color:C.text3}}>{tx('Cargando...')}</div>
+              : historial.length===0 ? <p style={{fontSize:13,color:C.text3,padding:'20px 0'}}>{tx('Sin sesiones registradas.')}</p>
               : historial.map((h,i)=>{
                 const st = h.status?.toLowerCase()
                 const ss = STATUS_STYLES[st]||STATUS_STYLES.pendiente
@@ -186,7 +186,7 @@ export default function FisioClientesView() {
                         {(h.date||h.reservation_date)?.slice(0,10)} a las {(h.time||h.reservation_time||'').slice(0,5)}
                       </p>
                       <p style={{fontSize:11,color:C.text3,marginTop:1}}>
-                        {h.notes ? h.notes.slice(0,60)+(h.notes.length>60?'...':'') : 'Sesión'}
+                        {h.notes ? h.notes.slice(0,60)+(h.notes.length>60?'...':'') : tx('Sesión')}
                       </p>
                     </div>
                     <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,alignSelf:'center'}}>{getStatusLabel(st, 'es')}</span>

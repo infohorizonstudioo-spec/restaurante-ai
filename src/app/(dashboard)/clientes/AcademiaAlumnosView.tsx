@@ -16,7 +16,7 @@ export default function AcademiaAlumnosView() {
   const [historial,setHistorial] = useState<any[]>([])
   const [loadingH,setLoadingH]   = useState(false)
   const [tid,setTid]             = useState<string|null>(null)
-  const { template } = useTenant()
+  const { template, tx } = useTenant()
   const L = template?.labels
   const cs = getCommonStrings('es')
 
@@ -66,10 +66,10 @@ export default function AcademiaAlumnosView() {
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,position:'sticky',top:0,zIndex:20}}>
         <div>
           <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>📚 {L?.clientes||'Alumnos'}</h1>
-          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{clientes.length} alumnos registrados</p>
+          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{clientes.length} {tx('alumnos registrados')}</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder='Buscar alumno…'
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tx('Buscar alumno…')}
             style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:220,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
           <NotifBell/>
         </div>
@@ -81,8 +81,8 @@ export default function AcademiaAlumnosView() {
           {filtered.length===0 ? (
             <div style={{padding:'60px 24px',textAlign:'center'}}>
               <div style={{fontSize:36,marginBottom:10}}>📚</div>
-              <p style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>Sin alumnos</p>
-              <p style={{fontSize:13,color:C.text3}}>Los alumnos que contacten al agente aparecerán aquí.</p>
+              <p style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>{tx('Sin alumnos')}</p>
+              <p style={{fontSize:13,color:C.text3}}>{tx('Los alumnos que contacten al agente aparecerán aquí.')}</p>
             </div>
           ) : filtered.map(c => (
             <div key={c.id} onClick={()=>openClient(c)} style={{padding:'12px 16px',cursor:'pointer',borderBottom:`1px solid ${C.border}`,
@@ -96,13 +96,13 @@ export default function AcademiaAlumnosView() {
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:'flex',alignItems:'center',gap:6}}>
                     <p style={{fontSize:13,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name}</p>
-                    {c.vip&&<span style={{fontSize:9,fontWeight:700,color:C.yellow,background:C.yellowDim,padding:'1px 5px',borderRadius:4}}>VIP</span>}
+                    {c.vip&&<span style={{fontSize:9,fontWeight:700,color:C.yellow,background:C.yellowDim,padding:'1px 5px',borderRadius:4}}>{tx('VIP')}</span>}
                   </div>
-                  <p style={{fontSize:11,color:C.text3,marginTop:1}}>{c.phone||c.email||'Sin contacto'}</p>
+                  <p style={{fontSize:11,color:C.text3,marginTop:1}}>{c.phone||c.email||tx('Sin contacto')}</p>
                 </div>
                 <div style={{textAlign:'right',flexShrink:0}}>
                   <p style={{fontFamily:'var(--rz-mono)',fontSize:11,fontWeight:600,color:C.text2}}>{c.total_reservations||c.total_visits||0}</p>
-                  {c.last_visit&&<p style={{fontSize:10,color:C.text3,marginTop:1}}>{new Date(c.last_visit).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</p>}
+                  {c.last_visit&&<p style={{fontSize:10,color:C.text3,marginTop:1}}>{new Date(c.last_visit).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</p>}
                 </div>
               </div>
             </div>
@@ -114,7 +114,7 @@ export default function AcademiaAlumnosView() {
           {!selected ? (
             <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',color:C.text3}}>
               <div style={{width:64,height:64,borderRadius:'50%',background:C.blueDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,marginBottom:14}}>📚</div>
-              <p style={{fontSize:14,color:C.text3}}>Selecciona un alumno para ver su historial</p>
+              <p style={{fontSize:14,color:C.text3}}>{tx('Selecciona un alumno para ver su historial')}</p>
             </div>
           ) : (
             <>
@@ -131,9 +131,9 @@ export default function AcademiaAlumnosView() {
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
                   {[
-                    {label:'Clases',value:selected.total_reservations||selected.total_visits||0},
-                    {label:'Última clase',value:selected.last_visit?new Date(selected.last_visit).toLocaleDateString('es-ES',{day:'numeric',month:'short'}):'—'},
-                    {label:'Total pagado',value:selected.total_spent?selected.total_spent+'€':'—'},
+                    {label:tx('Clases'),value:selected.total_reservations||selected.total_visits||0},
+                    {label:tx('Última clase'),value:selected.last_visit?new Date(selected.last_visit).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'—'},
+                    {label:tx('Total pagado'),value:selected.total_spent?selected.total_spent+'€':'—'},
                   ].map(m=>(
                     <div key={m.label} style={{background:C.surface2,borderRadius:9,padding:'10px 14px'}}>
                       <p style={{fontSize:10,color:C.text3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:3}}>{m.label}</p>
@@ -145,8 +145,8 @@ export default function AcademiaAlumnosView() {
               </div>
 
               {/* History */}
-              <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Historial de clases</p>
-              {loadingH ? <div style={{textAlign:'center',padding:20,color:C.text3}}>Cargando...</div>
+              <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>{tx('Historial de clases')}</p>
+              {loadingH ? <div style={{textAlign:'center',padding:20,color:C.text3}}>{tx('Cargando...')}</div>
               : historial.length===0 ? <p style={{fontSize:13,color:C.text3,padding:'20px 0'}}>{cs.noActivity}</p>
               : historial.map((h,i)=>(
                 <div key={i} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:'12px 14px',marginBottom:8,display:'flex',gap:10,transition:'background 0.12s'}}
@@ -166,7 +166,7 @@ export default function AcademiaAlumnosView() {
                       </>
                     ) : (
                       <>
-                        <p style={{fontSize:13,fontWeight:500,color:C.text}}>{h.summary||'Llamada'}</p>
+                        <p style={{fontSize:13,fontWeight:500,color:C.text}}>{h.summary||tx('Llamada')}</p>
                         <p style={{fontSize:11,color:C.text3,marginTop:1}}>{(h.started_at||'').slice(0,10)}</p>
                       </>
                     )}

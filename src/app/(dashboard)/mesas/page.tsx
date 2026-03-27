@@ -29,11 +29,11 @@ interface Zone { id:string; name:string; active:boolean }
 const snap = (v:number) => Math.round(v/GRID)*GRID
 
 // ── SVG FLOOR ELEMENT ────────────────────────────────────────────────────────
-function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDragEnd, onResize, onDoubleClick, unitIcon, zoneColor, comboCapacity }:{
+function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDragEnd, onResize, onDoubleClick, unitIcon, zoneColor, comboCapacity, tx }:{
   table:TableItem; selected:boolean; multiSelected:boolean; snapOn:boolean
   onSelect:(shiftKey:boolean)=>void; onDragEnd:(x:number,y:number)=>void
   onResize:(w:number,h:number)=>void; onDoubleClick:()=>void; unitIcon:string; zoneColor?:string
-  comboCapacity?:number
+  comboCapacity?:number; tx:(s:string)=>string
 }) {
   const cfg = STATUS_CFG[table.status] || STATUS_CFG.libre
   const w = table.w || 80, h = table.h || 70
@@ -129,7 +129,7 @@ function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDrag
       {/* Capacity — show combined if in group */}
       <text x={w/2} y={h/2+8} textAnchor="middle" fill={C.muted}
         fontSize={10} fontWeight={600} style={{pointerEvents:'none',userSelect:'none'}}>
-        {comboCapacity ? `${comboCapacity}p (combo)` : `${table.capacity}p`} · {STATUS_CFG[table.status]?.label || 'Libre'}
+        {comboCapacity ? `${comboCapacity}p (combo)` : `${table.capacity}p`} · {tx(STATUS_CFG[table.status]?.label || 'Libre')}
       </text>
       {/* Resize handle */}
       {selected && (
@@ -209,23 +209,23 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
         {/* Name & Number */}
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
           <div>
-            <label style={lbl}>Nombre</label>
+            <label style={lbl}>{tx('Nombre')}</label>
             <input className="rz-inp" value={f.name} onChange={e=>up('name',e.target.value)} placeholder={isRoom?'Sala A':'Mesa 1'} />
           </div>
           <div>
-            <label style={lbl}>Número</label>
+            <label style={lbl}>{tx('Número')}</label>
             <input className="rz-inp" value={f.number} onChange={e=>up('number',e.target.value)} />
           </div>
         </div>
 
         {/* Capacity */}
         <div>
-          <label style={lbl}>{isRoom?'Aforo':'Capacidad'}</label>
+          <label style={lbl}>{isRoom?tx('Aforo'):tx('Capacidad')}</label>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             <button onClick={()=>up('capacity',Math.max(1,f.capacity-1))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.sub,fontSize:16,cursor:'pointer',fontFamily:'inherit'}}>−</button>
             <span style={{fontSize:18,fontWeight:800,color:C.amber,minWidth:30,textAlign:'center'}}>{f.capacity}</span>
             <button onClick={()=>up('capacity',Math.min(100,f.capacity+1))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.sub,fontSize:16,cursor:'pointer',fontFamily:'inherit'}}>+</button>
-            <span style={{fontSize:11,color:C.muted,marginLeft:4}}>personas</span>
+            <span style={{fontSize:11,color:C.muted,marginLeft:4}}>{tx('personas')}</span>
           </div>
         </div>
 
@@ -233,16 +233,16 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
         <div>
           <label style={lbl}>{zoneLabel}</label>
           <select className="rz-inp" value={f.zone_id} onChange={e=>up('zone_id',e.target.value)} style={{cursor:'pointer'}}>
-            <option value="">Sin {zoneLabel.toLowerCase()}</option>
+            <option value="">{tx('Sin')} {zoneLabel.toLowerCase()}</option>
             {zones.map(z=><option key={z.id} value={z.id} style={{background:C.card}}>{z.name}</option>)}
           </select>
         </div>
 
         {/* Shape */}
         <div>
-          <label style={lbl}>Forma</label>
+          <label style={lbl}>{tx('Forma')}</label>
           <div style={{display:'flex',gap:6}}>
-            {([['square','□','Cuadrada'],['round','○','Redonda'],['rectangle','▬','Rectangular']] as const).map(([k,ico,l])=>(
+            {([['square','□','Cuadrada'],['round','○','Redonda'],['rectangle','▬','Rectangular']] as const).map(([k,ico,lbl2])=>(
               <button key={k} onClick={()=>up('shape_type',k)} style={{
                 flex:1,padding:'7px 4px',borderRadius:8,
                 border:`1px solid ${f.shape_type===k?C.amber+'44':C.border}`,
@@ -252,7 +252,7 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
                 display:'flex',flexDirection:'column',alignItems:'center',gap:2,
               }}>
                 <span style={{fontSize:16}}>{ico}</span>
-                <span>{l}</span>
+                <span>{tx(lbl2)}</span>
               </button>
             ))}
           </div>
@@ -260,7 +260,7 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
 
         {/* Rotation */}
         <div>
-          <label style={lbl}>Rotación ({f.rotation}°)</label>
+          <label style={lbl}>{tx('Rotación')} ({f.rotation}°)</label>
           <input type="range" min={0} max={360} step={15} value={f.rotation}
             onChange={e=>up('rotation',parseInt(e.target.value))}
             style={{width:'100%',accentColor:C.amber}} />
@@ -268,7 +268,7 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
 
         {/* Status */}
         <div>
-          <label style={lbl}>Estado</label>
+          <label style={lbl}>{tx('Estado')}</label>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:5}}>
             {Object.entries(STATUS_CFG).map(([k,v])=>(
               <button key={k} onClick={()=>up('status',k)} style={{
@@ -286,8 +286,8 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
         {!isRoom && (
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0'}}>
             <div>
-              <p style={{fontSize:12,fontWeight:600,color:C.text}}>Combinable</p>
-              <p style={{fontSize:10,color:C.muted}}>Se puede juntar</p>
+              <p style={{fontSize:12,fontWeight:600,color:C.text}}>{tx('Combinable')}</p>
+              <p style={{fontSize:10,color:C.muted}}>{tx('Se puede juntar')}</p>
             </div>
             <button onClick={()=>up('combinable',!f.combinable)} style={{
               width:40,height:22,borderRadius:11,border:'none',cursor:'pointer',
@@ -305,7 +305,7 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
         <div style={{padding:'0 16px 10px'}}>
           <div style={{background:C.tealDim,border:`1px solid ${C.teal}33`,borderRadius:10,padding:'10px 12px'}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
-              <p style={{fontSize:11,fontWeight:700,color:C.teal}}>🔗 Mesas juntas</p>
+              <p style={{fontSize:11,fontWeight:700,color:C.teal}}>🔗 {tx('Mesas juntas')}</p>
               <span style={{fontSize:12,fontWeight:800,color:C.teal}}>{comboCapacity}p</span>
             </div>
             <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:8}}>
@@ -323,7 +323,7 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
                 width:'100%',padding:'6px',fontSize:11,fontWeight:600,borderRadius:7,
                 border:`1px solid ${C.red}33`,background:C.redDim,color:C.red,
                 cursor:'pointer',fontFamily:'inherit',
-              }}>✂️ Separar mesas</button>
+              }}>✂️ {tx('Separar mesas')}</button>
             )}
           </div>
         </div>
@@ -333,26 +333,26 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
       <div style={{padding:'12px 16px',borderTop:`1px solid ${C.border}`,display:'flex',flexDirection:'column',gap:8}}>
         <div style={{display:'flex',gap:6}}>
           <button onClick={onDuplicate} style={{flex:1,padding:'8px',fontSize:11,fontWeight:600,borderRadius:8,border:`1px solid ${C.teal}33`,background:C.tealDim,color:C.teal,cursor:'pointer',fontFamily:'inherit'}}>
-            Duplicar
+            {tx('Duplicar')}
           </button>
           {!confirmDel ? (
             <button onClick={()=>setConfirmDel(true)} style={{flex:1,padding:'8px',fontSize:11,fontWeight:600,borderRadius:8,border:`1px solid ${C.red}33`,background:C.redDim,color:C.red,cursor:'pointer',fontFamily:'inherit'}}>
-              Eliminar
+              {tx('Eliminar')}
             </button>
           ) : (
             <button onClick={onDelete} style={{flex:1,padding:'8px',fontSize:11,fontWeight:700,borderRadius:8,border:'none',background:C.red,color:'white',cursor:'pointer',fontFamily:'inherit'}}>
-              Confirmar
+              {tx('Confirmar')}
             </button>
           )}
         </div>
-        <p style={{fontSize:9,color:C.muted,textAlign:'center'}}>Los cambios se guardan automáticamente</p>
+        <p style={{fontSize:9,color:C.muted,textAlign:'center'}}>{tx('Los cambios se guardan automáticamente')}</p>
       </div>
     </div>
   )
 }
 
 // ── ELEMENT LIBRARY ITEM ─────────────────────────────────────────────────────
-function LibraryItem({preset,onAdd}:{preset:ElementPreset;onAdd:()=>void}) {
+function LibraryItem({preset,onAdd,tx}:{preset:ElementPreset;onAdd:()=>void;tx:(s:string)=>string}) {
   return (
     <button onClick={onAdd} draggable onDragStart={e => {
       e.dataTransfer.setData('preset-id', preset.id)
@@ -369,7 +369,7 @@ function LibraryItem({preset,onAdd}:{preset:ElementPreset;onAdd:()=>void}) {
       <span style={{fontSize:20,width:32,textAlign:'center'}}>{preset.icon}</span>
       <div style={{flex:1}}>
         <p style={{fontSize:12,fontWeight:600,color:C.text}}>{preset.label}</p>
-        <p style={{fontSize:10,color:C.muted}}>{preset.capacity}p · {preset.shape==='round'?'Redondo':'Rectangular'}</p>
+        <p style={{fontSize:10,color:C.muted}}>{preset.capacity}p · {preset.shape==='round'?tx('Redondo'):tx('Rectangular')}</p>
       </div>
       <span style={{fontSize:16,color:C.muted}}>+</span>
     </button>
@@ -377,7 +377,7 @@ function LibraryItem({preset,onAdd}:{preset:ElementPreset;onAdd:()=>void}) {
 }
 
 // ── STARTER LAYOUT CARD ──────────────────────────────────────────────────────
-function StarterCard({layout,onApply}:{layout:{label:string;description:string;icon:string};onApply:()=>void}) {
+function StarterCard({layout,onApply,tx}:{layout:{label:string;description:string;icon:string};onApply:()=>void;tx:(s:string)=>string}) {
   return (
     <button onClick={onApply} style={{
       display:'flex',flexDirection:'column',alignItems:'center',gap:8,
@@ -391,7 +391,7 @@ function StarterCard({layout,onApply}:{layout:{label:string;description:string;i
       <span style={{fontSize:36}}>{layout.icon}</span>
       <p style={{fontSize:14,fontWeight:700,color:C.text}}>{layout.label}</p>
       <p style={{fontSize:12,color:C.muted}}>{layout.description}</p>
-      <span style={{fontSize:11,fontWeight:600,color:C.amber,marginTop:4}}>Usar esta plantilla →</span>
+      <span style={{fontSize:11,fontWeight:600,color:C.amber,marginTop:4}}>{tx('Usar esta plantilla')} →</span>
     </button>
   )
 }
@@ -416,15 +416,15 @@ function ZoneRow({zone,color,tableCount,onRename,onDelete,unitP,tx}:{
           <p style={{flex:1,fontSize:14,fontWeight:600,color:C.text,cursor:'pointer'}} onClick={()=>setEditing(true)}>{zone.name}</p>
         )}
         <span style={{fontSize:12,color:C.muted}}>{tableCount} {unitP.toLowerCase()}</span>
-        <button onClick={()=>{setEditing(true);setName(zone.name)}} style={{padding:'4px 10px',fontSize:11,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>Editar</button>
-        <button onClick={()=>setConfirmDel(true)} style={{padding:'4px 10px',fontSize:11,background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:7,cursor:'pointer',color:C.red,fontFamily:'inherit'}}>Borrar</button>
+        <button onClick={()=>{setEditing(true);setName(zone.name)}} style={{padding:'4px 10px',fontSize:11,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>{tx('Editar')}</button>
+        <button onClick={()=>setConfirmDel(true)} style={{padding:'4px 10px',fontSize:11,background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:7,cursor:'pointer',color:C.red,fontFamily:'inherit'}}>{tx('Borrar')}</button>
       </div>
       {confirmDel&&(
         <div style={{marginTop:10,padding:'10px 12px',background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
-          <p style={{fontSize:12,color:C.red}}>Eliminar &quot;{zone.name}&quot;?</p>
+          <p style={{fontSize:12,color:C.red}}>{tx('Eliminar')} &quot;{zone.name}&quot;?</p>
           <div style={{display:'flex',gap:6}}>
-            <button onClick={()=>setConfirmDel(false)} style={{padding:'5px 12px',fontSize:11,background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>Cancelar</button>
-            <button onClick={()=>{setConfirmDel(false);onDelete()}} style={{padding:'5px 12px',fontSize:11,background:C.red,border:'none',borderRadius:7,cursor:'pointer',color:'white',fontFamily:'inherit',fontWeight:700}}>Eliminar</button>
+            <button onClick={()=>setConfirmDel(false)} style={{padding:'5px 12px',fontSize:11,background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>{tx('Cancelar')}</button>
+            <button onClick={()=>{setConfirmDel(false);onDelete()}} style={{padding:'5px 12px',fontSize:11,background:C.red,border:'none',borderRadius:7,cursor:'pointer',color:'white',fontFamily:'inherit',fontWeight:700}}>{tx('Eliminar')}</button>
           </div>
         </div>
       )}
@@ -812,8 +812,8 @@ export default function MesasPage() {
   const isEmpty = tables.length === 0
 
   const zonePlaceholder = isRoom
-    ? `Nueva ${zoneLabel.toLowerCase()}: Planta 1, Ala norte...`
-    : `Nueva ${zoneLabel.toLowerCase()}: Terraza, Interior, Barra...`
+    ? `${tx('Nueva')} ${zoneLabel.toLowerCase()}: Planta 1, Ala norte...`
+    : `${tx('Nueva')} ${zoneLabel.toLowerCase()}: Terraza, Interior, Barra...`
 
   return (
     <div style={{background:C.bg,height:'100vh',fontFamily:"'Sora',-apple-system,sans-serif",display:'flex',flexDirection:'column',overflow:'hidden'}}>
@@ -831,7 +831,7 @@ export default function MesasPage() {
             </p>
           </div>
           <div style={{display:'flex',gap:6}}>
-            {[{l:'Libres',v:freeCount,c:C.green},{l:'Reservados',v:resCount,c:C.amber},{l:'Ocupados',v:occCount,c:C.red}].map(s=>(
+            {[{l:tx('Libres'),v:freeCount,c:C.green},{l:tx('Reservados'),v:resCount,c:C.amber},{l:tx('Ocupados'),v:occCount,c:C.red}].map(s=>(
               <div key={s.l} style={{padding:'3px 8px',borderRadius:7,background:`${s.c}12`,border:`1px solid ${s.c}28`}}>
                 <span style={{fontSize:12,fontWeight:800,color:s.c}}>{s.v}</span>
                 <span style={{fontSize:9,color:C.muted,marginLeft:3}}>{s.l}</span>
@@ -868,7 +868,7 @@ export default function MesasPage() {
           {showLibrary && (
             <div style={{width:220,background:C.card,borderRight:`1px solid ${C.border}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}}>
               <div style={{padding:'10px 12px',borderBottom:`1px solid ${C.border}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <p style={{fontSize:11,fontWeight:700,color:C.sub,letterSpacing:'0.06em',textTransform:'uppercase'}}>Elementos</p>
+                <p style={{fontSize:11,fontWeight:700,color:C.sub,letterSpacing:'0.06em',textTransform:'uppercase'}}>{tx('Elementos')}</p>
                 <button onClick={()=>setShowLibrary(false)} style={{background:'none',border:'none',fontSize:14,cursor:'pointer',color:C.muted,padding:2}}>◀</button>
               </div>
               <div style={{flex:1,overflow:'auto',padding:'8px 10px',display:'flex',flexDirection:'column',gap:6}}>
@@ -876,14 +876,14 @@ export default function MesasPage() {
                   <div key={cat}>
                     <p style={{fontSize:9,fontWeight:700,color:C.muted,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:6,marginTop:8}}>{cat}</p>
                     {presets.elements.filter(e=>e.category===cat).map(preset=>(
-                      <LibraryItem key={preset.id} preset={preset} onAdd={()=>addFromPreset(preset)} />
+                      <LibraryItem key={preset.id} preset={preset} onAdd={()=>addFromPreset(preset)} tx={tx} />
                     ))}
                   </div>
                 ))}
               </div>
               <div style={{padding:'8px 10px',borderTop:`1px solid ${C.border}`}}>
                 <p style={{fontSize:9,color:C.muted,textAlign:'center',lineHeight:1.4}}>
-                  Arrastra al plano o haz click para añadir
+                  {tx('Arrastra al plano o haz click para añadir')}
                 </p>
               </div>
             </div>
@@ -894,7 +894,7 @@ export default function MesasPage() {
             {/* Toolbar */}
             <div style={{padding:'6px 12px',background:C.card2,borderBottom:`1px solid ${C.border}`,display:'flex',gap:6,alignItems:'center',flexWrap:'wrap',flexShrink:0}}>
               {!showLibrary && (
-                <button onClick={()=>setShowLibrary(true)} style={{padding:'3px 8px',fontSize:11,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:6,color:C.sub,cursor:'pointer',fontFamily:'inherit',marginRight:4}}>▶ Elementos</button>
+                <button onClick={()=>setShowLibrary(true)} style={{padding:'3px 8px',fontSize:11,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:6,color:C.sub,cursor:'pointer',fontFamily:'inherit',marginRight:4}}>▶ {tx('Elementos')}</button>
               )}
               {/* Zone filters */}
               <button onClick={()=>setZoneFilter('all')} style={{
@@ -902,7 +902,7 @@ export default function MesasPage() {
                 border:`1px solid ${zoneFilter==='all'?C.amber+'44':C.border}`,
                 background:zoneFilter==='all'?C.amberDim:'transparent',
                 color:zoneFilter==='all'?C.amber:C.sub,cursor:'pointer',fontFamily:'inherit',
-              }}>Todos ({tables.length})</button>
+              }}>{tx('Todos')} ({tables.length})</button>
               {zones.map((z,zi)=>{
                 const cnt=tables.filter(t=>t.zone_id===z.id).length
                 const col=ZONE_COLORS[zi%ZONE_COLORS.length]
@@ -931,23 +931,23 @@ export default function MesasPage() {
                   border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',
                   color:undoStack.length>0?C.sub:C.muted,cursor:undoStack.length>0?'pointer':'default',
                   fontFamily:'inherit',opacity:undoStack.length>0?1:0.4,
-                }}>↩ Deshacer</button>
+                }}>↩ {tx('Deshacer')}</button>
                 {/* Join/Separate buttons */}
                 {multiSelect.size >= 2 && (
                   <button onClick={joinTables} style={{
                     padding:'3px 10px',fontSize:10,fontWeight:700,borderRadius:6,cursor:'pointer',fontFamily:'inherit',
                     border:`1px solid ${C.teal}44`,background:C.tealDim,color:C.teal,
                     animation:'pulse-glow 1.5s ease-in-out infinite',
-                  }}>🔗 Juntar ({multiSelect.size})</button>
+                  }}>🔗 {tx('Juntar')} ({multiSelect.size})</button>
                 )}
                 {selectedId && tables.find(t=>t.id===selectedId)?.combo_group && (
                   <button onClick={()=>separateGroup(tables.find(t=>t.id===selectedId)!.combo_group!)} style={{
                     padding:'3px 10px',fontSize:10,fontWeight:700,borderRadius:6,cursor:'pointer',fontFamily:'inherit',
                     border:`1px solid ${C.red}44`,background:C.redDim,color:C.red,
-                  }}>✂️ Separar</button>
+                  }}>✂️ {tx('Separar')}</button>
                 )}
                 {multiSelect.size > 0 && (
-                  <span style={{fontSize:9,color:C.violet,fontWeight:600}}>{multiSelect.size} seleccionados</span>
+                  <span style={{fontSize:9,color:C.violet,fontWeight:600}}>{multiSelect.size} {tx('seleccionados')}</span>
                 )}
               </div>
             </div>
@@ -963,19 +963,19 @@ export default function MesasPage() {
                 /* ── EMPTY STATE: starter templates ─────────────────────────── */
                 <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',gap:16,padding:32}}>
                   <div style={{fontSize:48,marginBottom:8}}>🏗️</div>
-                  <h2 style={{fontSize:20,fontWeight:700,color:C.text}}>Diseña tu espacio</h2>
+                  <h2 style={{fontSize:20,fontWeight:700,color:C.text}}>{tx('Diseña tu espacio')}</h2>
                   <p style={{fontSize:14,color:C.sub,textAlign:'center',maxWidth:450,lineHeight:1.5}}>
-                    Crea el plano de tu negocio arrastrando elementos desde el panel izquierdo, o empieza con una plantilla.
+                    {tx('Crea el plano de tu negocio arrastrando elementos desde el panel izquierdo, o empieza con una plantilla.')}
                   </p>
 
                   {presets.starterLayouts.length > 0 && (
                     <div style={{marginTop:12,width:'100%',maxWidth:500}}>
                       <p style={{fontSize:11,fontWeight:700,color:C.muted,textAlign:'center',marginBottom:12,letterSpacing:'0.06em',textTransform:'uppercase'}}>
-                        Empezar con plantilla
+                        {tx('Empezar con plantilla')}
                       </p>
                       <div style={{display:'grid',gridTemplateColumns:`repeat(${Math.min(presets.starterLayouts.length, 3)}, 1fr)`,gap:12}}>
                         {presets.starterLayouts.map((layout,i)=>(
-                          <StarterCard key={i} layout={layout} onApply={()=>applyStarter(i)} />
+                          <StarterCard key={i} layout={layout} onApply={()=>applyStarter(i)} tx={tx} />
                         ))}
                       </div>
                     </div>
@@ -986,11 +986,11 @@ export default function MesasPage() {
                       padding:'10px 24px',fontSize:13,fontWeight:700,
                       background:`linear-gradient(135deg,${C.amber},#E8923A)`,
                       color:'#0C1018',border:'none',borderRadius:10,cursor:'pointer',fontFamily:'inherit',
-                    }}>+ Añadir {unitS.toLowerCase()}</button>
+                    }}>+ {tx('Añadir')} {unitS.toLowerCase()}</button>
                   </div>
 
                   <p style={{fontSize:11,color:C.muted,marginTop:16}}>
-                    Ctrl+Z deshacer · Ctrl+D duplicar · Delete eliminar · Scroll zoom · Shift+Click juntar mesas
+                    {tx('Ctrl+Z deshacer · Ctrl+D duplicar · Delete eliminar · Scroll zoom · Shift+Click juntar mesas')}
                   </p>
                 </div>
               ) : (
@@ -1089,6 +1089,7 @@ export default function MesasPage() {
                       unitIcon={unitIcon}
                       zoneColor={t.zone_id ? zoneColorMap[t.zone_id] : undefined}
                       comboCapacity={t.combo_group ? getComboCapacity(t.combo_group) : undefined}
+                      tx={tx}
                     />
                   ))}
                 </svg>
@@ -1108,7 +1109,7 @@ export default function MesasPage() {
                     </div>
                   ))}
                   <span style={{fontSize:10,color:C.muted,marginLeft:'auto'}}>
-                    Arrastra · Shift+Click multi-selección · 🔗 Juntar mesas · Ctrl+Scroll zoom
+                    {tx('Arrastra · Shift+Click multi-selección · Juntar mesas · Ctrl+Scroll zoom')}
                   </span>
                 </div>
               )}
@@ -1153,8 +1154,8 @@ export default function MesasPage() {
             {zones.length === 0 ? (
               <div style={{textAlign:'center',padding:'48px 0'}}>
                 <p style={{fontSize:28,marginBottom:10}}>🏠</p>
-                <p style={{fontSize:14,fontWeight:600,color:C.sub,marginBottom:6}}>Sin {zonesLabel.toLowerCase()} configuradas</p>
-                <p style={{fontSize:12,color:C.muted}}>Las {zonesLabel.toLowerCase()} son opcionales. Puedes operar sin ellas.</p>
+                <p style={{fontSize:14,fontWeight:600,color:C.sub,marginBottom:6}}>{tx('Sin')} {zonesLabel.toLowerCase()} {tx('configuradas')}</p>
+                <p style={{fontSize:12,color:C.muted}}>{tx('Las')} {zonesLabel.toLowerCase()} {tx('son opcionales. Puedes operar sin ellas.')}</p>
               </div>
             ) : zones.map((z,zi)=>(
               <ZoneRow key={z.id} zone={z} color={ZONE_COLORS[zi%ZONE_COLORS.length]}

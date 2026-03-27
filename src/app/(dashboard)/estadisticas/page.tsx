@@ -69,7 +69,7 @@ export default function EstadisticasPage(){
       const avgPeople = res.length>0 ? (res.reduce((s:number,r:any)=>s+((r.people||r.party_size||2) as number),0)/res.length).toFixed(1) : '—'
 
       // Reservas por dia de la semana
-      const dayNames = ['Dom','Lun','Mar','Mie','Jue','Vie','Sab']
+      const dayNames = [tx('Dom'),tx('Lun'),tx('Mar'),tx('Mie'),tx('Jue'),tx('Vie'),tx('Sab')]
       const dayCounts:Record<number,number> = {}
       res.forEach(r=>{ if(r.date){ const d=new Date(r.date+'T12:00:00').getDay(); dayCounts[d]=(dayCounts[d]||0)+1 } })
       const maxDay = Math.max(...Object.values(dayCounts),1)
@@ -93,10 +93,10 @@ export default function EstadisticasPage(){
         <div style={{width:64,height:64,borderRadius:16,background:'linear-gradient(135deg,#F0A84E,#E8923A)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',boxShadow:'0 8px 24px rgba(240,168,78,0.25)'}}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="#0C1018"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         </div>
-        <h2 style={{fontSize:22,fontWeight:700,color:'#E8EEF6',marginBottom:10}}>Estadísticas avanzadas</h2>
-        <p style={{fontSize:14,color:'#8895A7',lineHeight:1.6,marginBottom:24}}>Analiza el rendimiento de tu recepcionista: tasa de conversión, hora pico, tendencias de reservas y más. Disponible en Pro y Business.</p>
+        <h2 style={{fontSize:22,fontWeight:700,color:'#E8EEF6',marginBottom:10}}>{tx('Estadísticas avanzadas')}</h2>
+        <p style={{fontSize:14,color:'#8895A7',lineHeight:1.6,marginBottom:24}}>{tx('Analiza el rendimiento de tu recepcionista: tasa de conversión, hora pico, tendencias de reservas y más. Disponible en Pro y Business.')}</p>
         <Link href="/precios" style={{display:'inline-block',padding:'12px 28px',fontSize:14,fontWeight:600,color:'#0C1018',background:'linear-gradient(135deg,#F0A84E,#E8923A)',borderRadius:10,textDecoration:'none',boxShadow:'0 4px 16px rgba(240,168,78,0.3)'}}>
-          Ver planes →
+          {tx('Ver planes →')}
         </Link>
       </div>
     </div>
@@ -122,7 +122,7 @@ export default function EstadisticasPage(){
             {label:tx('Llamadas este mes'),value:d.callsMonth,sub:tx('Completadas')+': '+d.callsMonthCompleted,color:'#F0A84E'},
             {label:`${L?.reservas||tx('Reservas')} ${tx('este mes')}`, value:d.resMonth,  sub:tx('Via agente')+': '+d.resVoiceMonth,   color:'#34D399'},
             {label:tx('Tasa conversión'),   value:d.convRate+'%',sub:`${L?.reservas||tx('Reservas')} ${tx('voz / llamadas completadas')}`, color:d.convRate>=30?'#059669':d.convRate>=15?'#d97706':'#dc2626'},
-            {label:L?.clientes||'Clientes', value:d.custs, sub:`${tx('Media por')} ${L?.reserva?.toLowerCase()||'reserva'}: ${d.avgPeople}`, color:'#A78BFA'},
+            {label:L?.clientes||tx('Clientes'), value:d.custs, sub:`${tx('Media por')} ${L?.reserva?.toLowerCase()||tx('reserva')}: ${d.avgPeople}`, color:'#A78BFA'},
           ].map(k=>(
             <div key={k.label} style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'18px 20px'}}>
               <p style={{fontSize:28,fontWeight:700,color:k.color,letterSpacing:'-0.025em'}}>{k.value}</p>
@@ -135,7 +135,7 @@ export default function EstadisticasPage(){
         <div className="rz-grid-2col-equal" style={{gap:16,marginBottom:16}}>
           {/* Reservas por día */}
           <div style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'18px 20px'}}>
-            <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:14}}>Reservas por día de la semana</p>
+            <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:14}}>{tx('Reservas por día de la semana')}</p>
             <div style={{display:'flex',gap:8,alignItems:'flex-end',height:100}}>
               {[1,2,3,4,5,6,0].map(day=>{
                 const cnt = d.dayCounts[day]||0
@@ -160,11 +160,11 @@ export default function EstadisticasPage(){
                 <div style={{display:'flex',alignItems:'center',gap:12}}>
                   <div style={{fontSize:32,fontWeight:800,color:'#F0A84E'}}>{d.peakHour[0]}h</div>
                   <div>
-                    <p style={{fontSize:13,color:'#C4CDD8'}}>{d.peakHour[1]} llamadas</p>
-                    <p style={{fontSize:11,color:'#49566A'}}>El horario más activo</p>
+                    <p style={{fontSize:13,color:'#C4CDD8'}}>{d.peakHour[1]} {tx('llamadas')}</p>
+                    <p style={{fontSize:11,color:'#49566A'}}>{tx('El horario más activo')}</p>
                   </div>
                 </div>
-              ) : <p style={{fontSize:13,color:'#49566A'}}>Sin datos de llamadas</p>}
+              ) : <p style={{fontSize:13,color:'#49566A'}}>{tx('Sin datos de llamadas')}</p>}
             </div>
             <div style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'16px 20px',flex:1}}>
               <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:8}}>{tx('Origen reservas')}</p>

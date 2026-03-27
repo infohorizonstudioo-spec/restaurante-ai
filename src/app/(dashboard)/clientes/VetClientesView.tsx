@@ -28,7 +28,7 @@ export default function VetClientesView() {
   const [historial,setHistorial] = useState<any[]>([])
   const [loadingH,setLoadingH]   = useState(false)
   const [tid,setTid]             = useState<string|null>(null)
-  const { template } = useTenant()
+  const { template, tx } = useTenant()
   const L = template?.labels
   const cs = getCommonStrings('es')
 
@@ -79,10 +79,10 @@ export default function VetClientesView() {
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,position:'sticky',top:0,zIndex:20}}>
         <div>
           <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>🐾 {L?.clientes||'Clientes'}</h1>
-          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{clientes.length} dueños registrados</p>
+          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{clientes.length} {tx('dueños registrados')}</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder='Buscar dueño o teléfono…'
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tx('Buscar dueño o teléfono…')}
             style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:220,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
           <NotifBell/>
         </div>
@@ -95,7 +95,7 @@ export default function VetClientesView() {
             <div style={{padding:'60px 24px',textAlign:'center'}}>
               <div style={{fontSize:36,marginBottom:10}}>🐾</div>
               <p style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>{cs.noClients}</p>
-              <p style={{fontSize:13,color:C.text3}}>Los dueños que contacten al agente aparecerán aquí.</p>
+              <p style={{fontSize:13,color:C.text3}}>{tx('Los dueños que contacten al agente aparecerán aquí.')}</p>
             </div>
           ) : filtered.map(c => (
             <div key={c.id} onClick={()=>openClient(c)} style={{padding:'12px 16px',cursor:'pointer',borderBottom:`1px solid ${C.border}`,
@@ -109,15 +109,15 @@ export default function VetClientesView() {
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:'flex',alignItems:'center',gap:6}}>
                     <p style={{fontSize:13,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name}</p>
-                    {c.vip&&<span style={{fontSize:9,fontWeight:700,color:C.yellow,background:C.yellowDim,padding:'1px 5px',borderRadius:4}}>VIP</span>}
+                    {c.vip&&<span style={{fontSize:9,fontWeight:700,color:C.yellow,background:C.yellowDim,padding:'1px 5px',borderRadius:4}}>{tx('VIP')}</span>}
                   </div>
-                  <p style={{fontSize:11,color:C.text3,marginTop:1}}>{c.phone||c.email||'Sin contacto'}</p>
+                  <p style={{fontSize:11,color:C.text3,marginTop:1}}>{c.phone||c.email||tx('Sin contacto')}</p>
                   {/* Pet badges from metadata */}
                   {c.pets&&Array.isArray(c.pets)&&c.pets.length>0&&(
                     <div style={{display:'flex',gap:4,marginTop:3,flexWrap:'wrap'}}>
                       {c.pets.map((pet:any,i:number)=>(
                         <span key={i} style={{fontSize:10,padding:'1px 6px',borderRadius:5,background:C.tealDim,color:C.teal,fontWeight:500}}>
-                          {getSpeciesIcon(pet.species||pet.type||'')} {pet.name||'Mascota'}
+                          {getSpeciesIcon(pet.species||pet.type||'')} {pet.name||tx('Mascota')}
                         </span>
                       ))}
                     </div>
@@ -125,7 +125,7 @@ export default function VetClientesView() {
                 </div>
                 <div style={{textAlign:'right',flexShrink:0}}>
                   <p style={{fontFamily:'var(--rz-mono)',fontSize:11,fontWeight:600,color:C.text2}}>{c.total_reservations||c.total_visits||0}</p>
-                  {c.last_visit&&<p style={{fontSize:10,color:C.text3,marginTop:1}}>{new Date(c.last_visit).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</p>}
+                  {c.last_visit&&<p style={{fontSize:10,color:C.text3,marginTop:1}}>{new Date(c.last_visit).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</p>}
                 </div>
               </div>
             </div>
@@ -137,7 +137,7 @@ export default function VetClientesView() {
           {!selected ? (
             <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',color:C.text3}}>
               <div style={{width:64,height:64,borderRadius:'50%',background:C.tealDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,marginBottom:14}}>🐾</div>
-              <p style={{fontSize:14,color:C.text3}}>Selecciona un dueño para ver su historial</p>
+              <p style={{fontSize:14,color:C.text3}}>{tx('Selecciona un dueño para ver su historial')}</p>
             </div>
           ) : (
             <>
@@ -154,9 +154,9 @@ export default function VetClientesView() {
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
                   {[
-                    {label:'Visitas',value:selected.total_reservations||selected.total_visits||0},
-                    {label:'Última visita',value:selected.last_visit?new Date(selected.last_visit).toLocaleDateString('es-ES',{day:'numeric',month:'short'}):'—'},
-                    {label:'Total gastado',value:selected.total_spent?selected.total_spent+'€':'—'},
+                    {label:tx('Visitas'),value:selected.total_reservations||selected.total_visits||0},
+                    {label:tx('Última visita'),value:selected.last_visit?new Date(selected.last_visit).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'—'},
+                    {label:tx('Total gastado'),value:selected.total_spent?selected.total_spent+'€':'—'},
                   ].map(m=>(
                     <div key={m.label} style={{background:C.surface2,borderRadius:9,padding:'10px 14px'}}>
                       <p style={{fontSize:10,color:C.text3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:3}}>{m.label}</p>
@@ -170,15 +170,15 @@ export default function VetClientesView() {
               {/* Pets section */}
               {selected.pets&&Array.isArray(selected.pets)&&selected.pets.length>0&&(
                 <div style={{marginBottom:16}}>
-                  <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Mascotas</p>
+                  <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>{tx('Mascotas')}</p>
                   <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:10}}>
                     {selected.pets.map((pet:any,i:number)=>(
                       <div key={i} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:'12px 14px'}}>
                         <div style={{display:'flex',alignItems:'center',gap:8}}>
                           <span style={{fontSize:22}}>{getSpeciesIcon(pet.species||pet.type||'')}</span>
                           <div>
-                            <p style={{fontSize:13,fontWeight:600,color:C.text}}>{pet.name||'Sin nombre'}</p>
-                            <span style={{fontSize:10,padding:'1px 6px',borderRadius:5,background:C.tealDim,color:C.teal,fontWeight:500}}>{pet.species||pet.type||'Otro'}</span>
+                            <p style={{fontSize:13,fontWeight:600,color:C.text}}>{pet.name||tx('Sin nombre')}</p>
+                            <span style={{fontSize:10,padding:'1px 6px',borderRadius:5,background:C.tealDim,color:C.teal,fontWeight:500}}>{pet.species||pet.type||tx('Otro')}</span>
                           </div>
                         </div>
                       </div>
@@ -188,8 +188,8 @@ export default function VetClientesView() {
               )}
 
               {/* Visit history */}
-              <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Historial de visitas</p>
-              {loadingH ? <div style={{textAlign:'center',padding:20,color:C.text3}}>Cargando...</div>
+              <p style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>{tx('Historial de visitas')}</p>
+              {loadingH ? <div style={{textAlign:'center',padding:20,color:C.text3}}>{tx('Cargando...')}</div>
               : historial.length===0 ? <p style={{fontSize:13,color:C.text3,padding:'20px 0'}}>{cs.noActivity}</p>
               : historial.map((h,i)=>(
                 <div key={i} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:'12px 14px',marginBottom:8,display:'flex',gap:10,transition:'background 0.12s'}}
@@ -209,7 +209,7 @@ export default function VetClientesView() {
                       </>
                     ) : (
                       <>
-                        <p style={{fontSize:13,fontWeight:500,color:C.text}}>{h.summary||'Llamada'}</p>
+                        <p style={{fontSize:13,fontWeight:500,color:C.text}}>{h.summary||tx('Llamada')}</p>
                         <p style={{fontSize:11,color:C.text3,marginTop:1}}>{(h.started_at||'').slice(0,10)}</p>
                       </>
                     )}

@@ -1,13 +1,17 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useTenant } from '@/contexts/TenantContext'
 
 export default function NotificationBell({ tenantId: propTenantId }: { tenantId?: string } = {}) {
   const [count, setCount] = useState(0)
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
+  const [tid, setTid] = useState<string | null>(propTenantId || null)
   const ref = useRef<HTMLDivElement>(null)
+  const { tx } = useTenant()
 
+  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
@@ -16,30 +20,35 @@ export default function NotificationBell({ tenantId: propTenantId }: { tenantId?
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // Resolve tenant_id once
   useEffect(() => {
-    loadNotifications()
-    const ch = supabase.channel('notifications-bell')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, () => loadNotifications())
-      .subscribe()
-    return () => { supabase.removeChannel(ch) }
-  }, [])
-
-  async function loadNotifications() {
-    let tid = propTenantId
-    if (!tid) {
+    if (propTenantId) { setTid(propTenantId); return }
+    ;(async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
       const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).maybeSingle()
-      if (!profile?.tenant_id) return
-      tid = profile.tenant_id
-    }
-    const tenant = { id: tid }
-    const { data } = await supabase.from('notifications').select('*').eq('tenant_id', tenant.id).order('created_at', { ascending: false }).limit(10)
+      if (profile?.tenant_id) setTid(profile.tenant_id)
+    })()
+  }, [propTenantId])
+
+  const loadNotifications = useCallback(async () => {
+    if (!tid) return
+    const { data } = await supabase.from('notifications').select('*').eq('tenant_id', tid).order('created_at', { ascending: false }).limit(10)
     if (data) {
       setNotifications(data)
       setCount(data.filter((n: any) => !n.read).length)
     }
-  }
+  }, [tid])
+
+  // Load notifications + subscribe ONLY when tenant_id is resolved
+  useEffect(() => {
+    if (!tid) return
+    loadNotifications()
+    const ch = supabase.channel('notifications-bell-' + tid)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `tenant_id=eq.${tid}` }, () => loadNotifications())
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [tid, loadNotifications])
 
   async function markAllRead() {
     const unread = notifications.filter(n => !n.read).map(n => n.id)
@@ -67,16 +76,16 @@ export default function NotificationBell({ tenantId: propTenantId }: { tenantId?
       {open && (
         <div style={S.dropdown}>
           <div style={S.header}>
-            <span style={{ color: '#E8EEF6', fontWeight: 600, fontSize: '14px' }}>Notificaciones</span>
-            {count > 0 && <button onClick={markAllRead} style={{ background: 'none', border: 'none', color: '#F0A84E', fontSize: '12px', cursor: 'pointer' }}>Marcar leídas</button>}
+            <span style={{ color: '#E8EEF6', fontWeight: 600, fontSize: '14px' }}>{tx('Notificaciones')}</span>
+            {count > 0 && <button onClick={markAllRead} style={{ background: 'none', border: 'none', color: '#F0A84E', fontSize: '12px', cursor: 'pointer' }}>{tx('Marcar leídas')}</button>}
           </div>
           {notifications.length === 0 ? (
-            <div style={S.empty}>Sin notificaciones</div>
+            <div style={S.empty}>{tx('Sin notificaciones')}</div>
           ) : (
             notifications.map(n => (
               <div key={n.id} style={{ ...S.item, background: n.read ? 'transparent' : 'rgba(240,168,78,0.05)' }}>
-                <div style={{ color: n.read ? '#49566A' : '#E8EEF6', fontWeight: n.read ? 400 : 500 }}>{n.message || n.title || 'Notificación'}</div>
-                <div style={{ fontSize: '11px', color: '#49566A', marginTop: '4px' }}>{new Date(n.created_at).toLocaleString('es-ES')}</div>
+                <div style={{ color: n.read ? '#49566A' : '#E8EEF6', fontWeight: n.read ? 400 : 500 }}>{n.message || n.title || tx('Notificación')}</div>
+                <div style={{ fontSize: '11px', color: '#49566A', marginTop: '4px' }}>{new Date(n.created_at).toLocaleString()}</div>
               </div>
             ))
           )}

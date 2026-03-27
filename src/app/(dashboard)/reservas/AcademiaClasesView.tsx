@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
-import { getStatusLabel } from '@/lib/i18n'
 
 import { C } from "@/lib/colors"
 
@@ -59,7 +58,7 @@ export default function AcademiaClasesView() {
   const [tid,setTid]             = useState<string|null>(null)
   const [modal,setModal]         = useState<any|null>(null)
   const [search,setSearch]       = useState('')
-  const { template } = useTenant()
+  const { template, tx } = useTenant()
   const L = template?.labels
 
   const load = useCallback(async (tenantId:string) => {
@@ -86,7 +85,7 @@ export default function AcademiaClasesView() {
 
   useEffect(()=>{
     if (!tid) return
-    const ch = supabase.channel('academia-res-rt')
+    const ch = supabase.channel('academia-res-rt-' + tid)
       .on('postgres_changes',{event:'*',schema:'public',table:'reservations',filter:'tenant_id=eq.'+tid},()=>load(tid))
       .subscribe()
     return ()=>{ supabase.removeChannel(ch) }
@@ -115,7 +114,7 @@ export default function AcademiaClasesView() {
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,position:'sticky',top:0,zIndex:20}}>
         <div>
           <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>📚 {L?.pageTitle || 'Clases'}</h1>
-          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} clases para el {new Date(selected+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
+          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} clases para el {new Date(selected+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})}</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={L?.buscarPlaceholder||'Buscar clases…'}
@@ -148,12 +147,12 @@ export default function AcademiaClasesView() {
           <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'60px 24px',textAlign:'center'}}>
             <div style={{fontSize:36,marginBottom:10}}>📚</div>
             <p style={{fontSize:15,fontWeight:600,color:C.text,marginBottom:4}}>{L?.emptyReservas||'Sin clases este día'}</p>
-            <p style={{fontSize:13,color:C.text3}}>No hay clases programadas para el día seleccionado.</p>
+            <p style={{fontSize:13,color:C.text3}}>{tx('No hay clases programadas para el día seleccionado.')}</p>
           </div>
         ) : filtered.map(r=>{
           const ss = STATUS_STYLES[r.status]||STATUS_STYLES.pendiente
           const time = r.time||r.reservation_time||''
-          const studentName = r.customer_name||'Sin nombre'
+          const studentName = r.customer_name||tx('Sin nombre')
           const subject = extractSubject(r)
           const level = extractLevel(r.notes)
           const levelStyle = level ? LEVEL_STYLES[level] : null
@@ -176,7 +175,7 @@ export default function AcademiaClasesView() {
                 </p>
               </div>
               <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
-                <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,border:`1px solid ${ss.color}25`,flexShrink:0}}>{getStatusLabel(r.status, 'es')}</span>
+                <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,border:`1px solid ${ss.color}25`,flexShrink:0}}>{tx(ss.label)}</span>
                 {levelStyle&&<span style={{fontSize:10,padding:'2px 7px',borderRadius:6,background:levelStyle.bg,color:levelStyle.color,fontWeight:600}}>{level}</span>}
               </div>
             </div>
@@ -190,7 +189,7 @@ export default function AcademiaClasesView() {
           <div style={{background:C.surface,border:`1px solid ${C.borderMd}`,borderRadius:16,padding:24,width:'100%',maxWidth:440,boxShadow:'0 20px 60px rgba(0,0,0,0.6)'}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
               <div>
-                <p style={{fontSize:18,fontWeight:700,color:C.text}}>{modal.customer_name||'Sin nombre'}</p>
+                <p style={{fontSize:18,fontWeight:700,color:C.text}}>{modal.customer_name||tx('Sin nombre')}</p>
                 <p style={{fontSize:13,color:C.text2,marginTop:2}}>
                   {(modal.date||modal.reservation_date)?.slice(0,10)} · {(modal.time||modal.reservation_time||'').slice(0,5)}
                 </p>
@@ -202,19 +201,19 @@ export default function AcademiaClasesView() {
             <div style={{background:C.surface2,borderRadius:10,padding:'12px 14px',marginBottom:14}}>
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
                 <span style={{fontSize:20}}>📚</span>
-                <p style={{fontSize:15,fontWeight:600,color:C.text}}>{extractSubject(modal)||'Materia no indicada'}</p>
+                <p style={{fontSize:15,fontWeight:600,color:C.text}}>{extractSubject(modal)||tx('Materia no indicada')}</p>
                 {extractLevel(modal.notes)&&(()=>{
                   const lvl = extractLevel(modal.notes)!
                   const ls = LEVEL_STYLES[lvl]
                   return <span style={{fontSize:10,padding:'2px 8px',borderRadius:6,background:ls?.bg||C.blueDim,color:ls?.color||C.blue,fontWeight:600}}>{lvl}</span>
                 })()}
               </div>
-              {modal.table_name&&<p style={{fontSize:13,color:C.text2}}>🏫 Aula: {modal.table_name}</p>}
+              {modal.table_name&&<p style={{fontSize:13,color:C.text2}}>🏫 {tx('Aula')}: {modal.table_name}</p>}
             </div>
 
             {modal.customer_phone&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>📞 {modal.customer_phone}</p>}
             {modal.notes&&<p style={{fontSize:13,color:C.text2,marginBottom:16}}>📝 {modal.notes}</p>}
-            {modal.source==='voice_agent'&&<p style={{fontSize:12,color:C.violet,marginBottom:16,background:C.violetDim,padding:'6px 10px',borderRadius:8}}>📞 Inscripción creada por el agente de voz</p>}
+            {modal.source==='voice_agent'&&<p style={{fontSize:12,color:C.violet,marginBottom:16,background:C.violetDim,padding:'6px 10px',borderRadius:8}}>📞 {tx('Inscripción creada por el agente de voz')}</p>}
 
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>
               {['confirmada','pendiente','cancelada','completada'].map(s=>(
@@ -222,7 +221,7 @@ export default function AcademiaClasesView() {
                   style={{padding:'7px 14px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${STATUS_STYLES[s]?.color||C.border}40`,
                     background: modal.status===s ? STATUS_STYLES[s]?.bg||C.surface2 : 'transparent',
                     color: STATUS_STYLES[s]?.color||C.text2,cursor:'pointer',fontFamily:'inherit'}}>
-                  {getStatusLabel(s, 'es')}
+                  {tx(STATUS_STYLES[s]?.label||s)}
                 </button>
               ))}
             </div>

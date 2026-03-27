@@ -48,8 +48,8 @@ export default function FacturacionPage() {
       const res = await fetch('/api/stripe/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan,tenant_id:tid,user_id:user.id})})
       const d = await res.json()
       if(d.url) window.location.href=d.url
-      else setUpgradeError(d.error||'Error al procesar el pago')
-    } catch(e:any){ setUpgradeError(e.message||'Error de conexión') }
+      else setUpgradeError(d.error||tx('Error al procesar el pago'))
+    } catch(e:any){ setUpgradeError(e.message||tx('Error de conexión')) }
     finally{setUpgrading(false)}
   }
 
@@ -63,7 +63,7 @@ export default function FacturacionPage() {
   const extraCost = (billing.estimated_extra_cost||0).toFixed(2)
   const IVA = 0.21
   const total = ((pi.price+parseFloat(extraCost))*(1+IVA)).toFixed(2)
-  const renewDate = billing.billing_cycle_end ? new Date(billing.billing_cycle_end).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}) : null
+  const renewDate = billing.billing_cycle_end ? new Date(billing.billing_cycle_end).toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'}) : null
 
   return (
     <div style={{background:C.bg, minHeight:'100vh', fontFamily:'var(--rz-font)'}}>
@@ -86,15 +86,15 @@ export default function FacturacionPage() {
               <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:10}}>
                 <span style={{fontSize:10, fontWeight:700, padding:'3px 10px', borderRadius:12, background:pi.color+'18', color:pi.color, textTransform:'uppercase', letterSpacing:'0.06em'}}>{pi.label}</span>
                 <span style={{fontSize:10, fontWeight:600, padding:'3px 10px', borderRadius:12, background:billing.subscription_status==='active'?C.greenDim:C.surface2, color:billing.subscription_status==='active'?C.green:C.text3, border:`1px solid ${billing.subscription_status==='active'?C.green+'25':C.border}`}}>
-                  {billing.subscription_status==='active'?'Activo':billing.subscription_status==='past_due'?'Pago pendiente':'Sin suscripción'}
+                  {billing.subscription_status==='active'?tx('Activo'):billing.subscription_status==='past_due'?tx('Pago pendiente'):tx('Sin suscripción')}
                 </span>
-                {billing.next_plan && <span style={{fontSize:10, fontWeight:600, padding:'3px 10px', borderRadius:12, background:C.amberDim, color:C.amber}}>→ {billing.next_plan} próx. ciclo</span>}
+                {billing.next_plan && <span style={{fontSize:10, fontWeight:600, padding:'3px 10px', borderRadius:12, background:C.amberDim, color:C.amber}}>→ {billing.next_plan} {tx('próx. ciclo')}</span>}
               </div>
-              <p style={{fontFamily:'var(--rz-mono)', fontSize:30, fontWeight:700, color:pi.color, letterSpacing:'-0.03em', marginBottom:4}}>{isTrial?'Gratis':pi.price+'€/mes'}</p>
-              <p style={{fontSize:12, color:C.text3}}>{pi.calls} llamadas incluidas{!isTrial?` · ${pi.rate}€ por llamada extra`:''}</p>
-              {renewDate&&!isTrial&&<p style={{fontSize:12, color:C.text3, marginTop:4}}>Siguiente factura: {renewDate}</p>}
+              <p style={{fontFamily:'var(--rz-mono)', fontSize:30, fontWeight:700, color:pi.color, letterSpacing:'-0.03em', marginBottom:4}}>{isTrial?tx('Gratis'):pi.price+'€/'+tx('mes')}</p>
+              <p style={{fontSize:12, color:C.text3}}>{pi.calls} {tx('llamadas incluidas')}{!isTrial?` · ${pi.rate}€ ${tx('por llamada extra')}`:''}</p>
+              {renewDate&&!isTrial&&<p style={{fontSize:12, color:C.text3, marginTop:4}}>{tx('Siguiente factura:')} {renewDate}</p>}
             </div>
-            {isTrial&&<Link href='/precios' style={{padding:'10px 20px', fontSize:13, fontWeight:700, color:'#0C1018', background:C.amber, borderRadius:10, textDecoration:'none', whiteSpace:'nowrap', flexShrink:0}}>Activar plan →</Link>}
+            {isTrial&&<Link href='/precios' style={{padding:'10px 20px', fontSize:13, fontWeight:700, color:'#0C1018', background:C.amber, borderRadius:10, textDecoration:'none', whiteSpace:'nowrap', flexShrink:0}}>{tx('Activar plan →')}</Link>}
           </div>
         </div>
 
@@ -102,12 +102,12 @@ export default function FacturacionPage() {
         <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:'20px 24px', marginBottom:14}}>
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16}}>
             <div>
-              <p style={{fontSize:14, fontWeight:700, color:C.text, marginBottom:3}}>Uso del ciclo actual</p>
-              <p style={{fontSize:12, color:C.text3}}>{isTrial?'Llamadas del trial':'Ciclo mensual'}</p>
+              <p style={{fontSize:14, fontWeight:700, color:C.text, marginBottom:3}}>{tx('Uso del ciclo actual')}</p>
+              <p style={{fontSize:12, color:C.text3}}>{isTrial?tx('Llamadas del trial'):tx('Ciclo mensual')}</p>
             </div>
             <div style={{textAlign:'right'}}>
               <p style={{fontFamily:'var(--rz-mono)', fontSize:24, fontWeight:700, color:hasExtra?C.red:pi.color, letterSpacing:'-0.03em'}}>{billing.used_calls}<span style={{color:C.text3, fontSize:16}}>/{billing.included_calls}</span></p>
-              <p style={{fontSize:11, color:C.text3}}>llamadas del plan</p>
+              <p style={{fontSize:11, color:C.text3}}>{tx('llamadas del plan')}</p>
             </div>
           </div>
 
@@ -116,7 +116,7 @@ export default function FacturacionPage() {
             <div style={{height:'100%', width:usedPct+'%', background:usedPct>=100?C.red:usedPct>=80?C.yellow:pi.color, borderRadius:3, transition:'width 0.6s ease', transformOrigin:'left'}}/>
           </div>
           <div style={{display:'flex', justifyContent:'space-between'}}>
-            <span style={{fontSize:11, color:C.text3}}>{billing.remaining_calls} llamadas restantes</span>
+            <span style={{fontSize:11, color:C.text3}}>{billing.remaining_calls} {tx('llamadas restantes')}</span>
             <span style={{fontFamily:'var(--rz-mono)', fontSize:11, color:C.text3}}>{usedPct}%</span>
           </div>
 
@@ -125,8 +125,8 @@ export default function FacturacionPage() {
             <div style={{marginTop:16, padding:'14px 16px', background:C.redDim, border:`1px solid ${C.red}25`, borderRadius:12}}>
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                 <div>
-                  <p style={{fontSize:13, fontWeight:700, color:C.red, marginBottom:3}}>⚠ Llamadas extra: {billing.extra_calls}</p>
-                  <p style={{fontSize:11, color:`${C.red}90`}}>{pi.rate}€ por llamada adicional</p>
+                  <p style={{fontSize:13, fontWeight:700, color:C.red, marginBottom:3}}>⚠ {tx('Llamadas extra')}: {billing.extra_calls}</p>
+                  <p style={{fontSize:11, color:`${C.red}90`}}>{pi.rate}€ {tx('por llamada adicional')}</p>
                 </div>
                 <p style={{fontFamily:'var(--rz-mono)', fontSize:22, fontWeight:700, color:C.red}}>{extraCost}€</p>
               </div>
@@ -137,11 +137,11 @@ export default function FacturacionPage() {
           {!isTrial && (
             <div style={{marginTop:12, padding:'14px 16px', background:C.surface2, border:`1px solid ${C.border}`, borderRadius:12, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
               <div>
-                <p style={{fontSize:12, color:C.text3}}>Suscripción mensual · {pi.price}€ + 21% IVA</p>
-                {hasExtra && <p style={{fontSize:12, color:C.text3, marginTop:2}}>+ {extraCost}€ llamadas extra</p>}
+                <p style={{fontSize:12, color:C.text3}}>{tx('Suscripción mensual')} · {pi.price}€ + 21% IVA</p>
+                {hasExtra && <p style={{fontSize:12, color:C.text3, marginTop:2}}>+ {extraCost}€ {tx('llamadas extra')}</p>}
               </div>
               <div style={{textAlign:'right'}}>
-                <p style={{fontSize:11, color:C.text3, marginBottom:2}}>Total estimado (IVA incl.)</p>
+                <p style={{fontSize:11, color:C.text3, marginBottom:2}}>{tx('Total estimado (IVA incl.)')}</p>
                 <p style={{fontFamily:'var(--rz-mono)', fontSize:24, fontWeight:700, color:C.text, letterSpacing:'-0.03em'}}>{total}€</p>
               </div>
             </div>
@@ -151,9 +151,9 @@ export default function FacturacionPage() {
         {/* KPIs */}
         <div className="rz-grid-3col" style={{gap:12, marginBottom:14}}>
           {[
-            {label:'Llamadas usadas', value:billing.used_calls, sub:'este ciclo', color:pi.color},
-            {label:'Llamadas restantes', value:Math.max(0,billing.remaining_calls), sub:'antes de extras', color:billing.remaining_calls<=10?C.red:C.green},
-            {label:'Llamadas extra', value:billing.extra_calls||0, sub:billing.extra_calls>0?extraCost+'€ adicional':'sin coste extra', color:billing.extra_calls>0?C.red:C.text3},
+            {label:tx('Llamadas usadas'), value:billing.used_calls, sub:tx('este ciclo'), color:pi.color},
+            {label:tx('Llamadas restantes'), value:Math.max(0,billing.remaining_calls), sub:tx('antes de extras'), color:billing.remaining_calls<=10?C.red:C.green},
+            {label:tx('Llamadas extra'), value:billing.extra_calls||0, sub:billing.extra_calls>0?extraCost+'€ '+tx('adicional'):tx('sin coste extra'), color:billing.extra_calls>0?C.red:C.text3},
           ].map(m=>(
             <div key={m.label} style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:'16px 18px'}}>
               <p style={{fontFamily:'var(--rz-mono)', fontSize:26, fontWeight:700, color:m.color, letterSpacing:'-0.03em', marginBottom:4}}>{m.value}</p>
@@ -173,9 +173,9 @@ export default function FacturacionPage() {
                   <div key={p} style={{background:C.surface2, border:`1px solid ${C.border}`, borderRadius:14, padding:'18px', textAlign:'center'}}>
                     <p style={{fontSize:12, fontWeight:700, color:pp.color, marginBottom:6, textTransform:'uppercase', letterSpacing:'0.06em'}}>{pp.label}</p>
                     <p style={{fontFamily:'var(--rz-mono)', fontSize:24, fontWeight:700, color:C.text, marginBottom:2}}>{pp.price}€<span style={{fontSize:12, color:C.text3}}>/mes</span></p>
-                    <p style={{fontSize:11, color:C.text3, marginBottom:14}}>{pp.calls} llamadas incluidas</p>
+                    <p style={{fontSize:11, color:C.text3, marginBottom:14}}>{pp.calls} {tx('llamadas incluidas')}</p>
                     <button onClick={()=>handleUpgrade(p)} disabled={upgrading} style={{width:'100%', padding:'9px', fontSize:12, fontWeight:700, color:'#0C1018', background:pp.color, border:'none', borderRadius:9, cursor:'pointer', opacity:upgrading?0.6:1, transition:'all 0.15s'}}>
-                      {upgrading?'Redirigiendo…':'Activar '+pp.label}
+                      {upgrading?tx('Redirigiendo…'):tx('Activar')+' '+pp.label}
                     </button>
                   </div>
                 )
@@ -193,16 +193,16 @@ export default function FacturacionPage() {
           {history.length===0 ? (
             <div style={{padding:'36px 20px', textAlign:'center'}}>
               <div style={{fontSize:28, marginBottom:10}}>🧾</div>
-              <p style={{fontSize:14, color:C.text2, marginBottom:6}}>Sin historial aún</p>
-              <p style={{fontSize:12, color:C.text3, lineHeight:1.6}}>El historial de facturas aparecerá aquí después de tu primera renovación mensual.</p>
+              <p style={{fontSize:14, color:C.text2, marginBottom:6}}>{tx('Sin historial aún')}</p>
+              <p style={{fontSize:12, color:C.text3, lineHeight:1.6}}>{tx('El historial de facturas aparecerá aquí después de tu primera renovación mensual.')}</p>
             </div>
           ) : history.map((h,i)=>(
             <div key={h.id} style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 20px', borderTop:i>0?`1px solid ${C.border}`:'none', transition:'background 0.12s'}}
               onMouseEnter={e=>(e.currentTarget.style.background=C.surface2)}
               onMouseLeave={e=>(e.currentTarget.style.background='transparent')}>
               <div>
-                <p style={{fontSize:13, fontWeight:600, color:C.text, marginBottom:3}}>{new Date(h.cycle_start).toLocaleDateString('es-ES',{month:'long',year:'numeric'})}</p>
-                <p style={{fontFamily:'var(--rz-mono)', fontSize:11, color:C.text3}}>{h.used_calls} llamadas · {h.extra_calls} extra</p>
+                <p style={{fontSize:13, fontWeight:600, color:C.text, marginBottom:3}}>{new Date(h.cycle_start).toLocaleDateString(undefined,{month:'long',year:'numeric'})}</p>
+                <p style={{fontFamily:'var(--rz-mono)', fontSize:11, color:C.text3}}>{h.used_calls} {tx('llamadas')} · {h.extra_calls} extra</p>
               </div>
               <div style={{textAlign:'right'}}>
                 <p style={{fontFamily:'var(--rz-mono)', fontSize:16, fontWeight:700, color:C.text, marginBottom:4}}>{h.total_amount}€</p>

@@ -9,8 +9,24 @@ import Link from 'next/link'
 
 const DEFAULT_HOURS = Array.from({length:15},(_,i)=>i+8)  // 08:00 → 22:00
 const _DAY_LABELS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']  // reserved
-const DAY_SHORT  = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM']
-const MONTH_ES   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+/** Generate short day names (Mon→LUN etc.) from locale, starting Monday */
+function getDayShort(): string[] {
+  const base = new Date(2024, 0, 1) // a known Monday
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(base)
+    d.setDate(d.getDate() + i)
+    return d.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase()
+  })
+}
+
+/** Format month name from locale */
+function fmtMonth(date: Date): string {
+  return date.toLocaleDateString(undefined, { month: 'long' })
+}
+
+/** Capitalize first letter */
+function cap(s: string) { return s.charAt(0).toUpperCase() + s.slice(1) }
 
 /** Build hour range from service_hours config — covers lunch through dinner for hosteleria, or generic 8–22 */
 function buildHoursFromConfig(cfg?: ReservationConfig): number[] {
@@ -48,11 +64,11 @@ function getWeekDays(base: Date): Date[] {
 }
 
 function fmtTime(t:string){ return (t||'').slice(0,5) }
-function _fmtDate(d:Date){ return `${d.getDate()} ${MONTH_ES[d.getMonth()]} ${d.getFullYear()}` }  // reserved
+function _fmtDate(d:Date){ return `${d.getDate()} ${cap(fmtMonth(d))} ${d.getFullYear()}` }  // reserved
 
 
 // ── Tooltip flotante ──────────────────────────────────────────────────────
-function ResTooltip({r}: {r:any, anchorRef?: React.RefObject<HTMLDivElement>}) {
+function ResTooltip({r, tx}: {r:any, anchorRef?: React.RefObject<HTMLDivElement>, tx:(s:string)=>string}) {
   const cfg = STATUS_CFG[r.status] || STATUS_CFG.confirmada
   const ppl = r.people || r.party_size || 1
   return (
@@ -65,10 +81,10 @@ function ResTooltip({r}: {r:any, anchorRef?: React.RefObject<HTMLDivElement>}) {
     }}>
       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
         <div style={{width:10,height:10,borderRadius:'50%',background:cfg.color,flexShrink:0}}/>
-        <span style={{fontSize:13,fontWeight:700,color:'#E8EEF6',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.customer_name||'Sin nombre'}</span>
+        <span style={{fontSize:13,fontWeight:700,color:'#E8EEF6',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.customer_name||tx('Sin nombre')}</span>
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:5}}>
-        <Row icon="🕐" text={`${fmtTime(r.time||r.reservation_time||'')} · ${ppl} persona${ppl!==1?'s':''}`}/>
+        <Row icon="🕐" text={`${fmtTime(r.time||r.reservation_time||'')} · ${ppl} ${ppl!==1?tx('personas'):tx('persona')}`}/>
         {(r.customer_phone||r.phone) && <Row icon="📞" text={r.customer_phone||r.phone}/>}
         {r.table_name && <Row icon="🪑" text={r.table_name}/>}
         {r.notes && <Row icon="📝" text={r.notes} muted/>}
@@ -77,7 +93,7 @@ function ResTooltip({r}: {r:any, anchorRef?: React.RefObject<HTMLDivElement>}) {
         display:'inline-block',marginTop:10,
         fontSize:10,fontWeight:700,letterSpacing:'0.04em',textTransform:'uppercase',
         color:cfg.color,background:cfg.bg,padding:'3px 10px',borderRadius:20
-      }}>{cfg.label}</span>
+      }}>{tx(cfg.label)}</span>
     </div>
   )
 }
@@ -93,7 +109,7 @@ function Row({icon,text,muted}:{icon:string,text:string,muted?:boolean}) {
 
 
 // ── Bloque de reserva en la celda ─────────────────────────────────────────
-function ResBlock({r, onHover, onLeave}: {r:any, onHover:(e:React.MouseEvent,r:any)=>void, onLeave:()=>void}) {
+function ResBlock({r, onHover, onLeave, tx}: {r:any, onHover:(e:React.MouseEvent,r:any)=>void, onLeave:()=>void, tx:(s:string)=>string}) {
   const cfg = STATUS_CFG[r.status] || STATUS_CFG.confirmada
   const ppl = r.people || r.party_size || 1
   const time = fmtTime(r.time || r.reservation_time || '')
@@ -109,7 +125,7 @@ function ResBlock({r, onHover, onLeave}: {r:any, onHover:(e:React.MouseEvent,r:a
         borderLeftWidth:3, borderLeftColor:cfg.color,
       }}
     >
-      <p style={{fontSize:11.5,fontWeight:700,color:'#E8EEF6',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.3}}>{r.customer_name||'Sin nombre'}</p>
+      <p style={{fontSize:11.5,fontWeight:700,color:'#E8EEF6',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.3}}>{r.customer_name||tx('Sin nombre')}</p>
       <p style={{fontSize:10,color:'#8895A7',marginTop:1}}>{time} · {ppl}p</p>
     </div>
   )
@@ -118,8 +134,9 @@ function ResBlock({r, onHover, onLeave}: {r:any, onHover:(e:React.MouseEvent,r:a
 
 // ── Página principal ──────────────────────────────────────────────────────
 export default function AgendaPage() {
-  const { tenant, template, loading: tenantLoading } = useTenant()
+  const { tenant, template, loading: tenantLoading, tx } = useTenant()
   const L = template?.labels
+  const DAY_SHORT = getDayShort()
   const [base,setBase]   = useState(new Date())
   const [res,setRes]     = useState<any[]>([])
   const [loading,setLoad]= useState(true)
@@ -171,8 +188,8 @@ export default function AgendaPage() {
   const colCount = visibleDays.length
   const weekFrom = week[0], weekTo = week[6]
   const weekLabel = weekFrom.getMonth()===weekTo.getMonth()
-    ? `${weekFrom.getDate()} – ${weekTo.getDate()} ${MONTH_ES[weekTo.getMonth()]} ${weekTo.getFullYear()}`
-    : `${weekFrom.getDate()} ${MONTH_ES[weekFrom.getMonth()]} – ${weekTo.getDate()} ${MONTH_ES[weekTo.getMonth()]} ${weekTo.getFullYear()}`
+    ? `${weekFrom.getDate()} – ${weekTo.getDate()} ${cap(fmtMonth(weekTo))} ${weekTo.getFullYear()}`
+    : `${weekFrom.getDate()} ${cap(fmtMonth(weekFrom))} – ${weekTo.getDate()} ${cap(fmtMonth(weekTo))} ${weekTo.getFullYear()}`
 
   const totalThisWeek = res.length
   const todayCount = res.filter(r=>(r.date||r.reservation_date)===todayIso).length
@@ -217,22 +234,22 @@ export default function AgendaPage() {
       <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:isMobile?'10px 12px':'14px 24px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
         <div style={{display:'flex',alignItems:'center',gap:isMobile?10:20}}>
           <div>
-            <h1 style={{fontSize:isMobile?15:17,fontWeight:700,color:C.text,lineHeight:1.2}}>Agenda</h1>
+            <h1 style={{fontSize:isMobile?15:17,fontWeight:700,color:C.text,lineHeight:1.2}}>{tx('Agenda')}</h1>
             <p style={{fontSize:11,color:C.muted,marginTop:2}}>{weekLabel}</p>
           </div>
           <div style={{display:'flex',gap:6,alignItems:'center'}}>
             <button className="nav-btn" onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()-7);return n})}>‹</button>
-            <button className="today-btn" onClick={()=>{setBase(new Date());setMobileDay(()=>{const d=new Date().getDay();return d===0?6:d-1})}}>Hoy</button>
+            <button className="today-btn" onClick={()=>{setBase(new Date());setMobileDay(()=>{const d=new Date().getDay();return d===0?6:d-1})}}>{tx('Hoy')}</button>
             <button className="nav-btn" onClick={()=>setBase(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n})}>›</button>
           </div>
         </div>
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
           {!isMobile && <div style={{display:'flex',gap:16,marginRight:8}}>
-            <Stat label="Esta semana" value={totalThisWeek} color={C.amber}/>
-            <Stat label="Hoy" value={todayCount} color="#34d399"/>
+            <Stat label={tx('Esta semana')} value={totalThisWeek} color={C.amber}/>
+            <Stat label={tx('Hoy')} value={todayCount} color="#34d399"/>
           </div>}
           <Link href="/reservas/nueva" className="new-btn">
-            <span style={{fontSize:16,lineHeight:1}}>+</span>{!isMobile&&` Nueva ${L?.reserva || 'reserva'}`}
+            <span style={{fontSize:16,lineHeight:1}}>+</span>{!isMobile&&` ${tx('Nueva')} ${L?.reserva || tx('reserva')}`}
           </Link>
           <NotifBell/>
         </div>
@@ -303,7 +320,7 @@ export default function AgendaPage() {
                   return (
                     <div key={di} className="res-cell" style={{borderRight:`1px solid ${C.border}`,padding:'4px 5px',background:isToday?C.today:'transparent',transition:'background 0.1s',minHeight:isMobile?50:60}}>
                       {cellRes.map(r=>(
-                        <ResBlock key={r.id} r={r} onHover={handleHover} onLeave={()=>setTooltip(null)}/>
+                        <ResBlock key={r.id} r={r} onHover={handleHover} onLeave={()=>setTooltip(null)} tx={tx}/>
                       ))}
                     </div>
                   )
@@ -317,7 +334,7 @@ export default function AgendaPage() {
             {Object.entries({confirmada:'#34d399',pendiente:'#fbbf24',completada:'#818cf8'}).map(([k,c])=>(
               <div key={k} style={{display:'flex',alignItems:'center',gap:6}}>
                 <div style={{width:10,height:10,borderRadius:'50%',background:c}}/>
-                <span style={{fontSize:11,color:C.muted,textTransform:'capitalize'}}>{STATUS_CFG[k]?.label||k}</span>
+                <span style={{fontSize:11,color:C.muted,textTransform:'capitalize'}}>{tx(STATUS_CFG[k]?.label||k)}</span>
               </div>
             ))}
           </div>
@@ -326,7 +343,7 @@ export default function AgendaPage() {
 
       {/* ── Tooltip flotante ─────────────────────────────────────────────── */}
       {tooltip&&<div style={{position:'fixed',left:Math.min(tooltip.x,window.innerWidth-250),top:Math.max(8,Math.min(tooltip.y,window.innerHeight-200)),zIndex:9999,pointerEvents:'none'}}>
-        <ResTooltip r={tooltip.r}/>
+        <ResTooltip r={tooltip.r} tx={tx}/>
       </div>}
     </div>
   )

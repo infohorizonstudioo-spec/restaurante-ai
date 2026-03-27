@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
-import { getStatusLabel } from '@/lib/i18n'
 
 import { C } from "@/lib/colors"
 
@@ -73,7 +72,7 @@ export default function FisioReservasView() {
   const [modal,setModal]       = useState<any|null>(null)
   const [search,setSearch]     = useState('')
   const [statusFilter,setStatusFilter] = useState<string>('todos')
-  const { template } = useTenant()
+  const { template, tx } = useTenant()
   const L = template?.labels
 
   const load = useCallback(async (tenantId:string) => {
@@ -100,7 +99,7 @@ export default function FisioReservasView() {
 
   useEffect(()=>{
     if (!tid) return
-    const ch = supabase.channel('fisio-res-rt')
+    const ch = supabase.channel('fisio-res-rt-' + tid)
       .on('postgres_changes',{event:'*',schema:'public',table:'reservations',filter:'tenant_id=eq.'+tid},()=>load(tid))
       .subscribe()
     return ()=>{ supabase.removeChannel(ch) }
@@ -136,10 +135,10 @@ export default function FisioReservasView() {
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,position:'sticky',top:0,zIndex:20}}>
         <div>
           <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{L?.pageTitle || 'Citas'} — Fisioterapia</h1>
-          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} citas para el {new Date(selected+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
+          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} citas para el {new Date(selected+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})}</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder='Buscar paciente…'
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tx('Buscar paciente…')}
             style={{padding:'8px 14px',fontSize:13,border:`1px solid ${C.borderMd}`,borderRadius:9,outline:'none',width:200,background:C.surface2,color:C.text,fontFamily:'inherit'}}/>
           <NotifBell/>
         </div>
@@ -169,7 +168,7 @@ export default function FisioReservasView() {
           <button key={f} onClick={()=>setStatusFilter(f)}
             style={{padding:'5px 12px',fontSize:11,fontWeight:600,borderRadius:7,border:`1px solid ${statusFilter===f?C.teal:C.border}`,
               background:statusFilter===f?C.tealDim:'transparent',color:statusFilter===f?C.teal:C.text3,cursor:'pointer',fontFamily:'inherit',textTransform:'capitalize'}}>
-            {f}
+            {tx(f === 'todos' ? 'Todos' : STATUS_STYLES[f]?.label || f)}
           </button>
         ))}
       </div>
@@ -178,13 +177,13 @@ export default function FisioReservasView() {
         {filtered.length===0 ? (
           <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'60px 24px',textAlign:'center'}}>
             <div style={{fontSize:36,marginBottom:10}}>🦴</div>
-            <p style={{fontSize:15,fontWeight:600,color:C.text,marginBottom:4}}>Sin citas este día</p>
-            <p style={{fontSize:13,color:C.text3}}>No hay citas de fisioterapia para el día seleccionado.</p>
+            <p style={{fontSize:15,fontWeight:600,color:C.text,marginBottom:4}}>{tx('Sin citas este día')}</p>
+            <p style={{fontSize:13,color:C.text3}}>{tx('No hay citas de fisioterapia para el día seleccionado.')}</p>
           </div>
         ) : filtered.map((r)=>{
           const ss = STATUS_STYLES[r.status]||STATUS_STYLES.pendiente
           const time = r.time||r.reservation_time||''
-          const name = r.customer_name||'Sin nombre'
+          const name = r.customer_name||tx('Sin nombre')
           const session = classifySession(r.notes)
           const zona = parseZonaFromNotes(r.notes)
           const fisio = parseFisioFromNotes(r.notes, r.table_name)
@@ -204,8 +203,8 @@ export default function FisioReservasView() {
                 </p>
               </div>
               <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
-                <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:session.bg,color:session.color,fontWeight:700,border:`1px solid ${session.color}25`,flexShrink:0}}>{session.label}</span>
-                <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,border:`1px solid ${ss.color}25`,flexShrink:0}}>{getStatusLabel(r.status, 'es')}</span>
+                <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:session.bg,color:session.color,fontWeight:700,border:`1px solid ${session.color}25`,flexShrink:0}}>{tx(session.label)}</span>
+                <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,border:`1px solid ${ss.color}25`,flexShrink:0}}>{tx(ss.label)}</span>
               </div>
             </div>
           )
@@ -217,26 +216,26 @@ export default function FisioReservasView() {
           <div style={{background:C.surface,border:`1px solid ${C.borderMd}`,borderRadius:16,padding:24,width:'100%',maxWidth:440,boxShadow:'0 20px 60px rgba(0,0,0,0.6)'}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
               <div>
-                <p style={{fontSize:18,fontWeight:700,color:C.text}}>{modal.customer_name||'Sin nombre'}</p>
+                <p style={{fontSize:18,fontWeight:700,color:C.text}}>{modal.customer_name||tx('Sin nombre')}</p>
                 <p style={{fontSize:13,color:C.text2,marginTop:2}}>
                   {(modal.date||modal.reservation_date)?.slice(0,10)} · {(modal.time||modal.reservation_time||'').slice(0,5)}
                 </p>
               </div>
               <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:C.text3}}>×</button>
             </div>
-            {modal.customer_phone&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>Tel: {modal.customer_phone}</p>}
-            {(() => { const z = parseZonaFromNotes(modal.notes); return z ? <p style={{fontSize:13,color:C.teal,marginBottom:8}}>Zona: {z}</p> : null })()}
-            {(() => { const f = parseFisioFromNotes(modal.notes, modal.table_name); return f ? <p style={{fontSize:13,color:C.text2,marginBottom:8}}>Fisioterapeuta: {f}</p> : null })()}
-            {(() => { const s = classifySession(modal.notes); return <p style={{fontSize:12,color:s.color,marginBottom:8,background:s.bg,padding:'6px 10px',borderRadius:8,display:'inline-block'}}>{s.label}</p> })()}
-            {modal.notes&&<p style={{fontSize:13,color:C.text2,marginBottom:16,background:C.surface2,padding:'8px 12px',borderRadius:9}}>Notas: {modal.notes}</p>}
-            {modal.source==='voice_agent'&&<p style={{fontSize:12,color:C.violet,marginBottom:16,background:C.violetDim,padding:'6px 10px',borderRadius:8}}>Cita creada por el agente de voz</p>}
+            {modal.customer_phone&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>{tx('Tel')}: {modal.customer_phone}</p>}
+            {(() => { const z = parseZonaFromNotes(modal.notes); return z ? <p style={{fontSize:13,color:C.teal,marginBottom:8}}>{tx('Zona')}: {z}</p> : null })()}
+            {(() => { const f = parseFisioFromNotes(modal.notes, modal.table_name); return f ? <p style={{fontSize:13,color:C.text2,marginBottom:8}}>{tx('Fisioterapeuta')}: {f}</p> : null })()}
+            {(() => { const s = classifySession(modal.notes); return <p style={{fontSize:12,color:s.color,marginBottom:8,background:s.bg,padding:'6px 10px',borderRadius:8,display:'inline-block'}}>{tx(s.label)}</p> })()}
+            {modal.notes&&<p style={{fontSize:13,color:C.text2,marginBottom:16,background:C.surface2,padding:'8px 12px',borderRadius:9}}>{tx('Notas')}: {modal.notes}</p>}
+            {modal.source==='voice_agent'&&<p style={{fontSize:12,color:C.violet,marginBottom:16,background:C.violetDim,padding:'6px 10px',borderRadius:8}}>{tx('Cita creada por el agente de voz')}</p>}
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>
               {['confirmada','pendiente','cancelada','completada'].map(s=>(
                 <button key={s} onClick={()=>updateStatus(modal.id,s)}
                   style={{padding:'7px 14px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${STATUS_STYLES[s]?.color||C.border}40`,
                     background: modal.status===s ? STATUS_STYLES[s]?.bg||C.surface2 : 'transparent',
                     color: STATUS_STYLES[s]?.color||C.text2,cursor:'pointer',fontFamily:'inherit'}}>
-                  {getStatusLabel(s, 'es')}
+                  {tx(STATUS_STYLES[s]?.label||s)}
                 </button>
               ))}
             </div>

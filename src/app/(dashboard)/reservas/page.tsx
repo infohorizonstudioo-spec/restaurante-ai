@@ -173,7 +173,7 @@ export default function ReservasPage() {
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,position:'sticky',top:0,zIndex:20}}>
         <div>
           <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{L?.pageTitle || 'Reservas'}</h1>
-          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} {tx('para el')} {new Date(selected+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
+          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} {tx('para el')} {new Date(selected+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})}</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
         <div style={{position:'relative'}}>

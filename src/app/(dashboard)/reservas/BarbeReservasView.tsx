@@ -4,7 +4,6 @@ import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
 import { useTenant } from '@/contexts/TenantContext'
-import { getStatusLabel } from '@/lib/i18n'
 
 import { C } from "@/lib/colors"
 
@@ -54,7 +53,7 @@ function getWeek(base: Date) {
 }
 
 export default function BarbeReservasView() {
-  const { tenant, template } = useTenant()
+  const { tenant, template, tx } = useTenant()
   const L = template?.labels
 
   const [base,setBase]         = useState(new Date())
@@ -90,7 +89,7 @@ export default function BarbeReservasView() {
 
   useEffect(()=>{
     if (!tid) return
-    const ch = supabase.channel('barbe-res-rt')
+    const ch = supabase.channel('barbe-res-rt-' + tid)
       .on('postgres_changes',{event:'*',schema:'public',table:'reservations',filter:'tenant_id=eq.'+tid},()=>load(tid))
       .subscribe()
     return ()=>{ supabase.removeChannel(ch) }
@@ -123,7 +122,7 @@ export default function BarbeReservasView() {
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,position:'sticky',top:0,zIndex:20}}>
         <div>
           <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{L?.pageTitle || 'Citas'}</h1>
-          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} para el {new Date(selected+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
+          <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} para el {new Date(selected+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})}</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={L?.buscarPlaceholder||'Buscar citas…'}
@@ -158,7 +157,7 @@ export default function BarbeReservasView() {
             border:`1px solid ${filterBarbero==='all'?C.amber+'44':C.border}`,
             background:filterBarbero==='all'?C.amberDim:'transparent',
             color:filterBarbero==='all'?C.amber:C.text2,cursor:'pointer',fontFamily:'inherit'
-          }}>Todos</button>
+          }}>{tx('Todos')}</button>
           {barberos.map(b=>(
             <button key={b} onClick={()=>setFilterBarbero(b)} style={{
               padding:'5px 14px',fontSize:12,fontWeight:600,borderRadius:9,
@@ -175,12 +174,12 @@ export default function BarbeReservasView() {
           <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'60px 24px',textAlign:'center'}}>
             <div style={{fontSize:36,marginBottom:10}}>🪒</div>
             <p style={{fontSize:15,fontWeight:600,color:C.text,marginBottom:4}}>{L?.emptyReservas||'Sin citas este día'}</p>
-            <p style={{fontSize:13,color:C.text3}}>No hay citas para el día seleccionado.</p>
+            <p style={{fontSize:13,color:C.text3}}>{tx('No hay citas para el día seleccionado.')}</p>
           </div>
         ) : filtered.map(r=>{
           const ss = STATUS_STYLES[r.status]||STATUS_STYLES.pendiente
           const time = r.time||r.reservation_time||''
-          const name = r.customer_name||'Sin nombre'
+          const name = r.customer_name||tx('Sin nombre')
           const svc = detectService(r.notes||'')
           const svcBadge = svc ? SERVICE_BADGES[svc] : null
           return (
@@ -202,7 +201,7 @@ export default function BarbeReservasView() {
                 </div>
               </div>
               <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
-                <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,border:`1px solid ${ss.color}25`,flexShrink:0}}>{getStatusLabel(r.status, 'es')}</span>
+                <span style={{fontSize:10,padding:'3px 9px',borderRadius:8,background:ss.bg,color:ss.color,fontWeight:700,border:`1px solid ${ss.color}25`,flexShrink:0}}>{tx(ss.label)}</span>
                 {r.customer_phone&&<p style={{fontSize:11,color:C.text3}}>{r.customer_phone}</p>}
               </div>
             </div>
@@ -216,7 +215,7 @@ export default function BarbeReservasView() {
           <div style={{background:C.surface,border:`1px solid ${C.borderMd}`,borderRadius:16,padding:24,width:'100%',maxWidth:440,boxShadow:'0 20px 60px rgba(0,0,0,0.6)'}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
               <div>
-                <p style={{fontSize:18,fontWeight:700,color:C.text}}>{modal.customer_name||'Sin nombre'}</p>
+                <p style={{fontSize:18,fontWeight:700,color:C.text}}>{modal.customer_name||tx('Sin nombre')}</p>
                 <p style={{fontSize:13,color:C.text2,marginTop:2}}>
                   {(modal.date||modal.reservation_date)?.slice(0,10)} · {(modal.time||modal.reservation_time||'').slice(0,5)}
                 </p>
@@ -224,16 +223,16 @@ export default function BarbeReservasView() {
               <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:C.text3}}>×</button>
             </div>
             {modal.customer_phone&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>📞 {modal.customer_phone}</p>}
-            {modal.table_name&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>🪒 Barbero: {modal.table_name}</p>}
+            {modal.table_name&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>🪒 {tx('Barbero')}: {modal.table_name}</p>}
             {modal.notes&&<p style={{fontSize:13,color:C.text2,marginBottom:16}}>📝 {modal.notes}</p>}
-            {modal.source==='voice_agent'&&<p style={{fontSize:12,color:C.amber,marginBottom:16,background:C.amberDim,padding:'6px 10px',borderRadius:8}}>📞 Cita creada por el agente de voz</p>}
+            {modal.source==='voice_agent'&&<p style={{fontSize:12,color:C.amber,marginBottom:16,background:C.amberDim,padding:'6px 10px',borderRadius:8}}>📞 {tx('Cita creada por el agente de voz')}</p>}
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>
               {['confirmada','pendiente','cancelada','completada'].map(s=>(
                 <button key={s} onClick={()=>updateStatus(modal.id,s)}
                   style={{padding:'7px 14px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${STATUS_STYLES[s]?.color||C.border}40`,
                     background: modal.status===s ? STATUS_STYLES[s]?.bg||C.surface2 : 'transparent',
                     color: STATUS_STYLES[s]?.color||C.text2,cursor:'pointer',fontFamily:'inherit'}}>
-                  {getStatusLabel(s, 'es')}
+                  {tx(STATUS_STYLES[s]?.label||s)}
                 </button>
               ))}
             </div>

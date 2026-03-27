@@ -9,7 +9,7 @@ import NotifBell from '@/components/NotifBell'
 import { C } from "@/lib/colors"
 
 export default function EcomClientesView() {
-  const { tenant } = useTenant()
+  const { tenant, tx } = useTenant()
   const cs = getCommonStrings('es')
   const [clientes, setClientes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -48,11 +48,11 @@ export default function EcomClientesView() {
     <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20 }}>
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Clientes</h1>
-          <p style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>{clientes.length} clientes</p>
+          <h1 style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{tx('Clientes')}</h1>
+          <p style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>{clientes.length} {tx('clientes')}</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar clientes…"
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tx('Buscar clientes…')}
             style={{ padding: '8px 14px', fontSize: 13, border: `1px solid ${C.borderMd}`, borderRadius: 9, outline: 'none', width: 220, background: C.surface2, color: C.text, fontFamily: 'inherit' }} />
           <NotifBell />
         </div>
@@ -75,9 +75,9 @@ export default function EcomClientesView() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
-                  <p style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>{c.email || c.phone || 'Sin contacto'}</p>
+                  <p style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>{c.email || c.phone || tx('Sin contacto')}</p>
                 </div>
-                <p style={{ fontSize: 11, color: C.text2, flexShrink: 0 }}>{c.total_reservations || 0} pedidos</p>
+                <p style={{ fontSize: 11, color: C.text2, flexShrink: 0 }}>{c.total_reservations || 0} {tx('pedidos')}</p>
               </div>
             </div>
           ))}
@@ -87,7 +87,7 @@ export default function EcomClientesView() {
           {!selected ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
               <div style={{ fontSize: 48, marginBottom: 14 }}>🛍️</div>
-              <p style={{ fontSize: 14, color: C.text3 }}>Selecciona un cliente</p>
+              <p style={{ fontSize: 14, color: C.text3 }}>{tx('Selecciona un cliente')}</p>
             </div>
           ) : (
             <>
@@ -102,9 +102,9 @@ export default function EcomClientesView() {
                   </div>
                 </div>
               </div>
-              <p style={{ fontSize: 10, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Pedidos</p>
-              {loadingP ? <p style={{ color: C.text3 }}>Cargando...</p>
-                : pedidos.length === 0 ? <p style={{ fontSize: 13, color: C.text3 }}>Sin pedidos registrados.</p>
+              <p style={{ fontSize: 10, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{tx('Pedidos')}</p>
+              {loadingP ? <p style={{ color: C.text3 }}>{tx('Cargando...')}</p>
+                : pedidos.length === 0 ? <p style={{ fontSize: 13, color: C.text3 }}>{tx('Sin pedidos registrados.')}</p>
                 : pedidos.map((p, i) => (
                   <div key={i} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', marginBottom: 8, display: 'flex', gap: 10 }}>
                     <span style={{ fontSize: 16 }}>🛍️</span>
