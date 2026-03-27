@@ -58,7 +58,7 @@ const FLAG_LABELS: Record<string,string> = {
   surgery:'Cirugía', long_stay:'Estancia larga', high_value_order:'Alto valor',
   tow_required:'Necesita grúa', return_request:'Devolución',
 }
-// Opciones en lenguaje humano para corregir lo que hizo Sofía
+// Human-readable correction options
 const CORRECTION_KEYS = [
   {value:'confirmed',             key:'Sí, quedó bien confirmado', icon:'✅'},
   {value:'pending_review',        key:'Quiero revisarlo yo', icon:'👁'},

@@ -9,7 +9,7 @@ import NotifBell from '@/components/NotifBell'
 import Link from 'next/link'
 
 const DEFAULT_HOURS = Array.from({length:15},(_,i)=>i+8)  // 08:00 → 22:00
-const _DAY_LABELS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']  // reserved
+
 
 /** Generate short day names (Mon→LUN etc.) from locale, starting Monday */
 function getDayShort(): string[] {
@@ -55,7 +55,6 @@ function getWeekDays(base: Date): Date[] {
 }
 
 function fmtTime(t:string){ return (t||'').slice(0,5) }
-function _fmtDate(d:Date){ return `${d.getDate()} ${cap(fmtMonth(d))} ${d.getFullYear()}` }  // reserved
 
 
 // ── Tooltip flotante ──────────────────────────────────────────────────────

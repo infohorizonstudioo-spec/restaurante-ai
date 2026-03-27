@@ -134,14 +134,19 @@ export default function MensajesPage() {
   // ── Escalation actions ─────────────────────────────────────
   const handleEscalation = async (action: 'escalate' | 'resume' | 'close') => {
     if (!selected || !tid) return
-    await fetch('/api/channels/escalate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conversationId: selected.id, tenantId: tid, action }),
-    })
-    const newStatus = action === 'escalate' ? 'escalated' : action === 'resume' ? 'active' : 'closed'
-    setSelected({ ...selected, status: newStatus })
-    loadConversations(tid)
+    try {
+      const res = await fetch('/api/channels/escalate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: selected.id, tenantId: tid, action }),
+      })
+      if (!res.ok) throw new Error()
+      const newStatus = action === 'escalate' ? 'escalated' : action === 'resume' ? 'active' : 'closed'
+      setSelected({ ...selected, status: newStatus })
+      loadConversations(tid)
+    } catch {
+      toast.push({ title: tx('Error'), body: tx('No se pudo completar la acción'), type: 'message', priority: 'error', icon: '⚠️' })
+    }
   }
 
   // ── Filter conversations ───────────────────────────────────

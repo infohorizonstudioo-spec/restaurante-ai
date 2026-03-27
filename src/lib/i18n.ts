@@ -936,6 +936,9 @@ const TX: Record<string, Record<string, string>> = {
   'Campo obligatorio': {en:'Required field',fr:'Champ obligatoire',pt:'Campo obrigatório'},
   'Precio no válido': {en:'Invalid price',fr:'Prix non valide',pt:'Preço inválido'},
   'Mínimo 1': {en:'Minimum 1',fr:'Minimum 1',pt:'Mínimo 1'},
+  'Sin datos': {en:'No data',fr:'Pas de données',pt:'Sem dados'},
+  'No se pudo completar la acción': {en:'Could not complete the action',fr:'Impossible de compléter l\'action',pt:'Não foi possível completar a ação'},
+  'Error al guardar': {en:'Error saving',fr:'Erreur lors de l\'enregistrement',pt:'Erro ao guardar'},
 }
 
 export function tx(text: string, locale: string): string {
@@ -946,20 +949,21 @@ export function tx(text: string, locale: string): string {
 /** Common UI strings that are scattered everywhere */
 export function getCommonStrings(locale: string = 'es') {
   const t = getTranslations(locale)
+  const _tx = (s: string) => tx(s, locale)
   return {
-    today: locale === 'es' ? 'Hoy' : locale === 'en' ? 'Today' : locale === 'fr' ? "Aujourd'hui" : locale === 'pt' ? 'Hoje' : 'Hoy',
-    people: locale === 'es' ? 'personas' : locale === 'en' ? 'people' : locale === 'fr' ? 'personnes' : locale === 'pt' ? 'pessoas' : 'personas',
-    noData: locale === 'es' ? 'Sin datos' : locale === 'en' ? 'No data' : locale === 'fr' ? 'Pas de données' : locale === 'pt' ? 'Sem dados' : 'Sin datos',
-    recentCalls: locale === 'es' ? 'Llamadas recientes' : locale === 'en' ? 'Recent calls' : locale === 'fr' ? 'Appels récents' : locale === 'pt' ? 'Chamadas recentes' : 'Llamadas recientes',
-    viewAll: locale === 'es' ? 'Ver todas →' : locale === 'en' ? 'View all →' : locale === 'fr' ? 'Voir tout →' : locale === 'pt' ? 'Ver todas →' : 'Ver todas →',
-    manage: locale === 'es' ? 'Gestionar →' : locale === 'en' ? 'Manage →' : locale === 'fr' ? 'Gérer →' : locale === 'pt' ? 'Gerir →' : 'Gestionar →',
-    saveChanges: locale === 'es' ? 'Guardar cambios' : locale === 'en' ? 'Save changes' : locale === 'fr' ? 'Enregistrer' : locale === 'pt' ? 'Guardar alterações' : 'Guardar cambios',
-    callBack: locale === 'es' ? 'Llamar de vuelta' : locale === 'en' ? 'Call back' : locale === 'fr' ? 'Rappeler' : locale === 'pt' ? 'Ligar de volta' : 'Llamar de vuelta',
-    noCalls: locale === 'es' ? 'Sin llamadas aún' : locale === 'en' ? 'No calls yet' : locale === 'fr' ? "Pas d'appels" : locale === 'pt' ? 'Sem chamadas' : 'Sin llamadas aún',
-    noClients: locale === 'es' ? 'Sin clientes' : locale === 'en' ? 'No clients' : locale === 'fr' ? 'Pas de clients' : locale === 'pt' ? 'Sem clientes' : 'Sin clientes',
-    noActivity: locale === 'es' ? 'Sin actividad registrada' : locale === 'en' ? 'No activity recorded' : locale === 'fr' ? 'Aucune activité' : locale === 'pt' ? 'Sem atividade' : 'Sin actividad registrada',
-    forecast: locale === 'es' ? 'Así pinta hoy' : locale === 'en' ? "Today's forecast" : locale === 'fr' ? "Prévision du jour" : locale === 'pt' ? 'Previsão de hoje' : 'Así pinta hoy',
-    callsTotal: locale === 'es' ? 'llamadas en total' : locale === 'en' ? 'total calls' : locale === 'fr' ? 'appels au total' : locale === 'pt' ? 'chamadas no total' : 'llamadas en total',
+    today: _tx('Hoy'),
+    people: _tx('personas'),
+    noData: _tx('Sin datos'),
+    recentCalls: _tx('Llamadas recientes'),
+    viewAll: _tx('Ver todas →'),
+    manage: _tx('Gestionar →'),
+    saveChanges: _tx('Guardar cambios'),
+    callBack: _tx('Llamar de vuelta'),
+    noCalls: _tx('Sin llamadas aún'),
+    noClients: _tx('Sin clientes'),
+    noActivity: _tx('Sin actividad registrada'),
+    forecast: _tx('Así pinta hoy'),
+    callsTotal: _tx('llamadas en total'),
   }
 }
 

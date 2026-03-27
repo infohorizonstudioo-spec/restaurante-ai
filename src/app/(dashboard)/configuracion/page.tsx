@@ -645,6 +645,7 @@ export default function ConfiguracionPage() {
 
 // ── Alert Rules Section Component ────────────────────────────────
 function AlertRulesSection({ tenantId, tx: _tx }: { tenantId?: string; tx: (s: string) => string }) {
+  const toast = useToast()
   const [rules, setRules] = useState<any[]>([])
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -667,7 +668,9 @@ function AlertRulesSection({ tenantId, tx: _tx }: { tenantId?: string; tx: (s: s
     fetch(`/api/tenant/alert-rules?tenant_id=${tenantId}`)
       .then(r => r.json())
       .then(d => setRules(d.rules || []))
-      .catch(() => {})
+      .catch(() => {
+        toast.push({ title: 'Error al cargar reglas de alertas', type: 'error', priority: 'warning', icon: '⚠️' })
+      })
   }, [tenantId])
 
   const toggleRule = (eventType: string, field: string, value: any) => {

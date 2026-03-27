@@ -14,6 +14,7 @@ import AcademiaAlumnosView from './AcademiaAlumnosView'
 import BarbeClientesView from './BarbeClientesView'
 import EcomClientesView from './EcomClientesView'
 import { C } from '@/lib/colors'
+import { useToast } from '@/components/NotificationToast'
 
 // Router — decide qué vista mostrar según el tipo de negocio
 export default function ClientesPage() {
@@ -45,6 +46,7 @@ function DefaultClientesView() {
   const [editVip,setEditVip] = useState(false)
   const [scores,setScores] = useState<Record<string,any>>({})
   const { template, t, tx } = useTenant()
+  const toast = useToast()
   const cs = getCommonStrings(t.locale)
 
   const L = template?.labels
@@ -68,7 +70,9 @@ function DefaultClientesView() {
       const sess = await supabase.auth.getSession()
       if (sess.data.session) {
         fetch('/api/customer-scores', { headers: { 'Authorization': 'Bearer ' + sess.data.session.access_token } })
-          .then(r => r.json()).then(d => setScores(d.scores || {})).catch(() => {})
+          .then(r => r.json()).then(d => setScores(d.scores || {})).catch(() => {
+            toast.push({ title: 'Error al cargar puntuaciones', type: 'error', priority: 'warning', icon: '⚠️' })
+          })
       }
     })()
   },[load])

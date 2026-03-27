@@ -19,6 +19,7 @@ import AcademiaClasesView from './AcademiaClasesView'
 import Link from 'next/link'
 import { C } from '@/lib/colors'
 import { RESERVATION_STATUS } from '@/lib/status-config'
+import { useToast } from '@/components/NotificationToast'
 
 const DAYS = ['DO','LU','MA','MI','JU','VI','SA']
 
@@ -36,6 +37,7 @@ function getWeek(base: Date) {
 
 export default function ReservasPage() {
   const { tenant, template, t, tx } = useTenant()
+  const toast = useToast()
   if (tenant?.type === 'ecommerce') return <EcomReservasView />
   if (tenant?.type === 'veterinaria') return <VetReservasView />
   if (tenant?.type === 'barberia') return <BarbeReservasView />
@@ -124,7 +126,9 @@ export default function ReservasPage() {
                   ? `✅ ${r.customer_name}, tu reserva está confirmada: ${r.date || r.reservation_date} a las ${(r.time || r.reservation_time || '').slice(0,5)}, ${r.people || r.party_size || 1} personas. ¡Te esperamos!`
                   : `❌ ${r.customer_name}, tu reserva del ${r.date || r.reservation_date} a las ${(r.time || r.reservation_time || '').slice(0,5)} ha sido cancelada. Si necesitas algo, llámanos.`
               })
-            }).catch(() => {})
+            }).catch(() => {
+              toast.push({ title: 'No se pudo enviar el SMS de confirmación', type: 'sms_error', priority: 'warning', icon: '⚠️' })
+            })
           }
         }
         // Si cancelan, avisar al primer cliente en lista de espera
@@ -145,7 +149,9 @@ export default function ReservasPage() {
                     to: waitlisted.customer_phone,
                     message: `🎉 Ha quedado un hueco el ${resDate}. Llámanos para confirmar tu reserva.`
                   })
-                }).catch(() => {})
+                }).catch(() => {
+                  toast.push({ title: 'No se pudo notificar al cliente en lista de espera', type: 'sms_error', priority: 'warning', icon: '⚠️' })
+                })
                 // Marcar como notificado
                 await supabase.from('waitlist').update({ status: 'notified' }).eq('id', waitlisted.id)
               }

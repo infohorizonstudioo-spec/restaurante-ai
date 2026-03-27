@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
+import { useToast } from '@/components/NotificationToast'
 
 const HOURS = Array.from({length:30},(_,i)=>{
   const h = Math.floor(i/2)+8
@@ -15,6 +16,7 @@ const HOURS = Array.from({length:30},(_,i)=>{
 export default function NuevaReservaPage() {
   const router = useRouter()
   const { template, tx } = useTenant()
+  const toast = useToast()
   const L = template?.labels
   const [tid, setTid]       = useState<string|null>(null)
   const [loading, setLoading] = useState(true)
@@ -88,7 +90,9 @@ export default function NuevaReservaPage() {
               to: form.customer_phone,
               message: `✅ ${L?.reserva || 'Reserva'} confirmada: ${form.customer_name}, ${dateStr} a las ${form.time}, ${form.people} personas. ¡Te esperamos!`
             })
-          }).catch(() => {})
+          }).catch(() => {
+            toast.push({ title: 'Reserva creada, pero no se pudo enviar el SMS', type: 'sms_error', priority: 'warning', icon: '⚠️' })
+          })
         }
       }
 
