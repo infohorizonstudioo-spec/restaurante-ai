@@ -23,6 +23,55 @@
 import { logger } from './logger'
 
 // ═══════════════════════════════════════════════════════════════════════════
+// PLAN B: COLD START AUTO-RECOVERY — restaura estado al primer request
+// ═══════════════════════════════════════════════════════════════════════════
+
+let stateRestored = false
+let restoreInProgress = false
+
+/**
+ * Se ejecuta UNA vez por cold start, en background, sin bloquear el request.
+ * El Guardian protege MIENTRAS restaura (patrones estáticos siempre activos).
+ */
+function triggerColdStartRecovery(): void {
+  if (stateRestored || restoreInProgress) return
+  restoreInProgress = true
+
+  import('./security-persistence').then(async ({ loadState }) => {
+    try {
+      const state = await loadState()
+      if (state) {
+        const now = Date.now()
+        let ips = 0, patterns = 0
+        for (const entry of state.blockedIPs) {
+          if (entry.until > now) {
+            const profile = getProfile(entry.ip, `recovered_${entry.ip}`)
+            profile.blockUntil = entry.until
+            profile.strikeCount = entry.strikes
+            ips++
+          }
+        }
+        for (const p of state.learnedPatterns) {
+          if (!learnedPatterns.some(lp => lp.pattern === p.pattern)) {
+            learnedPatterns.push({
+              pattern: p.pattern, type: p.type,
+              confidence: p.confidence, matchCount: p.matchCount,
+              createdAt: now, source: 'cold-start',
+            })
+            patterns++
+          }
+        }
+        if (ips > 0 || patterns > 0) {
+          logger.info('Guardian recovered from cold start', { blockedIPs: ips, learnedPatterns: patterns })
+        }
+      }
+    } catch { /* Guardian funciona sin estado — plan B del plan B */ }
+    stateRestored = true
+    restoreInProgress = false
+  }).catch(() => { stateRestored = true; restoreInProgress = false })
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -792,6 +841,27 @@ function escalate(profile: AttackerProfile, score: number): void {
     isBot: detectBot(profile),
     fingerprint: profile.fingerprint,
   })
+
+  // Plan B: auto-persistir inmediatamente al bloquear (no esperar al cron)
+  autoSaveState()
+}
+
+/** Guarda estado en background tras cada bloqueo — fire and forget */
+let lastAutoSave = 0
+function autoSaveState(): void {
+  const now = Date.now()
+  if (now - lastAutoSave < 60_000) return // máximo 1 save por minuto
+  lastAutoSave = now
+
+  import('./security-persistence').then(async ({ persistState }) => {
+    try {
+      await persistState({
+        blockedIPs: getBlockedIPs(),
+        learnedPatterns: getLearnedPatternsExport(),
+        lastUpdated: new Date().toISOString(),
+      })
+    } catch { /* best effort */ }
+  }).catch(() => {})
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -799,6 +869,9 @@ function escalate(profile: AttackerProfile, score: number): void {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function analyzeRequest(req: Request, body?: string): ThreatAssessment {
+  // Plan B: restaurar estado persistido al primer request tras cold start
+  triggerColdStartRecovery()
+
   const ip = extractIp(req)
   const fingerprint = computeFingerprint(req)
   const profile = getProfile(ip, fingerprint)

@@ -109,10 +109,11 @@ export async function loadState(): Promise<PersistedState | null> {
 
     const state = JSON.parse(data.body) as PersistedState
 
-    // Only restore if state is recent (< 1 hour old)
+    // Only restore if state is recent (< 24 hours old)
+    // Plan B: ventana amplia para cubrir downtime, weekends, etc.
     const lastUpdated = new Date(state.lastUpdated).getTime()
-    if (Date.now() - lastUpdated > 3600_000) {
-      logger.info('Security state too old, starting fresh')
+    if (Date.now() - lastUpdated > 24 * 3600_000) {
+      logger.info('Security state too old (>24h), starting fresh')
       return null
     }
 
