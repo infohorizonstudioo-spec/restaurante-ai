@@ -42,6 +42,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing from/to' }, { status: 400 })
     }
 
+    // Validate sender email format to reject obviously spoofed addresses
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(from)) {
+      logger.security('Email webhook: invalid sender format', { from })
+      return NextResponse.json({ error: 'Invalid sender address' }, { status: 400 })
+    }
+
+    // Validate that the 'to' address belongs to a configured tenant
+    if (!emailRegex.test(to)) {
+      logger.security('Email webhook: invalid recipient format', { to })
+      return NextResponse.json({ error: 'Invalid recipient address' }, { status: 400 })
+    }
+
     // Use plain text content, fallback to stripping HTML
     const content = textContent || htmlContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 

@@ -27,6 +27,8 @@ export async function GET(req: NextRequest) {
   const type = url.searchParams.get('type') || 'reservations'
   const tid = auth.tenantId
 
+  logger.security('Data exported', { tenantId: tid, type })
+
   let rows: any[] = []
   let headers: string[] = []
   let filename = 'export.csv'

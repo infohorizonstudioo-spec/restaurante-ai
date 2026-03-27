@@ -15,6 +15,13 @@ export async function POST(req: NextRequest) {
     if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
     const body = await req.json()
 
+    // Per-tenant rate limit to prevent reservation spam
+    const tenantId = sanitizeUUID(body.tenant_id)
+    if (tenantId) {
+      const tenantRl = rateLimitByIp(req, { limit: 10, windowSeconds: 60 }, `agent:reservation:${tenantId}`)
+      if (tenantRl.blocked) return tenantRl.response
+    }
+
     const sanitized = {
       ...body,
       tenant_id: sanitizeUUID(body.tenant_id),

@@ -148,7 +148,12 @@
       "Bash(done)",
       "Bash(git stash:*)",
       "Bash(wc -l /c/Users/krush/restaurante-ai/src/app/\\\\\\(dashboard\\\\\\)/*/*View.tsx)",
-      "Bash(ls -la /c/Users/krush/restaurante-ai/src/app/\\\\\\(dashboard\\\\\\)/dashboard/)"
+      "Bash(ls -la /c/Users/krush/restaurante-ai/src/app/\\\\\\(dashboard\\\\\\)/dashboard/)",
+      "Bash(npx vitest:*)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(find /c/Users/krush/restaurante-ai -type f \\\\\\(-name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js \\\\\\))",
+      "Bash(grep -n \"\\\\.or\\(\" /c/Users/krush/restaurante-ai/src/lib/*.ts)"
     ]
   }
 }

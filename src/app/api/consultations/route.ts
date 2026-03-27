@@ -24,8 +24,8 @@ export async function GET(req: Request) {
     if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     const tenantId = auth.tenantId
     const url = new URL(req.url)
-    const limit  = parseInt(url.searchParams.get('limit') || '50')
-    const page   = parseInt(url.searchParams.get('page')  || '0')
+    const limit  = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '50'), 1), 100)
+    const page   = Math.min(Math.max(parseInt(url.searchParams.get('page')  || '0'), 0), 1000)
     const status = url.searchParams.get('status') || null
 
     let query = admin.from('consultation_events')
@@ -114,6 +114,19 @@ export async function PATCH(req: Request) {
     const validStatuses = ['collecting', 'confirmed', 'completed', 'cancelled', 'escalated', 'no_show']
     if (body.status && !validStatuses.includes(body.status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
+    }
+
+    // Before updating, check current state
+    const { data: current } = await admin.from('consultation_events')
+      .select('status')
+      .eq('id', id)
+      .eq('tenant_id', tenant_id)
+      .maybeSingle()
+
+    // Don't allow updates on terminal states
+    const terminalStates = ['completed', 'cancelled']
+    if (current && terminalStates.includes(current.status)) {
+      return NextResponse.json({ error: 'Cannot update completed/cancelled consultation' }, { status: 409 })
     }
 
     const updates: any = { updated_at: new Date().toISOString() }

@@ -11,6 +11,12 @@ function getAdmin() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
+// Idempotency: track processed Stripe event IDs to prevent replay attacks
+const processedEvents = new Set<string>()
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => { processedEvents.clear() }, 10 * 60_000)
+}
+
 const PLAN_LIMITS: Record<string, { calls: number; rate: number }> = {
   starter:  { calls: 50,  rate: 0.90 },
   pro:      { calls: 200, rate: 0.70 },
@@ -57,6 +63,12 @@ export async function POST(req: Request) {
     logger.security('Stripe webhook: invalid signature', { error: e.message })
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
+
+  // Idempotency check: skip already-processed events
+  if (processedEvents.has(event.id)) {
+    return NextResponse.json({ received: true, duplicate: true })
+  }
+  processedEvents.add(event.id)
 
   try {
     switch (event.type) {

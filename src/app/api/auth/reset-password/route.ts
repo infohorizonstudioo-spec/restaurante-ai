@@ -15,6 +15,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: auth.error }, { status: auth.status || 401 })
     }
 
+    // Per-user rate limit: max 2 resets per 10 minutes regardless of IP
+    const userRl = rateLimitByIp(req, { limit: 2, windowSeconds: 600 }, `reset:${auth.userId}`)
+    if (userRl.blocked) return userRl.response
+
     const { password } = await req.json()
     if (!password || typeof password !== 'string' || password.length < 8 || password.length > 128) {
       return NextResponse.json({ error: 'Password debe tener entre 8 y 128 caracteres' }, { status: 400 })

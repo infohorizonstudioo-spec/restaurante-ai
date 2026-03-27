@@ -27,6 +27,11 @@ export async function GET(req: NextRequest) {
     const tenantId = auth.tenantId
     const channel = req.nextUrl.searchParams.get('channel')
 
+    const ALLOWED_CHANNELS = ['whatsapp', 'email', 'sms', 'voice', 'web']
+    if (channel && !ALLOWED_CHANNELS.includes(channel)) {
+      return NextResponse.json({ error: 'Invalid channel' }, { status: 400 })
+    }
+
     let query = supabase.from('channel_configs').select('*').eq('tenant_id', tenantId)
     if (channel) query = query.eq('channel', channel)
 
@@ -59,6 +64,11 @@ export async function PUT(req: NextRequest) {
     const tenant_id = auth.tenantId
     if (!channel) {
       return NextResponse.json({ error: 'channel required' }, { status: 400 })
+    }
+
+    const ALLOWED_CHANNELS = ['whatsapp', 'email', 'sms', 'voice', 'web']
+    if (!ALLOWED_CHANNELS.includes(channel)) {
+      return NextResponse.json({ error: 'Invalid channel' }, { status: 400 })
     }
 
     // Upsert channel config

@@ -22,8 +22,8 @@ export async function GET(req: Request) {
     if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     const tenantId = auth.tenantId
     const url = new URL(req.url)
-    const limit = parseInt(url.searchParams.get('limit') || '50')
-    const page  = parseInt(url.searchParams.get('page')  || '0')
+    const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '50'), 1), 100)
+    const page  = Math.min(Math.max(parseInt(url.searchParams.get('page')  || '0'), 0), 1000)
 
     const { data, error, count } = await admin.from('order_events')
       .select('id,tenant_id,call_sid,status,order_type,customer_name,customer_phone,items,notes,pickup_time,total_estimate,table_id,created_at,updated_at', { count: 'exact' })

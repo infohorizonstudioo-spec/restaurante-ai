@@ -53,6 +53,13 @@ export async function POST(req: Request) {
     })
     if (userError) return NextResponse.json({ error: 'Internal server error' }, { status: 400 })
 
+    // Verificar que el tenant existe antes de asignar
+    const { data: targetTenant, error: tenantError } = await admin.from('tenants').select('id').eq('id', tenantId).maybeSingle()
+    if (tenantError || !targetTenant) {
+      logger.security('Admin create-user: target tenant does not exist', { tenantId })
+      return NextResponse.json({ error: 'Tenant no existe' }, { status: 400 })
+    }
+
     // El trigger handle_new_user crea el perfil automáticamente.
     // Solo actualizamos tenant_id y role.
     const { error: profileError } = await admin.from('profiles')
@@ -60,7 +67,8 @@ export async function POST(req: Request) {
       .eq('id', userData.user.id)
     if (profileError) return NextResponse.json({ error: 'Internal server error' }, { status: 400 })
 
-    logger.info('Admin: user created', { userId: userData.user.id, tenantId, role })
+    // Log cross-tenant creation for audit trail
+    logger.info('Admin: user created', { userId: userData.user.id, targetTenantId: tenantId, role })
     return NextResponse.json({ success: true, userId: userData.user.id })
   } catch (e: any) {
     logger.error('Admin create-user: unexpected error', {}, e)
