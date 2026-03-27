@@ -10,6 +10,7 @@ import { makeDecision, TypeRules } from '@/lib/agent-decision'
 import { classifyInteraction, generateSummary, learnFromInteraction } from '@/lib/intelligence-engine'
 import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
+import { detectLanguage, classifyClientType, buildLanguageAwareSummary, buildMultilangSms, type LangCode } from '@/lib/language-engine'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -440,6 +441,16 @@ export async function POST(req: Request) {
     const confidence = decisionResult.confidence
     const specialFlags = decisionResult.flags || []
 
+    // ── Language detection & client classification ─────────────────────────
+    const langDetection = detectLanguage(transcript)
+    const detectedLang = langDetection.lang
+    const clientType = classifyClientType(detectedLang, callerPhone)
+
+    // Extract language tag from summary if agent included it (e.g. "[EN] ...")
+    const langTagMatch = analysis.summary?.match(/^\[([A-Z]{2})\]\s*/)
+    const agentDetectedLang = langTagMatch?.[1]?.toLowerCase() as LangCode | undefined
+    const finalLang: LangCode = agentDetectedLang || detectedLang
+
     const isBookingIntent = analysis.intent === 'reserva' || analysis.intent === 'pedido'
     const decisionStatus = analysis.intent === 'cancelacion' ? 'cancelled'
       : isBookingIntent ? decisionResult.status
@@ -452,14 +463,25 @@ export async function POST(req: Request) {
       party_size: analysis.details?.party_size,
     })
 
+    // Build enhanced summary with language context
+    const enhancedSummary = clientType === 'extranjero'
+      ? buildLanguageAwareSummary({
+          lang: finalLang,
+          clientType,
+          customerName: analysis.customer_name,
+          intent: analysis.intent,
+          details: analysis.summary,
+        })
+      : analysis.summary
+
     const decision = {
       status:           decisionStatus,
       intent:           analysis.intent,
-      summary:          analysis.summary,
+      summary:          enhancedSummary,
       customer_name:    analysis.customer_name,
       action_required:  analysis.action_required,
       phone_number:     callerPhone,
-      details:          analysis.details,
+      details:          { ...analysis.details, detected_language: finalLang, client_type: clientType } as Record<string, any>,
       confidence,
       special_flags:    specialFlags,
       reasoning_label:  `${analysis.intent} — confianza ${(confidence * 100).toFixed(0)}%`,
@@ -506,11 +528,42 @@ export async function POST(req: Request) {
             applied_rule:        decision.applied_rule,
             knowledge_source:    decision.knowledge_source,
             decision_trace:      decision.decision_trace,
+            detected_language:   finalLang,
+            client_type:         clientType,
             ...(callerPhone ? { caller_phone: callerPhone, from_number: callerPhone } : {}),
           })
           .eq('call_sid', key)
           .eq('tenant_id', tenantId)
       } catch {}
+    }
+
+    // ── Multilanguage SMS after reservation ───────────────────────────────
+    const sendMultilangSms = async () => {
+      if (decision.intent !== 'reserva' || decision.status !== 'confirmed') return
+      if (!callerPhone) return
+      try {
+        const smsText = buildMultilangSms(finalLang, 'confirmed', {
+          businessName: businessName,
+          customerName: decision.customer_name || 'Cliente',
+          date: analysis.details?.date || new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+          time: analysis.details?.time || '20:00',
+          people: analysis.details?.party_size || 2,
+          bookingLabel: resolveTemplate(tenantInfo?.type || 'otro').labels.reserva.toLowerCase(),
+        })
+        // Send SMS via internal API
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+        if (appUrl) {
+          await fetch(`${appUrl}/api/sms/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: callerPhone,
+              message: smsText,
+              tenant_id: tenantId,
+            }),
+          })
+        }
+      } catch { /* SMS is best-effort */ }
     }
 
     const autoCreateReservation = async () => {
@@ -654,6 +707,7 @@ export async function POST(req: Request) {
       autoCreateReservation(),
       sendNotification(),
       learnFromCallAsync(),
+      sendMultilangSms(),
     ])
 
     // ── Backfill: crear registros en conversations + messages ───────────────
@@ -673,7 +727,7 @@ export async function POST(req: Request) {
         decision_flags: decision.special_flags,
         reasoning_label: decision.reasoning_label,
         closed_at: new Date().toISOString(),
-        metadata: { duration, source: 'voice_backfill' },
+        metadata: { duration, source: 'voice_backfill', detected_language: finalLang, client_type: clientType },
       }).select('id').maybeSingle()
 
       if (convRecord?.id) {
@@ -744,6 +798,8 @@ export async function POST(req: Request) {
       knowledge_source: decision.knowledge_source,
       decision_trace:   decision.decision_trace,
       duration,
+      detected_language: finalLang,
+      client_type:       clientType,
       billed:           shouldBill,
       ms:               Date.now() - t0,
     })

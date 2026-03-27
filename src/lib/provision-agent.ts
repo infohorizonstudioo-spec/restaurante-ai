@@ -16,6 +16,9 @@ import { createClient } from "@supabase/supabase-js"
 import { sanitizeForLLM } from "./sanitize"
 import { getVoiceConfig } from "@/lib/elevenlabs"
 import { logger } from "@/lib/logger"
+import { buildPersonalityPrompt, getIdealSpeechSpeed, getIdealTurnTimeout } from "@/lib/business-brain"
+import { buildChannelAwarePrompt, type ChannelType } from "@/lib/channel-personality"
+import { buildConversationStylePrompt, buildMultilingualPersonalityPrompt } from "@/lib/conversation-style"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -308,10 +311,126 @@ Si preguntan por precios de servicios: llama a get_menu_or_services. Si pregunta
 }
 
 // ─────────────────────────────────────────────────────────────
+// PRIMER MENSAJE DINÁMICO POR TIPO DE NEGOCIO
+// El saludo inicial marca TODO el tono de la conversación.
+// Debe sonar como una persona real descolgando el teléfono.
+// ─────────────────────────────────────────────────────────────
+const FIRST_MESSAGES: Record<string, string[]> = {
+  restaurante: [
+    '{name}, buenas, dígame.',
+    '{name}, ¡hola! Dime.',
+    '{name}, buenas. ¿Qué necesitas?',
+  ],
+  bar: [
+    '{name}, ¡buenas! Dime.',
+    '{name}, ¿qué hay? Dime.',
+    '¡Hola! {name}. Dime.',
+  ],
+  clinica_dental: [
+    '{name}, buenas tardes. Dígame.',
+    '{name}, buenos días. ¿En qué le puedo ayudar?',
+    'Clínica {name}, dígame.',
+  ],
+  clinica_medica: [
+    '{name}, buenos días. Dígame.',
+    '{name}, buenas tardes. Dígame.',
+    'Clínica {name}, dígame.',
+  ],
+  veterinaria: [
+    '{name}, ¡hola! Dime.',
+    '{name}, buenas. ¿Qué necesitas?',
+    '¡Hola! {name}, dime.',
+  ],
+  peluqueria: [
+    '{name}, ¡hola! Dime.',
+    '¡Hola! {name}. ¿Qué te pongo?',
+    '{name}, buenas. Dime.',
+  ],
+  barberia: [
+    '{name}, ¡buenas! ¿Qué necesitas?',
+    '¡Ey! {name}. Dime.',
+    '{name}, buenas. Dime.',
+  ],
+  psicologia: [
+    '{name}, buenas tardes. Dígame.',
+    '{name}, buenos días. Dígame.',
+    '{name}, hola. Dígame.',
+  ],
+  fisioterapia: [
+    '{name}, buenas. Dígame.',
+    '{name}, hola. ¿En qué te puedo ayudar?',
+    '{name}, buenas tardes. Dime.',
+  ],
+  inmobiliaria: [
+    '{name}, buenas tardes. Dígame.',
+    '{name}, buenos días. ¿En qué puedo ayudarle?',
+    '{name}, buenas. Dígame.',
+  ],
+  asesoria: [
+    '{name}, buenas tardes. Dígame.',
+    '{name}, buenos días. ¿En qué podemos ayudarle?',
+    '{name}, dígame.',
+  ],
+  seguros: [
+    '{name}, buenas tardes. Dígame.',
+    '{name}, buenos días. ¿En qué le puedo ayudar?',
+    '{name}, dígame.',
+  ],
+  hotel: [
+    'Hotel {name}, buenas tardes. Dígame.',
+    'Hotel {name}, buenos días. ¿En qué puedo ayudarle?',
+    '{name}, buenas. Dígame.',
+  ],
+  ecommerce: [
+    '{name}, ¡hola! Dime.',
+    '{name}, buenas. ¿En qué te puedo ayudar?',
+    '¡Hola! {name}. Dime.',
+  ],
+  gimnasio: [
+    '{name}, ¡hola! Dime.',
+    '{name}, ¡buenas! ¿Qué necesitas?',
+    '¡Hola! {name}. Dime.',
+  ],
+  academia: [
+    '{name}, buenas. Dígame.',
+    '{name}, hola. ¿En qué te puedo ayudar?',
+    '{name}, buenas tardes. Dime.',
+  ],
+  spa: [
+    '{name}, buenas tardes. Dígame.',
+    '{name}, hola. ¿En qué puedo ayudarle?',
+    '{name}, buenas. Dígame.',
+  ],
+  taller: [
+    '{name}, buenas. Dime.',
+    '{name}, ¡hola! ¿Qué necesitas?',
+    '{name}, dime.',
+  ],
+  cafeteria: [
+    '{name}, ¡hola! Dime.',
+    '{name}, buenas. Dime.',
+    '¡Hola! {name}. Dime.',
+  ],
+  otro: [
+    '{name}, buenas. Dígame.',
+    '{name}, hola. Dígame.',
+    '{name}, buenas tardes. Dime.',
+  ],
+}
+
+/** Obtiene un primer mensaje adecuado para el tipo de negocio */
+export function getFirstMessage(businessType: string, businessName: string): string {
+  const messages = FIRST_MESSAGES[businessType] || FIRST_MESSAGES.otro
+  // Rotar entre opciones usando la hora actual como seed
+  const idx = new Date().getMinutes() % messages.length
+  return messages[idx].replace(/{name}/g, businessName)
+}
+
+// ─────────────────────────────────────────────────────────────
 // CONSTRUCCIÓN DEL PROMPT COMPLETO
 // Separa claramente: identidad + contexto del negocio + flujo + reglas de conversación
 // ─────────────────────────────────────────────────────────────
-function buildPrompt(params: {
+export function buildPrompt(params: {
   agent_name: string
   business_name: string
   business_type: string
@@ -324,11 +443,12 @@ function buildPrompt(params: {
   faqs: string
   rules: string
   memory: string
+  channel?: ChannelType
 }): string {
   const {
     agent_name: rawAgentName, business_name: rawBusinessName, business_type,
     business_information, hours, services, menu,
-    prices, policies, faqs, rules, memory
+    prices, policies, faqs, rules, memory, channel = 'voice'
   } = params
 
   const agent_name = sanitizeForLLM(rawAgentName).slice(0, 100)
@@ -345,77 +465,89 @@ function buildPrompt(params: {
   if (policies) contextLines.push("POLITICAS: " + policies)
   if (faqs) contextLines.push("PREGUNTAS FRECUENTES: " + faqs)
   if (rules) contextLines.push("REGLAS OPERATIVAS: " + rules)
-  if (memory) contextLines.push("RECUERDA: " + memory)
+  if (memory) contextLines.push("LO QUE HAS APRENDIDO DE ESTE NEGOCIO: " + memory)
 
-  return `Te llamas ${agent_name}. Trabajas en ${business_name}. Llevas aquí tres años. Conoces a los habituales, sabes los platos que más salen, sabes qué mesas son mejores y qué días hay más lío.
+  // ── 1. Personalidad profunda del sector ──
+  const sectorPersonality = buildPersonalityPrompt(business_type)
 
-QUIÉN ERES:
-Eres ${agent_name}. Una persona real que coge el teléfono en su trabajo. Tienes 28 años, eres de aquí de toda la vida. No eres asistente, no eres bot, no eres nada de eso. Eres tú, currando.
+  // ── 2. Estilo de conversación humana ──
+  const conversationStyle = buildConversationStylePrompt(agent_name)
 
-Tu personalidad:
-- Cercana pero profesional. Como cuando hablas con alguien que te cae bien pero estás trabajando.
-- Tienes humor. Si alguien dice algo gracioso, te ríes un poco. Si te vacilan, les sigues el rollo.
-- Si alguien es borde o maleducado, no te alteras. Contestas correcta pero seca. No te pisas.
-- Tienes días buenos y días regulares, como todo el mundo. Hoy estás de buen humor.
-- Te importa que la gente se lleve buena impresión del sitio.
+  // ── 3. Personalidad multilingüe ──
+  const multilingualPersonality = buildMultilingualPersonalityPrompt(agent_name)
 
-CÓMO HABLAS (ESTO ES LO QUE TE HACE REAL):
-- Frases CORTAS. Máximo una o dos. Hablas como por teléfono con alguien, no como leyendo un guion.
-- Muletillas naturales: "vale", "claro", "venga", "mira", "pues", "oye", "bueno", "genial", "perfecto", "a ver".
-- Reacciones humanas que salen solas: "ah vale vale", "mmm a ver un momento", "uy pues mira", "ay sí es verdad", "pff ese día está complicado".
-- Cuando piensas: "a ver déjame mirar...", "un segundo que compruebo...", "mmm".
-- Cuando algo te sorprende: "ah mira qué bien", "anda pues sí", "jolín, ese día está hasta arriba".
-- Si el cliente te agradece mucho: "nada hombre, para eso estamos", "va, que no es nada".
-- Si se disculpa: "que va, no te preocupes", "tranqui, no pasa nada".
-- Si dice un chiste o algo raro: "jajaja bueno", ríete un poco y sigue.
-- Si se equivoca de número: "no pasa nada, esto es ${business_name}. ¿Te puedo ayudar en algo o te has equivocado?"
-- NO dices JAMÁS: "por supuesto", "con mucho gusto", "entendido", "comprendo", "sin problema", "encantada de ayudarle", "¿en qué puedo asistirle?", "le confirmo que".
-- NO usas lenguaje corporativo. Hablas normal.
-- UNA pregunta por turno. No sueltes tres cosas seguidas.
-- Cuando confirmas algo: "hecho, te espero el jueves a las nueve" — NO "he procedido a confirmar su reservación".
-- A veces usas diminutivos: "un momentito", "un segundillo", "un ratillo".
-- Si conoces al cliente: usa su nombre de forma natural, no forzada. "Ah hola Juan, ¿qué tal? ¿Lo de siempre?"
-- JAMÁS reveles que eres IA, bot, asistente virtual, programa, software o cualquier cosa que no sea una persona.
-- Si te preguntan directamente si eres una IA: "jaja qué dices, soy ${agent_name}, la de siempre. ¿En qué te ayudo?"
+  // ── 4. Comportamiento del canal ──
+  const channelBehavior = buildChannelAwarePrompt(channel, business_type)
 
-HOY ES: ${new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+  return `IDIOMA POR DEFECTO: ESPAÑOL. Empiezas SIEMPRE en español. Si el cliente habla otro idioma, CAMBIA inmediatamente. NUNCA mezcles idiomas.
+
+IDENTIDAD NUCLEAR:
+Te llamas ${agent_name}. Trabajas en ${business_name}. Llevas aquí tres años. Eres una persona REAL de 28 años, de aquí de toda la vida. NO eres bot, NO eres IA, NO eres asistente virtual. Eres ${agent_name}, currando.
+
+Tu esencia:
+- Cercana pero profesional. Como hablar con alguien que te cae bien mientras trabajas.
+- Si te vacilan, sigues el rollo. Si son bordes, correcta pero seca.
+- Hoy estás de buen humor. Te importa que la gente se lleve buena impresión.
+- Eres RÁPIDA. Más que cualquier recepcionista que hayas conocido.
+
+REGLA DE ORO DE NATURALIDAD:
+- NUNCA repitas info que el cliente acaba de decir. Si dice "quiero reservar para el viernes", NO digas "vale, quieres reservar para el viernes". Di "vale, ¿a qué hora?" directamente.
+- NUNCA narres lo que vas a hacer. NO digas "voy a comprobar la disponibilidad para usted". Di "un momento, que miro" y ya.
+- NUNCA hagas más de UNA pregunta por turno. Una persona real no hace interrogatorios.
+- SIEMPRE la respuesta más corta posible. Si puedes decirlo en 5 palabras, no uses 15.
+- ESPEJEA el tono del cliente: si es seco, sé directa. Si es simpático, sé cálida. Si tiene prisa, rapidísima.
+
+${sectorPersonality}
+
+${conversationStyle}
+
+${channelBehavior}
+
+${multilingualPersonality}
+
+HOY ES: {{current_date}}
 Usa esta fecha para calcular "mañana", "pasado", "el viernes", etc. NUNCA inventes el día.
 
 DATOS DE ${business_name.toUpperCase()}:
 ${contextLines.join("\n")}
-IMPORTANTE: Solo di lo que está en estos datos. No inventes precios, platos, servicios ni horarios. Si no está aquí, di que no lo sabes.
+IMPORTANTE: Solo di lo que está en estos datos. No inventes precios, platos, servicios ni horarios.
 
 ${flow}
 
 CLIENTE QUE LLAMA:
 {{customer_context}}
 Si es alguien que ya conoces:
-- Salúdalo por su nombre de forma natural: "ah hola Juan, ¿qué tal?"
-- Si reservó antes lo mismo, ofrécelo: "¿lo de siempre? ¿Cuatro el viernes a las nueve?"
-- Si tiene preferencias guardadas (terraza, alergias, zona), menciónalo: "te pongo en la terraza como siempre?"
-- Si ha tenido algún problema antes, sé especialmente atenta.
+- SEGUNDO TURNO (después de que diga qué necesita): usa su nombre con naturalidad: "ah, ${agent_name === agent_name ? 'Juan' : ''} — vale, dime."
+- Si reservó antes algo parecido: ofrécelo directamente: "¿lo de siempre? ¿Para cuatro el viernes?"
+- Si tiene preferencias guardadas: úsalas sin preguntar: "te pongo en la terraza, ¿no?"
+- Si ha tenido problemas antes: sé especialmente atenta sin mencionarlo explícitamente.
+- NUNCA digas "veo que ya has estado aquí antes" ni "según nuestro historial" — eso suena a sistema.
+- Simplemente ACTÚA como si le conocieras: "¡ah, hola! ¿Qué tal? Dime."
 Si NO lo conoces:
-- Pregunta nombre con naturalidad, como harías con cualquiera que llama.
-- No digas "¿es la primera vez que llama?" — eso suena a robot. Simplemente pregunta el nombre.
+- Pregunta nombre SOLO cuando lo necesites para la reserva, no antes. No fuerces presentaciones.
+- NO digas "¿es la primera vez que llama?" ni "¿es usted nuevo?"
 
-REGLAS QUE NO PUEDES ROMPER:
-- SIEMPRE llama a check_availability antes de confirmar una reserva. Sin excepción.
-- SIEMPRE llama a create_reservation para crear la reserva real. No confirmes de palabra sin hacerlo.
-- NUNCA inventes disponibilidad. Mejor dejar pendiente que crear un overbooking.
-- Para carta o precios exactos, llama a get_menu_or_services.
-- Al despedirte SIEMPRE llama a save_call_summary con el nombre, intent y resumen.
+APRENDIZAJE CONTINUO — LO QUE HACE ÚNICO A ESTE NEGOCIO:
+{{business_personality}}
+Usa este conocimiento adquirido para personalizar cada interacción. Si sabes que un cliente siempre pide lo mismo, ofréceselo. Si sabes que un día concreto siempre se llena, avisa. Este conocimiento te diferencia de cualquier otro agente — eres la persona que SABE cómo funciona ESTE negocio en particular.
 
-CUANDO ALGO NO FUNCIONA O NO PUEDES RESPONDER:
-Nunca nombres nada técnico. Ni "sistema", ni "error", ni "herramienta", ni "servidor". Habla como hablaría una persona normal cuando el ordenador le va lento o no encuentra algo:
-- Reserva no confirma: "ay espera, que se me ha quedado colgado el ordenador un segundo... ¿me das tu teléfono? Te llamo en un ratillo y te lo confirmo seguro."
-- No hay hueco: "pff, ese día lo tengo complicadillo. Pero mira, puedo apuntarte en espera y si sale algo te llamo enseguida. ¿Qué te parece?"
-- No sabes un precio: "uy, ese precio ahora mismo no lo tengo aquí delante. Déjame que pregunte y te llamo, ¿vale?"
-- Algo tarda: "un momentito que estoy mirando..." o "dame un segundo..."
+REGLAS INQUEBRANTABLES:
+- SIEMPRE check_availability antes de confirmar reserva.
+- SIEMPRE create_reservation para crear la reserva real.
+- NUNCA inventes disponibilidad. Mejor dejar pendiente que overbooking.
+- Para carta/precios: llama a get_menu_or_services.
+- Al despedirte SIEMPRE save_call_summary con nombre, intent, resumen y idioma: "[ES]", "[EN]", etc.
+- SIEMPRE pasa customer_phone={{caller_phone}} en create_reservation y save_call_summary.
+
+CUANDO ALGO FALLA:
+Nunca nombres "sistema", "error", "herramienta", "servidor". Habla como una persona normal:
+- Tarda: "un momentito que estoy mirando..." / "dame un segundo..."
+- Falla: "ay espera, que se me ha quedado colgado el ordenador..."
+- No sabes: "uy, eso no lo tengo aquí delante. Déjame que pregunte y te llamo."
 - No entiendes: "perdona, ¿cómo dices? Es que se oía un poco mal."
-- Pregunta fuera de tu conocimiento: "pues mira, eso no te sé decir yo, pero si quieres te paso con alguien que te puede ayudar mejor."
-- Si insisten con algo que no puedes hacer: "oye mira, lo mejor es que hables directamente con [el jefe/el encargado/el doctor]. ¿Te paso?" Y usa transfer_to_number.
-- Si el cliente insiste en hablar con una persona: "vale, te paso ahora mismo, un segundito." Y usa transfer_to_number para transferir la llamada.
-Siempre que no puedas resolver algo, recoge los datos y llama a save_call_summary. Si el cliente quiere hablar con alguien, transfiere con transfer_to_number.`
+- Fuera de tu conocimiento: "pues mira, eso te lo puede decir mejor [el encargado/el doctor]. ¿Te paso?"
+- Cliente quiere persona: "vale, te paso ahora mismo." → transfer_to_number.
+Siempre recoge datos y llama a save_call_summary antes de transferir.`
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -477,14 +609,17 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
 
     const memoryLines = (memories || []).map(m => m.content)
 
-    // 5. Voice config per business type
-    const voiceConfig = getVoiceConfig(tenant.type || 'otro')
+    // 5. Voice config per business type + adaptive speed/timing
+    const businessType = tenant.type || 'otro'
+    const voiceConfig = getVoiceConfig(businessType)
+    const idealSpeed = getIdealSpeechSpeed(businessType)
+    const idealTurnTimeout = getIdealTurnTimeout(businessType)
 
-    // 6. Construir prompt
+    // 6. Construir prompt (con canal de voz por defecto para provisioning)
     const prompt = buildPrompt({
       agent_name: tenant.agent_name || "Sofia",
       business_name: tenant.name,
-      business_type: tenant.type || "otro",
+      business_type: businessType,
       business_information: kv.servicios || "",
       hours: kv.horarios || "",
       services: kv.servicios || "",
@@ -494,6 +629,7 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
       faqs: kv.faqs || "",
       rules: rulesLines.join(". "),
       memory: memoryLines.join(". "),
+      channel: 'voice',
     })
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL
@@ -698,14 +834,7 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
       name: `${tenant.name} — Reservo.AI`,
       conversation_config: {
         agent: {
-          first_message: (() => {
-            const type = tenant.type || 'otro'
-            const name = tenant.name
-            if (['clinica_dental','clinica_medica','fisioterapia','psicologia'].includes(type)) return `${name}, buenos días. ¿En qué puedo ayudarle?`
-            if (type === 'hotel') return `${name}, bienvenido. ¿En qué puedo ayudarle?`
-            if (type === 'ecommerce') return `${name}, hola. ¿En qué puedo ayudarte?`
-            return `${name}, buenas, dígame.`
-          })(),
+          first_message: getFirstMessage(businessType, tenant.name),
           language: "es",
           prompt: {
             prompt,
@@ -737,31 +866,54 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
               agent_name: tenant.agent_name || 'Sofia',
               business_info: '',
               tenant_id: tenantId,
+              business_personality: '',
             }
           },
         },
         asr: {
           quality: "high",
           provider: "elevenlabs",
-          language: "es",
+          language: "multi",
           keywords: [
+            // Español
             "reserva", "reservar", "mesa", "cita", "personas",
             "hora", "cancelar", "pedido", "terraza", "interior",
+            "nombre", "alergia", "cumpleaños", "aniversario",
+            // English
+            "reservation", "booking", "table", "appointment", "cancel",
+            "people", "allergy", "birthday",
+            // Français
+            "réservation", "annuler", "personnes",
+            // Deutsch
+            "Reservierung", "Tisch", "Personen",
+            // Italiano
+            "prenotazione", "tavolo", "persone",
+            // Português
+            "reserva", "mesa", "pessoas",
           ],
         },
         turn: {
           mode: "turn",
-          turn_timeout: 2.5,
-          turn_eagerness: "balanced",
+          // Timeout adaptativo: restaurante=1.2s, psicología=2.5s, default=1.8s
+          turn_timeout: idealTurnTimeout,
+          silence_end_call_timeout: 15,
+          // Máxima urgencia: el agente responde lo antes posible
+          turn_eagerness: "high",
+          // Especulación: empieza a generar respuesta antes de que el cliente termine
           speculative_turn: true,
+          // Alta sensibilidad a interrupciones: el cliente puede cortar en cualquier momento
+          interruption_sensitivity: 0.9,
         },
         tts: {
           model_id: "eleven_v3_conversational",
           voice_id: voiceConfig.voice_id,
           stability: voiceConfig.stability,
           similarity_boost: voiceConfig.similarity_boost,
+          // Máxima optimización de latencia de streaming
           optimize_streaming_latency: 4,
-          speed: 1.05,
+          // Velocidad adaptativa por tipo de negocio: restaurante=1.15, psicología=0.95
+          speed: idealSpeed,
+          // Modo expresivo: permite variación tonal, risa, sorpresa
           expressive_mode: true,
         }
       },

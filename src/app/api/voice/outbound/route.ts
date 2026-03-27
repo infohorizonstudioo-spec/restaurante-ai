@@ -61,15 +61,67 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ElevenLabs not configured' }, { status: 503 })
     }
 
-    // Primer mensaje personalizado según el motivo
-    const greetings: Record<string, string> = {
-      confirm_reservation: `Hola${customer_name ? ' ' + customer_name : ''}, te llamo de ${tenant.name} para confirmarte la reserva.`,
-      reminder: `Hola${customer_name ? ' ' + customer_name : ''}, te llamo de ${tenant.name} para recordarte tu cita.`,
-      callback: `Hola${customer_name ? ' ' + customer_name : ''}, te llamo de ${tenant.name}, antes me quedé a medias con tu reserva y quería confirmártela.`,
-      schedule_change: `Hola${customer_name ? ' ' + customer_name : ''}, te llamo de ${tenant.name} porque ha habido un cambio en el horario.`,
-      general: `Hola${customer_name ? ' ' + customer_name : ''}, te llamo de ${tenant.name}.`,
+    // Check customer's preferred language from previous calls
+    let customerLang = 'es'
+    if (phone_number) {
+      const { data: prevCall } = await admin.from('calls')
+        .select('detected_language')
+        .eq('tenant_id', auth.tenantId)
+        .or(`caller_phone.eq.${phone_number},from_number.eq.${phone_number}`)
+        .not('detected_language', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      if (prevCall?.[0]?.detected_language) customerLang = prevCall[0].detected_language
     }
-    const firstMessage = greetings[reason] || greetings.general
+
+    // Multilanguage greetings — adapt to customer's language
+    const name = customer_name ? ' ' + customer_name : ''
+    const greetingsByLang: Record<string, Record<string, string>> = {
+      es: {
+        confirm_reservation: `Hola${name}, te llamo de ${tenant.name} para confirmarte la reserva.`,
+        reminder: `Hola${name}, te llamo de ${tenant.name} para recordarte tu cita.`,
+        callback: `Hola${name}, te llamo de ${tenant.name}, antes me quedé a medias con tu reserva y quería confirmártela.`,
+        schedule_change: `Hola${name}, te llamo de ${tenant.name} porque ha habido un cambio en el horario.`,
+        general: `Hola${name}, te llamo de ${tenant.name}.`,
+      },
+      en: {
+        confirm_reservation: `Hi${name}, I'm calling from ${tenant.name} to confirm your reservation.`,
+        reminder: `Hi${name}, calling from ${tenant.name} to remind you about your appointment.`,
+        callback: `Hi${name}, calling back from ${tenant.name} about your booking.`,
+        schedule_change: `Hi${name}, calling from ${tenant.name} — there's been a schedule change.`,
+        general: `Hi${name}, calling from ${tenant.name}.`,
+      },
+      fr: {
+        confirm_reservation: `Bonjour${name}, je vous appelle de ${tenant.name} pour confirmer votre réservation.`,
+        reminder: `Bonjour${name}, je vous appelle de ${tenant.name} pour vous rappeler votre rendez-vous.`,
+        callback: `Bonjour${name}, je vous rappelle de ${tenant.name} concernant votre réservation.`,
+        schedule_change: `Bonjour${name}, je vous appelle de ${tenant.name} — il y a eu un changement d'horaire.`,
+        general: `Bonjour${name}, je vous appelle de ${tenant.name}.`,
+      },
+      de: {
+        confirm_reservation: `Hallo${name}, ich rufe von ${tenant.name} an, um Ihre Reservierung zu bestätigen.`,
+        reminder: `Hallo${name}, ich rufe von ${tenant.name} an, um Sie an Ihren Termin zu erinnern.`,
+        callback: `Hallo${name}, ich rufe von ${tenant.name} zurück wegen Ihrer Buchung.`,
+        schedule_change: `Hallo${name}, ich rufe von ${tenant.name} an — es gibt eine Terminänderung.`,
+        general: `Hallo${name}, ich rufe von ${tenant.name} an.`,
+      },
+      pt: {
+        confirm_reservation: `Olá${name}, estou ligando de ${tenant.name} para confirmar a sua reserva.`,
+        reminder: `Olá${name}, estou ligando de ${tenant.name} para lembrar da sua consulta.`,
+        callback: `Olá${name}, estou retornando a ligação de ${tenant.name} sobre a sua reserva.`,
+        schedule_change: `Olá${name}, estou ligando de ${tenant.name} — houve uma mudança no horário.`,
+        general: `Olá${name}, estou ligando de ${tenant.name}.`,
+      },
+      it: {
+        confirm_reservation: `Ciao${name}, chiamo da ${tenant.name} per confermare la prenotazione.`,
+        reminder: `Ciao${name}, chiamo da ${tenant.name} per ricordarti l'appuntamento.`,
+        callback: `Ciao${name}, richiamo da ${tenant.name} per la tua prenotazione.`,
+        schedule_change: `Ciao${name}, chiamo da ${tenant.name} — c'è stato un cambio di orario.`,
+        general: `Ciao${name}, chiamo da ${tenant.name}.`,
+      },
+    }
+    const langGreetings = greetingsByLang[customerLang] || greetingsByLang.es
+    const firstMessage = langGreetings[reason] || langGreetings.general
 
     // Iniciar llamada saliente via ElevenLabs
     const controller = new AbortController()

@@ -109,12 +109,14 @@ export async function POST(req: NextRequest) {
             .limit(5)
 
           const isHospitality = ['restaurante', 'bar', 'cafeteria'].includes(businessType)
-          const parts = [`Este cliente se llama ${c.name || 'desconocido'}`]
+          const parts = [`CONOCES a este cliente. Se llama ${c.name || 'desconocido'}. Trátalo como a alguien que ya conoces — usa su nombre desde que sepas quién es.`]
 
-          if (c.total_reservations && c.total_reservations >= 3) {
-            parts.push(`Es habitual — lleva ${c.total_reservations} ${bookingTerm}s`)
+          if (c.total_reservations && c.total_reservations >= 10) {
+            parts.push(`Es SUPER habitual — lleva ${c.total_reservations} ${bookingTerm}s. Trátalo como a un amigo. Puedes ofrecerle "¿lo de siempre?"`)
+          } else if (c.total_reservations && c.total_reservations >= 3) {
+            parts.push(`Es habitual — lleva ${c.total_reservations} ${bookingTerm}s. Demuestra que le recuerdas.`)
           } else if (c.total_reservations === 1) {
-            parts.push(`Ha tenido una ${bookingTerm} antes`)
+            parts.push(`Ha venido una vez antes. Puedes decir "me suena tu nombre" si quieres.`)
           }
 
           if (recentRes && recentRes.length > 0) {
@@ -192,6 +194,76 @@ export async function POST(req: NextRequest) {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     })
 
+    // Check if customer has a preferred language from previous calls
+    let preferredLanguage = 'es'
+    if (callerPhone && tenant) {
+      const cleanPhone = callerPhone.replace(/[^0-9+]/g, '')
+      if (cleanPhone.length >= 7) {
+        const { data: prevCall } = await supabase
+          .from('calls')
+          .select('detected_language')
+          .eq('tenant_id', tenant.id)
+          .or(`caller_phone.eq.${cleanPhone},from_number.eq.${cleanPhone}`)
+          .not('detected_language', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+        if (prevCall?.[0]?.detected_language) {
+          preferredLanguage = prevCall[0].detected_language
+        }
+      }
+    }
+
+    // If customer spoke a different language before, add it to context
+    if (preferredLanguage !== 'es') {
+      customerContext += `\nIDIOMA PREFERIDO: Este cliente habló en ${preferredLanguage.toUpperCase()} en llamadas anteriores. Respóndele en ese idioma desde el principio.`
+    }
+
+    // ── Business personality: learned patterns from this specific business ──
+    let businessPersonality = ''
+    try {
+      const { data: bMemories } = await supabase
+        .from('business_memory')
+        .select('content, memory_type, confidence')
+        .eq('tenant_id', tenant.id)
+        .eq('active', true)
+        .gte('confidence', 0.6)
+        .order('confidence', { ascending: false })
+        .limit(15)
+
+      if (bMemories && bMemories.length > 0) {
+        const grouped: Record<string, string[]> = {}
+        for (const m of bMemories) {
+          const type = m.memory_type || 'general'
+          if (!grouped[type]) grouped[type] = []
+          grouped[type].push(m.content)
+        }
+        const parts: string[] = []
+        if (grouped.pattern) parts.push('PATRONES DETECTADOS: ' + grouped.pattern.join('. '))
+        if (grouped.preference) parts.push('PREFERENCIAS DE CLIENTES: ' + grouped.preference.join('. '))
+        if (grouped.peak) parts.push('PICOS DE DEMANDA: ' + grouped.peak.join('. '))
+        if (grouped.issue) parts.push('PROBLEMAS RECURRENTES: ' + grouped.issue.join('. '))
+        if (grouped.general) parts.push('NOTAS: ' + grouped.general.join('. '))
+        businessPersonality = parts.join('\n')
+      }
+    } catch { /* non-critical */ }
+
+    // ── Call stats for this business (gives context on how busy they are) ──
+    let callStats = ''
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      const { count: todayCalls } = await supabase
+        .from('calls')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenant.id)
+        .gte('created_at', today + 'T00:00:00')
+
+      if (todayCalls && todayCalls > 5) {
+        callStats = `Hoy ya has atendido ${todayCalls} llamadas. Día movido.`
+      }
+    } catch { /* non-critical */ }
+
+    if (callStats) businessPersonality += '\n' + callStats
+
     // Return dynamic variables for ElevenLabs
     return NextResponse.json({
       dynamic_variables: {
@@ -205,6 +277,8 @@ export async function POST(req: NextRequest) {
         business_type: businessType,
         booking_term: bookingTerm,
         action_name: (typeLogic as any).action_name || 'gestión',
+        preferred_language: preferredLanguage,
+        business_personality: businessPersonality,
       }
     })
 

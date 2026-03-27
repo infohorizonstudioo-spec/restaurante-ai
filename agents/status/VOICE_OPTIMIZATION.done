@@ -1,0 +1,28 @@
+COMPLETADO — Fase 2: Auditoría completa + Rediseño de comportamiento del agente
+
+## Archivos modificados (Fase 2):
+- src/lib/conversation-style.ts — Eliminadas frases bot de FILLERS_CONFIRM, añadidos anti-patrones de IA
+- src/lib/provision-agent.ts — Sistema de primer mensaje dinámico por tipo de negocio, regla de oro de naturalidad
+- src/lib/eleven.ts — Integrado con getFirstMessage() dinámico
+- src/lib/channel-personality.ts — 47 combos canal+negocio (antes 13), anti-patrones de voz reforzados
+- src/lib/business-brain.ts — Eliminadas frases prohibidas de reacciones situacionales
+- src/app/api/voice/context/route.ts — Contexto de cliente más accionable y natural
+
+## Cambios clave (Fase 2):
+1. FILLERS_CONFIRM: eliminadas 'entendido', 'sin problema', 'por supuesto' (contradicción con lista prohibida)
+2. 18 tipos de negocio con primeros mensajes distintos (3 variantes cada uno, rotación por minuto)
+3. 47 combos canal+negocio específicos (voz:17, WhatsApp:13, email:8, SMS:9)
+4. Anti-patrones de IA: no repetir estructura, espejar tono, no interrogar, no narrar acciones
+5. Regla de oro: nunca repetir info del cliente, nunca narrar acciones, una pregunta por turno
+6. Contexto de cliente recurrente más directo y accionable
+7. Frases prohibidas ampliadas: "déjame ayudarte con eso", "estaré encantada de", "no dudes en"
+
+## Archivos previos (Fase 1):
+- src/lib/language-engine.ts — Motor de detección de idioma (40+ idiomas) + SMS multiidioma
+- supabase/migrations/20260327_voice_multilanguage.sql — Columnas detected_language, client_type
+- src/lib/provision-agent.ts — Prompt mejorado: comportamiento humano, velocidad, multiidioma
+- src/lib/elevenlabs.ts — Eliminado "recepcionista virtual", ASR multi-idioma
+- src/lib/sms.ts — Soporte multiidioma (40+ idiomas)
+- src/app/api/voice/post-call/route.ts — Detección idioma, clasificación cliente
+- src/app/api/voice/context/route.ts — Idioma preferido del cliente
+- src/app/api/voice/outbound/route.ts — Saludos multiidioma en llamadas salientes

@@ -1,8 +1,13 @@
 /**
- * Builds SMS messages for different reservation/booking events.
+ * RESERVO.AI — SMS Builder (Multilanguage)
+ *
+ * Builds SMS messages for reservation/booking/order events.
  * Returns the message text — does NOT send (that's the API's job).
- * Adapts terminology per business type (reserva/cita/sesión/clase).
+ * Supports 40+ languages via language-engine.
+ * Falls back to Spanish for backwards compatibility.
  */
+
+import { buildMultilangSms, buildMultilangOrderSms, type LangCode } from './language-engine'
 
 export function buildReservationSms(params: {
   businessName: string
@@ -11,27 +16,43 @@ export function buildReservationSms(params: {
   time: string
   people: number
   status: 'confirmed' | 'cancelled' | 'reminder'
-  bookingLabel?: string // "reserva" | "cita" | "sesión" | "clase" | "visita"
+  bookingLabel?: string
+  language?: string // ISO 639-1 language code
 }): string {
-  const { businessName, customerName, date, time, people, status } = params
-  const label = params.bookingLabel || 'reserva'
+  const lang = (params.language || 'es') as LangCode
+  const smsType = params.status === 'reminder' ? 'reminder' : params.status
 
-  const dateStr = new Date(date + 'T12:00:00').toLocaleDateString('es-ES', {
-    weekday: 'long', day: 'numeric', month: 'long'
+  return buildMultilangSms(lang, smsType, {
+    businessName: params.businessName,
+    customerName: params.customerName,
+    date: params.date,
+    time: params.time,
+    people: params.people,
+    bookingLabel: params.bookingLabel,
   })
+}
 
-  const peopleStr = people > 1 ? `, ${people} personas` : ''
-
-  if (status === 'confirmed') {
-    return `${businessName}: Hola ${customerName}, confirmada tu ${label} para el ${dateStr} a las ${time}${peopleStr}. ¡Te esperamos!`
-  }
-  if (status === 'cancelled') {
-    return `${businessName}: Hola ${customerName}, tu ${label} del ${dateStr} a las ${time} queda cancelada. Cualquier cosa, llámanos.`
-  }
-  if (status === 'reminder') {
-    return `${businessName}: Hola ${customerName}, mañana tienes ${label} a las ${time}${peopleStr}. ¡Te esperamos!`
-  }
-  return `${businessName}: Hola ${customerName}, te escribimos por tu ${label} del ${dateStr} a las ${time}.`
+/**
+ * Build a 30-minute reminder SMS in the customer's language.
+ */
+export function buildReminder30minSms(params: {
+  businessName: string
+  customerName: string
+  date: string
+  time: string
+  people: number
+  bookingLabel?: string
+  language?: string
+}): string {
+  const lang = (params.language || 'es') as LangCode
+  return buildMultilangSms(lang, 'reminder_30min', {
+    businessName: params.businessName,
+    customerName: params.customerName,
+    date: params.date,
+    time: params.time,
+    people: params.people,
+    bookingLabel: params.bookingLabel,
+  })
 }
 
 export function buildOrderSms(params: {
@@ -40,17 +61,13 @@ export function buildOrderSms(params: {
   orderType: string
   total: number
   status: 'confirmed' | 'ready' | 'delivering'
+  language?: string
 }): string {
-  const { businessName, customerName, orderType, total, status } = params
-
-  if (status === 'confirmed') {
-    return `${businessName}: Hola ${customerName}, tu pedido (${total.toFixed(2)}€) para ${orderType} está confirmado. Te avisamos cuando esté listo.`
-  }
-  if (status === 'ready') {
-    return `${businessName}: ${customerName}, tu pedido está listo. Puedes pasar a recogerlo cuando quieras.`
-  }
-  if (status === 'delivering') {
-    return `${businessName}: ${customerName}, tu pedido va en camino. Llega en breve.`
-  }
-  return `${businessName}: Hola ${customerName}, te escribimos por tu pedido.`
+  const lang = (params.language || 'es') as LangCode
+  return buildMultilangOrderSms(lang, params.status, {
+    businessName: params.businessName,
+    customerName: params.customerName,
+    orderType: params.orderType,
+    total: params.total,
+  })
 }
