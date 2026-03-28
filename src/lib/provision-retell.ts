@@ -870,7 +870,7 @@ export async function provisionRetellAgent(tenantId: string): Promise<{
       fallback_voice_ids: voiceConfig.fallbacks,
       voice_speed: voiceConfig.speed,
       voice_temperature: voiceConfig.temperature,
-      language: 'multi',
+      language: 'es-ES',
       enable_backchannel: true,
       backchannel_frequency: 0.7,
       backchannel_words: ['sí', 'ajá', 'claro', 'vale', 'mmhm', 'ya'],
