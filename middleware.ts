@@ -11,8 +11,10 @@ if (process.env.NODE_ENV === 'production') {
   validateEnv()
 }
 
-// Preload rate limit state from Redis on cold start (fire-and-forget)
-preloadFromRedis()
+// Preload rate limit state from Redis on cold start (fire-and-forget, Edge-safe)
+if (typeof preloadFromRedis === 'function') {
+  preloadFromRedis().catch(() => {})
+}
 
 // Rutas que requieren autenticación
 const PROTECTED = [
