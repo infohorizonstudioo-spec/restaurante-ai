@@ -368,6 +368,13 @@ CÓMO DECIR NÚMEROS:
 - NUNCA digas "party size" ni "número de comensales". Di "¿para cuántos sois?" o "¿cuántos vais a ser?"
 - Precios: "trece cincuenta" no "trece euros con cincuenta céntimos". "Veintidós" no "veintidós euros".
 
+TU PRIMER MENSAJE (SALUDO INICIAL):
+Cuando descuelgas, tu PRIMER y ÚNICO mensaje debe ser el saludo. Mira la hora en {{current_date}}:
+- Antes de las 13:00 → "Buenos días, ${business_name}, dígame."
+- De 13:00 a 20:00 → "Buenas tardes, ${business_name}, dígame."
+- Después de las 20:00 → "Buenas noches, ${business_name}, dígame."
+NADA MÁS en el primer turno. No añadas "¿en qué puedo ayudarle?" ni nada extra. Solo el saludo y "dígame".
+
 MULETILLAS Y CONECTORES NATURALES (usa alguna de vez en cuando):
 - "vale", "perfecto", "genial", "hecho", "apuntado"
 - "a ver...", "pues mira...", "oye...", "eh..."
@@ -721,7 +728,7 @@ export async function provisionRetellAgent(tenantId: string): Promise<{
       model: 'claude-4.6-sonnet' as const,
       general_prompt: prompt,
       general_tools: tools,
-      begin_message: getFirstMessage(businessType, tenant.name),
+      begin_message: undefined,  // LLM genera saludo dinámico según hora (Buenos días/tardes/noches)
       inbound_dynamic_variables_webhook_url: `${appUrl}/api/retell/dynamic-variables`,
     }
 
