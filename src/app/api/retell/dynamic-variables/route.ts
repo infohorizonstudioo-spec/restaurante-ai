@@ -30,10 +30,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
-    // Retell envía: agent_id, call info, from_number, to_number
-    const agentId = body.agent_id || ''
-    const callerPhone = body.from_number || body.caller_number || ''
-    const calledNumber = body.to_number || ''
+    // Retell envía distintos campos según el tipo de llamada
+    const agentId = body.agent_id || body.call?.agent_id || ''
+    const callerPhone = body.from_number || body.caller_phone || body.caller_number || body.call?.from_number || body.call?.caller_phone || ''
+    const calledNumber = body.to_number || body.call?.to_number || ''
 
     logger.info('Retell dynamic variables requested', { agentId, from: callerPhone })
 
