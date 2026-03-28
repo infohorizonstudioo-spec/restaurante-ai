@@ -74,8 +74,14 @@ import { C } from '@/lib/colors'
 const SL:Record<string,string> = {
   completada:'Completada', completed:'Completada',
   activa:'En curso', 'in-progress':'En curso',
-  fallida:'Fallida', failed:'Fallida', 'no-answer':'Perdida', perdida:'Perdida',
+  fallida:'Fallida', failed:'Fallida', 'no-answer':'Llamada perdida', perdida:'Llamada perdida',
   pendiente:'Pendiente', pending:'Pendiente'
+}
+const IL:Record<string,string> = {
+  pendiente:'Pendiente', reserva:'Reserva', pedido:'Pedido', informacion:'Informacion',
+  cancelacion:'Cancelacion', perdida:'Perdida', devuelta:'Devuelta', saliente:'Saliente',
+  completada:'Completada', sin_accion:'Sin accion', callback:'Devuelta',
+  'Pedido_proveedor':'Pedido proveedor', test:'Test',
 }
 const SC:Record<string,string> = {
   completada:C.green, completed:C.green,
@@ -287,7 +293,7 @@ export default function LlamadasPage() {
                         <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:3}}>
                           <p style={{fontSize:13, fontWeight:600, color:C.text}}>{phone}</p>
                           <span style={{fontSize:10, padding:'2px 8px', borderRadius:8, background:SB[status], color:SC[status], fontWeight:700, flexShrink:0}}>{getStatusLabel(status, t.locale)}</span>
-                          {call.intent&&call.intent!=='consulta'&&<span style={{fontSize:10, padding:'2px 8px', borderRadius:8, background:C.violetDim, color:C.violet, fontWeight:600, textTransform:'capitalize'}}>{call.intent}</span>}
+                          {call.intent&&call.intent!=='consulta'&&call.intent!=='pendiente'&&<span style={{fontSize:10, padding:'2px 8px', borderRadius:8, background:C.violetDim, color:C.violet, fontWeight:600, textTransform:'capitalize'}}>{IL[call.intent]||call.intent}</span>}
                         </div>
                         {call.summary ? <p style={{fontSize:12, color:C.text2, lineHeight:1.5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{call.summary}</p> : <p style={{fontSize:12, color:C.text3}}>{tx('Sin resumen')}</p>}
                       </div>
@@ -385,20 +391,12 @@ export default function LlamadasPage() {
                             <p style={{fontSize:11, color:C.green}}>✓ {tx('Listo') + ' — ' + agentName + ' ' + tx('tendrá esto en cuenta la próxima vez')}</p>
                           ) : (
                             <div style={{display:'flex',alignItems:'center',gap:0}}>
-                              {call.caller_phone && call.caller_phone !== 'anonymous' && call.caller_phone !== 'unknown' && (
+                              {call.caller_phone && call.caller_phone !== 'anonymous' && call.caller_phone !== 'unknown' && (call.status === 'perdida' || call.status === 'no-answer' || call.intent === 'perdida') && (
                                 <button onClick={async () => {
-                                  const sess = await supabase.auth.getSession()
-                                  if (!sess.data.session) return
-                                  const r = await fetch('/api/voice/outbound', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
-                                    body: JSON.stringify({ tenant_id: tid, call_type: 'callback', phone: call.caller_phone, customer_name: call.customer_name || 'cliente' })
-                                  })
-                                  if (r.ok) toast.push({ title: 'Llamando de vuelta a ' + (call.caller_phone || 'cliente'), type: 'call', priority: 'info', icon: '📞' })
-                                  else toast.push({ title: 'Error al llamar', type: 'call', priority: 'critical', icon: '❌' })
+                                  toast.push({ title: 'Función en desarrollo — próximamente', type: 'call', priority: 'info', icon: '📞' })
                                 }}
                                 style={{fontSize:11, padding:'5px 12px', borderRadius:7, border:`1px solid ${C.teal}40`, background:C.tealDim, color:C.teal, cursor:'pointer', fontFamily:'inherit', fontWeight:500, marginRight:8}}>
-                                  📞 {cs.callBack}
+                                  📞 Devolver llamada
                                 </button>
                               )}
                               <button onClick={()=>{setCorrecting(call.call_sid);setFeedbackNote('')}}
