@@ -1,45 +1,90 @@
 'use client'
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-const TIPOS = [
-  { key:'restaurante',    label:'🍽️', name:'Restaurante' },
-  { key:'bar',            label:'🍺', name:'Bar / Cafetería' },
-  { key:'clinica_dental', label:'🦷', name:'Clínica Dental' },
-  { key:'clinica_medica', label:'🏥', name:'Clínica Médica' },
-  { key:'veterinaria',    label:'🐾', name:'Veterinaria' },
-  { key:'peluqueria',     label:'✂️', name:'Peluquería' },
-  { key:'barberia',       label:'🪒', name:'Barbería' },
-  { key:'fisioterapia',   label:'💆', name:'Fisioterapia' },
-  { key:'psicologia',     label:'🧠', name:'Psicología' },
-  { key:'asesoria',       label:'💼', name:'Asesoría' },
-  { key:'seguros',        label:'🛡️', name:'Seguros' },
-  { key:'inmobiliaria',   label:'🏠', name:'Inmobiliaria' },
-  { key:'gimnasio',       label:'🏋️', name:'Gimnasio' },
-  { key:'academia',       label:'📚', name:'Academia' },
-  { key:'spa',            label:'💆', name:'Spa / Centro wellness' },
-  { key:'taller',         label:'🔧', name:'Taller mecánico' },
-  { key:'ecommerce',      label:'🛒', name:'Tienda online' },
-  { key:'otro',           label:'📋', name:'Otro negocio' },
+const CATEGORIAS = [
+  {
+    label: 'Hostelería',
+    tipos: [
+      { key:'restaurante',  icon:'🍽️', name:'Restaurante' },
+      { key:'bar',           icon:'🍺', name:'Bar / Cafetería' },
+      { key:'hotel',         icon:'🏨', name:'Hotel' },
+    ]
+  },
+  {
+    label: 'Salud y Bienestar',
+    tipos: [
+      { key:'clinica_dental', icon:'🦷', name:'Clínica Dental' },
+      { key:'clinica_medica', icon:'🏥', name:'Clínica Médica' },
+      { key:'veterinaria',    icon:'🐾', name:'Veterinaria' },
+      { key:'fisioterapia',   icon:'💆', name:'Fisioterapia' },
+      { key:'psicologia',     icon:'🧠', name:'Psicología' },
+      { key:'spa',            icon:'🧖', name:'Spa / Wellness' },
+    ]
+  },
+  {
+    label: 'Imagen personal',
+    tipos: [
+      { key:'peluqueria', icon:'✂️', name:'Peluquería' },
+      { key:'barberia',   icon:'🪒', name:'Barbería' },
+    ]
+  },
+  {
+    label: 'Servicios profesionales',
+    tipos: [
+      { key:'asesoria',     icon:'💼', name:'Asesoría' },
+      { key:'seguros',      icon:'🛡️', name:'Seguros' },
+      { key:'inmobiliaria', icon:'🏠', name:'Inmobiliaria' },
+    ]
+  },
+  {
+    label: 'Formación y deporte',
+    tipos: [
+      { key:'gimnasio',  icon:'🏋️', name:'Gimnasio' },
+      { key:'academia',  icon:'📚', name:'Academia' },
+    ]
+  },
+  {
+    label: 'Otros',
+    tipos: [
+      { key:'taller',     icon:'🔧', name:'Taller mecánico' },
+      { key:'ecommerce',  icon:'🛒', name:'Tienda online' },
+      { key:'otro',       icon:'📋', name:'Otro negocio' },
+    ]
+  },
 ]
+
+const ALL_TIPOS = CATEGORIAS.flatMap(c => c.tipos)
 
 export default function RegistroPage() {
   const [step,setStep]       = useState(1)
   const [loading,setLoading] = useState(false)
   const [error,setError]     = useState('')
   const [form,setForm]       = useState({ name:'',email:'',password:'',businessName:'',businessType:'restaurante' })
+  const [search,setSearch]   = useState('')
+  const [dropOpen,setDropOpen] = useState(false)
   const up = (k:string,v:string) => setForm(f=>({...f,[k]:v}))
   const nameRef     = useRef<HTMLInputElement>(null)
   const emailRef    = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
+
+  const selectedTipo = ALL_TIPOS.find(t => t.key === form.businessType)
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return CATEGORIAS
+    const q = search.toLowerCase()
+    return CATEGORIAS.map(c => ({
+      ...c,
+      tipos: c.tipos.filter(t => t.name.toLowerCase().includes(q) || t.key.includes(q))
+    })).filter(c => c.tipos.length > 0)
+  }, [search])
 
   const handleRegister = useCallback(async () => {
     if (!form.email||!form.password||!form.name||!form.businessName){setError('Rellena todos los campos');return}
     if (form.password.length<6){setError('La contraseña debe tener al menos 6 caracteres');return}
     setLoading(true);setError('')
     try {
-      // 1. Crear tenant + usuario via API (usa service role, evita RLS)
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -57,30 +102,16 @@ export default function RegistroPage() {
         else setError(data.error || 'Error al registrarse. Inténtalo de nuevo.')
         return
       }
-
-      // 2. Hacer login automático para obtener sesión activa
       const { error: loginErr } = await supabase.auth.signInWithPassword({
         email: form.email.trim().toLowerCase(),
         password: form.password,
       })
-      if (loginErr) {
-        // Cuenta creada pero login falló — mandar a login
-        window.location.href = '/login'
-        return
-      }
-
-      // 3. Redirigir al onboarding
+      if (loginErr) { window.location.href = '/login'; return }
       window.location.href = '/onboarding'
     } catch(e:any) {
       setError('Error al registrarse. Inténtalo de nuevo.')
     } finally { setLoading(false) }
   },[form])
-
-  const FEATURES = [
-    { icon:'📞', title:'Recepcionista 24/7', desc:'Atiende llamadas automáticamente sin que tú estés presente.' },
-    { icon:'📅', title:'Gestión en tiempo real', desc:'Reservas, citas y pedidos aparecen al instante en tu panel.' },
-    { icon:'🔒', title:'Sin contratos', desc:'Empieza gratis. Cancela cuando quieras.' },
-  ]
 
   return (
     <div style={{ minHeight:'100vh', display:'grid', gridTemplateColumns:'1fr 1fr', fontFamily:"'Sora',-apple-system,sans-serif" }}>
@@ -89,21 +120,28 @@ export default function RegistroPage() {
         *{box-sizing:border-box}
         @keyframes rz-spin{to{transform:rotate(360deg)}}
         @keyframes rz-fade-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes rz-pulse{0%,100%{opacity:1}50%{opacity:0.45}}
         .rzinp{width:100%;font-family:'Sora',sans-serif;font-size:14px;color:#E8EEF6;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;outline:none;transition:border-color 0.15s,box-shadow 0.15s}
         .rzinp::placeholder{color:#49566A}
         .rzinp:focus{border-color:#F0A84E!important;box-shadow:0 0 0 3px rgba(240,168,78,0.12)!important}
         .rzbtn{width:100%;padding:13px 20px;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#0C1018;background:linear-gradient(135deg,#F0A84E,#E8923A);border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 14px rgba(240,168,78,0.25);transition:all 0.15s}
         .rzbtn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 22px rgba(240,168,78,0.38)}
         .rzbtn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-        .rz-tipo{padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;cursor:pointer;transition:all 0.12s;text-align:center;font-family:'Sora',sans-serif}
-        .rz-tipo:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.14)}
-        .rz-tipo.sel{background:rgba(240,168,78,0.1);border-color:rgba(240,168,78,0.35)}
+        .rz-sel-btn{width:100%;padding:12px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:10px;font-family:'Sora',sans-serif;transition:all 0.15s;color:#E8EEF6}
+        .rz-sel-btn:hover{border-color:rgba(255,255,255,0.18);background:rgba(255,255,255,0.07)}
+        .rz-drop{position:absolute;left:0;right:0;top:calc(100% + 6px);background:#1A2230;border:1px solid rgba(255,255,255,0.1);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.5);z-index:50;max-height:320px;overflow-y:auto;animation:rz-fade-up 0.15s ease}
+        .rz-drop::-webkit-scrollbar{width:5px}
+        .rz-drop::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}
+        .rz-opt{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;transition:background 0.1s;font-size:13px;color:#C8D0DC}
+        .rz-opt:hover{background:rgba(240,168,78,0.08)}
+        .rz-opt.active{background:rgba(240,168,78,0.12);color:#F0A84E}
+        .rz-cat-label{padding:8px 14px 4px;font-size:10px;font-weight:700;color:#49566A;letter-spacing:0.08em;text-transform:uppercase}
         @media(max-width:860px){.rz-rp{display:none!important}.rz-lp{grid-column:1/-1!important}}
       `}</style>
 
       {/* ── LEFT: Form ── */}
       <div className="rz-lp" style={{ display:'flex', flexDirection:'column', justifyContent:'center', padding:'clamp(28px,6vw,72px)', background:'#0F1823', minHeight:'100vh', borderRight:'1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ maxWidth:400, width:'100%', margin:'0 auto' }}>
+        <div style={{ maxWidth:420, width:'100%', margin:'0 auto' }}>
           <Link href="/" style={{ display:'flex', alignItems:'center', gap:9, marginBottom:40, textDecoration:'none' }}>
             <div style={{ width:32, height:32, borderRadius:10, background:'linear-gradient(135deg,#F0A84E,#E8923A)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 10px rgba(240,168,78,0.3)' }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="#0C1018"><path d="M22 17a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A2 2 0 014 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 17z"/></svg>
@@ -165,26 +203,65 @@ export default function RegistroPage() {
             <div style={{ animation:'rz-fade-up 0.3s ease' }}>
               <h1 style={{ fontSize:24, fontWeight:700, color:'#E8EEF6', letterSpacing:'-0.03em', marginBottom:6 }}>Tu negocio</h1>
               <p style={{ fontSize:13, color:'#8895A7', marginBottom:28 }}>Personalizaremos el agente para ti</p>
-              <div style={{ display:'flex', flexDirection:'column', gap:16, marginBottom:18 }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:16, marginBottom:20 }}>
                 <div>
                   <label style={{ display:'block', fontSize:11, fontWeight:600, color:'#8895A7', marginBottom:6, letterSpacing:'0.05em', textTransform:'uppercase' }}>Nombre del negocio</label>
                   <input className="rzinp" type="text" value={form.businessName} onChange={e=>up('businessName',e.target.value)} placeholder="Restaurante La Plaza"/>
                 </div>
-                <div>
-                  <label style={{ display:'block', fontSize:11, fontWeight:600, color:'#8895A7', marginBottom:10, letterSpacing:'0.05em', textTransform:'uppercase' }}>Tipo de negocio</label>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                    {TIPOS.map(t => (
-                      <button key={t.key} onClick={()=>up('businessType',t.key)} className={`rz-tipo${form.businessType===t.key?' sel':''}`}>
-                        <div style={{ fontSize:20, marginBottom:4 }}>{t.label}</div>
-                        <div style={{ fontSize:12, fontWeight:600, color: form.businessType===t.key ? '#F0A84E' : '#8895A7' }}>{t.name}</div>
-                      </button>
-                    ))}
-                  </div>
+                <div style={{ position:'relative' }}>
+                  <label style={{ display:'block', fontSize:11, fontWeight:600, color:'#8895A7', marginBottom:6, letterSpacing:'0.05em', textTransform:'uppercase' }}>Tipo de negocio</label>
+                  <button
+                    type="button"
+                    className="rz-sel-btn"
+                    onClick={() => { setDropOpen(!dropOpen); setSearch('') }}
+                    style={dropOpen ? { borderColor: '#F0A84E', boxShadow: '0 0 0 3px rgba(240,168,78,0.12)' } : {}}
+                  >
+                    <span style={{ fontSize:18 }}>{selectedTipo?.icon}</span>
+                    <span style={{ fontSize:14, fontWeight:600, flex:1, textAlign:'left' }}>{selectedTipo?.name}</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8895A7" strokeWidth="2.5" strokeLinecap="round" style={{ transition:'transform 0.15s', transform: dropOpen ? 'rotate(180deg)' : 'none' }}><path d="M6 9l6 6 6-6"/></svg>
+                  </button>
+
+                  {dropOpen && (
+                    <div className="rz-drop" onClick={e => e.stopPropagation()}>
+                      <div style={{ padding:'10px 12px 6px', borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
+                        <input
+                          className="rzinp"
+                          style={{ fontSize:13, padding:'9px 12px', background:'rgba(255,255,255,0.04)' }}
+                          type="text"
+                          placeholder="Buscar tipo de negocio..."
+                          value={search}
+                          onChange={e => setSearch(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      {filtered.map(cat => (
+                        <div key={cat.label}>
+                          <div className="rz-cat-label">{cat.label}</div>
+                          {cat.tipos.map(t => (
+                            <div
+                              key={t.key}
+                              className={`rz-opt${form.businessType === t.key ? ' active' : ''}`}
+                              onClick={() => { up('businessType', t.key); setDropOpen(false) }}
+                            >
+                              <span style={{ fontSize:16 }}>{t.icon}</span>
+                              <span style={{ fontWeight:600 }}>{t.name}</span>
+                              {form.businessType === t.key && (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F0A84E" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft:'auto' }}><path d="M20 6L9 17l-5-5"/></svg>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                      {filtered.length === 0 && (
+                        <div style={{ padding:'16px', textAlign:'center', color:'#49566A', fontSize:13 }}>Sin resultados</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               {error && <div style={{ background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.2)', borderRadius:9, padding:'10px 14px', marginBottom:14, fontSize:13, color:'#F87171' }}>{error}</div>}
               <div style={{ display:'flex', gap:10 }}>
-                <button onClick={()=>setStep(1)} style={{ flex:1, padding:'13px', fontFamily:"'Sora',sans-serif", fontSize:14, fontWeight:600, color:'#8895A7', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:10, cursor:'pointer' }}>← Atrás</button>
+                <button onClick={()=>setStep(1)} style={{ flex:1, padding:'13px', fontFamily:"'Sora',sans-serif", fontSize:14, fontWeight:600, color:'#8895A7', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:10, cursor:'pointer', transition:'all 0.15s' }}>← Atrás</button>
                 <button className="rzbtn" style={{ flex:2 }} disabled={loading} onClick={handleRegister}>
                   {loading ? <><div style={{ width:16, height:16, border:'2px solid rgba(12,16,24,0.3)', borderTop:'2px solid #0C1018', borderRadius:'50%', animation:'rz-spin 0.7s linear infinite' }}/> Creando…</> : 'Empezar gratis →'}
                 </button>
@@ -211,7 +288,11 @@ export default function RegistroPage() {
             <p style={{ fontSize:14, color:'rgba(255,255,255,0.38)', lineHeight:1.7 }}>Sin instalaciones, sin complicaciones. En menos de 5 minutos tu negocio ya recibe llamadas.</p>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-            {FEATURES.map((f,i) => (
+            {[
+              { icon:'📞', title:'Recepcionista 24/7', desc:'Atiende llamadas automáticamente sin que tú estés presente.' },
+              { icon:'📅', title:'Gestión en tiempo real', desc:'Reservas, citas y pedidos aparecen al instante en tu panel.' },
+              { icon:'🔒', title:'Sin contratos', desc:'Empieza gratis. Cancela cuando quieras.' },
+            ].map((f,i) => (
               <div key={f.title} style={{ display:'flex', gap:14, padding:'16px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:14, animation:'rz-fade-up 0.4s ease both', animationDelay:`${i*0.08}s` }}>
                 <div style={{ width:40, height:40, borderRadius:11, background:'rgba(240,168,78,0.1)', border:'1px solid rgba(240,168,78,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>{f.icon}</div>
                 <div>
@@ -230,7 +311,6 @@ export default function RegistroPage() {
             ))}
           </div>
         </div>
-        <style>{`@keyframes rz-pulse{0%,100%{opacity:1}50%{opacity:0.45}} @keyframes rz-fade-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
       </div>
     </div>
   )
