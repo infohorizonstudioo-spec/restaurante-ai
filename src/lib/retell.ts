@@ -277,7 +277,7 @@ export async function createOutboundCall(config: {
   metadata?: Record<string, any>
   retell_llm_dynamic_variables?: Record<string, string>
 }): Promise<{ call_id: string }> {
-  return retellFetch('/create-phone-call', {
+  return retellFetch('/v2/create-phone-call', {
     method: 'POST',
     body: JSON.stringify({
       from_number: config.from_number || null,
