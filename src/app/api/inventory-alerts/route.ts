@@ -47,7 +47,8 @@ export async function GET(req: NextRequest) {
   try {
     const alerts = await generateInventoryAlerts(tenantId)
     return NextResponse.json({ ok: true, alerts })
-  } catch {
-    return NextResponse.json({ error: 'internal error' }, { status: 500 })
+  } catch (e: any) {
+    console.error('GET /api/inventory-alerts failed:', e?.message)
+    return NextResponse.json({ error: 'Failed to generate inventory alerts' }, { status: 500 })
   }
 }
