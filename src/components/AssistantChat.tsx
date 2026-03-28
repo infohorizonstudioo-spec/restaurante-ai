@@ -287,6 +287,21 @@ export default function AssistantChat() {
                 <p style={{ fontSize: 11, color: C.text3, lineHeight: 1.6, maxWidth: 260, margin: 0 }}>
                   Puedes consultar sobre reservas, configuracion, metricas o cualquier duda de tu negocio.
                 </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8, justifyContent: 'center' }}>
+                  {[
+                    'Reservas de hoy',
+                    'Como va el negocio?',
+                    'Llamadas de hoy',
+                    'Cambiar horario',
+                    'Añadir a la carta',
+                  ].map(s => (
+                    <button key={s} onClick={() => { setInput(s); setTimeout(() => sendMessage(), 100) }}
+                      style={{ fontSize: 11, padding: '5px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'rgba(255,255,255,0.03)', color: C.text2, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+                      onMouseEnter={e => { (e.target as HTMLElement).style.borderColor = C.amber + '44'; (e.target as HTMLElement).style.color = C.amber }}
+                      onMouseLeave={e => { (e.target as HTMLElement).style.borderColor = C.border; (e.target as HTMLElement).style.color = C.text2 }}
+                    >{s}</button>
+                  ))}
+                </div>
               </div>
             )}
 
