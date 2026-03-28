@@ -13,6 +13,115 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
+// ── Dynamic menu cache ──────────────────────────────────────────
+type MenuItem = { keywords: string[]; name: string; price: number }
+type MenuCache = { items: MenuItem[]; ts: number }
+const menuCache = new Map<string, MenuCache>()
+const MENU_TTL = 5 * 60 * 1000 // 5 minutes
+
+/** Hardcoded fallback menu (FormaNova defaults) */
+const FALLBACK_MENU: MenuItem[] = [
+  { keywords: ['paella'], name: 'Paella', price: 13 },
+  { keywords: ['arroz banda', 'arroz a banda'], name: 'Arroz a banda', price: 14 },
+  { keywords: ['arroz negro'], name: 'Arroz negro', price: 15 },
+  { keywords: ['lubina'], name: 'Lubina', price: 18 },
+  { keywords: ['dorada'], name: 'Dorada', price: 16 },
+  { keywords: ['chuleton', 'chuletón', 'txuleta'], name: 'Chuleton', price: 22 },
+  { keywords: ['solomillo'], name: 'Solomillo', price: 20 },
+  { keywords: ['ensalada', 'ensaladita'], name: 'Ensalada', price: 8 },
+  { keywords: ['croquetas', 'croqueta'], name: 'Croquetas', price: 7 },
+  { keywords: ['bravas', 'patatas bravas'], name: 'Bravas', price: 7 },
+  { keywords: ['gambas', 'gamba'], name: 'Gambas al ajillo', price: 12 },
+  { keywords: ['tarta', 'tarta de queso'], name: 'Tarta de queso', price: 6 },
+  { keywords: ['flan'], name: 'Flan', price: 5 },
+  { keywords: ['helado'], name: 'Helado', price: 4 },
+  { keywords: ['hamburguesa', 'burger'], name: 'Hamburguesa gourmet', price: 16 },
+  { keywords: ['pulpo'], name: 'Pulpo a la gallega', price: 17 },
+  { keywords: ['tortilla'], name: 'Tortilla', price: 8 },
+  { keywords: ['chorizo'], name: 'Chorizo a la sidra', price: 9 },
+  { keywords: ['coca cola', 'cocacola', 'coca-cola'], name: 'Coca Cola', price: 3 },
+  { keywords: ['seven up', 'sevenup', '7up', '7 up'], name: 'Seven Up', price: 3 },
+  { keywords: ['fanta'], name: 'Fanta', price: 3 },
+  { keywords: ['nestea'], name: 'Nestea', price: 3 },
+  { keywords: ['agua'], name: 'Agua', price: 2 },
+  { keywords: ['cerveza', 'birra', 'cana', 'cania'], name: 'Cerveza', price: 3 },
+  { keywords: ['vino', 'tinto', 'blanco', 'ribera', 'rioja'], name: 'Vino', price: 4 },
+  { keywords: ['sangria'], name: 'Sangria', price: 5 },
+  { keywords: ['cafe', 'cortado', 'solo'], name: 'Cafe', price: 2 },
+  { keywords: ['pan', 'panecillo'], name: 'Pan', price: 1 },
+]
+
+/**
+ * Parse menu text from business_knowledge into MenuItem[].
+ * Handles patterns like:
+ *   "Arroz a banda 14 euros, paella 13, arroz negro 15"
+ *   "Lubina 18€, dorada 16 eur"
+ */
+function parseMenuText(text: string): MenuItem[] {
+  const items: MenuItem[] = []
+  // Split on commas or periods that separate items
+  const segments = text.split(/[,.]/).map(s => s.trim()).filter(Boolean)
+
+  for (const seg of segments) {
+    // Match: item name (words) followed by price number, optionally followed by euros/eur/€
+    const m = seg.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*(?:euros?|eur|€)?$/i)
+    if (m) {
+      const rawName = m[1].trim()
+      const price = parseFloat(m[2].replace(',', '.'))
+      if (rawName && price > 0) {
+        // Generate keywords: the full name lowercased + individual significant words
+        const nameLower = rawName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        const keywords = [nameLower]
+        // Add individual words longer than 2 chars as extra keywords
+        const words = nameLower.split(/\s+/).filter(w => w.length > 2)
+        if (words.length > 1) {
+          for (const w of words) keywords.push(w)
+        }
+        items.push({ keywords, name: rawName, price })
+      }
+    }
+  }
+  return items
+}
+
+/**
+ * Load menu for a tenant from business_knowledge, with 5-min cache.
+ * Returns FALLBACK_MENU if no menu found in DB.
+ */
+async function loadMenuForTenant(tenantId: string): Promise<MenuItem[]> {
+  const cached = menuCache.get(tenantId)
+  if (cached && Date.now() - cached.ts < MENU_TTL) {
+    return cached.items
+  }
+
+  try {
+    const { data: knowledge } = await supabase
+      .from('business_knowledge')
+      .select('content')
+      .eq('tenant_id', tenantId)
+      .eq('active', true)
+      .in('category', ['menu', 'carta', 'productos', 'precios'])
+
+    if (knowledge && knowledge.length > 0) {
+      const allItems: MenuItem[] = []
+      for (const row of knowledge) {
+        const parsed = parseMenuText(row.content)
+        allItems.push(...parsed)
+      }
+      if (allItems.length > 0) {
+        menuCache.set(tenantId, { items: allItems, ts: Date.now() })
+        return allItems
+      }
+    }
+  } catch {
+    // DB error — fall through to fallback
+  }
+
+  // No menu in DB or parse failed — use fallback
+  menuCache.set(tenantId, { items: FALLBACK_MENU, ts: Date.now() })
+  return FALLBACK_MENU
+}
+
 export async function parseRetellBody(body: Record<string, any>): Promise<Record<string, any>> {
   // Try args first (in case Retell fixes the bug)
   let parsed: Record<string, any> = {}
@@ -43,14 +152,15 @@ export async function parseRetellBody(body: Record<string, any>): Promise<Record
   // Extract data from transcript if args are empty
   const transcript = body.call?.transcript || ''
   if (transcript) {
-    const extracted = extractFromTranscript(transcript)
+    const tenantMenu = parsed.tenant_id ? await loadMenuForTenant(parsed.tenant_id) : FALLBACK_MENU
+    const extracted = extractFromTranscript(transcript, tenantMenu)
     if (!parsed.date && extracted.date) parsed.date = extracted.date
     if (!parsed.time && extracted.time) parsed.time = extracted.time
     if (!parsed.party_size && extracted.party_size) parsed.party_size = extracted.party_size
     if (!parsed.customer_name && extracted.customer_name) parsed.customer_name = extracted.customer_name
     if (!parsed.intent && extracted.intent) parsed.intent = extracted.intent
     if (!parsed.summary) parsed.summary = extracted.summary
-    if (!parsed.items || (Array.isArray(parsed.items) && parsed.items.length === 0)) parsed.items = extracted.items
+    if ((!parsed.items || (Array.isArray(parsed.items) && parsed.items.length === 0)) && extracted.items) parsed.items = extracted.items
     if (!parsed.order_type && extracted.order_type) parsed.order_type = extracted.order_type
     if (!parsed.notes && extracted.notes) parsed.notes = extracted.notes
   }
@@ -59,7 +169,7 @@ export async function parseRetellBody(body: Record<string, any>): Promise<Record
   return parsed
 }
 
-function extractFromTranscript(transcript: string): Record<string, any> {
+function extractFromTranscript(transcript: string, menu: MenuItem[]): Record<string, any> {
   const result: Record<string, any> = {}
   const lower = transcript.toLowerCase()
 
@@ -176,39 +286,9 @@ function extractFromTranscript(transcript: string): Record<string, any> {
   else if (lower.includes('recoger') || lower.includes('pasar a') || lower.includes('para llevar')) result.order_type = 'recoger'
   else if (lower.includes('mesa') || lower.includes('comer aqui')) result.order_type = 'mesa'
 
-  // Items - extract food items from transcript
+  // Items - extract food items from transcript using dynamic menu
   // Normalize: remove accents for matching
   const norm = lower.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  const menu: Array<{keywords: string[], name: string, price: number}> = [
-    { keywords: ['paella'], name: 'Paella', price: 13 },
-    { keywords: ['arroz banda', 'arroz a banda'], name: 'Arroz a banda', price: 14 },
-    { keywords: ['arroz negro'], name: 'Arroz negro', price: 15 },
-    { keywords: ['lubina'], name: 'Lubina', price: 18 },
-    { keywords: ['dorada'], name: 'Dorada', price: 16 },
-    { keywords: ['chuleton', 'chuletón', 'chuleton', 'txuleta'], name: 'Chuleton', price: 22 },
-    { keywords: ['solomillo'], name: 'Solomillo', price: 20 },
-    { keywords: ['ensalada', 'ensaladita'], name: 'Ensalada', price: 8 },
-    { keywords: ['croquetas', 'croqueta'], name: 'Croquetas', price: 7 },
-    { keywords: ['bravas', 'patatas bravas'], name: 'Bravas', price: 7 },
-    { keywords: ['gambas', 'gamba'], name: 'Gambas al ajillo', price: 12 },
-    { keywords: ['tarta', 'tarta de queso'], name: 'Tarta de queso', price: 6 },
-    { keywords: ['flan'], name: 'Flan', price: 5 },
-    { keywords: ['helado'], name: 'Helado', price: 4 },
-    { keywords: ['hamburguesa', 'burger'], name: 'Hamburguesa gourmet', price: 16 },
-    { keywords: ['pulpo'], name: 'Pulpo a la gallega', price: 17 },
-    { keywords: ['tortilla'], name: 'Tortilla', price: 8 },
-    { keywords: ['chorizo'], name: 'Chorizo a la sidra', price: 9 },
-    { keywords: ['coca cola', 'cocacola', 'coca-cola'], name: 'Coca Cola', price: 3 },
-    { keywords: ['seven up', 'sevenup', '7up', '7 up'], name: 'Seven Up', price: 3 },
-    { keywords: ['fanta'], name: 'Fanta', price: 3 },
-    { keywords: ['nestea'], name: 'Nestea', price: 3 },
-    { keywords: ['agua'], name: 'Agua', price: 2 },
-    { keywords: ['cerveza', 'birra', 'cana', 'cania'], name: 'Cerveza', price: 3 },
-    { keywords: ['vino', 'tinto', 'blanco', 'ribera', 'rioja'], name: 'Vino', price: 4 },
-    { keywords: ['sangria'], name: 'Sangria', price: 5 },
-    { keywords: ['cafe', 'cortado', 'solo'], name: 'Cafe', price: 2 },
-    { keywords: ['pan', 'panecillo'], name: 'Pan', price: 1 },
-  ]
   const items: Array<{name: string, quantity: number, price: number}> = []
   for (const item of menu) {
     for (const kw of item.keywords) {
