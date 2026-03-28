@@ -72,7 +72,7 @@ export default function Sidebar() {
     const map: Record<string, string> = {
       panel: t.nav.panel, reservas: t.nav.reservations, agenda: t.nav.agenda,
       llamadas: t.nav.calls, clientes: t.nav.clients, mesas: t.nav.spaces,
-      turnos: t.nav.shifts, productos: t.nav.products, pedidos: t.nav.orders,
+      turnos: t.nav.shifts, 'horarios-equipo': t.nav.teamSchedule, productos: t.nav.products, pedidos: t.nav.orders,
       estadisticas: t.nav.stats, facturacion: t.nav.billing,
       agente: t.nav.agent, configuracion: t.nav.settings,
     }

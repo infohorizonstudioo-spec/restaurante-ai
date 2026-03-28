@@ -18,7 +18,7 @@ export interface Translations {
   }
   nav: {
     panel: string; reservations: string; agenda: string; calls: string
-    clients: string; spaces: string; shifts: string; products: string
+    clients: string; spaces: string; shifts: string; teamSchedule: string; products: string
     orders: string; stats: string; billing: string; agent: string; settings: string
   }
   agent: {
@@ -58,7 +58,7 @@ const ES: Translations = {
   },
   nav: {
     panel: 'Resumen del día', reservations: 'Reservas', agenda: 'Agenda', calls: 'Llamadas',
-    clients: 'Clientes', spaces: 'Mesas y zonas', shifts: 'Turnos y franjas', products: 'Carta y productos',
+    clients: 'Clientes', spaces: 'Mesas y zonas', shifts: 'Turnos y franjas', teamSchedule: 'Horarios equipo', products: 'Carta y productos',
     orders: 'Pedidos', stats: 'Estadísticas', billing: 'Facturación', agent: 'Mi recepcionista', settings: 'Configuración',
   },
   agent: {
@@ -100,7 +100,7 @@ const EN: Translations = {
   },
   nav: {
     panel: 'Dashboard', reservations: 'Reservations', agenda: 'Schedule', calls: 'Calls',
-    clients: 'Clients', spaces: 'Tables & zones', shifts: 'Shifts', products: 'Menu & products',
+    clients: 'Clients', spaces: 'Tables & zones', shifts: 'Shifts', teamSchedule: 'Team schedule', products: 'Menu & products',
     orders: 'Orders', stats: 'Analytics', billing: 'Billing', agent: 'My receptionist', settings: 'Settings',
   },
   agent: {
@@ -142,7 +142,7 @@ const FR: Translations = {
   },
   nav: {
     panel: 'Tableau de bord', reservations: 'Réservations', agenda: 'Agenda', calls: 'Appels',
-    clients: 'Clients', spaces: 'Tables et zones', shifts: 'Horaires', products: 'Menu et produits',
+    clients: 'Clients', spaces: 'Tables et zones', shifts: 'Horaires', teamSchedule: 'Horaires équipe', products: 'Menu et produits',
     orders: 'Commandes', stats: 'Statistiques', billing: 'Facturation', agent: 'Mon réceptionniste', settings: 'Paramètres',
   },
   agent: {
@@ -184,7 +184,7 @@ const PT: Translations = {
   },
   nav: {
     panel: 'Painel', reservations: 'Reservas', agenda: 'Agenda', calls: 'Chamadas',
-    clients: 'Clientes', spaces: 'Mesas e zonas', shifts: 'Turnos', products: 'Menu e produtos',
+    clients: 'Clientes', spaces: 'Mesas e zonas', shifts: 'Turnos', teamSchedule: 'Horários equipa', products: 'Menu e produtos',
     orders: 'Pedidos', stats: 'Estatísticas', billing: 'Faturação', agent: 'Meu rececionista', settings: 'Configurações',
   },
   agent: {

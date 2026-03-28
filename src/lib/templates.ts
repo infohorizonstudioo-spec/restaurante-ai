@@ -76,6 +76,7 @@ const HOSTELERIA: TemplateConfig = {
     { id:'clientes',     href:'/clientes',     icon:'users', label:'Clientes' },
     { id:'mesas',        href:'/mesas',        icon:'layout',label:'Mesas y zonas' },
     { id:'turnos',       href:'/turnos',       icon:'clock2', label:'Turnos y franjas' },
+    { id:'horarios-equipo', href:'/horarios-equipo', icon:'users', label:'Horarios equipo' },
     { id:'productos',    href:'/productos',    icon:'menu',   label:'Carta y productos' },
     { id:'pedidos',      href:'/pedidos',      icon:'bag',   label:'Pedidos', pro:true },
     { id:'estadisticas', href:'/estadisticas', icon:'bar',   label:'Estadísticas', pro:true },

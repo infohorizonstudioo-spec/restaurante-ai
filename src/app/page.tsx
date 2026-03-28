@@ -346,6 +346,105 @@ export default function HomePage() {
       </div>
 
       {/* ══════════════════════════════════════════
+          1.5 FUNCIONALIDADES — Feature cards con stagger
+         ══════════════════════════════════════════ */}
+      <section style={{padding:'90px clamp(16px,5vw,64px)',maxWidth:1200,margin:'0 auto'}}>
+        <div style={{textAlign:'center',marginBottom:56}}>
+          <p style={{fontSize:12,fontWeight:600,color:C.amber,letterSpacing:'0.08em',marginBottom:12}}>TODO LO QUE NECESITAS</p>
+          <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
+            Un sistema completo.<br/>
+            <span style={{background:'linear-gradient(135deg,#F0A84E,#E8923A)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>Todo integrado.</span>
+          </h2>
+          <p style={{fontSize:16,color:C.muted,maxWidth:560,margin:'0 auto'}}>
+            No necesitas 5 herramientas distintas. Reservo centraliza todo lo que tu negocio necesita para funcionar sin fricción.
+          </p>
+        </div>
+        <style>{`
+          @keyframes featIn{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+          .feat-card{animation:featIn 0.6s ease both}
+          .feat-card:nth-child(1){animation-delay:0s}
+          .feat-card:nth-child(2){animation-delay:0.08s}
+          .feat-card:nth-child(3){animation-delay:0.16s}
+          .feat-card:nth-child(4){animation-delay:0.24s}
+          .feat-card:nth-child(5){animation-delay:0.32s}
+          .feat-card:nth-child(6){animation-delay:0.40s}
+        `}</style>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="feat-grid">
+          {[
+            {
+              icon: (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F0A84E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 2v3M16 2v3M3 8h18M5 4h14a2 2 0 012 2v13a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/>
+                </svg>
+              ),
+              title: 'Reservas inteligentes',
+              body: 'Gestiona reservas y citas desde cualquier canal. Ofrece alternativas, detecta conflictos y confirma al instante.',
+              color: 'rgba(240,168,78,0.1)', bc: 'rgba(240,168,78,0.2)', accent: C.amber,
+            },
+            {
+              icon: (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/>
+                </svg>
+              ),
+              title: 'Pedidos en tiempo real',
+              body: 'Recibe y organiza pedidos para recoger o a domicilio. Todo actualizado en tiempo real sin intermediarios.',
+              color: 'rgba(45,212,191,0.1)', bc: 'rgba(45,212,191,0.2)', accent: C.teal,
+            },
+            {
+              icon: (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 17a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A2 2 0 014 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 17z"/>
+                </svg>
+              ),
+              title: 'Agente de voz IA',
+              body: 'Responde llamadas como una persona real. Entiende contexto, toma decisiones y no necesita descanso.',
+              color: 'rgba(167,139,250,0.1)', bc: 'rgba(167,139,250,0.2)', accent: '#A78BFA',
+            },
+            {
+              icon: (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                </svg>
+              ),
+              title: 'Control de equipo',
+              body: 'Horarios, turnos y disponibilidad de tu equipo organizados. Cada persona sabe lo que le toca.',
+              color: 'rgba(96,165,250,0.1)', bc: 'rgba(96,165,250,0.2)', accent: '#60A5FA',
+            },
+            {
+              icon: (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 20V10M12 20V4M6 20v-6"/>
+                </svg>
+              ),
+              title: 'Estadisticas claras',
+              body: 'Visualiza el rendimiento de tu negocio de un vistazo. Llamadas, reservas, tendencias y oportunidades.',
+              color: 'rgba(52,211,153,0.1)', bc: 'rgba(52,211,153,0.2)', accent: '#34D399',
+            },
+            {
+              icon: (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F87171" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              ),
+              title: 'Memoria de clientes',
+              body: 'Cada cliente queda registrado con su historial, preferencias y notas. Atiendes mejor sin esfuerzo.',
+              color: 'rgba(248,113,113,0.1)', bc: 'rgba(248,113,113,0.2)', accent: '#F87171',
+            },
+          ].map(({icon,title,body,color,bc,accent})=>(
+            <div key={title} className="feat-card card-hover" style={{background:color,border:`1px solid ${bc}`,borderRadius:16,padding:'28px 24px'}}>
+              <div style={{width:52,height:52,borderRadius:14,background:'rgba(255,255,255,0.04)',border:`1px solid ${bc}`,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:18}}>
+                {icon}
+              </div>
+              <h3 style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:10,letterSpacing:'-0.02em'}}>{title}</h3>
+              <p style={{fontSize:13.5,color:C.muted,lineHeight:1.65}}>{body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════
           2. MULTICANAL — Integración natural
          ══════════════════════════════════════════ */}
       <section style={{padding:'90px clamp(16px,5vw,64px)',maxWidth:1200,margin:'0 auto'}}>
