@@ -4,11 +4,12 @@
  * Each function contains the core business logic without HTTP concerns.
  */
 import { createClient } from '@supabase/supabase-js'
-import { parseReservationConfig, checkSlotAvailability, generateSlots } from './scheduling-engine'
+import { parseReservationConfig, checkSlotAvailability, generateSlots, hasBufferConflict, timeToMinutes } from './scheduling-engine'
 import { resolveTemplate } from './templates'
 import { makeDecision } from './agent-decision'
 import { scheduleReminders, cancelReminders } from './reminder-engine'
 import { classifyInteraction, detectConflicts, generateSummary, learnFromInteraction } from './intelligence-engine'
+import { saveCustomerMemory, getCustomerProfile } from './customer-memory'
 import { logger } from './logger'
 
 const supabase = createClient(
@@ -102,7 +103,95 @@ async function loadAvailabilityContext(tenantId: string, date: string, excludeRe
     zone_id: r.zone_id, table_id: r.table_id,
   }))
 
-  return { tenantType, tenantName: tenantRes.data?.name || '', cfg, tmpl, zones, tables, existing }
+  return { tenantType, tenantName: tenantRes.data?.name || '', cfg, tmpl, zones, tables, existing, reservationConfig: tenantRes.data?.reservation_config }
+}
+
+// ── Helper: get table IDs occupied at a given time considering duration overlap ─
+function getOccupiedTableIds(
+  time: string,
+  existing: Array<{ time: string; people: number; zone_id?: string; table_id?: string }>,
+  cfg: { default_reservation_duration_minutes: number; buffer_minutes: number }
+): Set<string> {
+  const occupied = new Set<string>()
+  const newMins = timeToMinutes(time.slice(0, 5))
+  const dur = cfg.default_reservation_duration_minutes
+  const buf = cfg.buffer_minutes
+
+  for (const r of existing) {
+    if (!r.table_id) continue
+    const exMins = timeToMinutes((r.time || '').slice(0, 5))
+    const exEnd = exMins + dur + buf
+    const newEnd = newMins + dur + buf
+    // Two windows overlap if neither ends before the other starts
+    if (!(newEnd <= exMins || newMins >= exEnd)) {
+      occupied.add(r.table_id)
+    }
+  }
+  return occupied
+}
+
+// ── Helper: find best-fit table for party size with overlap awareness ─────────
+function findBestTable(params: {
+  partySize: number
+  zone?: string
+  preferredZoneId?: string | null
+  preferredTableId?: string | null
+  time: string
+  existing: Array<{ time: string; people: number; zone_id?: string; table_id?: string }>
+  tables: Array<{ id: string; zone_id?: string; capacity: number; status?: string }>
+  zones: Array<{ id: string; name: string }>
+  cfg: { default_reservation_duration_minutes: number; buffer_minutes: number }
+}): { tableId: string | null; tableInfo: string; zoneId?: string } {
+  const { partySize, zone, preferredZoneId, preferredTableId, time, existing, tables, zones, cfg } = params
+  if (tables.length === 0) return { tableId: null, tableInfo: '' }
+
+  const occupiedIds = getOccupiedTableIds(time, existing, cfg)
+
+  let freeTables = tables.filter((t: any) =>
+    !occupiedIds.has(t.id) &&
+    (t.capacity == null || t.capacity === 0 || t.capacity >= partySize) &&
+    t.status !== 'bloqueada'
+  )
+
+  // Priority 1: if customer has a preferred table from memory and it's free
+  if (preferredTableId) {
+    const preferred = freeTables.find(t => t.id === preferredTableId)
+    if (preferred) {
+      const tableZone = zones.find(z => z.id === preferred.zone_id)
+      return { tableId: preferred.id, tableInfo: tableZone ? ` en ${tableZone.name}` : '', zoneId: preferred.zone_id }
+    }
+  }
+
+  // Priority 2: zone preference (explicit > memory-based)
+  const zonePreference = zone || null
+  let resolvedZoneId: string | undefined
+  if (zonePreference) {
+    const zoneObj = zones.find((z: any) => z.name.toLowerCase().includes(zonePreference.toLowerCase()))
+    if (zoneObj) {
+      const zoneTables = freeTables.filter((t: any) => t.zone_id === zoneObj.id)
+      if (zoneTables.length > 0) {
+        freeTables = zoneTables
+        resolvedZoneId = zoneObj.id
+      }
+    }
+  } else if (preferredZoneId) {
+    // Use customer's preferred zone from memory if no explicit zone
+    const zoneTables = freeTables.filter((t: any) => t.zone_id === preferredZoneId)
+    if (zoneTables.length > 0) {
+      freeTables = zoneTables
+      resolvedZoneId = preferredZoneId
+    }
+  }
+
+  // Priority 3: best-fit by capacity (smallest table that fits the party)
+  freeTables.sort((a: any, b: any) => (a.capacity || 99) - (b.capacity || 99))
+
+  if (freeTables[0]) {
+    const tableZone = zones.find((z: any) => z.id === freeTables[0].zone_id)
+    return { tableId: freeTables[0].id, tableInfo: tableZone ? ` en ${tableZone.name}` : '', zoneId: freeTables[0].zone_id }
+  }
+
+  return { tableId: null, tableInfo: '' }
 }
 
 // ── Helper: find next available day ──────────────────────────
@@ -156,6 +245,29 @@ export async function checkAvailabilityTool(params: {
       time, date, party_size: size, zone_name: zone,
       cfg, existing_reservations: existing, tables, zones,
     })
+
+    // Additional overlap check: verify tables are truly free considering reservation duration
+    if (result.available && tables.length > 0) {
+      const occupiedIds = getOccupiedTableIds(time, existing, cfg)
+      const trulyFreeTables = tables.filter((t: any) =>
+        !occupiedIds.has(t.id) &&
+        (t.capacity == null || t.capacity === 0 || t.capacity >= size) &&
+        t.status !== 'bloqueada'
+      )
+      if (trulyFreeTables.length === 0) {
+        // Scheduling engine said available but all tables are occupied by overlapping reservations
+        const alternatives = result.alternatives.length > 0 ? result.alternatives : []
+        return {
+          success: true, available: false, waitlist_available: true,
+          reason: 'no_table_available',
+          message: `No hay mesa disponible para ${size} personas a las ${time} — las mesas están ocupadas por reservas cercanas.`,
+          alternatives,
+          suggestion: alternatives.length > 0
+            ? `No hay mesa libre a las ${time} por reservas cercanas. Alternativas: ${alternatives.join(', ')}.`
+            : `No hay mesa libre a las ${time}. Sugiérele otra hora.`,
+        }
+      }
+    }
 
     if (result.available) {
       // Smart tip: warn if almost full
@@ -304,31 +416,60 @@ export async function createReservationTool(params: {
     customerId = newC?.id || null
   }
 
-  // 4. Assign best table
-  const reservedTableIds = new Set(existing.map(r => r.table_id).filter(Boolean))
-  let assignedTableId: string | null = null
-  let assignedTableInfo = ''
-
-  if (tables.length > 0) {
-    let freeTables = tables.filter((t: any) =>
-      !reservedTableIds.has(t.id) &&
-      (t.capacity == null || t.capacity === 0 || t.capacity >= finalPartySize) &&
-      t.status !== 'bloqueada'
-    )
-    if (zone) {
-      const zoneObj = zones.find((z: any) => z.name.toLowerCase().includes(zone.toLowerCase()))
-      if (zoneObj) {
-        const zoneTables = freeTables.filter((t: any) => t.zone_id === zoneObj.id)
-        if (zoneTables.length > 0) freeTables = zoneTables
+  // 3b. Load customer memory for table/zone preferences
+  let preferredZoneId: string | null = null
+  let preferredTableId: string | null = null
+  if (customer_phone || customerId) {
+    const profile = await getCustomerProfile(tenant_id, customer_phone).catch(() => null)
+    if (profile) {
+      // Extract preferred zone and table from memory
+      const memories = (profile as any).memories || []
+      for (const m of memories) {
+        if (m.memory_key === 'preferred_zone' && m.memory_value) {
+          const zoneObj = zones.find((z: any) => z.name.toLowerCase().includes(m.memory_value.toLowerCase()))
+          if (zoneObj) preferredZoneId = zoneObj.id
+        }
+        if (m.memory_key === 'preferred_table' && m.memory_value) {
+          preferredTableId = m.memory_value
+        }
       }
     }
-    freeTables.sort((a: any, b: any) => (a.capacity || 99) - (b.capacity || 99))
-    if (freeTables[0]) {
-      assignedTableId = freeTables[0].id
-      const tableZone = zones.find((z: any) => z.id === freeTables[0].zone_id)
-      assignedTableInfo = tableZone ? ` en ${tableZone.name}` : ''
+  }
+
+  // 4. Assign best table — overlap-aware, best-fit, zone-preference, memory-aware
+  const bestTable = findBestTable({
+    partySize: finalPartySize,
+    zone,
+    preferredZoneId,
+    preferredTableId,
+    time: finalTime,
+    existing, tables, zones, cfg,
+  })
+  let assignedTableId = bestTable.tableId
+  let assignedTableInfo = bestTable.tableInfo
+
+  // If no table found via overlap-aware check but scheduling engine said available,
+  // it means all suitable tables are occupied by overlapping reservations
+  if (!assignedTableId && tables.length > 0) {
+    const occupiedIds = getOccupiedTableIds(finalTime, existing, cfg)
+    const anyFree = tables.some((t: any) =>
+      !occupiedIds.has(t.id) && t.status !== 'bloqueada'
+    )
+    if (!anyFree) {
+      return {
+        success: false, available: false,
+        reason: 'no_table_available',
+        message: `No hay mesa disponible a las ${finalTime} — todas están ocupadas por reservas cercanas.`,
+        alternatives: availability.alternatives,
+        suggestion: availability.alternatives.length > 0
+          ? `Las mesas están ocupadas por reservas cercanas. Alternativas: ${availability.alternatives.join(', ')}.`
+          : `No hay mesa libre a las ${finalTime}. Sugiérele otra hora.`,
+      }
     }
   }
+
+  // 4b. Large group handling — groups > 8 require owner review
+  const isLargeGroup = finalPartySize > 8 && ['restaurante', 'bar', 'cafeteria'].includes(tenantType)
 
   // 5. Run decision engine — per-type logic decides auto-confirm vs needs-review
   const decision = await makeDecision({
@@ -369,14 +510,17 @@ export async function createReservationTool(params: {
     }
   }
 
-  const finalStatus = decision.status === 'confirmed' ? 'confirmada' : 'pendiente'
+  // Large groups override decision status to pending
+  const finalStatus = isLargeGroup ? 'pendiente' : (decision.status === 'confirmed' ? 'confirmada' : 'pendiente')
+  const largeGroupNote = isLargeGroup ? `[GRUPO GRANDE: ${finalPartySize}p — requiere confirmación del propietario]` : ''
+  const fullNotes = [notesStr, largeGroupNote].filter(Boolean).join(' | ')
 
   // 6. Insert reservation with decision-based status
   const { data: reservation, error } = await supabase.from('reservations').insert({
     tenant_id, customer_id: customerId, customer_name,
     customer_phone: customer_phone || null,
     date: finalDate, time: finalTime, people: finalPartySize,
-    table_id: assignedTableId, notes: notesStr || null,
+    table_id: assignedTableId, notes: fullNotes || null,
     status: finalStatus, source,
   }).select('id').maybeSingle()
 
@@ -387,12 +531,20 @@ export async function createReservationTool(params: {
     await supabase.from('tables').update({ status: 'reservada' }).eq('id', assignedTableId)
   }
 
-  // 8. Notification for owner if needs review
+  // 8. Notification for owner if needs review OR large group
   if (decision.action === 'needs_review') {
     await supabase.from('notifications').insert({
       tenant_id, type: 'reservation_review',
       title: `📋 Revisar — ${customer_name} (${finalPartySize}p)`,
       body: `${decision.reason} | ${formatDateES(finalDate)} a las ${finalTime}`,
+      read: false,
+    })
+  }
+  if (isLargeGroup) {
+    await supabase.from('notifications').insert({
+      tenant_id, type: 'reservation_review',
+      title: `🍽️ Grupo grande — ${customer_name} (${finalPartySize} personas)`,
+      body: `Reserva para ${finalPartySize} personas el ${formatDateES(finalDate)} a las ${finalTime}. Requiere confirmación del propietario.`,
       read: false,
     })
   }
@@ -423,16 +575,82 @@ export async function createReservationTool(params: {
     customer_phone, outcome: 'success',
   }).catch(() => {}) // non-blocking
 
+  // 10. Save customer table/zone preferences to memory
+  if (customerId) {
+    const memoryPromises: Promise<void>[] = []
+
+    // Save preferred zone
+    if (bestTable.zoneId) {
+      const zoneName = zones.find((z: any) => z.id === bestTable.zoneId)?.name
+      if (zoneName) {
+        memoryPromises.push(saveCustomerMemory(tenant_id, customerId, {
+          memory_type: 'preference',
+          memory_key: 'preferred_zone',
+          memory_value: zoneName,
+          memory_data: { zone_id: bestTable.zoneId, last_zone: zoneName },
+          confidence: 0.6,
+          weight: 1.0,
+          source: 'reservation_system',
+        }))
+      }
+    }
+
+    // Save preferred table
+    if (assignedTableId) {
+      memoryPromises.push(saveCustomerMemory(tenant_id, customerId, {
+        memory_type: 'preference',
+        memory_key: 'preferred_table',
+        memory_value: assignedTableId,
+        memory_data: { table_id: assignedTableId },
+        confidence: 0.5,
+        weight: 0.8,
+        source: 'reservation_system',
+      }))
+    }
+
+    // Save party size pattern
+    memoryPromises.push(saveCustomerMemory(tenant_id, customerId, {
+      memory_type: 'pattern',
+      memory_key: 'usual_party_size',
+      memory_value: String(finalPartySize),
+      memory_data: { party_size: finalPartySize, date: finalDate },
+      confidence: 0.5,
+      weight: 0.6,
+      source: 'reservation_system',
+    }))
+
+    // Save visit frequency marker
+    memoryPromises.push(saveCustomerMemory(tenant_id, customerId, {
+      memory_type: 'pattern',
+      memory_key: 'visit_frequency',
+      memory_value: 'active',
+      memory_data: { last_reservation_date: finalDate, last_reservation_time: finalTime },
+      confidence: 0.7,
+      weight: 0.5,
+      source: 'reservation_system',
+    }))
+
+    // Non-blocking — fire all in parallel
+    Promise.all(memoryPromises).catch(() => {})
+  }
+
+  const largeGroupMsg = isLargeGroup
+    ? ' El propietario debe confirmar la reserva para grupos grandes.'
+    : ''
+
   return {
     success: true, reservation_id: reservation?.id || null,
     customer_name, date: finalDate, time: finalTime, party_size: finalPartySize,
     table: assignedTableId ? `${tmpl.labels.unit?.singular || 'Espacio'} asignado${assignedTableInfo}` : null,
-    status: finalStatus === 'confirmada' ? 'confirmed' : 'pending_review',
+    status: isLargeGroup ? 'pending_review' : (finalStatus === 'confirmada' ? 'confirmed' : 'pending_review'),
     decision_flags: decision.flags,
     decision_confidence: decision.confidence,
-    message: finalStatus === 'confirmada'
-      ? `${bLabel.singular.charAt(0).toUpperCase() + bLabel.singular.slice(1)} confirmada para ${customer_name} el ${finalDate} a las ${finalTime}${finalPartySize > 1 ? `, ${finalPartySize} personas` : ''}${assignedTableInfo}.`
-      : `${bLabel.singular.charAt(0).toUpperCase() + bLabel.singular.slice(1)} registrada para ${customer_name} el ${finalDate} a las ${finalTime}${finalPartySize > 1 ? `, ${finalPartySize} personas` : ''}. Pendiente de confirmación.`,
+    large_group: isLargeGroup || undefined,
+    message: isLargeGroup
+      ? `${bLabel.singular.charAt(0).toUpperCase() + bLabel.singular.slice(1)} registrada para ${customer_name} el ${finalDate} a las ${finalTime}, ${finalPartySize} personas${assignedTableInfo}. Pendiente de confirmación del propietario por ser grupo grande.`
+      : finalStatus === 'confirmada'
+        ? `${bLabel.singular.charAt(0).toUpperCase() + bLabel.singular.slice(1)} confirmada para ${customer_name} el ${finalDate} a las ${finalTime}${finalPartySize > 1 ? `, ${finalPartySize} personas` : ''}${assignedTableInfo}.`
+        : `${bLabel.singular.charAt(0).toUpperCase() + bLabel.singular.slice(1)} registrada para ${customer_name} el ${finalDate} a las ${finalTime}${finalPartySize > 1 ? `, ${finalPartySize} personas` : ''}. Pendiente de confirmación.`,
   }
 }
 
