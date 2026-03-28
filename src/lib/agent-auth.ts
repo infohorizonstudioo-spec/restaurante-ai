@@ -31,8 +31,6 @@ export function validateAgentKey(req: NextRequest): boolean {
     } catch {}
   }
 
-  // 2. Retell envia tenant_id como constant_value — si viene un UUID valido
-  // en el body es suficiente para autenticar (Retell es el unico que tiene ese valor)
-  // Esto se valida en cada endpoint contra la DB
-  return true
+  // SECURITY: fail closed — si no hay key válida, denegar acceso
+  return false
 }
