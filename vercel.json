@@ -14,15 +14,7 @@
     },
     {
       "path": "/api/cron/security-patrol",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron/callbacks",
-      "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron/supplier-orders",
-      "schedule": "0 8 * * 1"
+      "schedule": "*/5 * * * *"
     }
   ]
 }
