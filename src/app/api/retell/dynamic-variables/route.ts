@@ -77,9 +77,15 @@ export async function POST(req: NextRequest) {
 
         if (pendingCallback?.context) {
           const ctx = typeof pendingCallback.context === 'string' ? JSON.parse(pendingCallback.context) : pendingCallback.context
-          customerContext = `ATENCION: Este es un PROVEEDOR (${ctx.supplier_name || 'proveedor'}) que nos devuelve la llamada. Le hemos mandado un SMS pidiendole un pedido. Necesitamos: ${(ctx.products || []).join(', ')}. ${ctx.notes || ''} Trata esta llamada como un PEDIDO A PROVEEDOR — confirma los productos, pregunta precios y plazos de entrega. Al terminar llama a save_call_summary con intent=pedido_proveedor.`
+
+          if (pendingCallback.reason === 'supplier_order') {
+            customerContext = `ATENCION: Este es un PROVEEDOR (${ctx.supplier_name || 'proveedor'}) que nos devuelve la llamada. Le hemos mandado un SMS pidiendole un pedido. Necesitamos: ${(ctx.products || []).join(', ')}. ${ctx.notes || ''} Trata esta llamada como un PEDIDO A PROVEEDOR — confirma los productos, pregunta precios y plazos de entrega. Al terminar llama a save_call_summary con intent=pedido_proveedor.`
+          } else if (pendingCallback.reason === 'missed_call_sms') {
+            customerContext = `Este cliente nos llamo antes pero no pudimos atenderle. Le enviamos un SMS y ahora nos devuelve la llamada. Saluda con naturalidad tipo: "Hola! Si, perdona que antes no te pudimos coger. Dime, en que te puedo ayudar?" NO digas "buenos dias" ni "digame" — ya sabe quien eres porque le mandaste el SMS.`
+          }
+
           // Marcar como procesado
-          await supabase.from('scheduled_callbacks').update({ status: 'completed' }).eq('phone', callerPhone).eq('tenant_id', tenant.id).eq('status', 'pending').eq('reason', 'supplier_order')
+          await supabase.from('scheduled_callbacks').update({ status: 'completed' }).eq('phone', callerPhone).eq('tenant_id', tenant.id).eq('status', 'pending')
         }
       } catch {}
 
