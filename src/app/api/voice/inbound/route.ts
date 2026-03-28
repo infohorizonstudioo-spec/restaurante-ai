@@ -72,13 +72,12 @@ export async function POST(req: Request) {
 
     if (retellAgentId) {
       // ── RETELL AI ──
-      // Retell maneja inbound calls vía SIP trunking nativo.
-      // Twilio debe reenviar la llamada a Retell vía SIP.
-      // Retell ya tiene el número importado y sabe qué agente usar.
-      const sipUri = `sip:${calledNumber.replace('+', '')}@5t4n6j0wnrl.sip.livekit.cloud`
+      // Reenviar la llamada a Retell vía SIP.
+      // Retell identifica el número importado y asigna el agente configurado.
+      const sipUri = `sip:${calledNumber.replace('+', '')}@sip.retellai.com`
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Dial callerId="${callerPhone}">
+  <Dial callerId="${callerPhone}" timeout="30">
     <Sip>${sipUri}</Sip>
   </Dial>
 </Response>`
