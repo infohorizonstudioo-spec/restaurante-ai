@@ -28,6 +28,7 @@ function getSchemaMap(eventLabel?: string): Record<string, { icon: string; color
     visit:       { icon: '🏠', color: '#60A5FA', label: resLabel },
   }
 }
+// Default fallback for contexts without tenant
 const SCHEMA_MAP = getSchemaMap()
 const CALL_STATE_MAP: Record<string, { label: string; color: string }> = {
   escuchando:   { label: 'Escuchando', color: '#2DD4BF' },
@@ -59,86 +60,30 @@ function timeAgo(d: Date, lang='es') {
   return Math.floor(s/3600)+'h'
 }
 
-// ── Demo events dinamicos por tipo de negocio
+// ── Demo events dinámicos por tipo de negocio ──────────────────────────────
 function buildDemoEvents(evtConfig: BusinessEventConfig, lang='es'): Omit<LiveEvent,'id'|'ts'>[] {
   const _t = (s:string) => tx(s, lang)
   const eL = evtConfig.eventLabel || 'Reserva'
   const eLower = eL.toLowerCase()
+
+  // Ejemplos adaptados por tipo de negocio
   const demoByType: Record<string, { name: string; sub: string; consultaSub: string }> = {
-    'Cita':    { name: 'Maria Lopez',   sub: 'Revision · 10:30',              consultaSub: 'Paciente pregunto por horarios disponibles' },
-    'Sesion':  { name: 'Ana Garcia',    sub: 'Sesion individual · 17:00',     consultaSub: 'Cliente pregunto por disponibilidad' },
-    'Clase':   { name: 'Roberto Diaz',  sub: 'Spinning · 19:00',             consultaSub: 'Socio pregunto por horarios de clases' },
-    'Visita':  { name: 'Elena Mora',    sub: 'Piso 2 hab. centro · 17:00',   consultaSub: 'Cliente pregunto por pisos disponibles' },
-    'Pedido':  { name: 'Luis Fernandez',sub: '3 productos · 45.90EUR',       consultaSub: 'Cliente pregunto por estado de envio' },
+    'Cita':    { name: 'María López',   sub: 'Revisión · 10:30',              consultaSub: 'Paciente preguntó por horarios disponibles' },
+    'Sesión':  { name: 'Ana García',    sub: 'Sesión individual · 17:00',     consultaSub: 'Cliente preguntó por disponibilidad' },
+    'Clase':   { name: 'Roberto Díaz',  sub: 'Spinning · 19:00',             consultaSub: 'Socio preguntó por horarios de clases' },
+    'Visita':  { name: 'Elena Mora',    sub: 'Piso 2 hab. centro · 17:00',   consultaSub: 'Cliente preguntó por pisos disponibles' },
+    'Pedido':  { name: 'Luis Fernández',sub: '3 productos · 45.90€',         consultaSub: 'Cliente preguntó por estado de envío' },
   }
-  const demo = demoByType[eL] || { name: 'Maria Lopez', sub: '4 personas · 21:00', consultaSub: 'Cliente pregunto por opciones vegetarianas' }
+  const demo = demoByType[eL] || { name: 'María López', sub: '4 personas · 21:00', consultaSub: 'Cliente preguntó por opciones vegetarianas' }
+
   return [
     { type: 'call_incoming', icon: '📞', color: C.teal, title: `${_t('Llamada entrante')} — +34 612 345 678`, sub: `📅 ${eL} detectada`, priority: 'high', demo: true },
     { type: 'reservation', icon: '📅', color: C.teal, title: `Nueva ${eLower} — ${demo.name}`, sub: demo.sub, priority: 'high', demo: true },
-    { type: 'call_ended', icon: '✅', color: C.green, title: `${_t('Llamada finalizada')} — Carlos Ruiz`, sub: `${eL} confirmada para manana`, demo: true },
+    { type: 'call_ended', icon: '✅', color: C.green, title: `${_t('Llamada finalizada')} — Carlos Ruiz`, sub: `${eL} confirmada para mañana`, demo: true },
     { type: 'system', icon: '💬', color: C.text2, title: _t('Consulta atendida'), sub: demo.consultaSub, demo: true },
     { type: 'call_incoming', icon: '📞', color: C.teal, title: `${_t('Llamada entrante')} — +34 698 765 432`, sub: `💬 ${_t('Consulta detectada')}`, demo: true },
   ]
 }
-
-// ══════════════════════════════════════════════════
-// SECTION: Needs Attention - shows actionable items at the very top
-// ══════════════════════════════════════════════════
-function NeedsAttentionSection({ items, lang='es' }: { items: { id: string; icon: string; color: string; title: string; sub: string; action: string; href: string; urgency: 'critical'|'warning'|'info' }[]; lang?: string }) {
-  const _tx = (s:string) => tx(s, lang)
-  if (items.length === 0) return null
-  return (
-    <div style={{ background: `linear-gradient(135deg, ${C.surface}, ${C.surface2})`, border: `1px solid ${C.amber}20`, borderRadius: 16, overflow: 'hidden' }}>
-      <div style={{ padding: '12px 18px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10, background: `${C.amber}06` }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.amber, animation: 'rz-pulse 1.5s ease-in-out infinite' }} />
-        <span style={{ fontSize: 14, fontWeight: 700, color: C.amber }}>{_tx('Necesita tu atencion')}</span>
-        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: C.amberDim, color: C.amber, fontWeight: 700, marginLeft: 'auto' }}>{items.length}</span>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {items.map((item, i) => (
-          <Link key={item.id} href={item.href} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px', borderTop: i > 0 ? `1px solid ${C.border}` : 'none', transition: 'background 0.12s', background: item.urgency === 'critical' ? `${C.red}06` : 'transparent' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = C.surface2 }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = item.urgency === 'critical' ? `${C.red}06` : 'transparent' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: `${item.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
-              {item.icon}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 2 }}>{item.title}</p>
-              <p style={{ fontSize: 11, color: C.text2 }}>{item.sub}</p>
-            </div>
-            <span style={{ fontSize: 11, padding: '5px 12px', borderRadius: 8, background: `${item.color}15`, color: item.color, fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>{item.action}</span>
-          </Link>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ══════════════════════════════════════════════════
-// SECTION: Quick Actions - common tasks one click away
-// ══════════════════════════════════════════════════
-function QuickActions({ actions, lang='es' }: { actions: { id: string; icon: string; label: string; href: string; color?: string }[]; lang?: string }) {
-  const _tx = (s:string) => tx(s, lang)
-  return (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      {actions.map(a => (
-        <Link key={a.id} href={a.href} style={{
-          textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 7,
-          padding: '8px 14px', borderRadius: 10,
-          background: C.surface, border: `1px solid ${C.border}`,
-          fontSize: 12, fontWeight: 600, color: C.text2,
-          transition: 'all 0.15s', whiteSpace: 'nowrap',
-        }}
-          onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = C.surface2; el.style.borderColor = (a.color || C.amber) + '40'; el.style.color = a.color || C.amber }}
-          onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = C.surface; el.style.borderColor = C.border; el.style.color = C.text2 }}>
-          <span style={{ fontSize: 14 }}>{a.icon}</span>
-          {a.label}
-        </Link>
-      ))}
-    </div>
-  )
-}
-
 
 // ── Live Feed Component
 function LiveFeed({ events, demoMode, onToggleDemo, lang='es' }: { events:LiveEvent[], demoMode:boolean, onToggleDemo:()=>void, lang?:string }) {
@@ -159,42 +104,42 @@ function LiveFeed({ events, demoMode, onToggleDemo, lang='es' }: { events:LiveEv
           background:demoMode?'rgba(251,181,63,0.08)':'rgba(255,255,255,0.03)',
           color:demoMode?C.yellow:C.text3, cursor:'pointer', fontFamily:'inherit', fontWeight:600, transition:'all 0.15s'
         }}>
-          {demoMode ? _tx('Salir demo') : _tx('Modo demo')}
+          {demoMode ? '⏹ '+_tx('Salir demo') : '▶ '+_tx('Modo demo')}
         </button>
       </div>
 
       {/* Events */}
-      <div style={{ maxHeight:300, overflowY:'auto', scrollbarWidth:'none' }}>
+      <div style={{ maxHeight:340, overflowY:'auto', scrollbarWidth:'none' }}>
         {display.length === 0 ? (
-          <div style={{ padding:'32px 20px', textAlign:'center' }}>
-            <div style={{ width:40, height:40, borderRadius:'50%', background:'rgba(45,212,191,0.08)', border:'1px solid rgba(45,212,191,0.15)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px', fontSize:18 }}>⚡</div>
-            <p style={{ fontSize:13, fontWeight:600, color:C.text, marginBottom:4 }}>{_tx('El sistema esta listo')}</p>
-            <p style={{ fontSize:11, color:C.text3, lineHeight:1.6, maxWidth:240, margin:'0 auto' }}>{_tx('Tu recepcionista esta activa y preparada. Los eventos apareceran aqui en tiempo real.')}</p>
-            <button onClick={onToggleDemo} style={{ marginTop:12, padding:'6px 14px', fontSize:11, fontWeight:700, borderRadius:8, border:`1px solid ${C.amber}40`, background:C.amberDim, color:C.amber, cursor:'pointer', fontFamily:'inherit' }}>
-              {_tx('Ver demo')}
+          <div style={{ padding:'40px 20px', textAlign:'center' }}>
+            <div style={{ width:48, height:48, borderRadius:'50%', background:'rgba(45,212,191,0.08)', border:'1px solid rgba(45,212,191,0.15)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 14px', fontSize:20 }}>⚡</div>
+            <p style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:6 }}>{_tx('El sistema está listo')}</p>
+            <p style={{ fontSize:12, color:C.text3, lineHeight:1.7, maxWidth:260, margin:'0 auto' }}>{_tx('Tu recepcionista está activa y preparada. Los eventos aparecerán aquí en tiempo real.')}</p>
+            <button onClick={onToggleDemo} style={{ marginTop:16, padding:'8px 18px', fontSize:12, fontWeight:700, borderRadius:9, border:`1px solid ${C.amber}40`, background:C.amberDim, color:C.amber, cursor:'pointer', fontFamily:'inherit' }}>
+              ▶ {_tx('Ver demo')}
             </button>
           </div>
         ) : display.map((evt, i) => (
           <div key={evt.id} style={{
-            display:'flex', gap:12, padding:'10px 18px',
+            display:'flex', gap:12, padding:'11px 18px',
             borderBottom: i < display.length-1 ? `1px solid ${C.border}` : 'none',
             background: evt.priority==='high' ? `${evt.color}05` : 'transparent',
-            animation: i===0 ? 'rzSlideIn 0.35s ease' : `rzFeedFadeIn 0.4s cubic-bezier(.4,0,.2,1) ${i*0.05}s both`,
+            animation: i===0 ? 'rzSlideIn 0.35s ease' : 'none',
             transition:'background 0.15s',
           }}>
-            <div style={{ width:30, height:30, borderRadius:8, background:`${evt.color}15`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>
+            <div style={{ width:32, height:32, borderRadius:9, background:`${evt.color}15`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, flexShrink:0 }}>
               {evt.icon}
             </div>
             <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:1 }}>
-                <p style={{ fontSize:12, fontWeight:600, color:C.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{evt.title}</p>
-                {evt.priority==='high' && <div style={{ width:5, height:5, borderRadius:'50%', background:evt.color, flexShrink:0 }}/>}
+              <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:2 }}>
+                <p style={{ fontSize:13, fontWeight:600, color:C.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{evt.title}</p>
+                {evt.priority==='high' && <div style={{ width:6, height:6, borderRadius:'50%', background:evt.color, flexShrink:0 }}/>}
               </div>
-              {evt.sub && <p style={{ fontSize:11, color:C.text2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{evt.sub}</p>}
+              {evt.sub && <p style={{ fontSize:11.5, color:C.text2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{evt.sub}</p>}
             </div>
-            <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'flex-end', gap:2 }}>
+            <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4 }}>
               <span style={{ fontSize:10, color:C.text3, whiteSpace:'nowrap' }}>{timeAgo(evt.ts, lang)}</span>
-              {evt.demo && <span style={{ fontSize:8, color:C.yellow, fontWeight:700 }}>DEMO</span>}
+              {evt.demo && <span style={{ fontSize:9, color:C.yellow, fontWeight:700, letterSpacing:'0.04em' }}>DEMO</span>}
             </div>
           </div>
         ))}
@@ -208,23 +153,20 @@ function KpiCard({ value, label, sub, color=C.amber, href, icon, accent=false }:
   const inner = (
     <div className="rz-card-interactive" style={{
       background: accent ? `linear-gradient(135deg,${color}14,transparent 70%)` : C.surface,
-      border:`1px solid ${accent?color+'22':C.border}`, borderRadius:14, padding:'16px 18px',
+      border:`1px solid ${accent?color+'22':C.border}`, borderRadius:14, padding:'18px 20px',
       position:'relative', overflow:'hidden', cursor:href?'pointer':'default',
-      transition:'transform 0.2s cubic-bezier(.4,0,.2,1), box-shadow 0.2s cubic-bezier(.4,0,.2,1)',
-    }}
-    onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow=`0 8px 24px ${color}15` }}
-    onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='none' }}
-    >
+    }}>
       {accent && <div style={{ position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${color},transparent)`,borderRadius:'14px 14px 0 0' }}/>}
-      <div style={{ position:'absolute',top:'-30%',right:'-10%',width:100,height:100,background:`radial-gradient(circle,${color}08,transparent 70%)`,pointerEvents:'none' }}/>
+      {/* Ambient glow */}
+      <div style={{ position:'absolute',top:'-30%',right:'-10%',width:120,height:120,background:`radial-gradient(circle,${color}08,transparent 70%)`,pointerEvents:'none' }}/>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', position:'relative' }}>
         <div>
-          <p style={{ fontFamily:'var(--rz-mono)',fontSize:28,fontWeight:800,color,letterSpacing:'-0.03em',lineHeight:1,marginBottom:4 }}>{value}</p>
-          <p style={{ fontSize:11,color:C.text2,fontWeight:500 }}>{label}</p>
-          {sub && <p style={{ fontSize:10,color:C.text3,marginTop:2 }}>{sub}</p>}
+          <p style={{ fontFamily:'var(--rz-mono)',fontSize:30,fontWeight:800,color,letterSpacing:'-0.03em',lineHeight:1,marginBottom:6 }}>{value}</p>
+          <p style={{ fontSize:12,color:C.text2,fontWeight:500 }}>{label}</p>
+          {sub && <p style={{ fontSize:11,color:C.text3,marginTop:3 }}>{sub}</p>}
         </div>
-        {icon && <div style={{ width:34,height:34,borderRadius:10,background:`linear-gradient(135deg,${color}18,${color}08)`,border:`1px solid ${color}20`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
-          <span style={{ fontSize:15 }}>{icon}</span>
+        {icon && <div style={{ width:38,height:38,borderRadius:11,background:`linear-gradient(135deg,${color}18,${color}08)`,border:`1px solid ${color}20`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+          <span style={{ fontSize:17 }}>{icon}</span>
         </div>}
       </div>
     </div>
@@ -232,7 +174,7 @@ function KpiCard({ value, label, sub, color=C.amber, href, icon, accent=false }:
   return href ? <Link href={href} style={{ textDecoration:'none' }}>{inner}</Link> : inner
 }
 
-// ── Active call block
+// ── Active call block — usa schemas dinámicos
 function ActiveCallBlock({ call, businessType, lang='es' }:{ call:any; businessType:string; lang?:string }) {
   const _tx = (s:string) => tx(s, lang)
   const state = call.session_state || 'escuchando'
@@ -243,12 +185,12 @@ function ActiveCallBlock({ call, businessType, lang='es' }:{ call:any; businessT
   const elapsed = call.started_at ? Math.floor((now-new Date(call.started_at).getTime())/1000) : 0
   const dur = elapsed>=60 ? `${Math.floor(elapsed/60)}m ${elapsed%60}s` : `${elapsed}s`
   return (
-    <div style={{ display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:C.surface2,borderRadius:11,border:`1px solid ${color}25` }}>
-      <div style={{ width:34,height:34,borderRadius:'50%',background:`${color}18`,border:`1.5px solid ${color}30`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+    <div style={{ display:'flex',alignItems:'center',gap:12,padding:'11px 14px',background:C.surface2,borderRadius:11,border:`1px solid ${color}25` }}>
+      <div style={{ width:36,height:36,borderRadius:'50%',background:`${color}18`,border:`1.5px solid ${color}30`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill={color}><path d="M22 17a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A2 2 0 014 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 17z"/></svg>
       </div>
       <div style={{ flex:1,minWidth:0 }}>
-        <p style={{ fontSize:13,fontWeight:600,color:C.text,marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{call.caller_phone||_tx('Numero oculto')}</p>
+        <p style={{ fontSize:13,fontWeight:600,color:C.text,marginBottom:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{call.caller_phone||_tx('Número oculto')}</p>
         <div style={{ display:'flex',alignItems:'center',gap:6 }}>
           <div style={{ width:5,height:5,borderRadius:'50%',background:color,animation:'rz-pulse 1.5s ease-in-out infinite' }}/>
           <span style={{ fontSize:11,color,fontWeight:500 }}>{_tx(stateInfo.label)}</span>
@@ -259,37 +201,37 @@ function ActiveCallBlock({ call, businessType, lang='es' }:{ call:any; businessT
   )
 }
 
-// ── Call row
+// ── Call row — usa schemas dinámicos
 function CallRow({ call, idx, businessType, lang='es', eventLabel }:{ call:any; idx:number; businessType:string; lang?:string; eventLabel?:string }) {
   const _tx = (s:string) => tx(s, lang)
   const schemaType = INTENT_MAP[call.intent] || 'inquiry'
   const schema = getSchemaMap(eventLabel)[schemaType]
   const status = call.status||'completada'
   const done = ['completada','completed'].includes(status)
-  const phone = call.caller_phone||call.from_number||_tx('Numero oculto')
+  const phone = call.caller_phone||call.from_number||_tx('Número oculto')
   const dur = call.duration_seconds ? (call.duration_seconds>=60?`${Math.round(call.duration_seconds/60)}m`:`${call.duration_seconds}s`) : null
   const loc = lang==='es'?'es-ES':lang==='en'?'en-GB':lang==='fr'?'fr-FR':lang==='pt'?'pt-PT':'ca-ES'
   const time = call.started_at ? new Date(call.started_at).toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'}) : ''
   const ic = schema?.color || C.text3
   const intentLabel = schema?.label || call.intent
   return (
-    <div style={{ display:'flex',alignItems:'flex-start',gap:12,padding:'11px 18px',borderTop:idx>0?`1px solid ${C.border}`:'none',transition:'background 0.12s' }}
+    <div style={{ display:'flex',alignItems:'flex-start',gap:12,padding:'12px 20px',borderTop:idx>0?`1px solid ${C.border}`:'none',transition:'background 0.12s' }}
       onMouseEnter={e=>(e.currentTarget.style.background=C.surface2)} onMouseLeave={e=>(e.currentTarget.style.background='transparent')}>
-      <div style={{ width:30,height:30,borderRadius:'50%',background:done?C.greenDim:C.redDim,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1 }}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill={done?C.green:C.red}><path d="M22 17a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A2 2 0 014 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 17z"/></svg>
+      <div style={{ width:32,height:32,borderRadius:'50%',background:done?C.greenDim:C.redDim,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1 }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill={done?C.green:C.red}><path d="M22 17a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A2 2 0 014 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 17z"/></svg>
       </div>
       <div style={{ flex:1,minWidth:0 }}>
-        <div style={{ display:'flex',alignItems:'center',gap:6,marginBottom:2 }}>
-          <p style={{ fontSize:12,fontWeight:600,color:C.text }}>{phone}</p>
-          {schema && call.intent && <span style={{ fontSize:9,padding:'1px 6px',borderRadius:8,background:`${ic}18`,color:ic,fontWeight:600 }}>{schema.icon} {_tx(intentLabel)}</span>}
-          {done && <span style={{ fontSize:9,padding:'1px 6px',borderRadius:8,background:C.greenDim,color:C.green,fontWeight:600 }}>{_tx('Completada')}</span>}
+        <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:3 }}>
+          <p style={{ fontSize:13,fontWeight:600,color:C.text }}>{phone}</p>
+          {schema && call.intent && <span style={{ fontSize:10,padding:'1px 7px',borderRadius:10,background:`${ic}18`,color:ic,fontWeight:600 }}>{schema.icon} {_tx(intentLabel)}</span>}
+          {done && <span style={{ fontSize:10,padding:'1px 7px',borderRadius:10,background:C.greenDim,color:C.green,fontWeight:600 }}>{_tx('Completada')}</span>}
         </div>
-        {call.summary ? <p style={{ fontSize:11,color:C.text2,lineHeight:1.5,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' as const,overflow:'hidden' }}>{call.summary}</p>
-          : <p style={{ fontSize:11,color:C.text3 }}>{_tx('Sin resumen')}</p>}
+        {call.summary ? <p style={{ fontSize:12,color:C.text2,lineHeight:1.5,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' as const,overflow:'hidden' }}>{call.summary}</p>
+          : <p style={{ fontSize:12,color:C.text3 }}>{_tx('Sin resumen')}</p>}
       </div>
       <div style={{ flexShrink:0,textAlign:'right' as const }}>
-        <p style={{ fontSize:10,color:C.text3 }}>{time}</p>
-        {dur && <p style={{ fontFamily:'var(--rz-mono)',fontSize:10,color:C.text3,marginTop:2 }}>{dur}</p>}
+        <p style={{ fontSize:11,color:C.text3 }}>{time}</p>
+        {dur && <p style={{ fontFamily:'var(--rz-mono)',fontSize:11,color:C.text3,marginTop:2 }}>{dur}</p>}
       </div>
     </div>
   )
@@ -304,39 +246,39 @@ function AgentBar({ agentOn, agentName, lang='es' }:{ agentOn:boolean; agentName
         background:agentOn?'rgba(45,212,191,0.08)':'rgba(248,113,113,0.08)',
         border:`1px solid ${agentOn?'rgba(45,212,191,0.2)':'rgba(248,113,113,0.2)'}`,borderRadius:20 }}>
         <div style={{ width:6,height:6,borderRadius:'50%',background:agentOn?C.teal:C.red,animation:agentOn?'rz-pulse 2s ease-in-out infinite':'none' }}/>
-        <span style={{ fontSize:12,fontWeight:600,color:agentOn?C.teal:C.red }}>{agentOn?(agentName||'Sofia')+' '+_tx('activa'):_tx('Sin numero asignado')}</span>
+        <span style={{ fontSize:12,fontWeight:600,color:agentOn?C.teal:C.red }}>{agentOn?(agentName||'Sofía')+' '+_tx('activa'):_tx('Sin número asignado')}</span>
       </div>
       {!agentOn && <Link href="/configuracion" style={{ padding:'6px 14px',fontSize:12,fontWeight:600,color:'#0C1018',background:C.amber,borderRadius:8,textDecoration:'none' }}>{_tx('Configurar')} →</Link>}
     </div>
   )
 }
 
-// ── Insights Panel
-function InsightsPanel({ insights, headerLabel, lang='es', agentName='Sofia' }: { insights: any[]; headerLabel?: string; lang?:string; agentName?:string }) {
+// ── Insights Panel — AI thoughts
+function InsightsPanel({ insights, headerLabel, lang='es', agentName='Sofía' }: { insights: any[]; headerLabel?: string; lang?:string; agentName?:string }) {
   const _tx = (s:string) => tx(s, lang)
   if (insights.length === 0) return null
   const priorityOrder = { high: 0, normal: 1, low: 2 }
   const sorted = [...insights].sort((a, b) => (priorityOrder[a.priority as keyof typeof priorityOrder] || 1) - (priorityOrder[b.priority as keyof typeof priorityOrder] || 1))
 
   return (
-    <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
-      <div style={{ padding: '12px 18px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10, background:'rgba(255,255,255,0.015)' }}>
+    <div className="rz-card-premium" style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ padding: '14px 18px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10, background:'rgba(255,255,255,0.015)' }}>
         <div className="rz-status-busy"/>
-        <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{headerLabel || (agentName + ' ' + _tx('ha detectado'))}</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{headerLabel || (agentName + ' ' + _tx('ha detectado'))}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {sorted.slice(0, 4).map((insight, i) => (
+        {sorted.map((insight, i) => (
           <div key={insight.id} style={{
-            padding: '10px 18px', borderTop: i > 0 ? `1px solid ${C.border}` : 'none',
+            padding: '12px 18px', borderTop: i > 0 ? `1px solid ${C.border}` : 'none',
             background: insight.priority === 'high' ? 'rgba(240,168,78,0.04)' : 'transparent',
           }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1 }}>{insight.icon}</span>
+              <span style={{ fontSize: 18, flexShrink: 0, lineHeight: 1 }}>{insight.icon}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 2 }}>{insight.title}</p>
-                <p style={{ fontSize: 11, color: C.text2, lineHeight: 1.5 }}>{insight.body}</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 3 }}>{insight.title}</p>
+                <p style={{ fontSize: 12, color: C.text2, lineHeight: 1.5 }}>{insight.body}</p>
                 {insight.action && insight.actionHref && (
-                  <a href={insight.actionHref} style={{ fontSize: 11, color: C.amber, fontWeight: 600, textDecoration: 'none', marginTop: 4, display: 'inline-block' }}>
+                  <a href={insight.actionHref} style={{ fontSize: 11, color: C.amber, fontWeight: 600, textDecoration: 'none', marginTop: 6, display: 'inline-block' }}>
                     {insight.action} →
                   </a>
                 )}
@@ -349,120 +291,41 @@ function InsightsPanel({ insights, headerLabel, lang='es', agentName='Sofia' }: 
   )
 }
 
-// ── Forecast Chart
+// ── Forecast Chart — previsión de demanda por hora
 function ForecastChart({ data, forecastLabel, lang='es' }: { data: { hour: string; predicted: number; actual: number; level: string; color: string }[]; forecastLabel?: string; lang?:string }) {
   const _tx = (s:string) => tx(s, lang)
   if (!data || data.length === 0) return null
   const max = Math.max(...data.map(d => d.predicted), 1)
   const nowHour = new Date().getHours()
   return (
-    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:'16px 18px', overflow:'hidden' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
-        <span style={{ fontSize:14 }}>📊</span>
-        <span style={{ fontSize:13, fontWeight:700, color:C.text }}>{forecastLabel || _tx('Asi pinta hoy')}</span>
+    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:'18px 20px', overflow:'hidden' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+        <span style={{ fontSize:15 }}>📊</span>
+        <span style={{ fontSize:14, fontWeight:700, color:C.text }}>{forecastLabel || _tx('Así pinta hoy')}</span>
       </div>
-      <div style={{ display:'flex', gap:3, alignItems:'flex-end', height:60 }}>
+      <div style={{ display:'flex', gap:3, alignItems:'flex-end', height:80 }}>
         {data.map(d => {
-          const h = Math.max(4, Math.round((d.predicted / max) * 60))
+          const h = Math.max(4, Math.round((d.predicted / max) * 80))
           const isNow = parseInt(d.hour) === nowHour
           return (
-            <div key={d.hour} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
+            <div key={d.hour} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
               <div style={{ width:'100%', height:h, background:d.color, borderRadius:3, opacity: isNow ? 1 : 0.7, border: isNow ? '2px solid #E8EEF6' : 'none', transition:'height 0.3s' }}/>
-              <span style={{ fontSize:8, color: isNow ? C.text : C.text3, fontWeight: isNow ? 700 : 400 }}>{d.hour.slice(0,2)}</span>
+              <span style={{ fontSize:9, color: isNow ? C.text : C.text3, fontWeight: isNow ? 700 : 400 }}>{d.hour.slice(0,2)}</span>
             </div>
           )
         })}
       </div>
-      <div style={{ display:'flex', gap:10, marginTop:10, flexWrap:'wrap' }}>
+      <div style={{ display:'flex', gap:12, marginTop:12, flexWrap:'wrap' }}>
         {[{l:_tx('Tranquilo'),c:'#34D399'},{l:_tx('Normal'),c:'#F0A84E'},{l:_tx('Fuerte'),c:'#FB923C'},{l:_tx('A tope'),c:'#F87171'}].map(x => (
           <div key={x.l} style={{ display:'flex', alignItems:'center', gap:4 }}>
-            <div style={{ width:7, height:7, borderRadius:2, background:x.c }}/>
-            <span style={{ fontSize:9, color:C.text3 }}>{x.l}</span>
+            <div style={{ width:8, height:8, borderRadius:2, background:x.c }}/>
+            <span style={{ fontSize:10, color:C.text3 }}>{x.l}</span>
           </div>
         ))}
       </div>
     </div>
   )
 }
-
-// ══════════════════════════════════════════════════
-// SECTION: Today's Schedule Timeline
-// ══════════════════════════════════════════════════
-function TodayTimeline({ reservas, label, lang='es' }: { reservas: any[]; label: string; lang?: string }) {
-  const _tx = (s:string) => tx(s, lang)
-  const now = new Date()
-  const currentHour = now.getHours()
-  const currentMin = now.getMinutes()
-
-  // Group by hour
-  const byHour = new Map<number, any[]>()
-  for (const r of reservas) {
-    const t = r.time || r.reservation_time || ''
-    const h = parseInt(t.slice(0, 2))
-    if (!isNaN(h)) {
-      if (!byHour.has(h)) byHour.set(h, [])
-      byHour.get(h)!.push(r)
-    }
-  }
-
-  // Show hours from earliest to latest, min 8h window
-  const hours = [...byHour.keys()].sort((a,b) => a - b)
-  const minH = hours.length > 0 ? Math.min(hours[0], currentHour) : currentHour
-  const maxH = hours.length > 0 ? Math.max(hours[hours.length - 1], currentHour + 2) : currentHour + 4
-  const range: number[] = []
-  for (let h = minH; h <= maxH; h++) range.push(h)
-
-  if (reservas.length === 0) return null
-
-  return (
-    <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
-      <div style={{ padding: '12px 18px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14 }}>🕐</span>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{_tx('Horario de hoy')}</h2>
-          <span style={{ fontSize: 11, color: C.text3 }}>{reservas.length} {label.toLowerCase()}</span>
-        </div>
-        <Link href="/reservas" style={{ fontSize: 11, color: C.amber, fontWeight: 600, textDecoration: 'none' }}>{_tx('Ver todas')} →</Link>
-      </div>
-      <div style={{ padding: '8px 0', maxHeight: 260, overflowY: 'auto', scrollbarWidth: 'none' }}>
-        {range.map(h => {
-          const hourRes = byHour.get(h) || []
-          const isPast = h < currentHour
-          const isCurrent = h === currentHour
-          return (
-            <div key={h} style={{ display: 'flex', gap: 0, minHeight: hourRes.length > 0 ? 'auto' : 28 }}>
-              {/* Time label */}
-              <div style={{ width: 52, flexShrink: 0, textAlign: 'right', paddingRight: 12, paddingTop: 4 }}>
-                <span style={{ fontSize: 11, fontFamily: 'var(--rz-mono)', color: isCurrent ? C.amber : isPast ? C.text3 : C.text2, fontWeight: isCurrent ? 700 : 400 }}>
-                  {String(h).padStart(2, '0')}:00
-                </span>
-              </div>
-              {/* Timeline line */}
-              <div style={{ width: 1, background: isCurrent ? C.amber : C.border, position: 'relative', flexShrink: 0 }}>
-                {isCurrent && <div style={{ position: 'absolute', top: `${Math.round((currentMin / 60) * 100)}%`, left: -3, width: 7, height: 7, borderRadius: '50%', background: C.amber, border: `2px solid ${C.bg}` }} />}
-              </div>
-              {/* Events */}
-              <div style={{ flex: 1, padding: '2px 12px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {hourRes.map(r => {
-                  const statusColor = r.status === 'confirmada' ? C.green : r.status === 'cancelada' ? C.red : C.yellow
-                  return (
-                    <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 10px', borderRadius: 8, background: `${statusColor}08`, borderLeft: `3px solid ${statusColor}`, opacity: isPast ? 0.6 : 1 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{r.customer_name || _tx('Sin nombre')}</span>
-                      <span style={{ fontSize: 10, color: C.text3 }}>{(r.time || r.reservation_time || '').slice(0, 5)}</span>
-                      <span style={{ fontSize: 10, color: C.text3 }}>{r.people || r.party_size || 1}p</span>
-                      {r.source === 'voice_agent' && <span style={{ fontSize: 9, color: C.violet, fontWeight: 600 }}>AI</span>}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 
 // ══════════════════════════════════════════════════
 // MAIN PAGE
@@ -483,8 +346,8 @@ export default function PanelPage() {
   const [insights, setInsights] = useState<any[]>([])
   const [orderAlert, setOrderAlert] = useState<{name:string;type:string;id:string}|null>(null)
   const [daySummary, setDaySummary] = useState<any>(null)
+  const [suggestions, setSuggestions] = useState<any[]>([])
   const [summaryOpen, setSummaryOpen] = useState(false)
-  const [pendingNotifs, setPendingNotifs] = useState(0)
   const demoTimer              = useRef<ReturnType<typeof setInterval>|null>(null)
   const demoIdx                = useRef(0)
   const rtChannelRef           = useRef<any>(null)
@@ -504,7 +367,7 @@ export default function PanelPage() {
     if (!p?.tenant_id) { if(p?.role==='superadmin') router.push('/admin'); else router.push('/onboarding'); return }
     const tid = p.tenant_id
     const today = new Date().toISOString().split('T')[0]
-    const [{ data:t },{ data:c },{ data:r },{ data:cl },{ data:ac },{ data:ao },{ data:ac2 },{ data:notifs }] = await Promise.all([
+    const [{ data:t },{ data:c },{ data:r },{ data:cl },{ data:ac },{ data:ao },{ data:ac2 }] = await Promise.all([
       supabase.from('tenants').select('id,name,slug,type,plan,agent_name,agent_phone,free_calls_used,free_calls_limit,plan_calls_used,plan_calls_included,reservation_config,agent_config,language').eq('id',tid).maybeSingle(),
       supabase.from('calls').select('id,call_sid,status,intent,summary,started_at,duration_seconds,caller_phone,customer_name,from_number,decision_status,decision_flags,decision_confidence,session_state').eq('tenant_id',tid).order('started_at',{ascending:false}).limit(8),
       supabase.from('reservations').select('id,customer_name,customer_phone,date,time,reservation_time,people,party_size,status,source,notes').eq('tenant_id',tid).eq('date',today).order('time'),
@@ -512,11 +375,9 @@ export default function PanelPage() {
       supabase.from('calls').select('id,call_sid,caller_phone,session_state,started_at').eq('tenant_id',tid).eq('status','activa').order('started_at',{ascending:false}).limit(8),
       supabase.from('order_events').select('*').eq('tenant_id',tid).eq('status','collecting').order('created_at',{ascending:false}).limit(5),
       supabase.from('consultation_events').select('*').eq('tenant_id',tid).eq('status','collecting').order('created_at',{ascending:false}).limit(5),
-      supabase.from('notifications').select('id', { count: 'exact' }).eq('tenant_id',tid).eq('read',false),
     ])
     setTenant(t); setCalls(c||[]); setReservas(r||[]); setClientes(cl||[]); setActiveCalls(ac||[])
     setActiveOrders(ao||[]); setActiveConsultations(ac2||[])
-    setPendingNotifs(notifs?.length || 0)
     setLoading(false)
 
     // Load insights + forecast + yesterday's summary after main data
@@ -524,6 +385,7 @@ export default function PanelPage() {
     const headers = { 'Authorization': 'Bearer ' + token }
     fetch('/api/insights', { headers }).then(r => r.json()).then(d => setInsights(d.insights || [])).catch(() => {})
     fetch('/api/peak-prediction', { headers }).then(r => r.json()).then(d => setForecast(d.forecast || [])).catch(() => {})
+    fetch('/api/suggestions', { headers }).then(r => r.json()).then(d => setSuggestions(d.suggestions || [])).catch(() => {})
 
     // Load yesterday's summary
     const yd = new Date(); yd.setDate(yd.getDate() - 1)
@@ -535,9 +397,8 @@ export default function PanelPage() {
 
   useEffect(() => { load() }, [load])
 
-  // Real-time subscription
+  // Real-time: una sola suscripción, dep única combinada evita doble disparo
   const rtKey = tenant ? `${tenant.id}::${tenant.type||'otro'}` : null
-
   useEffect(() => {
     if (!rtKey || !tenant) return
     const tenantId   = tenant.id
@@ -546,6 +407,7 @@ export default function PanelPage() {
     const _rtx = (s:string) => tx(s, rtLang)
     const rtEvt = getEventConfig(tenantType)
     const rtSM = getSchemaMap(rtEvt.eventLabel)
+    // Guard: si ya hay canal activo con este mismo key, no re-suscribir
     if (rtChannelRef.current) {
       supabase.removeChannel(rtChannelRef.current)
       rtChannelRef.current = null
@@ -555,7 +417,7 @@ export default function PanelPage() {
         const c = payload.new as any
         const schType = INTENT_MAP[c.intent||'otro'] || 'inquiry'
         const sch = rtSM[schType]
-        pushEvent({ type:'call_incoming' as any, icon:'📞', color:C.teal, title:`${_rtx('Llamada entrante')} — ${c.caller_phone||_rtx('Numero oculto')}`, sub: sch ? `${sch.icon} ${_rtx(sch.label)} ${_rtx('detectada')}` : '', priority:'high' })
+        pushEvent({ type:'call_incoming' as any, icon:'📞', color:C.teal, title:`${_rtx('Llamada entrante')} — ${c.caller_phone||_rtx('Número oculto')}`, sub: sch ? `${sch.icon} ${_rtx(sch.label)} ${_rtx('detectada')}` : '', priority:'high' })
         if (c.status === 'activa') setActiveCalls(prev => [c, ...prev.filter(x => x.id !== c.id)])
         setCalls(prev => [c, ...prev].slice(0, 8))
       })
@@ -604,23 +466,26 @@ export default function PanelPage() {
         const n = payload.new as any
         const icon = n.priority==='critical' ? '🔴' : n.priority==='warning' ? '⚠️' : '💬'
         pushEvent({ type:'system', icon, color: n.priority==='critical'?C.red:n.priority==='warning'?C.yellow:C.text2, title:n.title, sub:n.body||'' })
-        setPendingNotifs(prev => prev + 1)
       })
+      // Pedidos en tiempo real
       .on('postgres_changes',{ event:'INSERT', schema:'public', table:'order_events', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const o = payload.new as any
         setActiveOrders(prev => [o, ...prev.filter(x => x.id !== o.id)].slice(0,5))
         const itemList = Array.isArray(o.items) && o.items.length > 0
-          ? o.items.map((i:any)=>`${i.quantity||1}x ${i.name}`).join(', ')
-          : _rtx('tomando pedido...')
+          ? o.items.map((i:any)=>`${i.quantity||1}× ${i.name}`).join(', ')
+          : _rtx('tomando pedido…')
         pushEvent({ type:'order' as any, icon:'🛍️', color:C.violet,
           title:`${_rtx('Nuevo pedido')} — ${o.customer_name||o.customer_phone||_rtx('Cliente')}`,
           sub:`${itemList} · ${_rtx(o.order_type||'recoger')}`, priority:'high' })
+        // Alerta de pedido según configuración del negocio
         const alertMode = tenant?.agent_config?.order_alert_mode || 'banner'
         if (alertMode !== 'none') {
           try { new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2JkZiYl5OSjYeFgoB/f4GDhYmNkJKUlZWUko+MiIWCf31+f4GDhYmMj5GTlJWVlJKQjYmGg4B+fX5/gYSHioyPkZOUlZWUkpCNiYaDgH5+fn+BhIeKjI+Rk5SVlZSSkI2JhoOAfn5+f4GEh4qMj5GTlJWVlJKQjYmGg4B+fn5/gYSHioyPkZOUlZWUkpCNiYaDgH5+fn+BhIeKjI+Rk5SVlQ==').play() } catch {}
           if (alertMode === 'redirect') {
+            // Ir directamente a pedidos
             window.location.href = '/pedidos'
           } else {
+            // Mostrar banner
             setOrderAlert({ name: o.customer_name||'Cliente', type: o.order_type||'recoger', id: o.id })
             setTimeout(() => setOrderAlert(null), 15000)
           }
@@ -634,7 +499,7 @@ export default function PanelPage() {
           setActiveOrders(prev => prev.filter(x => x.id !== o.id))
           if (o.status === 'confirmed') {
             const itemList = Array.isArray(o.items) && o.items.length > 0
-              ? o.items.map((i:any)=>`${i.quantity||1}x ${i.name}`).join(', ')
+              ? o.items.map((i:any)=>`${i.quantity||1}× ${i.name}`).join(', ')
               : 'pedido'
             pushEvent({ type:'order' as any, icon:'✅', color:C.green,
               title:`${_rtx('Pedido confirmado')} — ${o.customer_name||_rtx('Cliente')}`,
@@ -642,6 +507,7 @@ export default function PanelPage() {
           }
         }
       })
+      // Consultas clínica en tiempo real
       .on('postgres_changes',{ event:'INSERT', schema:'public', table:'consultation_events', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const ce = payload.new as any
         setActiveConsultations(prev => [ce, ...prev.filter(x => x.id !== ce.id)].slice(0,5))
@@ -666,11 +532,12 @@ export default function PanelPage() {
           } else if (ce.status === 'escalated') {
             pushEvent({ type:'system' as any, icon:'🚨', color:C.red,
               title:`🚨 ${_rtx('URGENTE')} — ${ce.patient_name||ce.patient_phone||_rtx('Paciente')}`,
-              sub: ce.symptoms?.slice(0,60) || _rtx('Requiere atencion inmediata'),
+              sub: ce.symptoms?.slice(0,60) || _rtx('Requiere atención inmediata'),
               priority:'high' })
           }
         }
       })
+      // ── Multichannel: conversations + messages ──────────────
       .on('postgres_changes',{ event:'INSERT', schema:'public', table:'conversations', filter:`tenant_id=eq.${tenantId}` }, payload => {
         const conv = payload.new as any
         const chMeta: Record<string,{icon:string;color:string;label:string}> = {
@@ -682,7 +549,7 @@ export default function PanelPage() {
         if (m) {
           pushEvent({ type: conv.channel as any, icon: m.icon, color: m.color,
             title:`${m.label} — ${conv.from_identifier || 'Cliente'}`,
-            sub: 'Nueva conversacion entrante',
+            sub: 'Nueva conversación entrante',
             priority: 'high',
           })
         }
@@ -705,7 +572,9 @@ export default function PanelPage() {
           }
         }
       })
-      .subscribe()
+      .subscribe(status => {
+        // RT status: subscribed or error
+      })
     rtChannelRef.current = ch
     return () => {
       if (rtChannelRef.current) {
@@ -713,7 +582,7 @@ export default function PanelPage() {
         rtChannelRef.current = null
       }
     }
-  }, [rtKey]) // eslint-disable-line
+  }, [rtKey]) // una sola dep: cambia solo cuando tenant.id o tenant.type cambian juntos
 
   // Demo mode loop
   const toggleDemo = useCallback(() => {
@@ -737,52 +606,7 @@ export default function PanelPage() {
     return () => { if(demoTimer.current) clearInterval(demoTimer.current) }
   }, [demoMode, pushEvent, tenant])
 
-  if (loading) return (
-    <div style={{ minHeight:'100vh', background:'#0C1018' }}>
-      {/* Header skeleton */}
-      <div style={{ background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', height:56 }}>
-        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-          <div className="rz-skeleton" style={{ width:140, height:16, borderRadius:8 }}/>
-          <div className="rz-skeleton" style={{ width:200, height:10, borderRadius:5 }}/>
-        </div>
-        <div className="rz-skeleton" style={{ width:32, height:32, borderRadius:8 }}/>
-      </div>
-      <div style={{ maxWidth:960, margin:'0 auto', padding:'24px 28px', display:'flex', flexDirection:'column', gap:16 }}>
-        {/* KPI row skeleton — 4 cards */}
-        <div className="rz-grid-4col" style={{ gap:10 }}>
-          {[0,1,2,3].map(i => (
-            <div key={i} style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'16px 18px', animation:`rz-skel-fade 0.4s cubic-bezier(.4,0,.2,1) ${i*0.08}s both` }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-                <div>
-                  <div className="rz-skeleton" style={{ width:60, height:28, borderRadius:7, marginBottom:6 }}/>
-                  <div className="rz-skeleton" style={{ width:90, height:10, borderRadius:5 }}/>
-                </div>
-                <div className="rz-skeleton" style={{ width:34, height:34, borderRadius:10 }}/>
-              </div>
-            </div>
-          ))}
-        </div>
-        {/* Main content skeleton — live feed placeholder */}
-        <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, overflow:'hidden', animation:'rz-skel-fade 0.4s cubic-bezier(.4,0,.2,1) 0.35s both' }}>
-          <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', gap:10 }}>
-            <div className="rz-skeleton" style={{ width:8, height:8, borderRadius:'50%' }}/>
-            <div className="rz-skeleton" style={{ width:120, height:14, borderRadius:6 }}/>
-          </div>
-          {[0,1,2,3,4].map(i => (
-            <div key={i} style={{ display:'flex', gap:12, padding:'10px 18px', borderBottom:`1px solid ${C.border}`, animation:`rz-skel-fade 0.4s cubic-bezier(.4,0,.2,1) ${0.4+i*0.06}s both` }}>
-              <div className="rz-skeleton" style={{ width:30, height:30, borderRadius:8, flexShrink:0 }}/>
-              <div style={{ flex:1, display:'flex', flexDirection:'column', gap:5 }}>
-                <div className="rz-skeleton" style={{ width:`${70-i*8}%`, height:12, borderRadius:5 }}/>
-                <div className="rz-skeleton" style={{ width:`${50-i*5}%`, height:10, borderRadius:4 }}/>
-              </div>
-              <div className="rz-skeleton" style={{ width:28, height:10, borderRadius:4, flexShrink:0 }}/>
-            </div>
-          ))}
-        </div>
-      </div>
-      <style>{`@keyframes rz-skel-fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
-    </div>
-  )
+  if (loading) return <PageSkeleton variant="cards"/>
   if (!tenant) return null
 
   const lang      = tenant.language||'es'
@@ -802,101 +626,19 @@ export default function PanelPage() {
   const panelT    = getTranslations(tenant.language || 'es')
   const cs        = getCommonStrings(tenant.language || 'es')
   const hour      = new Date().getHours()
-  const greeting  = hour<13?_tx('Buenos dias'):hour<20?_tx('Buenas tardes'):_tx('Buenas noches')
+  const greeting  = hour<13?_tx('Buenos días'):hour<20?_tx('Buenas tardes'):_tx('Buenas noches')
   const todayCalls= calls.filter(c=>c.started_at?.slice(0,10)===new Date().toISOString().split('T')[0])
-  const agentName = tenant.agent_name || 'Sofia'
-
-  // ── Build "Needs Attention" items from real data
-  const attentionItems: { id: string; icon: string; color: string; title: string; sub: string; action: string; href: string; urgency: 'critical'|'warning'|'info' }[] = []
-
-  // Missed calls that need callback
-  const missedCalls = calls.filter(c => (c.status === 'perdida' || c.status === 'no-answer') && c.caller_phone && c.caller_phone !== 'anonymous')
-  if (missedCalls.length > 0) {
-    attentionItems.push({
-      id: 'missed-calls', icon: '📞', color: C.red, urgency: 'critical',
-      title: `${missedCalls.length} ${_tx(missedCalls.length !== 1 ? 'llamadas perdidas' : 'llamada perdida')}`,
-      sub: missedCalls[0].caller_phone + (missedCalls.length > 1 ? ` ${_tx('y')} ${missedCalls.length - 1} ${_tx('mas')}` : ''),
-      action: _tx('Devolver llamada'), href: '/llamadas',
-    })
-  }
-
-  // Pending reservations needing confirmation
-  const pendingRes = reservas.filter(r => r.status === 'pendiente' || r.status === 'pending' || r.status === 'pending_review')
-  if (pendingRes.length > 0) {
-    attentionItems.push({
-      id: 'pending-res', icon: '📅', color: C.yellow, urgency: 'warning',
-      title: `${pendingRes.length} ${L.reservas.toLowerCase()} ${_tx('por confirmar')}`,
-      sub: pendingRes.map(r => r.customer_name || _tx('Sin nombre')).slice(0, 2).join(', ') + (pendingRes.length > 2 ? '...' : ''),
-      action: _tx('Revisar'), href: '/reservas',
-    })
-  }
-
-  // Calls needing human attention
-  const needsAttention = calls.filter(c => c.decision_status === 'needs_human_attention' || c.decision_status === 'pending_review')
-  if (needsAttention.length > 0) {
-    attentionItems.push({
-      id: 'needs-review', icon: '⚠️', color: C.amber, urgency: 'warning',
-      title: `${needsAttention.length} ${_tx(needsAttention.length !== 1 ? 'llamadas requieren tu revision' : 'llamada requiere tu revision')}`,
-      sub: agentName + ' ' + _tx('no pudo resolverlo automaticamente'),
-      action: _tx('Ver detalle'), href: '/llamadas',
-    })
-  }
-
-  // Active consultations with urgency
-  const urgentConsultations = activeConsultations.filter((c: any) => c.is_urgency)
-  if (urgentConsultations.length > 0) {
-    attentionItems.push({
-      id: 'urgent-consult', icon: '🚨', color: C.red, urgency: 'critical',
-      title: `${urgentConsultations.length} ${_tx('urgencia detectada')}`,
-      sub: urgentConsultations[0].patient_name || _tx('Paciente'),
-      action: _tx('Atender'), href: '/reservas',
-    })
-  }
-
-  // Trial running out
-  if (isTrial && callsLeft <= 3 && callsLeft > 0) {
-    attentionItems.push({
-      id: 'trial-low', icon: '⚡', color: C.amber, urgency: 'info',
-      title: `${_tx('Solo quedan')} ${callsLeft} ${_tx('llamadas del trial')}`,
-      sub: _tx('Activa un plan para no perder llamadas'),
-      action: _tx('Ver planes'), href: '/precios',
-    })
-  }
-
-  // ── Build Quick Actions based on business type
-  const quickActions: { id: string; icon: string; label: string; href: string; color?: string }[] = [
-    { id: 'new-res', icon: '📅', label: `${_tx('Nueva')} ${L.reserva?.toLowerCase() || _tx('reserva')}`, href: '/reservas/nueva', color: C.teal },
-    { id: 'view-calls', icon: '📞', label: _tx('Ver llamadas'), href: '/llamadas', color: C.amber },
-    { id: 'messages', icon: '💬', label: _tx('Mensajes'), href: '/mensajes', color: C.blue },
-    { id: 'clients', icon: '👥', label: L.clientes || _tx('Clientes'), href: '/clientes', color: C.violet },
-  ]
-  if (tenant.type === 'restaurante' || tenant.type === 'bar' || tenant.type === 'cafeteria') {
-    quickActions.push({ id: 'orders', icon: '🛍️', label: _tx('Pedidos'), href: '/pedidos', color: C.violet })
-  }
-  quickActions.push({ id: 'agent', icon: '🤖', label: agentName, href: '/agente', color: C.teal })
-
-  // Confirmed reservations count
-  const confirmedRes = reservas.filter(r => r.status === 'confirmada' || r.status === 'confirmed').length
-  // Next upcoming reservation
-  const now = new Date()
-  const upcoming = reservas.filter(r => {
-    const t = r.time || r.reservation_time || ''
-    const [h, m] = t.split(':').map(Number)
-    return (r.status === 'confirmada' || r.status === 'pendiente') && (h > now.getHours() || (h === now.getHours() && m > now.getMinutes()))
-  })
-  const nextRes = upcoming[0]
 
   return (
     <div style={{ minHeight:'100vh',background:C.bg,fontFamily:'var(--rz-font)' }}>
       <style>{`
         @keyframes rzSlideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes rzFeedFadeIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
         @keyframes rz-pulse{0%,100%{opacity:1}50%{opacity:0.4}}
         .rz-live-dot{width:8px;height:8px;border-radius:50%;background:#34D399;animation:rz-pulse 1.5s ease-in-out infinite}
       `}</style>
 
       {/* ── Header ── */}
-      <div style={{ background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'12px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20 }}>
+      <div style={{ background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20 }}>
         <div>
           <div style={{ display:'flex',alignItems:'center',gap:10 }}>
             <h1 style={{ fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em' }}>
@@ -908,13 +650,8 @@ export default function PanelPage() {
                 <span style={{ fontSize:11,fontWeight:600,color:C.teal }}>{activeCalls.length} {_tx('en vivo')}</span>
               </div>
             )}
-            {attentionItems.length > 0 && activeCalls.length === 0 && (
-              <div style={{ display:'flex',alignItems:'center',gap:5,padding:'3px 10px',background:C.amberDim,borderRadius:20,border:`1px solid ${C.amber}30` }}>
-                <span style={{ fontSize:11,fontWeight:600,color:C.amber }}>{attentionItems.length} {_tx('pendiente' + (attentionItems.length !== 1 ? 's' : ''))}</span>
-              </div>
-            )}
           </div>
-          <p style={{ fontSize:11,color:C.text3,marginTop:1,textTransform:'capitalize' }}>{new Date().toLocaleDateString(lang==='es'?'es-ES':lang==='en'?'en-GB':lang==='fr'?'fr-FR':lang==='pt'?'pt-PT':'ca-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
+          <p style={{ fontSize:11,color:C.text3,marginTop:2,textTransform:'capitalize' }}>{new Date().toLocaleDateString(lang==='es'?'es-ES':lang==='en'?'en-GB':lang==='fr'?'fr-FR':lang==='pt'?'pt-PT':'ca-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
         </div>
         <div style={{ display:'flex',alignItems:'center',gap:10 }}>
           <AgentBar agentOn={agentOn} agentName={tenant.agent_name} lang={lang}/>
@@ -937,24 +674,107 @@ export default function PanelPage() {
             <p style={{ fontSize:15, fontWeight:700, color:'white' }}>{_tx('Nuevo pedido de')} {orderAlert.name}</p>
             <p style={{ fontSize:12, color:'rgba(255,255,255,0.8)' }}>{_tx('Para')} {orderAlert.type} · {_tx('Toca para ver en pedidos')}</p>
           </div>
-          <span style={{ fontSize:13, color:'rgba(255,255,255,0.6)', marginLeft:'auto' }}>{_tx('Ver pedidos')} →</span>
+          <span style={{ fontSize:13, color:'rgba(255,255,255,0.6)', marginLeft:'auto' }}>→ {_tx('Ver pedidos')}</span>
           <button onClick={e => { e.stopPropagation(); setOrderAlert(null) }} style={{ background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8, padding:'4px 10px', color:'white', cursor:'pointer', fontSize:14, marginLeft:8 }} aria-label="Cerrar">✕</button>
         </div>
       )}
 
-      <div className="rz-page-enter" style={{ maxWidth:1200,margin:'0 auto',padding:'20px 28px',display:'flex',flexDirection:'column',gap:14 }}>
+      <div className="rz-page-enter" style={{ maxWidth:1200,margin:'0 auto',padding:'22px 28px',display:'flex',flexDirection:'column',gap:16 }}>
 
-        {/* ══ SECTION 1: Quick Actions ══ */}
-        <QuickActions actions={quickActions} lang={lang} />
+        {/* ── Yesterday's Summary ── */}
+        {daySummary && (
+          <div style={{
+            background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12,
+            overflow: 'hidden',
+          }}>
+            <button onClick={() => setSummaryOpen(!summaryOpen)} style={{
+              width: '100%', padding: '14px 20px', border: 'none', background: 'transparent',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 16 }}>📊</span>
+                <span style={{ color: C.text, fontSize: 14, fontWeight: 700 }}>
+                  {_tx('Resumen de ayer')}
+                </span>
+                {daySummary.highlights?.length > 0 && (
+                  <span style={{ fontSize: 12, color: C.text2 }}>
+                    — {daySummary.highlights[0]?.title}
+                  </span>
+                )}
+              </div>
+              <span style={{ color: C.text3, fontSize: 12, transform: summaryOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▼</span>
+            </button>
+            {summaryOpen && (
+              <div style={{ padding: '0 20px 16px', borderTop: `1px solid ${C.border}` }}>
+                {/* Channel breakdown */}
+                {daySummary.channel_breakdown && (
+                  <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+                    {Object.entries(daySummary.channel_breakdown as Record<string, any>).map(([ch, data]: [string, any]) => (
+                      <div key={ch} style={{
+                        padding: '8px 14px', borderRadius: 8, background: C.surface2,
+                        border: `1px solid ${C.border}`, minWidth: 100,
+                      }}>
+                        <div style={{ fontSize: 11, color: C.text3, fontWeight: 600 }}>
+                          {ch === 'voice' ? 'Llamadas' : ch === 'whatsapp' ? 'WhatsApp' : ch === 'email' ? 'Email' : 'SMS'}
+                        </div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginTop: 2 }}>{data.count}</div>
+                        {data.escalated > 0 && (
+                          <div style={{ fontSize: 10, color: C.red, marginTop: 2 }}>{data.escalated} escaladas</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Highlights */}
+                {daySummary.highlights?.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    {(daySummary.highlights as any[]).map((h: any, i: number) => (
+                      <div key={i} style={{
+                        padding: '6px 0', display: 'flex', alignItems: 'center', gap: 8,
+                      }}>
+                        <span style={{
+                          width: 6, height: 6, borderRadius: '50%',
+                          background: h.type === 'positive' ? C.green : h.type === 'warning' ? C.yellow : C.blue,
+                        }} />
+                        <span style={{ fontSize: 13, color: C.text }}>{h.title}</span>
+                        <span style={{ fontSize: 12, color: C.text3 }}>{h.description}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Pending actions */}
+                {daySummary.pending_actions?.length > 0 && (
+                  <div style={{ marginTop: 10, padding: '8px 12px', background: C.amberDim, borderRadius: 8, border: `1px solid ${C.amber}20` }}>
+                    <div style={{ fontSize: 11, color: C.amber, fontWeight: 700, marginBottom: 4 }}>{_tx('Pendiente')}</div>
+                    {(daySummary.pending_actions as string[]).map((a: string, i: number) => (
+                      <div key={i} style={{ fontSize: 12, color: C.text2, marginTop: 2 }}>• {a}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* ══ SECTION 2: Needs Attention (only if items exist) ══ */}
-        <NeedsAttentionSection items={attentionItems} lang={lang} />
+        {/* ── Alert trial ── */}
+        {isTrial && callsLeft<=5 && (
+          <div style={{ background:`linear-gradient(135deg,${C.amberDim},rgba(240,168,78,0.04))`,border:`1px solid ${C.amber}30`,borderRadius:12,padding:'14px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:16 }}>
+            <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+              <div style={{ width:7,height:7,borderRadius:'50%',background:C.amber,animation:'rz-pulse 1.5s ease-in-out infinite' }}/>
+              <div>
+                <p style={{ fontWeight:700,fontSize:14,color:C.amber }}>{callsLeft===0?_tx('Trial agotado'):`${callsLeft} ${_tx(callsLeft!==1?'llamadas restantes':'llamada restante')}`}</p>
+                <p style={{ fontSize:12,color:`${C.amber}90`,marginTop:1 }}>{_tx('Activa un plan para seguir recibiendo llamadas sin límites')}</p>
+              </div>
+            </div>
+            <Link href="/precios" style={{ padding:'8px 18px',fontSize:13,fontWeight:700,color:'#0C1018',background:C.amber,borderRadius:9,textDecoration:'none',whiteSpace:'nowrap',flexShrink:0 }}>{_tx('Ver planes')}</Link>
+          </div>
+        )}
 
-        {/* ══ SECTION 3: Active calls / orders / consultations — LIVE ══ */}
+        {/* ── Llamadas activas ── */}
         {activeCalls.length > 0 && (
-          <div style={{ background:`linear-gradient(135deg,${C.surface},${C.surface2})`,border:`1px solid ${C.teal}25`,borderRadius:16,padding:'16px 18px',position:'relative',overflow:'hidden' }}>
+          <div style={{ background:`linear-gradient(135deg,${C.surface},${C.surface2})`,border:`1px solid ${C.teal}25`,borderRadius:16,padding:'18px 20px',position:'relative',overflow:'hidden' }}>
             <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${C.teal}50,transparent)` }}/>
-            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12 }}>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14 }}>
               <div style={{ display:'flex',alignItems:'center',gap:10 }}>
                 <div className="rz-live-dot"/>
                 <span style={{ fontSize:14,fontWeight:700,color:C.text }}>{activeCalls.length} {_tx(activeCalls.length!==1?'llamadas en curso':'llamada en curso')}</span>
@@ -967,10 +787,11 @@ export default function PanelPage() {
           </div>
         )}
 
+        {/* ── Pedidos en curso (solo hostelería) ── */}
         {activeOrders.length > 0 && (
-          <div style={{ background:`linear-gradient(135deg,${C.surface},${C.surface2})`,border:`1px solid ${C.violet}25`,borderRadius:16,padding:'16px 18px',position:'relative',overflow:'hidden' }}>
+          <div style={{ background:`linear-gradient(135deg,${C.surface},${C.surface2})`,border:`1px solid ${C.violet}25`,borderRadius:16,padding:'18px 20px',position:'relative',overflow:'hidden' }}>
             <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${C.violet}50,transparent)` }}/>
-            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12 }}>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14 }}>
               <div style={{ display:'flex',alignItems:'center',gap:10 }}>
                 <div style={{ width:8,height:8,borderRadius:'50%',background:C.violet,animation:'rz-pulse 1.5s ease-in-out infinite' }}/>
                 <span style={{ fontSize:14,fontWeight:700,color:C.text }}>🛍️ {activeOrders.length} {_tx(activeOrders.length!==1?'pedidos en curso':'pedido en curso')}</span>
@@ -980,20 +801,20 @@ export default function PanelPage() {
             <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
               {activeOrders.map(order=>{
                 const items = Array.isArray(order.items) ? order.items : []
-                const itemStr = items.map((i:any)=>`${i.quantity||1}x ${i.name}`).join(', ')
+                const itemStr = items.map((i:any)=>`${i.quantity||1}× ${i.name}`).join(', ')
                 return (
-                  <div key={order.id} style={{ display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:C.surface2,borderRadius:11,border:`1px solid ${C.violet}20` }}>
-                    <div style={{ width:32,height:32,borderRadius:'50%',background:`${C.violet}18`,border:`1.5px solid ${C.violet}30`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:14 }}>🛍️</div>
+                  <div key={order.id} style={{ display:'flex',alignItems:'center',gap:12,padding:'11px 14px',background:C.surface2,borderRadius:11,border:`1px solid ${C.violet}20` }}>
+                    <div style={{ width:34,height:34,borderRadius:'50%',background:`${C.violet}18`,border:`1.5px solid ${C.violet}30`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:16 }}>🛍️</div>
                     <div style={{ flex:1,minWidth:0 }}>
-                      <p style={{ fontSize:12,fontWeight:600,color:C.text,marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+                      <p style={{ fontSize:13,fontWeight:600,color:C.text,marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
                         {order.customer_name||order.customer_phone||'Cliente'}
-                        <span style={{ fontSize:9,color:C.violet,marginLeft:8,padding:'1px 6px',borderRadius:8,background:`${C.violet}15`,fontWeight:600 }}>{order.order_type}</span>
+                        <span style={{ fontSize:10,color:C.violet,marginLeft:8,padding:'1px 6px',borderRadius:8,background:`${C.violet}15`,fontWeight:600 }}>{order.order_type}</span>
                       </p>
                       <p style={{ fontSize:11,color:C.text2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
                         {itemStr||_tx('Tomando pedido...')}{order.pickup_time?` · ${_tx('Recogida')} ${order.pickup_time}`:''}
                       </p>
                     </div>
-                    {order.total_estimate && <span style={{ fontFamily:'var(--rz-mono)',fontSize:12,color:C.violet,flexShrink:0 }}>{order.total_estimate.toFixed(2)}EUR</span>}
+                    {order.total_estimate && <span style={{ fontFamily:'var(--rz-mono)',fontSize:12,color:C.violet,flexShrink:0 }}>{order.total_estimate.toFixed(2)}€</span>}
                   </div>
                 )
               })}
@@ -1001,10 +822,11 @@ export default function PanelPage() {
           </div>
         )}
 
+        {/* ── Consultas en curso (solo clínicas) ── */}
         {activeConsultations.length > 0 && (
-          <div style={{ background:`linear-gradient(135deg,${C.surface},${C.surface2})`,border:`1px solid ${C.teal}25`,borderRadius:16,padding:'16px 18px',position:'relative',overflow:'hidden' }}>
+          <div style={{ background:`linear-gradient(135deg,${C.surface},${C.surface2})`,border:`1px solid ${C.teal}25`,borderRadius:16,padding:'18px 20px',position:'relative',overflow:'hidden' }}>
             <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${C.teal}50,transparent)` }}/>
-            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12 }}>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14 }}>
               <div style={{ display:'flex',alignItems:'center',gap:10 }}>
                 <div style={{ width:8,height:8,borderRadius:'50%',background:C.teal,animation:'rz-pulse 1.5s ease-in-out infinite' }}/>
                 <span style={{ fontSize:14,fontWeight:700,color:C.text }}>⚕️ {activeConsultations.length} {_tx(activeConsultations.length!==1?'consultas en curso':'consulta en curso')}</span>
@@ -1012,26 +834,31 @@ export default function PanelPage() {
               <Link href="/reservas" style={{ fontSize:11,color:C.teal,fontWeight:600,textDecoration:'none' }}>{_tx('Ver citas')} →</Link>
             </div>
             <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
-              {activeConsultations.map((ce: any) => {
+              {activeConsultations.map(ce=>{
                 const isUrgent = ce.is_urgency
                 const borderCol = isUrgent ? C.red : C.teal
                 const bgIcon = isUrgent ? C.red : C.teal
                 return (
-                  <div key={ce.id} style={{ display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:C.surface2,borderRadius:11,border:`1px solid ${borderCol}20` }}>
-                    <div style={{ width:32,height:32,borderRadius:'50%',background:`${bgIcon}18`,border:`1.5px solid ${bgIcon}30`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:14 }}>
+                  <div key={ce.id} style={{ display:'flex',alignItems:'center',gap:12,padding:'11px 14px',background:C.surface2,borderRadius:11,border:`1px solid ${borderCol}20` }}>
+                    <div style={{ width:34,height:34,borderRadius:'50%',background:`${bgIcon}18`,border:`1.5px solid ${bgIcon}30`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:16 }}>
                       {isUrgent ? '🚨' : '⚕️'}
                     </div>
                     <div style={{ flex:1,minWidth:0 }}>
-                      <div style={{ display:'flex',alignItems:'center',gap:6,marginBottom:2 }}>
-                        <p style={{ fontSize:12,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+                      <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:2 }}>
+                        <p style={{ fontSize:13,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
                           {ce.patient_name||ce.patient_phone||'Paciente'}
                         </p>
-                        {isUrgent && <span style={{ fontSize:9,color:C.red,fontWeight:700,padding:'1px 6px',borderRadius:8,background:`${C.red}15`,flexShrink:0 }}>{_tx('URGENTE')}</span>}
-                        {!isUrgent && ce.consultation_type && <span style={{ fontSize:9,color:C.teal,padding:'1px 6px',borderRadius:8,background:`${C.teal}15`,fontWeight:600,flexShrink:0 }}>{ce.consultation_type}</span>}
+                        {isUrgent && <span style={{ fontSize:10,color:C.red,fontWeight:700,padding:'1px 6px',borderRadius:8,background:`${C.red}15`,flexShrink:0 }}>{_tx('URGENTE')}</span>}
+                        {!isUrgent && ce.consultation_type && <span style={{ fontSize:10,color:C.teal,padding:'1px 6px',borderRadius:8,background:`${C.teal}15`,fontWeight:600,flexShrink:0 }}>{ce.consultation_type}</span>}
                       </div>
                       <p style={{ fontSize:11,color:C.text2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
                         {ce.symptoms ? ce.symptoms.slice(0,60) : `${ce.duration_minutes||20}min${ce.is_new_patient?' · '+_tx('Primera visita'):''}`}
                       </p>
+                    </div>
+                    <div style={{ flexShrink:0,textAlign:'right' as const }}>
+                      <span style={{ fontSize:10,color:isUrgent?C.red:C.text3,fontWeight:isUrgent?700:400 }}>
+                        {isUrgent?'⚠ '+_tx('Revisar'):_tx('En curso')}
+                      </span>
                     </div>
                   </div>
                 )
@@ -1040,146 +867,155 @@ export default function PanelPage() {
           </div>
         )}
 
-        {/* ══ SECTION 4: KPIs — compact row ══ */}
-        <div className="rz-grid-4col" style={{ gap:10 }}>
+        {/* ── KPIs ── */}
+        <div className="rz-grid-4col" style={{ gap:12 }}>
           <KpiCard value={todayCalls.length} label={_tx('Llamadas hoy')} icon="📞" color={C.amber} accent href="/llamadas"/>
-          <KpiCard value={reservas.length} label={`${L.reservas} ${_tx('hoy')}`} sub={`${confirmedRes} ${_tx('confirmadas')}${nextRes ? ` · ${_tx('prox')}: ${(nextRes.time||nextRes.reservation_time||'').slice(0,5)}` : ''}`} icon="📅" color={C.teal} accent href="/reservas"/>
+          <KpiCard value={reservas.length} label={`${L.reservas} ${_tx('hoy')}`} sub={`${reservas.filter(r=>r.status==='confirmada').length} ${_tx('confirmadas')}`} icon="📅" color={C.teal} accent href="/reservas"/>
           <KpiCard value={clientes.length} label={L.clientes} icon="👥" color={C.violet} href="/clientes"/>
           <KpiCard value={isTrial?callsLeft:`${callsUsed}/${callsLimit}`} label={isTrial?_tx('Llamadas restantes'):_tx('Uso del plan')} sub={planLabel} icon={isTrial?'⚡':'📊'} color={callsLeft<=3?C.red:planColor} accent={isTrial} href="/facturacion"/>
         </div>
 
-        {/* ══ SECTION 5: Yesterday's summary (collapsed by default) ══ */}
-        {daySummary && (
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
-            <button onClick={() => setSummaryOpen(!summaryOpen)} style={{
-              width: '100%', padding: '12px 18px', border: 'none', background: 'transparent',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 14 }}>📊</span>
-                <span style={{ color: C.text, fontSize: 13, fontWeight: 700 }}>{_tx('Resumen de ayer')}</span>
-                {daySummary.highlights?.length > 0 && (
-                  <span style={{ fontSize: 11, color: C.text3 }}>— {daySummary.highlights[0]?.title}</span>
-                )}
-              </div>
-              <span style={{ color: C.text3, fontSize: 11, transform: summaryOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▼</span>
-            </button>
-            {summaryOpen && (
-              <div style={{ padding: '0 18px 14px', borderTop: `1px solid ${C.border}` }}>
-                {daySummary.channel_breakdown && (
-                  <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-                    {Object.entries(daySummary.channel_breakdown as Record<string, any>).map(([ch, data]: [string, any]) => (
-                      <div key={ch} style={{ padding: '6px 12px', borderRadius: 8, background: C.surface2, border: `1px solid ${C.border}`, minWidth: 80 }}>
-                        <div style={{ fontSize: 10, color: C.text3, fontWeight: 600 }}>
-                          {ch === 'voice' ? 'Llamadas' : ch === 'whatsapp' ? 'WhatsApp' : ch === 'email' ? 'Email' : 'SMS'}
-                        </div>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginTop: 2 }}>{data.count}</div>
-                        {data.escalated > 0 && <div style={{ fontSize: 9, color: C.red, marginTop: 2 }}>{data.escalated} escaladas</div>}
-                      </div>
-                    ))}
+        {/* ── Sugerencias inteligentes ── */}
+        {suggestions.length > 0 && (
+          <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, overflow:'hidden' }}>
+            <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', gap:10, background:'rgba(255,255,255,0.015)' }}>
+              <span style={{ fontSize:15 }}>💡</span>
+              <span style={{ fontSize:14, fontWeight:700, color:C.text }}>{_tx('Sugerencias')}</span>
+              <span style={{ fontSize:11, color:C.text3, marginLeft:'auto' }}>{suggestions.length} {_tx('activas')}</span>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column' }}>
+              {suggestions.slice(0, 5).map((s: any, i: number) => {
+                const priorityBorder = s.priority === 'high' ? C.red : s.priority === 'medium' ? C.amber : C.teal
+                const priorityBg = s.priority === 'high' ? 'rgba(248,113,113,0.04)' : s.priority === 'medium' ? 'rgba(240,168,78,0.04)' : 'transparent'
+                return (
+                  <div key={s.id} style={{
+                    padding:'12px 18px', borderTop: i > 0 ? `1px solid ${C.border}` : 'none',
+                    borderLeft:`3px solid ${priorityBorder}`, background:priorityBg,
+                    display:'flex', alignItems:'flex-start', gap:12,
+                  }}>
+                    <div style={{ width:34, height:34, borderRadius:10, background:`${priorityBorder}15`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17, flexShrink:0 }}>
+                      {s.icon}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <p style={{ fontSize:13, fontWeight:600, color:C.text, marginBottom:3 }}>{s.title}</p>
+                      <p style={{ fontSize:12, color:C.text2, lineHeight:1.5 }}>{s.description}</p>
+                      {s.action && s.actionHref && (
+                        <a href={s.actionHref} style={{ fontSize:11, color:C.amber, fontWeight:600, textDecoration:'none', marginTop:6, display:'inline-block' }}>
+                          {s.action} →
+                        </a>
+                      )}
+                    </div>
+                    <span style={{
+                      fontSize:9, fontWeight:700, letterSpacing:'0.05em', textTransform:'uppercase' as const,
+                      padding:'2px 8px', borderRadius:8,
+                      background: s.priority === 'high' ? C.redDim : s.priority === 'medium' ? C.amberDim : C.tealDim,
+                      color: priorityBorder, flexShrink:0, marginTop:2,
+                    }}>
+                      {s.priority === 'high' ? _tx('Urgente') : s.priority === 'medium' ? _tx('Media') : _tx('Info')}
+                    </span>
                   </div>
-                )}
-                {daySummary.highlights?.length > 0 && (
-                  <div style={{ marginTop: 10 }}>
-                    {(daySummary.highlights as any[]).map((h: any, i: number) => (
-                      <div key={i} style={{ padding: '4px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: h.type === 'positive' ? C.green : h.type === 'warning' ? C.yellow : C.blue }} />
-                        <span style={{ fontSize: 12, color: C.text }}>{h.title}</span>
-                        <span style={{ fontSize: 11, color: C.text3 }}>{h.description}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {daySummary.pending_actions?.length > 0 && (
-                  <div style={{ marginTop: 8, padding: '6px 10px', background: C.amberDim, borderRadius: 8, border: `1px solid ${C.amber}20` }}>
-                    <div style={{ fontSize: 10, color: C.amber, fontWeight: 700, marginBottom: 3 }}>{_tx('Pendiente')}</div>
-                    {(daySummary.pending_actions as string[]).map((a: string, i: number) => (
-                      <div key={i} style={{ fontSize: 11, color: C.text2, marginTop: 2 }}>• {a}</div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                )
+              })}
+            </div>
           </div>
         )}
 
-        {/* ══ SECTION 6: Main grid — 3 columns on desktop ══ */}
-        <div className="rz-grid-2col" style={{ gap: 14 }}>
+        {/* ── Previsión de hoy ── */}
+        {forecast.length > 0 && <ForecastChart data={forecast} forecastLabel={cs.forecast} lang={lang}/>}
 
-          {/* LEFT: Calls + Schedule */}
-          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        {/* ── Main grid: Live feed + Llamadas ── */}
+        <div className="rz-grid-2col" style={{ gap:16 }}>
 
-            {/* Recent calls */}
-            <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,overflow:'hidden' }}>
-              <div style={{ padding:'12px 18px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between' }}>
-                <h2 style={{ fontSize:13,fontWeight:700,color:C.text }}>{cs.recentCalls}</h2>
-                <Link href="/llamadas" style={{ fontSize:11,color:C.amber,fontWeight:600,textDecoration:'none' }}>{cs.viewAll}</Link>
-              </div>
-              {calls.length===0 ? (
-                <div style={{ padding:'40px 18px',textAlign:'center' }}>
-                  <div style={{ width:48,height:48,borderRadius:'50%',background:'rgba(45,212,191,0.08)',border:'1px solid rgba(45,212,191,0.15)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 14px',fontSize:20 }}>📞</div>
-                  <p style={{ fontSize:14,fontWeight:700,color:C.text,marginBottom:6 }}>{agentOn ? agentName + ' ' + _tx('esta lista') : _tx('Configura tu agente')}</p>
-                  <p style={{ fontSize:12,color:C.text3,lineHeight:1.6,maxWidth:260,margin:'0 auto' }}>
-                    {agentOn ? _tx('Las llamadas apareceran aqui en tiempo real.') : _tx('Configura tu numero de telefono para empezar.')}
-                  </p>
-                  {!agentOn && <Link href="/configuracion" style={{ display:'inline-block',marginTop:14,padding:'8px 18px',fontSize:12,fontWeight:600,color:'#0C1018',background:C.amber,borderRadius:8,textDecoration:'none' }}>{_tx('Configurar')} →</Link>}
-                </div>
-              ) : calls.map((call,i)=><CallRow key={call.id} call={call} idx={i} businessType={tenant.type||'otro'} lang={lang} eventLabel={evtCfg.eventLabel}/>)}
+          {/* Llamadas recientes */}
+          <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,overflow:'hidden' }}>
+            <div style={{ padding:'14px 20px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+              <h2 style={{ fontSize:14,fontWeight:700,color:C.text }}>{cs.recentCalls}</h2>
+              <Link href="/llamadas" style={{ fontSize:12,color:C.amber,fontWeight:600,textDecoration:'none' }}>{cs.viewAll}</Link>
             </div>
-
-            {/* Today's schedule timeline */}
-            <TodayTimeline reservas={reservas} label={L.reservas} lang={lang} />
-
-            {/* Forecast */}
-            {forecast.length > 0 && <ForecastChart data={forecast} forecastLabel={cs.forecast} lang={lang}/>}
+            {calls.length===0 ? (
+              <div style={{ padding:'52px 20px',textAlign:'center' }}>
+                <div style={{ width:56,height:56,borderRadius:'50%',background:'rgba(45,212,191,0.08)',border:'1px solid rgba(45,212,191,0.15)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',fontSize:24 }}>📞</div>
+                <p style={{ fontSize:15,fontWeight:700,color:C.text,marginBottom:8 }}>{_tx('Tu recepcionista está activa')}</p>
+                <p style={{ fontSize:13,color:C.text3,lineHeight:1.7,maxWidth:280,margin:'0 auto' }}>
+                  {agentOn ? _tx('Esperando llamadas. Cuando entren, aparecerán aquí en tiempo real con su resumen.') : _tx('Configura tu número de teléfono para empezar a recibir llamadas.')}
+                </p>
+                {!agentOn && <Link href="/configuracion" style={{ display:'inline-block',marginTop:16,padding:'9px 20px',fontSize:13,fontWeight:600,color:'#0C1018',background:C.amber,borderRadius:9,textDecoration:'none' }}>{_tx('Configurar número')} →</Link>}
+                {agentOn && (
+                  <div style={{ marginTop:20,display:'flex',alignItems:'center',justifyContent:'center',gap:16 }}>
+                    {['📞 '+_tx('Responde 24/7'),'📅 '+_tx('Detecta reservas'),'🛍️ '+_tx('Toma pedidos')].map(s=>(
+                      <div key={s} style={{ fontSize:12,color:C.text3,display:'flex',alignItems:'center',gap:5 }}>{s}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : calls.map((call,i)=><CallRow key={call.id} call={call} idx={i} businessType={tenant.type||'otro'} lang={lang} eventLabel={evtCfg.eventLabel}/>)}
           </div>
 
-          {/* RIGHT: Live feed + Insights + Messages */}
-          <div style={{ display:'flex',flexDirection:'column',gap:14 }}>
+          {/* Columna derecha: feed + reservas */}
+          <div style={{ display:'flex',flexDirection:'column',gap:16 }}>
 
             {/* Live feed */}
             <LiveFeed events={events} demoMode={demoMode} onToggleDemo={toggleDemo} lang={lang}/>
 
-            {/* Agent insights */}
-            <InsightsPanel insights={insights} headerLabel={panelT.insights.detected} lang={lang} agentName={agentName}/>
-
-            {/* Multichannel quick access */}
+            {/* Mensajes multicanal — acceso rápido */}
             <Link href="/mensajes" style={{ textDecoration:'none' }}>
-              <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'12px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',transition:'all 0.15s' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = C.borderMd; (e.currentTarget as HTMLElement).style.background = C.surface2 }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = C.border; (e.currentTarget as HTMLElement).style.background = C.surface }}>
-                <div style={{ display:'flex',alignItems:'center',gap:8 }}>
-                  <span style={{ fontSize:16 }}>💬</span>
-                  <div>
-                    <span style={{ fontSize:13,fontWeight:700,color:C.text }}>{_tx('Mensajes')}</span>
-                    <p style={{ fontSize:10,color:C.text3,marginTop:1 }}>WhatsApp · Email · SMS</p>
-                  </div>
+              <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,padding:'14px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer' }}>
+                <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                  <span style={{ fontSize:18 }}>💬</span>
+                  <span style={{ fontSize:14,fontWeight:700,color:C.text }}>{_tx('Mensajes')}</span>
+                  <span style={{ fontSize:11,color:C.text3 }}>WhatsApp · Email · SMS</span>
                 </div>
-                <span style={{ fontSize:11,color:C.amber,fontWeight:600 }}>→</span>
+                <span style={{ fontSize:12,color:C.amber,fontWeight:600 }}>{_tx('Ver todo')} →</span>
               </div>
             </Link>
 
-            {/* Trial usage */}
-            {isTrial && (
-              <div style={{ background:C.surface,border:`1px solid ${callsLeft<=3?C.red+'30':C.border}`,borderRadius:12,padding:'14px 16px' }}>
-                <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6 }}>
-                  <span style={{ fontSize:12,fontWeight:600,color:C.text }}>{_tx('Trial gratuito')}</span>
-                  <span style={{ fontFamily:'var(--rz-mono)',fontSize:12,fontWeight:600,color:callsLeft<=3?C.red:C.text }}>{callsUsed}<span style={{ color:C.text3 }}> / {callsLimit}</span></span>
-                </div>
-                <div style={{ height:4,background:'rgba(255,255,255,0.05)',borderRadius:3,overflow:'hidden',marginBottom:6 }}>
-                  <div style={{ height:'100%',width:`${Math.min(100,Math.round(callsUsed/callsLimit*100))}%`,background:callsLeft<=3?C.red:callsUsed/callsLimit>0.7?C.yellow:C.amber,borderRadius:3,transition:'width 0.6s ease' }}/>
-                </div>
-                <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center' }}>
-                  <p style={{ fontSize:10,color:C.text3 }}>{callsLeft} {_tx('llamadas restantes')}</p>
-                  <Link href="/precios" style={{ fontSize:10,color:C.amber,fontWeight:700,textDecoration:'none' }}>{_tx('Activar plan')} →</Link>
-                </div>
+            <InsightsPanel insights={insights} headerLabel={panelT.insights.detected} lang={lang} agentName={tenant.agent_name||'Sofía'}/>
+
+            {/* Reservas hoy */}
+            <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,overflow:'hidden' }}>
+              <div style={{ padding:'14px 18px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+                <h2 style={{ fontSize:14,fontWeight:700,color:C.text }}>{L.reservas} {_tx('hoy')}</h2>
+                <Link href="/reservas" style={{ fontSize:12,color:C.amber,fontWeight:600,textDecoration:'none' }}>{cs.manage}</Link>
               </div>
-            )}
+              {reservas.length===0 ? (
+                <div style={{ padding:'32px 16px',textAlign:'center' }}>
+                  <div style={{ fontSize:24,marginBottom:10 }}>📅</div>
+                  <p style={{ fontSize:13,fontWeight:600,color:C.text,marginBottom:6 }}>{_tx('Sin')} {L.reservas.toLowerCase()} {_tx('hoy')}</p>
+                  <p style={{ fontSize:12,color:C.text3,lineHeight:1.6 }}>{_tx('Las')} {L.reservas.toLowerCase()} {_tx('se mostrarán automáticamente cuando entren.')}</p>
+                </div>
+              ) : reservas.slice(0,8).map((r,i)=>(
+                <div key={r.id} style={{ display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderTop:i>0?`1px solid ${C.border}`:'none',transition:'background 0.12s' }}
+                  onMouseEnter={e=>(e.currentTarget.style.background=C.surface2)} onMouseLeave={e=>(e.currentTarget.style.background='transparent')}>
+                  <div style={{ width:32,height:32,borderRadius:'50%',background:C.amberDim,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:12,color:C.amber,flexShrink:0 }}>
+                    {r.customer_name?.[0]?.toUpperCase()||'?'}
+                  </div>
+                  <div style={{ flex:1,minWidth:0 }}>
+                    <p style={{ fontSize:13,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{r.customer_name}</p>
+                    <p style={{ fontSize:11,color:C.text3 }}>{(r.time||r.reservation_time||'').slice(0,5)} · {r.people||r.party_size}p</p>
+                  </div>
+                  <span style={{ fontSize:10,padding:'2px 8px',borderRadius:10,background:r.status==='confirmada'?C.greenDim:C.surface2,color:r.status==='confirmada'?C.green:C.text3,fontWeight:600,border:`1px solid ${r.status==='confirmada'?C.green+'25':C.border}`,flexShrink:0 }}>{_tx(r.status)}</span>
+                </div>
+              ))}
+            </div>
+
           </div>
         </div>
 
-      </div>
+        {/* ── Trial usage bar ── */}
+        {isTrial && (
+          <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:'16px 20px' }}>
+            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8 }}>
+              <span style={{ fontSize:13,fontWeight:600,color:C.text }}>{_tx('Uso del trial gratuito')}</span>
+              <span style={{ fontFamily:'var(--rz-mono)',fontSize:13,fontWeight:600,color:callsLeft<=3?C.red:C.text }}>{callsUsed}<span style={{ color:C.text3 }}> / {callsLimit}</span></span>
+            </div>
+            <div style={{ height:5,background:'rgba(255,255,255,0.05)',borderRadius:3,overflow:'hidden',marginBottom:8 }}>
+              <div style={{ height:'100%',width:`${Math.min(100,Math.round(callsUsed/callsLimit*100))}%`,background:callsLeft<=3?C.red:callsUsed/callsLimit>0.7?C.yellow:C.amber,borderRadius:3,transition:'width 0.6s ease' }}/>
+            </div>
+            <p style={{ fontSize:11,color:C.text3 }}>{_tx('Cada llamada recibida cuenta como una del plan.')}</p>
+          </div>
+        )}
 
+      </div>
     </div>
   )
 }
