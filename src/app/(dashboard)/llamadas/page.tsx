@@ -151,6 +151,18 @@ export default function LlamadasPage() {
 
   useEffect(() => {
     if (!tid) { setLoading(false); return }
+    // Sync llamadas con Retell antes de cargar
+    ;(async () => {
+      try {
+        const sess = await supabase.auth.getSession()
+        if (sess.data.session) {
+          await fetch('/api/calls/sync', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + sess.data.session.access_token },
+          })
+        }
+      } catch {}
+    })()
     load(tid, true)
     const ch = supabase.channel('calls-rt-' + tid)
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},(payload)=>{
