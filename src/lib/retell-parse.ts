@@ -199,9 +199,15 @@ function extractFromTranscript(transcript: string): Record<string, any> {
     { keywords: ['tortilla'], name: 'Tortilla', price: 8 },
     { keywords: ['chorizo'], name: 'Chorizo a la sidra', price: 9 },
     { keywords: ['coca cola', 'cocacola', 'coca-cola'], name: 'Coca Cola', price: 3 },
+    { keywords: ['seven up', 'sevenup', '7up', '7 up'], name: 'Seven Up', price: 3 },
+    { keywords: ['fanta'], name: 'Fanta', price: 3 },
+    { keywords: ['nestea'], name: 'Nestea', price: 3 },
     { keywords: ['agua'], name: 'Agua', price: 2 },
-    { keywords: ['cerveza', 'birra', 'cana'], name: 'Cerveza', price: 3 },
-    { keywords: ['vino', 'tinto', 'blanco'], name: 'Vino', price: 4 },
+    { keywords: ['cerveza', 'birra', 'cana', 'cania'], name: 'Cerveza', price: 3 },
+    { keywords: ['vino', 'tinto', 'blanco', 'ribera', 'rioja'], name: 'Vino', price: 4 },
+    { keywords: ['sangria'], name: 'Sangria', price: 5 },
+    { keywords: ['cafe', 'cortado', 'solo'], name: 'Cafe', price: 2 },
+    { keywords: ['pan', 'panecillo'], name: 'Pan', price: 1 },
   ]
   const items: Array<{name: string, quantity: number, price: number}> = []
   for (const item of menu) {
