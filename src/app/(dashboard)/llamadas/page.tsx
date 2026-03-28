@@ -393,7 +393,15 @@ export default function LlamadasPage() {
                             <div style={{display:'flex',alignItems:'center',gap:0}}>
                               {call.caller_phone && call.caller_phone !== 'anonymous' && call.caller_phone !== 'unknown' && (call.status === 'perdida' || call.status === 'no-answer' || call.intent === 'perdida') && (
                                 <button onClick={async () => {
-                                  toast.push({ title: 'Función en desarrollo — próximamente', type: 'call', priority: 'info', icon: '📞' })
+                                  const sess = await supabase.auth.getSession()
+                                  if (!sess.data.session) return
+                                  const r = await fetch('/api/voice/outbound', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
+                                    body: JSON.stringify({ tenant_id: tid, call_type: 'callback', phone: call.caller_phone, customer_name: call.customer_name || '' })
+                                  })
+                                  if (r.ok) toast.push({ title: 'Llamando a ' + (call.caller_phone || 'cliente') + '...', type: 'call', priority: 'info', icon: '📞' })
+                                  else toast.push({ title: 'Error al llamar', type: 'call', priority: 'critical', icon: '❌' })
                                 }}
                                 style={{fontSize:11, padding:'5px 12px', borderRadius:7, border:`1px solid ${C.teal}40`, background:C.tealDim, color:C.teal, cursor:'pointer', fontFamily:'inherit', fontWeight:500, marginRight:8}}>
                                   📞 Devolver llamada

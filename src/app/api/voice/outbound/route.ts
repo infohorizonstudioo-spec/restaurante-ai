@@ -1,8 +1,5 @@
 /**
- * RESERVO.AI — Llamada saliente via Twilio → Retell SIP
- *
- * Twilio llama al cliente. Cuando contesta, conecta via SIP
- * con Retell para que el agente IA real maneje la conversación.
+ * RESERVO.AI — Llamada saliente via Retell directo
  */
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-auth'
@@ -10,8 +7,7 @@ import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
 import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
 
-const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID || ''
-const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN || ''
+const RETELL_KEY = process.env.RETELL_API_KEY || ''
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,7 +26,7 @@ export async function POST(req: Request) {
     const customerName = body.customer_name || ''
 
     if (!tenantId || !phone) {
-      return NextResponse.json({ error: 'tenant_id y phone requeridos' }, { status: 400 })
+      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
     }
 
     // Auth
@@ -46,48 +42,50 @@ export async function POST(req: Request) {
       .select('id,name,agent_phone,retell_agent_id')
       .eq('id', tenantId).single()
 
-    if (!tenant?.agent_phone) {
-      return NextResponse.json({ error: 'Sin numero configurado' }, { status: 400 })
+    if (!tenant?.retell_agent_id || !tenant?.agent_phone) {
+      return NextResponse.json({ error: 'Sin agente configurado' }, { status: 400 })
     }
 
-    // Build TwiML: Twilio calls customer, then connects to Retell via SIP
-    const sipUri = `sip:${tenant.agent_phone.replace('+', '')}@sip.retellai.com`
-    const twiml = `<Response><Dial callerId="${tenant.agent_phone}" timeout="30"><Sip>${sipUri}</Sip></Dial></Response>`
-
-    // Create outbound call via Twilio
-    const auth64 = Buffer.from(`${TWILIO_SID}:${TWILIO_TOKEN}`).toString('base64')
-    const params = new URLSearchParams({
-      To: phone,
-      From: tenant.agent_phone,
-      Twiml: twiml,
-    })
-
-    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Calls.json`, {
+    // Llamada via Retell API directa
+    const res = await fetch('https://api.retellai.com/v2/create-phone-call', {
       method: 'POST',
-      headers: { 'Authorization': `Basic ${auth64}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString(),
+      headers: {
+        'Authorization': `Bearer ${RETELL_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from_number: tenant.agent_phone,
+        to_number: phone,
+        override_agent_id: tenant.retell_agent_id,
+        retell_llm_dynamic_variables: {
+          customer_context: callType === 'callback'
+            ? `Llamada devuelta. El cliente nos llamo antes pero se corto. Saluda diciendo: Hola, te llamo de ${tenant.name}, tenemos una llamada tuya de antes, dime en que te puedo ayudar.`
+            : `Llamada saliente a ${customerName}. Saluda con: Hola ${customerName}, te llamo de ${tenant.name}.`,
+        },
+      }),
     })
-    const data = await res.json()
 
-    if (!data.sid) {
-      logger.error('Outbound call failed', { error: data.message })
-      return NextResponse.json({ error: data.message || 'Error al llamar' }, { status: 500 })
+    const data = await res.json()
+    if (!data.call_id) {
+      logger.error('Retell outbound failed', { error: data.message })
+      return NextResponse.json({ error: data.message || 'No se pudo llamar' }, { status: 500 })
     }
 
+    // Registrar en DB
     await supabase.from('calls').insert({
       tenant_id: tenantId,
-      call_sid: data.sid,
+      call_sid: data.call_id,
       caller_phone: phone,
       status: 'activa',
-      intent: callType === 'callback' ? 'devuelta' : 'saliente',
-      summary: callType === 'callback' ? `Devolviendo llamada a ${customerName || phone}` : `Llamada a ${customerName || phone}`,
+      intent: 'devuelta',
+      summary: `Devolviendo llamada a ${customerName || phone}`,
       started_at: new Date().toISOString(),
       source: 'retell',
     })
 
-    return NextResponse.json({ success: true, call_sid: data.sid })
+    return NextResponse.json({ success: true, call_id: data.call_id })
   } catch (err: any) {
     logger.error('Outbound error', {}, err)
-    return NextResponse.json({ error: 'Error al iniciar llamada' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al llamar' }, { status: 500 })
   }
 }
