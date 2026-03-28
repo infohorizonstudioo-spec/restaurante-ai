@@ -229,23 +229,22 @@ export default function ProveedoresPage() {
           notes = order.notes || ''
         }
       }
-      const res = await fetch('/api/retell/outbound', {
+      const sess = await supabase.auth.getSession()
+      const res = await fetch('/api/voice/notify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(sess.data.session ? { 'Authorization': 'Bearer ' + sess.data.session.access_token } : {}) },
         body: JSON.stringify({
           tenant_id: tid,
-          call_type: 'supplier',
+          notify_type: 'supplier_order',
           phone: supplier.phone,
-          supplier_name: supplier.name,
           supplier_id: supplierId,
-          order_id: orderId || undefined,
           products,
           notes,
         }),
       })
       const data = await res.json()
       if (res.ok) {
-        toast.push({ title: 'Llamada iniciada', type: 'success', priority: 'info', icon: '📞' })
+        toast.push({ title: 'SMS enviado a ' + supplier.name + '. Cuando llame, el agente ya sabe que pedir.', type: 'success', priority: 'info', icon: '💬' })
       } else {
         toast.push({ title: data.error || 'Error al llamar', type: 'error', priority: 'critical', icon: '❌' })
       }

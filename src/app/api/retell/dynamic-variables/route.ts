@@ -62,13 +62,37 @@ export async function POST(req: NextRequest) {
     // ── 2. Contexto del cliente (MEMORIA VIVA) ──
     let customerContext = 'Sin información previa del cliente.'
     if (callerPhone) {
+      // Primero: comprobar si es un proveedor devolviendo llamada
       try {
-        const profile = await getCustomerProfile(tenant.id, callerPhone)
-        if (profile) {
-          customerContext = profile.promptFragment
+        const { data: pendingCallback } = await supabase
+          .from('scheduled_callbacks')
+          .select('context,reason')
+          .eq('tenant_id', tenant.id)
+          .eq('phone', callerPhone)
+          .eq('status', 'pending')
+          .eq('reason', 'supplier_order')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (pendingCallback?.context) {
+          const ctx = typeof pendingCallback.context === 'string' ? JSON.parse(pendingCallback.context) : pendingCallback.context
+          customerContext = `ATENCION: Este es un PROVEEDOR (${ctx.supplier_name || 'proveedor'}) que nos devuelve la llamada. Le hemos mandado un SMS pidiendole un pedido. Necesitamos: ${(ctx.products || []).join(', ')}. ${ctx.notes || ''} Trata esta llamada como un PEDIDO A PROVEEDOR — confirma los productos, pregunta precios y plazos de entrega. Al terminar llama a save_call_summary con intent=pedido_proveedor.`
+          // Marcar como procesado
+          await supabase.from('scheduled_callbacks').update({ status: 'completed' }).eq('phone', callerPhone).eq('tenant_id', tenant.id).eq('status', 'pending').eq('reason', 'supplier_order')
         }
-      } catch (err) {
-        logger.error('Retell dynamic vars: customer profile failed', { tenantId: tenant.id }, err)
+      } catch {}
+
+      // Si no es proveedor, buscar perfil de cliente normal
+      if (customerContext === 'Sin información previa del cliente.') {
+        try {
+          const profile = await getCustomerProfile(tenant.id, callerPhone)
+          if (profile) {
+            customerContext = profile.promptFragment
+          }
+        } catch (err) {
+          logger.error('Retell dynamic vars: customer profile failed', { tenantId: tenant.id }, err)
+        }
       }
     }
 
