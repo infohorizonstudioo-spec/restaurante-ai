@@ -710,15 +710,35 @@ export async function updateOrderTool(params: {
 
     if (error) return { success: false, error: 'could not update order' }
 
-    if (action === 'confirm' && customer_phone) {
-      const { data: tenantInfo } = await supabase.from('tenants').select('name').eq('id', tenant_id).maybeSingle()
+    if (action === 'confirm') {
+      const { data: tenantInfo } = await supabase.from('tenants').select('name,agent_config').eq('id', tenant_id).maybeSingle()
       const bizName = tenantInfo?.name || 'Tu negocio'
       const total = data?.total_estimate || 0
       const orderT = order_type || 'recoger'
-      const smsBody = orderT === 'domicilio'
-        ? `${bizName}: Hola ${customer_name}, tu pedido (${total.toFixed(2)}€) a domicilio está confirmado. Lo preparamos ya.`
-        : `${bizName}: Hola ${customer_name}, tu pedido (${total.toFixed(2)}€) está confirmado. Te avisamos cuando esté listo.`
-      sendSms(customer_phone, smsBody).catch(() => {})
+
+      // SMS al cliente
+      if (customer_phone) {
+        const smsBody = orderT === 'domicilio'
+          ? `${bizName}: Hola ${customer_name}, tu pedido (${total.toFixed(2)}€) a domicilio está confirmado. Lo preparamos ya.`
+          : `${bizName}: Hola ${customer_name}, tu pedido (${total.toFixed(2)}€) está confirmado. Te avisamos cuando esté listo.`
+        sendSms(customer_phone, smsBody).catch(() => {})
+      }
+
+      // SMS al repartidor si es pedido a domicilio
+      if (orderT === 'domicilio') {
+        const deliveryPhone = (tenantInfo?.agent_config as any)?.delivery_phone
+        if (deliveryPhone) {
+          const itemsList = Array.isArray(data?.items)
+            ? (data.items as any[]).map((i: any) => `${i.quantity || 1}x ${i.name}`).join(', ')
+            : 'Ver detalles en panel'
+          const addr = delivery_address || (notes?.match(/DIRECCIÓN:\s*([^|]+)/)?.[1]?.trim()) || ''
+          const mapsLink = addr
+            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`
+            : ''
+          const driverSms = `Nuevo pedido a domicilio: ${itemsList}. Direccion: ${addr || 'No especificada'}. Cliente: ${customer_name || 'Sin nombre'}.${mapsLink ? ' ' + mapsLink : ''}`
+          sendSms(deliveryPhone, driverSms).catch(() => {})
+        }
+      }
     }
 
     return {

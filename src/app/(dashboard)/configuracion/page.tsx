@@ -41,6 +41,7 @@ const DEFAULT: AgentConfig = {
   conversation_flow: ['nombre','personas','fecha','hora','confirmar'],
   special_cases: { allergies:'review', birthdays:'confirm', events:'review', vip:'confirm' },
   order_alert_mode: 'banner' as 'none' | 'banner' | 'redirect',
+  delivery_phone: '',
 }
 
 interface AgentConfig {
@@ -52,6 +53,7 @@ interface AgentConfig {
   conversation_flow: string[]
   special_cases: { allergies:string; birthdays:string; events:string; vip:string }
   order_alert_mode?: 'none' | 'banner' | 'redirect'
+  delivery_phone?: string
 }
 
 
@@ -629,6 +631,11 @@ export default function ConfiguracionPage() {
               {cfg.order_alert_mode===opt.value && <span style={{fontSize:16,color:C.amber}}>✓</span>}
             </div>
           ))}
+          <div style={{borderTop:`1px solid ${C.border}`,paddingTop:16,marginTop:8}}>
+            <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>{tx('TELÉFONO DEL REPARTIDOR')}</label>
+            <input className="rz-inp" value={cfg.delivery_phone||''} onChange={e=>setCfg(c=>({...c,delivery_phone:e.target.value}))} placeholder="+34 600 000 000"/>
+            <p style={{fontSize:11,color:C.muted,marginTop:4}}>{tx('Cuando se confirme un pedido a domicilio, se enviará un SMS al repartidor con los detalles y la dirección del cliente')}</p>
+          </div>
         </SectionCard>
         )}
 
