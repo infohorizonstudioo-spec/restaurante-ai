@@ -178,7 +178,7 @@ export default function PedidosPage() {
     const ch = supabase.channel('order-events-rt-' + tid)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, (payload) => {
         playSound()
-        // Insert new order at the top instantly, then background-refresh for full data
+        toast.push({ title: `Nuevo pedido: ${(payload.new as any)?.customer_name || 'Cliente'} — ${(payload.new as any)?.order_type || 'pedido'}`, type: 'order', priority: 'info', icon: '🛒' })
         const newOrder = payload.new as any
         if (newOrder?.id) {
           setOrders(prev => {

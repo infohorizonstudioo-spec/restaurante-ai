@@ -147,8 +147,9 @@ export default function LlamadasPage() {
     if (!tid) { setLoading(false); return }
     load(tid, true)
     const ch = supabase.channel('calls-rt-' + tid)
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},()=>{
-        // New call arrived — silent refresh to avoid flashing the skeleton
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},(payload)=>{
+        const n = payload.new as any
+        toast.push({ title: `Nueva llamada: ${n.caller_phone || 'Desconocido'} — ${n.intent || 'entrante'}`, type: 'call', priority: 'info', icon: '📞' })
         load(tid, true, true)
       })
       .on('postgres_changes',{event:'UPDATE',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},(payload)=>{
