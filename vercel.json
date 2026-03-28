@@ -14,7 +14,7 @@
     },
     {
       "path": "/api/cron/security-patrol",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 3 * * *"
     }
   ]
 }
