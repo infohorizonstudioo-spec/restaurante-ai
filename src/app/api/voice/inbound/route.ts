@@ -37,10 +37,13 @@ export async function POST(req: Request) {
       .or(`agent_phone.eq.${cleanNumber},agent_phone.eq.${cleanNumber.replace('+', '')}`)
       .maybeSingle()
 
-    const retellAgentId = tenant?.retell_agent_id || ''
+    // ElevenLabs tiene soporte nativo Twilio via ConversationRelay.
+    // Retell requiere SIP trunking (plan Twilio de pago).
+    // Priorizamos ElevenLabs para compatibilidad con Twilio free/standard.
     const elAgentId = tenant?.el_agent_id || process.env.ELEVENLABS_AGENT_ID || ''
+    const retellAgentId = tenant?.retell_agent_id || ''
 
-    if (!retellAgentId && !elAgentId) {
+    if (!elAgentId && !retellAgentId) {
       return new NextResponse(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say language="es-ES" voice="Polly.Lucia">Lo sentimos, este número no tiene un agente configurado.</Say>
@@ -63,61 +66,8 @@ export async function POST(req: Request) {
 
     let twiml: string
 
-    if (retellAgentId) {
-      // ── RETELL AI ──
-      // Register a web call to get the WebSocket access
-      const retellRes = await fetch('https://api.retellai.com/v2/create-web-call', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${RETELL_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          agent_id: retellAgentId,
-          metadata: {
-            tenant_id: tenant?.id || '',
-            caller_phone: callerPhone,
-            call_sid: callSid,
-            twilio_call: true,
-          },
-        }),
-      })
-
-      if (!retellRes.ok) {
-        logger.error('Retell create-web-call failed', { status: retellRes.status })
-        // Fallback to ElevenLabs if available
-        if (elAgentId) {
-          twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Connect>
-    <ConversationRelay url="wss://api.elevenlabs.io/v1/convai/twilio/audio" dtmfDetection="true">
-      <Parameter name="agent_id" value="${elAgentId}" />
-    </ConversationRelay>
-  </Connect>
-</Response>`
-        } else {
-          twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Say language="es-ES">Perdona, hay un problemilla técnico. Llama en un momento.</Say>
-  <Hangup/>
-</Response>`
-        }
-      } else {
-        const retellData = await retellRes.json()
-        const wsUrl = `wss://api.retellai.com/audio-websocket/${retellData.call_id}`
-
-        twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Connect>
-    <Stream url="${wsUrl}">
-      <Parameter name="caller_phone" value="${callerPhone}" />
-      <Parameter name="call_sid" value="${callSid}" />
-    </Stream>
-  </Connect>
-</Response>`
-      }
-    } else {
-      // ── ELEVENLABS (legacy) ──
+    if (elAgentId) {
+      // ── ELEVENLABS — soporte nativo Twilio via ConversationRelay ──
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Connect>
@@ -125,6 +75,21 @@ export async function POST(req: Request) {
       <Parameter name="agent_id" value="${elAgentId}" />
     </ConversationRelay>
   </Connect>
+</Response>`
+    } else if (retellAgentId) {
+      // ── RETELL AI — requiere SIP trunking en Twilio ──
+      const sipUri = `sip:${calledNumber.replace('+', '')}@sip.retellai.com`
+      twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Dial callerId="${callerPhone}" timeout="30">
+    <Sip>${sipUri}</Sip>
+  </Dial>
+</Response>`
+    } else {
+      twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say language="es-ES">Lo sentimos, no hay agente configurado.</Say>
+  <Hangup/>
 </Response>`
     }
 
