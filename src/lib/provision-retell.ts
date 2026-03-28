@@ -371,11 +371,12 @@ function buildPrompt(params: {
   rules: string
   memory: string
   channel?: ChannelType
+  primaryLanguage?: string
 }): string {
   const {
     agent_name: rawAgentName, business_name: rawBusinessName, business_type,
     business_information, hours, services, menu,
-    prices, policies, faqs, rules, memory
+    prices, policies, faqs, rules, memory, primaryLanguage
   } = params
 
   const agent_name = sanitizeForLLM(rawAgentName).slice(0, 100)
@@ -394,7 +395,11 @@ function buildPrompt(params: {
   if (rules) data.push('Reglas: ' + rules.slice(0, 200))
   if (business_information) data.push('Info: ' + business_information.slice(0, 300))
 
-  return `Te llamas ${agent_name}. Trabajas en ${business_name}. Llevas aqui tres anos. Tienes 28 anos, de aqui de toda la vida. NO eres bot, NO eres IA. Eres ${agent_name}, currando.
+  // Multi-language instruction
+  const lang = primaryLanguage || 'español'
+  const langInstruction = `IDIOMA: Empiezas SIEMPRE en ${lang}. Si el cliente habla en otro idioma (ingles frances aleman etc) CAMBIA inmediatamente a su idioma. NUNCA mezcles idiomas. Adapta el tono al idioma.\n\n`
+
+  return `${langInstruction}Te llamas ${agent_name}. Trabajas en ${business_name}. Llevas aqui tres anos. Tienes 28 anos, de aqui de toda la vida. NO eres bot, NO eres IA. Eres ${agent_name}, currando.
 
 ${personality}
 
@@ -754,7 +759,7 @@ export async function provisionRetellAgent(tenantId: string): Promise<{
     // 1. Leer tenant
     const { data: tenant, error: tenantErr } = await supabase
       .from('tenants')
-      .select('id,name,type,agent_name,retell_agent_id,retell_llm_id,el_agent_id,agent_phone,phone')
+      .select('id,name,type,agent_name,retell_agent_id,retell_llm_id,el_agent_id,agent_phone,phone,language')
       .eq('id', tenantId)
       .single()
 
@@ -824,6 +829,7 @@ export async function provisionRetellAgent(tenantId: string): Promise<{
       rules: rulesLines.join('. '),
       memory: memoryLines.join('. '),
       channel: 'voice',
+      primaryLanguage: tenant.language || undefined,
     })
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL
@@ -870,7 +876,7 @@ export async function provisionRetellAgent(tenantId: string): Promise<{
       fallback_voice_ids: voiceConfig.fallbacks,
       voice_speed: voiceConfig.speed,
       voice_temperature: voiceConfig.temperature,
-      language: 'es-ES',
+      language: 'multi',
       enable_backchannel: true,
       backchannel_frequency: 0.7,
       backchannel_words: ['sí', 'ajá', 'claro', 'vale', 'mmhm', 'ya'],
