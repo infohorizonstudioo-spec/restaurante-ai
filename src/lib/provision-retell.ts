@@ -273,6 +273,29 @@ const FIRST_MESSAGES: Record<string, string[]> = {
   otro: ['{name}, buenas. Dígame.', '{name}, hola. Dígame.'],
 }
 
+// Sonido ambiente por tipo de negocio
+// Opciones Retell: coffee-shop, convention-hall, summer-outdoor, mountain-outdoor, static-noise, call-center
+function getAmbientSound(businessType: string): string {
+  const map: Record<string, string> = {
+    restaurante: 'coffee-shop',
+    bar: 'coffee-shop',
+    cafeteria: 'coffee-shop',
+    hotel: 'convention-hall',
+    clinica_dental: 'call-center',
+    clinica_medica: 'call-center',
+    veterinaria: 'call-center',
+    peluqueria: 'coffee-shop',
+    barberia: 'coffee-shop',
+    gimnasio: 'convention-hall',
+    spa: 'mountain-outdoor',
+    // Oficinas/profesionales — sin ruido
+    asesoria: 'call-center',
+    seguros: 'call-center',
+    inmobiliaria: 'call-center',
+  }
+  return map[businessType] || 'call-center'
+}
+
 function getFirstMessage(businessType: string, businessName: string): string {
   const messages = FIRST_MESSAGES[businessType] || FIRST_MESSAGES.otro
   const idx = new Date().getMinutes() % messages.length
@@ -769,7 +792,9 @@ export async function provisionRetellAgent(tenantId: string): Promise<{
       reminder_trigger_ms: 8000,
       reminder_max_count: 2,
       max_call_duration_ms: 1800000, // 30 min
-      denoising_mode: 'noise-and-background-speech-cancellation',
+      denoising_mode: 'noise-cancellation',
+      ambient_sound: getAmbientSound(businessType),
+      ambient_sound_volume: 0.6,
       webhook_url: `${appUrl}/api/retell/webhook`,
       webhook_events: ['call_started', 'call_ended', 'call_analyzed'],
       post_call_analysis_model: 'gpt-4o',
