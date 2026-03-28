@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
   try {
-    const rl = rateLimitByIp(req, RATE_LIMITS.agent, 'agent:get-menu')
-    if (rl.blocked) return rl.response
+    // const rl = rateLimitByIp(req, RATE_LIMITS.agent, 'agent:get-menu')
+    // if (rl.blocked) return rl.response
 
     if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
     const rawBody = await req.json()
