@@ -191,7 +191,7 @@ export async function createRetellLLM(config: {
   return retellFetch('/create-retell-llm', {
     method: 'POST',
     body: JSON.stringify({
-      model: config.model || 'gpt-4o-mini',
+      model: config.model || 'gpt-4o',
       s2s_model: null,
       general_prompt: config.general_prompt,
       general_tools: config.general_tools,

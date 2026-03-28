@@ -748,7 +748,7 @@ export async function provisionRetellAgent(tenantId: string): Promise<{
     let llmId = tenant.retell_llm_id
 
     const llmConfig = {
-      model: 'gpt-4o-mini' as const,  // Menor latencia (~300ms vs 1200ms con Claude)
+      model: 'gpt-4o' as const,  // Menor latencia (~300ms vs 1200ms con Claude)
       general_prompt: prompt,
       general_tools: tools,
       begin_message: undefined,  // LLM genera saludo dinámico según hora (Buenos días/tardes/noches)
