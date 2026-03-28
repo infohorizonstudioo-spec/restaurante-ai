@@ -151,18 +151,22 @@ export default function LlamadasPage() {
 
   useEffect(() => {
     if (!tid) { setLoading(false); return }
-    // Sync llamadas con Retell antes de cargar
-    ;(async () => {
+    // Sync llamadas con Retell al cargar + cada 10s
+    const doSync = async () => {
       try {
         const sess = await supabase.auth.getSession()
         if (sess.data.session) {
-          await fetch('/api/calls/sync', {
+          const r = await fetch('/api/calls/sync', {
             method: 'POST',
             headers: { 'Authorization': 'Bearer ' + sess.data.session.access_token },
           })
+          const d = await r.json().catch(() => ({}))
+          if (d.synced > 0) load(tid, true, true)
         }
       } catch {}
-    })()
+    }
+    doSync()
+    const syncInterval = setInterval(doSync, 10000)
     load(tid, true)
     const ch = supabase.channel('calls-rt-' + tid)
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},(payload)=>{
@@ -184,7 +188,7 @@ export default function LlamadasPage() {
         }
       })
       .subscribe()
-    return () => { supabase.removeChannel(ch) }
+    return () => { supabase.removeChannel(ch); clearInterval(syncInterval) }
   },[tid]) // eslint-disable-line
 
   if (loading) return <PageSkeleton variant="list"/>
