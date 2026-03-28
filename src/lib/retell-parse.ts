@@ -1,15 +1,46 @@
 /**
- * Retell envía el body de custom tools en dos formatos:
- * 1. Con payload_mode: { tenant_id, date, ... } (args at top level)
- * 2. Sin payload_mode: { args: { tenant_id, date }, call: {...} } (args nested)
- *
- * Esta función normaliza ambos formatos.
+ * Retell envia el body de custom tools con 'arguments' como string JSON.
+ * Los constant_value (como tenant_id) a veces NO se incluyen.
+ * Esta funcion parsea el body y extrae lo que necesitamos.
  */
-export function parseRetellBody(body: Record<string, any>): Record<string, any> {
-  if (body.args && typeof body.args === 'object') {
-    // Retell nested format — extract args to top level
-    return { ...body.args, _call: body.call }
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+)
+
+export async function parseRetellBody(body: Record<string, any>): Promise<Record<string, any>> {
+  let parsed: Record<string, any> = {}
+
+  // Parse arguments string
+  if (body.arguments && typeof body.arguments === 'string') {
+    try { parsed = JSON.parse(body.arguments) } catch { parsed = {} }
+  } else if (body.args && typeof body.args === 'object') {
+    parsed = body.args
+  } else {
+    parsed = { ...body }
   }
-  // Already at top level
-  return body
+
+  // Remove execution_message (not useful)
+  delete parsed.execution_message
+
+  // If no tenant_id, try to get it from the call context
+  if (!parsed.tenant_id && body.call) {
+    const agentId = body.call.agent_id || body.call.metadata?.agent_id
+    if (agentId) {
+      const { data } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('retell_agent_id', agentId)
+        .maybeSingle()
+      if (data) parsed.tenant_id = data.id
+    }
+  }
+
+  // Add call metadata
+  parsed._call = body.call || {}
+  parsed._caller_phone = body.call?.from_number || body.call?.caller_phone || ''
+
+  return parsed
 }

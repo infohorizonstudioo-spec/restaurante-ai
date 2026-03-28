@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
     const rawBody = await req.json()
-    const body = parseRetellBody(rawBody)
+    const body = await parseRetellBody(rawBody)
 
     // Retell envía items como string JSON — parsear si es necesario
     let items = body.items

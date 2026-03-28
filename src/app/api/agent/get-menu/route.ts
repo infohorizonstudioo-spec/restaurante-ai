@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
     const rawBody = await req.json()
-    const body = parseRetellBody(rawBody)
+    const body = await parseRetellBody(rawBody)
 
     const tenant_id = sanitizeUUID(body.tenant_id)
     if (!tenant_id) return NextResponse.json({ error: "tenant_id required" }, { status: 400 })
