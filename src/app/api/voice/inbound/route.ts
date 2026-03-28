@@ -72,9 +72,17 @@ export async function POST(req: Request) {
 
     if (retellAgentId) {
       // ── RETELL AI ──
-      // Retell maneja llamadas directamente vía su propia infraestructura.
-      // Con Twilio, usamos <Connect><Stream> hacia Retell WebSocket
-      const retellWsUrl = `wss://api.retellai.com/audio-websocket/${retellAgentId}`
+      // 1. Registrar la llamada en Retell para obtener call_id
+      // 2. Usar call_id en el WebSocket Stream de Twilio
+      const { registerInboundCall } = await import('@/lib/retell')
+      const retellCall = await registerInboundCall({
+        agent_id: retellAgentId,
+        from_number: callerPhone,
+        to_number: calledNumber,
+        metadata: { tenant_id: tenant?.id || '', call_sid: callSid },
+      })
+
+      const retellWsUrl = `wss://api.retellai.com/audio-websocket/${retellCall.call_id}`
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Connect>

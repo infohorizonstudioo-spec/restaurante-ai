@@ -246,6 +246,30 @@ export async function getRetellAgent(agentId: string): Promise<any> {
 // LLAMADAS
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Registra una llamada inbound de Twilio en Retell.
+ * Retell devuelve un call_id que se usa en el WebSocket Stream de Twilio.
+ */
+export async function registerInboundCall(config: {
+  agent_id: string
+  from_number: string
+  to_number: string
+  metadata?: Record<string, any>
+  retell_llm_dynamic_variables?: Record<string, string>
+}): Promise<{ call_id: string; sample_rate: number }> {
+  return retellFetch('/v2/create-phone-call', {
+    method: 'POST',
+    body: JSON.stringify({
+      from_number: config.from_number,
+      to_number: config.to_number,
+      agent_id: config.agent_id,
+      direction: 'inbound',
+      metadata: config.metadata || {},
+      retell_llm_dynamic_variables: config.retell_llm_dynamic_variables || {},
+    }),
+  })
+}
+
 export async function createOutboundCall(config: {
   agent_id: string
   customer_number: string
