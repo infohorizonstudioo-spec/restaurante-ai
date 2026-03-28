@@ -86,6 +86,9 @@ export default function ProveedoresPage() {
   // Order detail modal
   const [orderModal, setOrderModal] = useState<SupplyOrder | null>(null)
 
+  // Auto-order trigger
+  const [autoOrdering, setAutoOrdering] = useState(false)
+
   /* ── Load data ───────────────────────────────────────────────────── */
   const loadAll = useCallback(async (tenantId: string) => {
     const [s, i, o] = await Promise.all([
@@ -262,6 +265,40 @@ export default function ProveedoresPage() {
     loadAll(tid)
   }
 
+  /* ── Auto-order: review stock and trigger orders ────────────────── */
+  async function triggerAutoOrder() {
+    if (!tid) return
+    setAutoOrdering(true)
+    try {
+      const sess = await supabase.auth.getSession()
+      const res = await fetch('/api/cron/supplier-orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sess.data.session ? { 'Authorization': 'Bearer ' + sess.data.session.access_token } : {}),
+        },
+        body: JSON.stringify({ tenant_id: tid }),
+      })
+      const data = await res.json()
+      if (res.ok && data.ok) {
+        const msg = data.total_orders > 0
+          ? `${data.total_orders} pedido(s) creado(s), ${data.total_sms} SMS enviado(s)`
+          : 'Todo el stock esta bien, no hay pedidos pendientes'
+        toast.push({ title: msg, type: data.total_orders > 0 ? 'success' : 'info', priority: 'info', icon: data.total_orders > 0 ? '📦' : '✅' })
+        if (data.total_orders > 0) {
+          setTab('pedidos')
+          loadAll(tid)
+        }
+      } else {
+        toast.push({ title: data.error || 'Error al revisar stock', type: 'error', priority: 'critical', icon: '❌' })
+      }
+    } catch {
+      toast.push({ title: 'Error de conexion', type: 'error', priority: 'critical', icon: '❌' })
+    } finally {
+      setAutoOrdering(false)
+    }
+  }
+
   /* ── Filtered suppliers ──────────────────────────────────────────── */
   const filteredSuppliers = search
     ? suppliers.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || (s.category || '').toLowerCase().includes(search.toLowerCase()) || (s.products || []).some(p => p.toLowerCase().includes(search.toLowerCase())))
@@ -281,6 +318,7 @@ export default function ProveedoresPage() {
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar proveedor..."
               style={{ padding: '8px 14px', fontSize: 13, border: `1px solid ${C.borderMd}`, borderRadius: 9, outline: 'none', width: 200, background: C.surface2, color: C.text, fontFamily: 'inherit' }} />
           </div>
+          <button onClick={triggerAutoOrder} disabled={autoOrdering} style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700, background: autoOrdering ? C.surface2 : C.teal, color: autoOrdering ? C.text3 : '#0C1018', borderRadius: 8, border: 'none', cursor: autoOrdering ? 'wait' : 'pointer', fontFamily: 'inherit', opacity: autoOrdering ? 0.7 : 1 }}>{autoOrdering ? 'Revisando...' : 'Revisar stock y pedir'}</button>
           <button onClick={openNewForm} style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700, background: C.amber, color: '#0C1018', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>+ Nuevo proveedor</button>
           <NotifBell />
         </div>
