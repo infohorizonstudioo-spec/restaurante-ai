@@ -82,6 +82,26 @@ export default function HorariosEquipoPage() {
   const [newPhone, setNewPhone] = useState('')
   const [saving, setSaving] = useState(false)
   const [editingEmployee, setEditingEmployee] = useState<string | null>(null)
+  const [reportMonth, setReportMonth] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  })
+
+  const openReport = (empId: string) => {
+    if (!tenant?.id) return
+    const url = `/reports/work-hours?employee_id=${empId}&month=${reportMonth}&tenant_id=${tenant.id}`
+    window.open(url, '_blank')
+  }
+
+  const openAllReports = () => {
+    if (!tenant?.id) return
+    employees.forEach((emp, i) => {
+      setTimeout(() => {
+        const url = `/reports/work-hours?employee_id=${emp.id}&month=${reportMonth}&tenant_id=${tenant.id}`
+        window.open(url, '_blank')
+      }, i * 300) // stagger to avoid popup blocker
+    })
+  }
 
   const weekStart = getWeekStart(new Date())
   weekStart.setDate(weekStart.getDate() + weekOffset * 7)
@@ -202,6 +222,29 @@ export default function HorariosEquipoPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {saving && <span style={{ fontSize: 11, color: C.amber, fontWeight: 600 }}>{_tx('Guardando...')}</span>}
+          {employees.length > 0 && (
+            <>
+              <input
+                type="month"
+                value={reportMonth}
+                onChange={e => setReportMonth(e.target.value)}
+                style={{
+                  padding: '7px 10px', fontSize: 12, background: C.surface2,
+                  border: `1px solid ${C.border}`, borderRadius: 8, color: C.text,
+                  fontFamily: 'inherit', outline: 'none', cursor: 'pointer',
+                  colorScheme: 'dark',
+                }}
+                title={_tx('Mes para el registro de jornada')}
+              />
+              <button onClick={openAllReports} style={{
+                padding: '8px 14px', fontSize: 12, fontWeight: 600, color: C.teal, background: C.tealDim,
+                borderRadius: 9, border: `1px solid rgba(45,212,191,0.2)`, cursor: 'pointer', fontFamily: 'inherit',
+                whiteSpace: 'nowrap',
+              }}>
+                {_tx('Registros jornada')}
+              </button>
+            </>
+          )}
           <button onClick={() => setShowAddForm(true)} style={{
             padding: '8px 16px', fontSize: 13, fontWeight: 700, color: '#0C1018', background: C.amber,
             borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
@@ -478,6 +521,19 @@ export default function HorariosEquipoPage() {
                       {shiftCount > 0 ? `${shiftCount} turnos: ${shifts}` : _tx('Sin turnos esta semana')}
                     </p>
                   </div>
+                  <button
+                    onClick={() => openReport(emp.id)}
+                    title={_tx('Registro mensual de jornada')}
+                    style={{
+                      padding: '5px 10px', fontSize: 10, fontWeight: 600,
+                      color: C.teal, background: C.tealDim,
+                      borderRadius: 6, border: `1px solid rgba(45,212,191,0.18)`,
+                      cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {_tx('Registro')}
+                  </button>
                 </div>
               )
             })}
