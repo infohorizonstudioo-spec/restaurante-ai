@@ -42,7 +42,7 @@ export async function parseRetellBody(body: Record<string, any>): Promise<Record
 
   // Extract data from transcript if args are empty
   const transcript = body.call?.transcript || ''
-  if (transcript && (!parsed.date || !parsed.customer_name)) {
+  if (transcript) {
     const extracted = extractFromTranscript(transcript)
     if (!parsed.date && extracted.date) parsed.date = extracted.date
     if (!parsed.time && extracted.time) parsed.time = extracted.time
@@ -50,6 +50,9 @@ export async function parseRetellBody(body: Record<string, any>): Promise<Record
     if (!parsed.customer_name && extracted.customer_name) parsed.customer_name = extracted.customer_name
     if (!parsed.intent && extracted.intent) parsed.intent = extracted.intent
     if (!parsed.summary) parsed.summary = extracted.summary
+    if (!parsed.items || (Array.isArray(parsed.items) && parsed.items.length === 0)) parsed.items = extracted.items
+    if (!parsed.order_type && extracted.order_type) parsed.order_type = extracted.order_type
+    if (!parsed.notes && extracted.notes) parsed.notes = extracted.notes
   }
 
   parsed._call = body.call || {}
@@ -167,6 +170,34 @@ function extractFromTranscript(transcript: string): Record<string, any> {
   else if (lower.includes('pedido') || lower.includes('pedir') || lower.includes('domicilio') || lower.includes('llevar')) result.intent = 'pedido'
   else if (lower.includes('cancel')) result.intent = 'cancelacion'
   else if (lower.includes('horario') || lower.includes('carta') || lower.includes('precio')) result.intent = 'informacion'
+
+  // Order type
+  if (lower.includes('domicilio') || lower.includes('a casa') || lower.includes('llevar a')) result.order_type = 'domicilio'
+  else if (lower.includes('recoger') || lower.includes('pasar a') || lower.includes('para llevar')) result.order_type = 'recoger'
+  else if (lower.includes('mesa') || lower.includes('comer aqui')) result.order_type = 'mesa'
+
+  // Items - extract food items from transcript
+  const menu: Record<string, number> = {
+    'paella': 13, 'arroz banda': 14, 'arroz negro': 15,
+    'lubina': 18, 'dorada': 16, 'chuleton': 22, 'solomillo': 20,
+    'ensalada': 8, 'croquetas': 7, 'bravas': 7, 'gambas': 12,
+    'tarta': 6, 'flan': 5, 'helado': 4, 'hamburguesa': 16,
+    'pulpo': 17, 'tortilla': 8, 'chorizo': 9,
+    'coca cola': 3, 'agua': 2, 'cerveza': 3, 'vino': 4,
+  }
+  const items: Array<{name: string, quantity: number, price: number}> = []
+  for (const [item, price] of Object.entries(menu)) {
+    if (lower.includes(item)) {
+      items.push({ name: item.charAt(0).toUpperCase() + item.slice(1), quantity: 1, price })
+    }
+  }
+  if (items.length > 0) result.items = items
+
+  // Address from transcript
+  if (lower.includes('calle') || lower.includes('avenida') || lower.includes('plaza') || lower.includes('numero')) {
+    const addressMatch = transcript.match(/(?:calle|avenida|plaza|c\/)[^.!?\n]*/i)
+    if (addressMatch) result.notes = addressMatch[0].trim()
+  }
 
   // Summary
   result.summary = transcript.split('\n').slice(-3).join(' ').slice(0, 200)
