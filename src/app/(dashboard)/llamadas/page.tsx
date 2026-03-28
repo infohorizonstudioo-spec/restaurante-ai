@@ -389,7 +389,7 @@ export default function LlamadasPage() {
                                 <button onClick={async () => {
                                   const sess = await supabase.auth.getSession()
                                   if (!sess.data.session) return
-                                  const r = await fetch('/api/retell/outbound', {
+                                  const r = await fetch('/api/voice/outbound', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
                                     body: JSON.stringify({ tenant_id: tid, call_type: 'callback', phone: call.caller_phone, customer_name: call.customer_name || 'cliente' })
