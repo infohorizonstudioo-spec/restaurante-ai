@@ -1,17 +1,32 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { analyzeRequest } from '@/lib/security-guardian-edge'
+import { validateEnv } from '@/lib/env'
+import { analyzeRequest, isBlocked, getDeceptionResponse, record404 } from '@/lib/security-guardian'
+import { getBlockPage } from '@/lib/block-page'
+import { csrfMiddleware } from '@/lib/csrf-edge'
+import { preloadFromRedis } from '@/lib/rate-limit'
+
+// Validate required env vars on cold start in production
+if (process.env.NODE_ENV === 'production') {
+  validateEnv()
+}
+
+// Preload rate limit state from Redis on cold start (fire-and-forget)
+preloadFromRedis()
 
 // Rutas que requieren autenticación
 const PROTECTED = [
   '/panel', '/reservas', '/agenda', '/llamadas', '/clientes',
   '/mesas', '/pedidos', '/estadisticas', '/facturacion', '/configuracion', '/admin',
-  '/dashboard', '/agente', '/turnos', '/productos', '/proveedores', '/mensajes',
+  '/dashboard', '/agente', '/turnos', '/productos',
 ]
+// Rutas solo para no autenticados
 const AUTH_ONLY = ['/login', '/registro']
-const PUBLIC_ALWAYS = ['/', '/precios', '/reset', '/onboarding', '/cookies', '/privacidad', '/terminos']
+// Rutas siempre públicas (sin verificar sesión)
+const PUBLIC_ALWAYS = ['/', '/precios', '/reset', '/onboarding']
 
-// Security headers
+// Headers de seguridad exhaustivos
+const isDev = process.env.NODE_ENV === 'development'
 const SECURITY_HEADERS: [string, string][] = [
   ['X-Frame-Options', 'DENY'],
   ['X-Content-Type-Options', 'nosniff'],
@@ -19,12 +34,28 @@ const SECURITY_HEADERS: [string, string][] = [
   ['X-XSS-Protection', '1; mode=block'],
   ['Permissions-Policy', 'camera=(), microphone=(self), geolocation=()'],
   ['Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload'],
+  ['X-DNS-Prefetch-Control', 'off'],
+  ['Content-Security-Policy', [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://js.stripe.com https://elevenlabs.io`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.elevenlabs.io https://api.stripe.com https://api.twilio.com https://*.sentry.io",
+    "frame-src https://js.stripe.com https://elevenlabs.io",
+    "media-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "upgrade-insecure-requests",
+  ].join('; ')],
 ]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Static assets — always pass
+  // Assets, static → siempre pasar
   if (
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/favicon') ||
@@ -33,72 +64,106 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // SECURITY GUARDIAN — Edge-safe threat analysis
-  // ═══════════════════════════════════════════════════════════════════════
-  const threat = analyzeRequest(request)
+  // ══ SECURITY GUARDIAN — defensa autónoma en profundidad ══
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') || '0.0.0.0'
 
-  if (threat.blocked) {
-    return new Response(
-      JSON.stringify({
-        error: 'Access denied',
-        code: 'THREAT_BLOCKED',
-        ip: threat.ip,
-        score: threat.score,
-      }),
-      {
+  // Fast path: IP ya bloqueada → página de bloqueo intimidante
+  if (isBlocked(ip)) {
+    const assessment = { score: 100, blocked: true, threats: ['blocked'], ip, action: 'block' as const, tarpitMs: 0, fingerprint: 'cached', attackPhase: 'none' as const, riskLevel: 'critical' as const }
+    // APIs reciben JSON, navegadores reciben la página de bloqueo
+    const accept = request.headers.get('accept') || ''
+    if (accept.includes('text/html')) {
+      return new NextResponse(getBlockPage(assessment), {
         status: 403,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Content-Type-Options': 'nosniff',
-          'X-Frame-Options': 'DENY',
-          'Cache-Control': 'no-store',
-        },
-      }
-    )
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+      })
+    }
+    return new NextResponse(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
-  // API webhooks + agent + retell + cron → pass without auth (verified internally)
+  // Análisis completo del request
+  const assessment = analyzeRequest(request)
+
+  // Honeypot: servir respuesta falsa para engañar al atacante
+  if (assessment.action === 'honeypot') {
+    const deception = getDeceptionResponse(pathname)
+    return new NextResponse(deception.body, {
+      status: deception.status,
+      headers: deception.headers,
+    })
+  }
+
+  // Bloqueado: página intimidante para navegadores, JSON para APIs
+  if (assessment.blocked) {
+    const accept = request.headers.get('accept') || ''
+    if (accept.includes('text/html')) {
+      return new NextResponse(getBlockPage(assessment), {
+        status: 403,
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+      })
+    }
+    return new NextResponse(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  // Tarpit: el atacante queda marcado, próximo intento será bloqueado
+  if (assessment.action === 'tarpit' && assessment.tarpitMs > 0) {
+    // No bloqueamos aún — dejamos pasar pero el escalamiento progresivo
+    // garantiza que el siguiente intento sospechoso será bloqueado
+  }
+
+  // API webhooks → pasar sin auth (son llamadas externas verificadas internamente)
   if (
-    pathname.startsWith('/api/voice/') ||
-    pathname.startsWith('/api/twilio/') ||
+    pathname.startsWith('/api/voice/webhook') ||
+    pathname.startsWith('/api/voice/inbound') ||
+    pathname.startsWith('/api/twilio/webhook') ||
     pathname.startsWith('/api/stripe/webhook') ||
-    pathname.startsWith('/api/whatsapp/') ||
+    pathname.startsWith('/api/whatsapp/webhook') ||
     pathname.startsWith('/api/email/webhook') ||
-    pathname.startsWith('/api/retell/') ||
-    pathname.startsWith('/api/agent/') ||
-    pathname.startsWith('/api/cron/') ||
-    pathname.startsWith('/api/auth/')
+    pathname.startsWith('/api/cron/')
   ) {
     const response = NextResponse.next()
     response.headers.set('X-Content-Type-Options', 'nosniff')
     response.headers.set('X-Frame-Options', 'DENY')
+    response.headers.set('Content-Security-Policy', "default-src 'none'")
+    response.headers.set('X-DNS-Prefetch-Control', 'off')
     return response
   }
 
-  // Other APIs — CSRF check + basic headers
+  // Otras rutas API → pasar (protegidas internamente) con headers básicos + CSRF
   if (pathname.startsWith('/api/')) {
     const response = NextResponse.next()
     response.headers.set('X-Content-Type-Options', 'nosniff')
     response.headers.set('X-Frame-Options', 'DENY')
-
+    response.headers.set('Content-Security-Policy', "default-src 'none'")
+    response.headers.set('X-DNS-Prefetch-Control', 'off')
     // CSRF protection for state-changing API requests
-
+    const csrfError = csrfMiddleware(request, response)
+    if (csrfError) return csrfError
     return response
   }
 
-  // Public routes — pass without auth
+  // Rutas públicas → pasar sin comprobar
   if (PUBLIC_ALWAYS.some(r => pathname === r || pathname.startsWith(r + '/'))) {
     const response = NextResponse.next()
     SECURITY_HEADERS.forEach(([k, v]) => response.headers.set(k, v))
+    // Set CSRF cookie on public pages too
+    csrfMiddleware(request, response)
     return response
   }
 
-  // Protected routes — check auth
+  // Para el resto, verificar sesión con @supabase/ssr (usa cookies correctamente)
   const response = NextResponse.next({ request: { headers: request.headers } })
   SECURITY_HEADERS.forEach(([k, v]) => response.headers.set(k, v))
 
-  // CSRF protection for page routes (sets cookie)
+  // Set CSRF cookie on page routes so the client has a token ready for API calls
+  csrfMiddleware(request, response)
 
   try {
     const supabase = createServerClient(
@@ -120,12 +185,21 @@ export async function middleware(request: NextRequest) {
     const isAuthed = !!user
 
     const isProtected = PROTECTED.some(p => pathname === p || pathname.startsWith(p + '/'))
+    const isAuthOnly  = AUTH_ONLY.some(p => pathname === p || pathname.startsWith(p + '/'))
 
+    // Sin sesión en ruta protegida → login
     if (isProtected && !isAuthed) {
-      return NextResponse.redirect(new URL('/login', request.url))
+      const url = new URL('/login', request.url)
+      return NextResponse.redirect(url)
     }
+
+    // Autenticado en login/registro → panel (desactivado - React maneja la redirección)
+    // if (isAuthOnly && isAuthed) {
+    //   const url = new URL('/panel', request.url)
+    //   return NextResponse.redirect(url)
+    // }
   } catch {
-    // Auth error → let pass
+    // Error de auth → dejar pasar (evitar loops)
   }
 
   return response
