@@ -145,7 +145,10 @@ export default function PedidosPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const load = useCallback(async (tenantId: string) => {
-    const r = await fetch('/api/orders?tenant_id=' + tenantId + '&limit=100')
+    const { data: { session } } = await supabase.auth.getSession()
+    const r = await fetch('/api/orders?tenant_id=' + tenantId + '&limit=100', {
+      headers: session?.access_token ? { 'Authorization': 'Bearer ' + session.access_token } : {},
+    })
     const d = await r.json()
     setOrders(d.orders || [])
   }, [])
@@ -290,8 +293,10 @@ export default function PedidosPage() {
   async function nuevoOrder() {
     if (!tid) return
     try {
+      const { data: { session: s } } = await supabase.auth.getSession()
       const r = await fetch('/api/orders', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(s?.access_token ? { 'Authorization': 'Bearer ' + s.access_token } : {}) },
         body: JSON.stringify({ tenant_id: tid, customer_name: locale === 'en' ? 'New order' : locale === 'fr' ? 'Nouvelle commande' : locale === 'pt' ? 'Novo pedido' : 'Nuevo pedido', order_type: 'mesa' })
       })
       const d = await r.json()
