@@ -41,7 +41,6 @@ const DEFAULT: AgentConfig = {
   conversation_flow: ['nombre','personas','fecha','hora','confirmar'],
   special_cases: { allergies:'review', birthdays:'confirm', events:'review', vip:'confirm' },
   order_alert_mode: 'banner' as 'none' | 'banner' | 'redirect',
-  delivery_phone: '',
 }
 
 interface AgentConfig {
@@ -53,7 +52,6 @@ interface AgentConfig {
   conversation_flow: string[]
   special_cases: { allergies:string; birthdays:string; events:string; vip:string }
   order_alert_mode?: 'none' | 'banner' | 'redirect'
-  delivery_phone?: string
 }
 
 
@@ -494,7 +492,6 @@ export default function ConfiguracionPage() {
           <Toggle label={tx("¿Puede confirmar reservas pequeñas sin avisarte?")} sub={`${agentName} ${tx('confirma directamente cuando la reserva entra dentro de lo normal')}`} value={cfg.automation.auto_simple_reservations} onChange={v=>upCfg('automation','auto_simple_reservations',v)}/>
           <Toggle label={tx("¿Puede gestionar cancelaciones sin consultarte?")} sub={`${tx('Si un cliente cancela,')} ${agentName} ${tx('lo anota sin necesidad de avisarte')}`} value={cfg.automation.auto_cancellations} onChange={v=>upCfg('automation','auto_cancellations',v)}/>
           <Toggle label={tx("¿Puede contestar preguntas de horarios y precios?")} sub={`${tx('Horario, precios, servicios —')} ${agentName} ${tx('responde directamente sin molestarte')}`} value={cfg.automation.auto_info_queries} onChange={v=>upCfg('automation','auto_info_queries',v)}/>
-          <Toggle label="¿Llamar de vuelta en llamadas perdidas?" sub={`Si alguien cuelga rápido o no se completa la llamada, ${agentName} le devuelve la llamada automáticamente: "Hola, te llamo de ${basicForm.business_name || 'tu negocio'}, tenemos una llamada perdida tuya, ¿en qué te puedo ayudar?"`} value={(cfg.automation as any).auto_callback_missed || false} onChange={v=>upCfg('automation','auto_callback_missed',v)} color={C.teal}/>
           <Slider label={tx("¿Hasta cuántas personas puede aceptar sola?")} sub={`${tx('Si el grupo es más grande que esto,')} ${agentName} ${tx('te avisa para que decidas tú')}`} value={cfg.automation.max_auto_party} min={1} max={20} unit=" personas" onChange={v=>upCfg('automation','max_auto_party',v)}/>
           <div style={{background:C.amberDim,border:`1px solid ${C.amber}33`,borderRadius:10,padding:'10px 14px'}}>
             <p style={{fontSize:12,color:C.amber,fontWeight:600}}>{tx('Resumen de tu configuración')}</p>
@@ -631,11 +628,6 @@ export default function ConfiguracionPage() {
               {cfg.order_alert_mode===opt.value && <span style={{fontSize:16,color:C.amber}}>✓</span>}
             </div>
           ))}
-          <div style={{borderTop:`1px solid ${C.border}`,paddingTop:16,marginTop:8}}>
-            <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>{tx('TELÉFONO DEL REPARTIDOR')}</label>
-            <input className="rz-inp" value={cfg.delivery_phone||''} onChange={e=>setCfg(c=>({...c,delivery_phone:e.target.value}))} placeholder="+34 600 000 000"/>
-            <p style={{fontSize:11,color:C.muted,marginTop:4}}>{tx('Cuando se confirme un pedido a domicilio, se enviará un SMS al repartidor con los detalles y la dirección del cliente')}</p>
-          </div>
         </SectionCard>
         )}
 
