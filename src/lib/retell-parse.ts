@@ -177,18 +177,39 @@ function extractFromTranscript(transcript: string): Record<string, any> {
   else if (lower.includes('mesa') || lower.includes('comer aqui')) result.order_type = 'mesa'
 
   // Items - extract food items from transcript
-  const menu: Record<string, number> = {
-    'paella': 13, 'arroz banda': 14, 'arroz negro': 15,
-    'lubina': 18, 'dorada': 16, 'chuleton': 22, 'solomillo': 20,
-    'ensalada': 8, 'croquetas': 7, 'bravas': 7, 'gambas': 12,
-    'tarta': 6, 'flan': 5, 'helado': 4, 'hamburguesa': 16,
-    'pulpo': 17, 'tortilla': 8, 'chorizo': 9,
-    'coca cola': 3, 'agua': 2, 'cerveza': 3, 'vino': 4,
-  }
+  // Normalize: remove accents for matching
+  const norm = lower.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const menu: Array<{keywords: string[], name: string, price: number}> = [
+    { keywords: ['paella'], name: 'Paella', price: 13 },
+    { keywords: ['arroz banda', 'arroz a banda'], name: 'Arroz a banda', price: 14 },
+    { keywords: ['arroz negro'], name: 'Arroz negro', price: 15 },
+    { keywords: ['lubina'], name: 'Lubina', price: 18 },
+    { keywords: ['dorada'], name: 'Dorada', price: 16 },
+    { keywords: ['chuleton', 'chuletón', 'chuleton', 'txuleta'], name: 'Chuleton', price: 22 },
+    { keywords: ['solomillo'], name: 'Solomillo', price: 20 },
+    { keywords: ['ensalada', 'ensaladita'], name: 'Ensalada', price: 8 },
+    { keywords: ['croquetas', 'croqueta'], name: 'Croquetas', price: 7 },
+    { keywords: ['bravas', 'patatas bravas'], name: 'Bravas', price: 7 },
+    { keywords: ['gambas', 'gamba'], name: 'Gambas al ajillo', price: 12 },
+    { keywords: ['tarta', 'tarta de queso'], name: 'Tarta de queso', price: 6 },
+    { keywords: ['flan'], name: 'Flan', price: 5 },
+    { keywords: ['helado'], name: 'Helado', price: 4 },
+    { keywords: ['hamburguesa', 'burger'], name: 'Hamburguesa gourmet', price: 16 },
+    { keywords: ['pulpo'], name: 'Pulpo a la gallega', price: 17 },
+    { keywords: ['tortilla'], name: 'Tortilla', price: 8 },
+    { keywords: ['chorizo'], name: 'Chorizo a la sidra', price: 9 },
+    { keywords: ['coca cola', 'cocacola', 'coca-cola'], name: 'Coca Cola', price: 3 },
+    { keywords: ['agua'], name: 'Agua', price: 2 },
+    { keywords: ['cerveza', 'birra', 'cana'], name: 'Cerveza', price: 3 },
+    { keywords: ['vino', 'tinto', 'blanco'], name: 'Vino', price: 4 },
+  ]
   const items: Array<{name: string, quantity: number, price: number}> = []
-  for (const [item, price] of Object.entries(menu)) {
-    if (lower.includes(item)) {
-      items.push({ name: item.charAt(0).toUpperCase() + item.slice(1), quantity: 1, price })
+  for (const item of menu) {
+    for (const kw of item.keywords) {
+      if (norm.includes(kw) || lower.includes(kw)) {
+        items.push({ name: item.name, quantity: 1, price: item.price })
+        break
+      }
     }
   }
   if (items.length > 0) result.items = items
