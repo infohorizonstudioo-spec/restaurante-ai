@@ -602,7 +602,7 @@ export async function provisionRetellAgent(tenantId: string): Promise<{
     // 1. Leer tenant
     const { data: tenant, error: tenantErr } = await supabase
       .from('tenants')
-      .select('id,name,type,agent_name,retell_agent_id,retell_llm_id,el_agent_id,transfer_phone,agent_phone')
+      .select('id,name,type,agent_name,retell_agent_id,retell_llm_id,el_agent_id,agent_phone,phone')
       .eq('id', tenantId)
       .single()
 
@@ -679,7 +679,7 @@ export async function provisionRetellAgent(tenantId: string): Promise<{
     const agentApiKey = process.env.AGENT_API_KEY || ''
 
     // 7. Build tools
-    const tools = buildTools(tenantId, appUrl, agentApiKey, tenant.transfer_phone)
+    const tools = buildTools(tenantId, appUrl, agentApiKey, tenant.phone || undefined)
 
     // 8. Crear o actualizar LLM
     let llmId = tenant.retell_llm_id
