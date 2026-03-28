@@ -15,15 +15,15 @@ export interface ElevenLabsConfig {
 
 // Voces por tipo de plantilla (hostelería = voz cálida, servicios = voz profesional)
 const VOICE_BY_TEMPLATE: Record<string, ElevenLabsConfig> = {
-  hosteleria: { voice_id: 'EXAVITQu4vr4xnSDxMaL', stability: 0.5, similarity_boost: 0.8, style: 0.3 },
-  servicios:  { voice_id: 'ErXwobaYiN019PkySvjV', stability: 0.7, similarity_boost: 0.8, style: 0.1 },
+  hosteleria: { voice_id: 'EXAVITQu4vr4xnSDxMaL', stability: 0.65, similarity_boost: 0.82, style: 0.25 },
+  servicios:  { voice_id: 'ErXwobaYiN019PkySvjV', stability: 0.72, similarity_boost: 0.82, style: 0.1 },
 }
 
 // Overrides por tipo específico donde la voz importa más
 const VOICE_OVERRIDES: Record<string, ElevenLabsConfig> = {
   psicologia: { voice_id: 'ErXwobaYiN019PkySvjV', stability: 0.85, similarity_boost: 0.9, style: 0.0 },
-  veterinaria:{ voice_id: 'EXAVITQu4vr4xnSDxMaL', stability: 0.6,  similarity_boost: 0.8, style: 0.2 },
-  inmobiliaria:{ voice_id: 'VR6AewLTigWG4xSOukaG', stability: 0.6, similarity_boost: 0.8, style: 0.2 },
+  veterinaria:{ voice_id: 'EXAVITQu4vr4xnSDxMaL', stability: 0.65, similarity_boost: 0.82, style: 0.2 },
+  inmobiliaria:{ voice_id: 'VR6AewLTigWG4xSOukaG', stability: 0.68, similarity_boost: 0.82, style: 0.15 },
 }
 
 export function getVoiceConfig(businessType: string): ElevenLabsConfig {

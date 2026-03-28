@@ -551,16 +551,17 @@ ${taboosBlock}`
 /** Obtiene la velocidad de habla ideal para un tipo de negocio */
 export function getIdealSpeechSpeed(businessType: string): number {
   const p = getBusinessPersonality(businessType)
-  // Mapea 1-5 a velocidad TTS: 0.95 (pausado) a 1.15 (rápido)
-  const speeds = [0.95, 1.0, 1.05, 1.10, 1.15]
+  // Mapea 1-5 a velocidad TTS: 0.95 (pausado) a 1.25 (rápido y fluido)
+  // Rango más amplio para que los negocios rápidos suenen naturales y ágiles
+  const speeds = [0.95, 1.0, 1.08, 1.16, 1.25]
   return speeds[Math.min(p.speechSpeed - 1, 4)]
 }
 
 /** Obtiene el timeout de turno ideal para un tipo de negocio */
 export function getIdealTurnTimeout(businessType: string): number {
   const p = getBusinessPersonality(businessType)
-  // Más rápido = menos timeout. Psicología = más paciencia
-  if (p.speechSpeed <= 2) return 2.5  // Lento (psicología, spa)
-  if (p.speechSpeed <= 3) return 1.8  // Normal
-  return 1.2  // Rápido (restaurante, bar, peluquería)
+  // Reducido: menos silencio muerto entre turnos = conversación más fluida
+  if (p.speechSpeed <= 2) return 2.0  // Lento (psicología, spa) — antes 2.5
+  if (p.speechSpeed <= 3) return 1.4  // Normal — antes 1.8
+  return 0.8  // Rápido (restaurante, bar, peluquería) — antes 1.2
 }

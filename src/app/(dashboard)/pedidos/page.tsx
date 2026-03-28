@@ -176,17 +176,44 @@ export default function PedidosPage() {
   useEffect(() => {
     if (!tid) return
     const ch = supabase.channel('order-events-rt-' + tid)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, (payload) => {
         playSound()
+        // Insert new order at the top instantly, then background-refresh for full data
+        const newOrder = payload.new as any
+        if (newOrder?.id) {
+          setOrders(prev => {
+            if (prev.some(o => o.id === newOrder.id)) return prev
+            return [newOrder, ...prev]
+          })
+        }
         load(tid)
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, (payload) => {
-        load(tid)
-        if (modalRef.current && payload.new && (payload.new as any).id === modalRef.current.id) {
-          setModal(payload.new)
+        // Update order in place instantly for status changes
+        const updated = payload.new as any
+        if (updated?.id) {
+          setOrders(prev => {
+            const idx = prev.findIndex(o => o.id === updated.id)
+            if (idx === -1) return prev
+            const next = [...prev]
+            next[idx] = { ...next[idx], ...updated }
+            return next
+          })
+          if (modalRef.current && updated.id === modalRef.current.id) {
+            setModal((prev: any) => prev ? { ...prev, ...updated } : prev)
+          }
         }
+        // Also do background refresh to ensure full consistency
+        load(tid)
       })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, () => load(tid))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, (payload) => {
+        // Remove deleted order instantly
+        const deleted = payload.old as any
+        if (deleted?.id) {
+          setOrders(prev => prev.filter(o => o.id !== deleted.id))
+        }
+        load(tid)
+      })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [tid, load])

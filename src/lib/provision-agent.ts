@@ -894,15 +894,15 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
         },
         turn: {
           mode: "turn",
-          // Timeout adaptativo: restaurante=1.2s, psicología=2.5s, default=1.8s
+          // Timeout adaptativo reducido: restaurante=0.8s, psicología=2.0s
           turn_timeout: idealTurnTimeout,
           silence_end_call_timeout: 15,
           // Máxima urgencia: el agente responde lo antes posible
           turn_eagerness: "high",
           // Especulación: empieza a generar respuesta antes de que el cliente termine
           speculative_turn: true,
-          // Alta sensibilidad a interrupciones: el cliente puede cortar en cualquier momento
-          interruption_sensitivity: 0.9,
+          // Sensibilidad a interrupciones alta pero no extrema (0.9 cortaba con ruido de fondo)
+          interruption_sensitivity: 0.8,
         },
         tts: {
           model_id: "eleven_v3_conversational",
@@ -911,10 +911,12 @@ export async function provisionElevenAgent(tenantId: string): Promise<{ success:
           similarity_boost: voiceConfig.similarity_boost,
           // Máxima optimización de latencia de streaming
           optimize_streaming_latency: 4,
-          // Velocidad adaptativa por tipo de negocio: restaurante=1.15, psicología=0.95
+          // Velocidad adaptativa por tipo de negocio: restaurante=1.2, psicología=0.95
           speed: idealSpeed,
           // Modo expresivo: permite variación tonal, risa, sorpresa
           expressive_mode: true,
+          // Empezar a hablar con menos caracteres = primera sílaba más rápida
+          chunk_length_schedule: [50, 120, 200, 260],
         }
       },
       // Webhook post-call: ElevenLabs llama a nuestro endpoint al terminar cada conversación

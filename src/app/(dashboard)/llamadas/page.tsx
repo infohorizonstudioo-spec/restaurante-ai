@@ -124,8 +124,8 @@ export default function LlamadasPage() {
   const [feedbackDone,setFeedbackDone] = useState<Set<string>>(new Set())
   const [suggestions,setSuggestions] = useState<any[]>([])
 
-  const load = useCallback(async (tenantId:string, reset=true) => {
-    if (reset) setLoading(true)
+  const load = useCallback(async (tenantId:string, reset=true, silent=false) => {
+    if (reset && !silent) setLoading(true)
     const from = reset ? 0 : page * PAGE_SIZE
     const { data, count } = await supabase.from('calls').select('id,call_sid,tenant_id,status,intent,summary,started_at,duration_seconds,caller_phone,customer_name,from_number,decision_status,decision_flags,decision_confidence,reasoning_label,action_required,action_suggested,transcript',{count:'exact'})
       .eq('tenant_id',tenantId).order('started_at',{ascending:false})
@@ -147,8 +147,23 @@ export default function LlamadasPage() {
     if (!tid) { setLoading(false); return }
     load(tid, true)
     const ch = supabase.channel('calls-rt-' + tid)
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},()=>load(tid,true))
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},()=>load(tid,true))
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},()=>{
+        // New call arrived — silent refresh to avoid flashing the skeleton
+        load(tid, true, true)
+      })
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},(payload)=>{
+        // Status change (e.g. activa → completada) — update in place for instant feedback
+        const updated = payload.new as any
+        if (updated?.id) {
+          setCalls(prev => {
+            const idx = prev.findIndex(c => c.id === updated.id)
+            if (idx === -1) return prev
+            const next = [...prev]
+            next[idx] = { ...next[idx], ...updated }
+            return next
+          })
+        }
+      })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   },[tid]) // eslint-disable-line

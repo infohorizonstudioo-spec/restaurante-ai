@@ -2,11 +2,11 @@
  * RESERVO.AI — Inbound Voice Handler
  *
  * Twilio llama aquí cuando entra una llamada.
- * Responde INMEDIATAMENTE con TwiML que:
- * 1. Descuelga sin ring (no hay <Dial> ni <Ring>)
- * 2. Conecta vía <Stream> o <Connect> a ElevenLabs
+ * Soporta DOS motores de voz:
+ * - Retell AI (preferido) → usa retell_agent_id
+ * - ElevenLabs (legacy) → usa el_agent_id
  *
- * Esto elimina el sonido de "primmm" que oye el cliente.
+ * Descuelga INMEDIATAMENTE sin ring.
  */
 import { NextResponse } from 'next/server'
 import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
@@ -25,25 +25,25 @@ export async function POST(req: Request) {
 
     logger.info('Inbound call received', { callSid, from: callerPhone, to: calledNumber })
 
-    // Buscar el agente ElevenLabs asociado a este número
     const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Limpiar número para buscar en DB (puede venir como +34612... o 612...)
+    // Limpiar número para buscar en DB
     const cleanNumber = calledNumber.replace(/\s/g, '')
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('id,el_agent_id,agent_name,name')
+      .select('id,el_agent_id,retell_agent_id,agent_name,name')
       .or(`agent_phone.eq.${cleanNumber},agent_phone.eq.${cleanNumber.replace('+', '')}`)
       .maybeSingle()
 
-    const agentId = tenant?.el_agent_id || process.env.ELEVENLABS_AGENT_ID || ''
+    // Preferir Retell sobre ElevenLabs
+    const retellAgentId = tenant?.retell_agent_id || ''
+    const elAgentId = tenant?.el_agent_id || process.env.ELEVENLABS_AGENT_ID || ''
 
-    if (!agentId) {
-      // Sin agente configurado: mensaje de disculpa
+    if (!retellAgentId && !elAgentId) {
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say language="es-ES" voice="Polly.Lucia">Lo sentimos, este número no tiene un agente configurado. Por favor, inténtelo más tarde.</Say>
@@ -55,8 +55,6 @@ export async function POST(req: Request) {
     }
 
     // Registrar la llamada en DB
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${req.headers.get('host')}`
-
     if (tenant?.id) {
       void supabase.from('calls').insert({
         tenant_id: tenant.id,
@@ -66,27 +64,49 @@ export async function POST(req: Request) {
         intent: 'pendiente',
         started_at: new Date().toISOString(),
         session_state: 'escuchando',
+        source: retellAgentId ? 'retell' : 'elevenlabs',
       })
     }
 
-    // TwiML: Descuelga INMEDIATAMENTE y conecta a ElevenLabs
-    // <Connect> + <ConversationRelay> es el método oficial de ElevenLabs con Twilio
-    // Esto evita cualquier ring/tono de llamada
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    let twiml: string
+
+    if (retellAgentId) {
+      // ── RETELL AI ──
+      // Retell maneja llamadas directamente vía su propia infraestructura.
+      // Con Twilio, usamos <Connect><Stream> hacia Retell WebSocket
+      const retellWsUrl = `wss://api.retellai.com/audio-websocket/${retellAgentId}`
+      twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Connect>
+    <Stream url="${retellWsUrl}">
+      <Parameter name="caller_phone" value="${callerPhone}" />
+      <Parameter name="call_sid" value="${callSid}" />
+    </Stream>
+  </Connect>
+</Response>`
+    } else {
+      // ── ELEVENLABS (legacy) ──
+      twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Connect>
     <ConversationRelay url="wss://api.elevenlabs.io/v1/convai/twilio/audio" dtmfDetection="true">
-      <Parameter name="agent_id" value="${agentId}" />
+      <Parameter name="agent_id" value="${elAgentId}" />
     </ConversationRelay>
   </Connect>
 </Response>`
+    }
+
+    logger.info('Inbound call routed', {
+      callSid,
+      engine: retellAgentId ? 'retell' : 'elevenlabs',
+      tenantId: tenant?.id,
+    })
 
     return new NextResponse(twiml, {
       headers: { 'Content-Type': 'text/xml' },
     })
   } catch (err) {
     logger.error('Inbound voice error', {}, err)
-    // Fallback TwiML
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say language="es-ES">Perdona, ha habido un problemilla técnico. Inténtalo en un momento.</Say>

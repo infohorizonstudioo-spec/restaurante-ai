@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js"
 import { validateAgentKey } from "@/lib/agent-auth"
 import { createNotification } from "@/lib/notifications"
 import { learnFromCall } from "@/lib/tenant-learning"
+import { resolveCustomer } from "@/lib/customer-resolver"
+import { analyzeInteraction } from "@/lib/customer-memory"
 import { rateLimitByIp, RATE_LIMITS } from "@/lib/rate-limit"
 import { sanitizeUUID, sanitizeName, sanitizePhone, sanitizeString } from "@/lib/sanitize"
 import { logger } from "@/lib/logger"
@@ -88,27 +90,67 @@ export async function POST(req: NextRequest) {
       conversation_id: conversation_id || null,
     }).select("id").maybeSingle()
 
-    // ── 2. Crear/actualizar cliente ───────────────────────────────────────
-    if (name) {
-      if (phone) {
-        const { data: existing } = await supabase.from("customers")
-          .select("id").eq("tenant_id", tenant_id).eq("phone", phone).maybeSingle()
-        if (existing) {
-          await supabase.from("customers").update({ name }).eq("id", existing.id)
+    // ── 2. Resolver/crear cliente con identidad multicanal ─────────────
+    let customerId: string | null = null
+    try {
+      const resolved = await resolveCustomer({
+        tenantId: tenant_id,
+        phone,
+        name,
+        channel: 'voice',
+      })
+      customerId = resolved.customerId
+
+      // Actualizar nombre si tenemos uno nuevo
+      if (name && resolved.customerData.name === 'Cliente sin nombre') {
+        await supabase.from("customers").update({ name }).eq("id", customerId)
+      }
+    } catch {
+      // Fallback: crear/actualizar directamente
+      if (name) {
+        if (phone) {
+          const { data: existing } = await supabase.from("customers")
+            .select("id").eq("tenant_id", tenant_id).eq("phone", phone).maybeSingle()
+          if (existing) {
+            await supabase.from("customers").update({ name }).eq("id", existing.id)
+            customerId = existing.id
+          } else {
+            const { data: created } = await supabase.from("customers")
+              .insert({ tenant_id, name, phone }).select("id").maybeSingle()
+            customerId = created?.id || null
+          }
         } else {
-          await supabase.from("customers").insert({ tenant_id, name, phone })
-        }
-      } else {
-        // Sin teléfono — buscar por nombre
-        const { data: existing } = await supabase.from("customers")
-          .select("id").eq("tenant_id", tenant_id).eq("name", name).maybeSingle()
-        if (!existing) {
-          await supabase.from("customers").insert({ tenant_id, name })
+          const { data: existing } = await supabase.from("customers")
+            .select("id").eq("tenant_id", tenant_id).eq("name", name).maybeSingle()
+          if (!existing) {
+            const { data: created } = await supabase.from("customers")
+              .insert({ tenant_id, name }).select("id").maybeSingle()
+            customerId = created?.id || null
+          } else {
+            customerId = existing.id
+          }
         }
       }
     }
 
-    // ── 3. Notificación ───────────────────────────────────────────────────
+    // ── 3. Análisis de memoria del cliente (NUEVO) ──────────────────────
+    let memoryAnalysis = { memoriesCreated: [] as string[], alertsCreated: [] as string[], suggestionsGenerated: [] as string[] }
+    if (customerId) {
+      try {
+        memoryAnalysis = await analyzeInteraction({
+          tenantId: tenant_id,
+          customerId,
+          intent: callIntent,
+          summary,
+          channel: 'voice',
+          callerPhone: phone || undefined,
+        })
+      } catch (err) {
+        logger.error('save-summary: memory analysis failed', { tenant_id }, err)
+      }
+    }
+
+    // ── 4. Notificación ───────────────────────────────────────────────────
     try {
       await createNotification({
         tenant_id,
@@ -119,7 +161,7 @@ export async function POST(req: NextRequest) {
       })
     } catch {}
 
-    // ── 4. Aprendizaje ────────────────────────────────────────────────────
+    // ── 5. Aprendizaje del negocio ──────────────────────────────────────
     try {
       const intentConfidence: Record<string, number> = {
         reserva: 0.95, pedido: 0.90, cancelacion: 0.85, consulta: 0.70, otro: 0.60,
@@ -132,7 +174,13 @@ export async function POST(req: NextRequest) {
       })
     } catch {}
 
-    return NextResponse.json({ success: true, call_id: call?.id || null })
+    return NextResponse.json({
+      success: true,
+      call_id: call?.id || null,
+      customer_id: customerId,
+      memories_created: memoryAnalysis.memoriesCreated,
+      alerts_created: memoryAnalysis.alertsCreated,
+    })
   } catch (err) {
     logger.error('agent:save-summary', {}, err)
     return NextResponse.json({ error: "internal error" }, { status: 500 })
