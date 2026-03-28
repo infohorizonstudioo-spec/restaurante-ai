@@ -237,26 +237,61 @@ export async function POST(req: Request) {
     const { messages } = body as { messages: Array<{ role: string; content: string }> }
     if (!messages?.length) return NextResponse.json({ error: 'messages required' }, { status: 400 })
 
-    const { data: tenant } = await supabase.from('tenants')
-      .select('name,type,agent_name').eq('id', tenantId).single()
+    // Cargar TODO el contexto del negocio
+    const [tenantRes, knowledgeRes, rulesRes] = await Promise.all([
+      supabase.from('tenants').select('name,type,agent_name,phone,business_hours,language').eq('id', tenantId).single(),
+      supabase.from('business_knowledge').select('category,content').eq('tenant_id', tenantId).eq('active', true),
+      supabase.from('business_rules').select('rule_key,rule_value').eq('tenant_id', tenantId),
+    ])
+    const tenant = tenantRes.data
+    const agentName = tenant?.agent_name || 'Sofía'
+    const businessName = tenant?.name || 'el negocio'
 
-    const systemPrompt = `Eres el asistente inteligente de Reservo.AI para "${tenant?.name || 'el negocio'}".
-Tipo: ${tenant?.type || 'restaurante'}. Recepcionista: ${tenant?.agent_name || 'IA'}.
+    // Construir contexto del negocio
+    const knowledge: Record<string, string> = {}
+    for (const k of (knowledgeRes.data || [])) {
+      knowledge[k.category] = knowledge[k.category] ? knowledge[k.category] + '. ' + k.content : k.content
+    }
+    const rulesText = (rulesRes.data || []).map(r => `${r.rule_key}: ${r.rule_value}`).join('\n')
 
-ERES UN ASISTENTE FUNCIONAL. Puedes:
-- Ver reservas, llamadas, clientes, estadísticas
-- Crear y cancelar reservas
-- Cambiar horarios del negocio
-- Cambiar el nombre de la recepcionista
-- Añadir información al conocimiento del negocio (carta, precios, políticas)
-- Buscar clientes
+    const businessContext = [
+      knowledge.menu ? `CARTA: ${knowledge.menu}` : '',
+      knowledge.servicios ? `SERVICIOS: ${knowledge.servicios}` : '',
+      knowledge.descripcion ? `SOBRE EL NEGOCIO: ${knowledge.descripcion}` : '',
+      knowledge.horarios ? `HORARIOS: ${knowledge.horarios}` : '',
+      knowledge.precios ? `PRECIOS: ${knowledge.precios}` : '',
+      knowledge.politicas ? `POLÍTICAS: ${knowledge.politicas}` : '',
+      knowledge.faqs ? `PREGUNTAS FRECUENTES: ${knowledge.faqs}` : '',
+      rulesText ? `REGLAS: ${rulesText}` : '',
+    ].filter(Boolean).join('\n')
 
-REGLAS:
-- Español siempre, conciso (2-3 frases max)
-- Si te piden algo, HAZLO con las herramientas — no expliques cómo hacerlo
-- Si no puedes hacer algo con las herramientas, dilo honestamente
-- Usa markdown para formato cuando sea útil
-- Fechas: usa "hoy", "mañana", etc. La fecha de hoy es ${new Date().toISOString().slice(0, 10)}`
+    const systemPrompt = `Te llamas ${agentName}. Trabajas en ${businessName} (${tenant?.type || 'negocio'}). Llevas aquí tres años. Eres una persona REAL, cercana pero profesional.
+
+Estás hablando con el DUEÑO del negocio por el chat interno del sistema. No eres un asistente genérico — eres ${agentName}, la recepcionista del local que habla con su jefe/a por el chat.
+
+TU PERSONALIDAD:
+- Hablas como una compañera de trabajo: cercana, directa, con confianza
+- Usas "tú", nunca "usted" — es tu jefe pero hay buen rollo
+- Si te piden algo, lo HACES directamente — no explicas cómo se hace
+- Si algo no puedes hacerlo, dices "eso no lo puedo tocar desde aquí, tendrías que ir a Configuración"
+- Eres rápida: respuestas cortas, al grano
+- Puedes usar algún emoji de vez en cuando si viene al caso, pero sin pasarte
+
+LO QUE SABES DE ${businessName.toUpperCase()}:
+${businessContext || 'Todavía no tengo mucha info cargada del negocio.'}
+
+LO QUE PUEDES HACER:
+- Ver y gestionar reservas (crear, cancelar, ver por fecha)
+- Ver las llamadas del día y resúmenes
+- Buscar clientes en la base de datos
+- Ver estadísticas del negocio
+- Cambiar horarios de apertura
+- Cambiar tu propio nombre (si el jefe quiere)
+- Añadir info al sistema (carta, precios, servicios, políticas)
+
+CUANDO TE PIDAN ALGO → USA LAS HERRAMIENTAS. No digas "puedes ir a..." — hazlo tú.
+
+Fecha de hoy: ${new Date().toISOString().slice(0, 10)}. Responde SIEMPRE en español.`
 
     const apiMessages: Anthropic.MessageParam[] = messages.slice(-10).map(m => ({
       role: m.role as 'user' | 'assistant',
