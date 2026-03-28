@@ -145,10 +145,7 @@ export default function PedidosPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const load = useCallback(async (tenantId: string) => {
-    const { data: { session } } = await supabase.auth.getSession()
-    const r = await fetch('/api/orders?tenant_id=' + tenantId + '&limit=100', {
-      headers: session?.access_token ? { 'Authorization': 'Bearer ' + session.access_token } : {},
-    })
+    const r = await fetch('/api/orders?tenant_id=' + tenantId + '&limit=100')
     const d = await r.json()
     setOrders(d.orders || [])
   }, [])
@@ -179,44 +176,17 @@ export default function PedidosPage() {
   useEffect(() => {
     if (!tid) return
     const ch = supabase.channel('order-events-rt-' + tid)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, () => {
         playSound()
-        toast.push({ title: `Nuevo pedido: ${(payload.new as any)?.customer_name || 'Cliente'} — ${(payload.new as any)?.order_type || 'pedido'}`, type: 'order', priority: 'info', icon: '🛒' })
-        const newOrder = payload.new as any
-        if (newOrder?.id) {
-          setOrders(prev => {
-            if (prev.some(o => o.id === newOrder.id)) return prev
-            return [newOrder, ...prev]
-          })
-        }
         load(tid)
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, (payload) => {
-        // Update order in place instantly for status changes
-        const updated = payload.new as any
-        if (updated?.id) {
-          setOrders(prev => {
-            const idx = prev.findIndex(o => o.id === updated.id)
-            if (idx === -1) return prev
-            const next = [...prev]
-            next[idx] = { ...next[idx], ...updated }
-            return next
-          })
-          if (modalRef.current && updated.id === modalRef.current.id) {
-            setModal((prev: any) => prev ? { ...prev, ...updated } : prev)
-          }
-        }
-        // Also do background refresh to ensure full consistency
         load(tid)
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, (payload) => {
-        // Remove deleted order instantly
-        const deleted = payload.old as any
-        if (deleted?.id) {
-          setOrders(prev => prev.filter(o => o.id !== deleted.id))
+        if (modalRef.current && payload.new && (payload.new as any).id === modalRef.current.id) {
+          setModal(payload.new)
         }
-        load(tid)
       })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'order_events', filter: 'tenant_id=eq.' + tid }, () => load(tid))
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [tid, load])
@@ -270,10 +240,8 @@ export default function PedidosPage() {
   const activos = orders.filter(o => !['delivered', 'cancelled'].includes(o.status))
 
   async function cambiarEstado(id: string, status: string) {
-    const { data: { session: s } } = await supabase.auth.getSession()
     const res = await fetch('/api/orders', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...(s?.access_token ? { 'Authorization': 'Bearer ' + s.access_token } : {}) },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, tenant_id: tid, status })
     })
     if (!res.ok) {
@@ -295,10 +263,8 @@ export default function PedidosPage() {
   async function nuevoOrder() {
     if (!tid) return
     try {
-      const { data: { session: s } } = await supabase.auth.getSession()
       const r = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(s?.access_token ? { 'Authorization': 'Bearer ' + s.access_token } : {}) },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenant_id: tid, customer_name: locale === 'en' ? 'New order' : locale === 'fr' ? 'Nouvelle commande' : locale === 'pt' ? 'Novo pedido' : 'Nuevo pedido', order_type: 'mesa' })
       })
       const d = await r.json()
