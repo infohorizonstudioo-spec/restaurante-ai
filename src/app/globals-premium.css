@@ -1,0 +1,691 @@
+/* ═══════════════════════════════════════════════════════════
+   RESERVO.AI — Premium Micro-Interactions Layer
+   Import after globals.css for enhanced polish.
+   Designed to be non-breaking and purely additive.
+═══════════════════════════════════════════════════════════ */
+
+/* ── 1. Page Transition — Fade-in on mount ───────────────── */
+@keyframes rz-page-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.rz-page-transition {
+  animation: rz-page-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Main content areas get a subtle entrance */
+main,
+[data-page-content] {
+  animation: rz-page-reveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── 2. Card & Button Hover Micro-interactions ───────────── */
+
+/* Elevate cards on hover with a smooth lift + inner light */
+.rz-card-hover:hover,
+.rz-card-interactive:hover {
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Buttons: subtle press depth */
+button:not(.rz-collapse-btn):not([disabled]):active {
+  transform: scale(0.985);
+  transition: transform 0.08s ease;
+}
+
+/* Links and clickable rows: smooth color ramp */
+a,
+[role="button"],
+[data-clickable] {
+  transition:
+    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── 3. Glassmorphism Enhancement ────────────────────────── */
+
+/* Frosted overlay for modals and popups */
+.rz-glass-overlay {
+  background: rgba(12, 16, 24, 0.7);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+}
+
+/* Elevated glass — for floating panels, dropdown menus */
+.rz-glass-elevated {
+  background: rgba(19, 25, 32, 0.72);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--rz-r-lg);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Inner glow on glass surfaces for depth */
+.rz-glass::after,
+.rz-glass-amber::after,
+.rz-glass-teal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 60% 40% at 50% 0%,
+    rgba(255, 255, 255, 0.03) 0%,
+    transparent 70%
+  );
+}
+
+/* ── 4. Premium Skeleton Loading ─────────────────────────── */
+@keyframes rz-skeleton-wave {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.rz-skeleton-premium {
+  background: linear-gradient(
+    110deg,
+    var(--rz-surface) 0%,
+    var(--rz-surface) 30%,
+    rgba(255, 255, 255, 0.04) 50%,
+    var(--rz-surface) 70%,
+    var(--rz-surface) 100%
+  );
+  background-size: 300% 100%;
+  animation: rz-skeleton-wave 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  border-radius: var(--rz-r-sm);
+}
+
+/* Skeleton text line */
+.rz-skeleton-text {
+  height: 12px;
+  border-radius: 6px;
+}
+
+/* Skeleton circle (avatar placeholder) */
+.rz-skeleton-circle {
+  border-radius: 50%;
+  aspect-ratio: 1;
+}
+
+/* Skeleton card — full card placeholder */
+.rz-skeleton-card {
+  border-radius: var(--rz-r-lg);
+  border: 1px solid var(--rz-border);
+  overflow: hidden;
+}
+
+/* ── 5. Premium Scrollbar ────────────────────────────────── */
+
+/* Enhanced scrollbar with fade-in on scroll */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Hide scrollbar until hover (container must be positioned) */
+.rz-scroll-fade {
+  overflow-y: auto;
+  scrollbar-color: transparent transparent;
+}
+.rz-scroll-fade:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.06) transparent;
+}
+.rz-scroll-fade::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+.rz-scroll-fade:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ── 6. Focus Ring Animations ────────────────────────────── */
+@keyframes rz-focus-expand {
+  0% {
+    box-shadow: 0 0 0 0 rgba(240, 168, 78, 0.5);
+    outline-offset: 0px;
+  }
+  100% {
+    box-shadow: 0 0 0 4px rgba(240, 168, 78, 0.12);
+    outline-offset: 2px;
+  }
+}
+
+*:focus-visible {
+  outline: 2px solid var(--rz-amber);
+  outline-offset: 2px;
+  animation: rz-focus-expand 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Input focus: warm glow ramp */
+.rz-input:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--rz-amber);
+  box-shadow:
+    0 0 0 3px var(--rz-amber-dim),
+    0 0 20px rgba(240, 168, 78, 0.06);
+  animation: rz-focus-expand 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── 7. Toast / Notification Entrance ────────────────────── */
+@keyframes rz-toast-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes rz-toast-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+}
+
+@keyframes rz-toast-slide-right {
+  0% {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.rz-toast-enter {
+  animation: rz-toast-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.rz-toast-exit {
+  animation: rz-toast-out 0.25s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.rz-toast-slide {
+  animation: rz-toast-slide-right 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Notification dropdown entrance */
+@keyframes rz-dropdown-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+    transform-origin: top right;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.rz-dropdown-enter {
+  animation: rz-dropdown-reveal 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── 8. KPI Number Counter Animation ─────────────────────── */
+@keyframes rz-count-up {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+    filter: blur(3px);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes rz-count-flash {
+  0% { color: inherit; }
+  20% { color: var(--rz-amber); }
+  100% { color: inherit; }
+}
+
+.rz-kpi-value {
+  animation: rz-count-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Staggered KPI cards */
+.rz-kpi-card:nth-child(1) .rz-kpi-value { animation-delay: 0.00s; }
+.rz-kpi-card:nth-child(2) .rz-kpi-value { animation-delay: 0.08s; }
+.rz-kpi-card:nth-child(3) .rz-kpi-value { animation-delay: 0.16s; }
+.rz-kpi-card:nth-child(4) .rz-kpi-value { animation-delay: 0.24s; }
+.rz-kpi-card:nth-child(5) .rz-kpi-value { animation-delay: 0.32s; }
+.rz-kpi-card:nth-child(6) .rz-kpi-value { animation-delay: 0.40s; }
+
+/* Flash on value change */
+.rz-kpi-flash {
+  animation: rz-count-flash 0.6s ease both;
+}
+
+/* ── 9. Gradient Border on Hover ─────────────────────────── */
+@keyframes rz-border-sweep {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.rz-gradient-border {
+  position: relative;
+  overflow: hidden;
+}
+
+.rz-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    transparent 30%,
+    rgba(240, 168, 78, 0.25) 45%,
+    rgba(45, 212, 191, 0.2) 55%,
+    transparent 70%,
+    transparent 100%
+  );
+  background-size: 400% 400%;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.rz-gradient-border:hover::before {
+  opacity: 1;
+  animation: rz-border-sweep 4s ease infinite;
+}
+
+/* Warm amber gradient border variant */
+.rz-gradient-border-amber::before {
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    transparent 25%,
+    rgba(240, 168, 78, 0.35) 40%,
+    rgba(240, 168, 78, 0.1) 60%,
+    transparent 75%,
+    transparent 100%
+  );
+  background-size: 400% 400%;
+}
+
+/* Teal gradient border variant */
+.rz-gradient-border-teal::before {
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    transparent 25%,
+    rgba(45, 212, 191, 0.3) 40%,
+    rgba(45, 212, 191, 0.08) 60%,
+    transparent 75%,
+    transparent 100%
+  );
+  background-size: 400% 400%;
+}
+
+/* ── 10. Status Indicator Pulses ─────────────────────────── */
+@keyframes rz-dot-breathe {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 0 5px transparent;
+  }
+}
+
+@keyframes rz-dot-ring-expand {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Live indicator with expanding ring */
+.rz-live-indicator {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rz-teal);
+  flex-shrink: 0;
+  animation: rz-dot-breathe 2s ease-in-out infinite;
+  color: rgba(45, 212, 191, 0.35);
+}
+
+.rz-live-indicator::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--rz-teal);
+  animation: rz-dot-ring-expand 2s ease-out infinite;
+}
+
+/* Active/online status with glow */
+.rz-status-active {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rz-green);
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.4);
+  animation: rz-dot-breathe 2.5s ease-in-out infinite;
+  color: rgba(52, 211, 153, 0.35);
+  flex-shrink: 0;
+}
+
+/* Warning/busy status */
+.rz-status-warning {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rz-amber);
+  box-shadow: 0 0 6px rgba(240, 168, 78, 0.4);
+  animation: rz-dot-breathe 1.8s ease-in-out infinite;
+  color: rgba(240, 168, 78, 0.35);
+  flex-shrink: 0;
+}
+
+/* Error/critical status */
+.rz-status-critical {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rz-red);
+  box-shadow: 0 0 6px rgba(248, 113, 113, 0.5);
+  animation: rz-dot-breathe 1.2s ease-in-out infinite;
+  color: rgba(248, 113, 113, 0.4);
+  flex-shrink: 0;
+}
+
+/* ── Bonus: Modal Entrance ───────────────────────────────── */
+@keyframes rz-modal-backdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes rz-modal-content {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+.rz-modal-backdrop {
+  animation: rz-modal-backdrop 0.2s ease both;
+}
+
+.rz-modal-enter {
+  animation: rz-modal-content 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Bonus: Table Row Hover ──────────────────────────────── */
+tr {
+  transition: background 0.15s ease;
+}
+
+tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ── Bonus: Smooth Appearance for Lists ──────────────────── */
+@keyframes rz-list-item-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.rz-list-animate > * {
+  animation: rz-list-item-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.rz-list-animate > *:nth-child(1) { animation-delay: 0.00s; }
+.rz-list-animate > *:nth-child(2) { animation-delay: 0.03s; }
+.rz-list-animate > *:nth-child(3) { animation-delay: 0.06s; }
+.rz-list-animate > *:nth-child(4) { animation-delay: 0.09s; }
+.rz-list-animate > *:nth-child(5) { animation-delay: 0.12s; }
+.rz-list-animate > *:nth-child(6) { animation-delay: 0.15s; }
+.rz-list-animate > *:nth-child(7) { animation-delay: 0.18s; }
+.rz-list-animate > *:nth-child(8) { animation-delay: 0.21s; }
+.rz-list-animate > *:nth-child(9) { animation-delay: 0.24s; }
+.rz-list-animate > *:nth-child(10) { animation-delay: 0.27s; }
+
+/* ── Bonus: Progress Bar Shine ───────────────────────────── */
+@keyframes rz-progress-shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.rz-progress-bar {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.rz-progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.12) 50%,
+    transparent 100%
+  );
+  animation: rz-progress-shine 2.5s ease-in-out infinite;
+}
+
+/* ── Bonus: Tooltip Entrance ─────────────────────────────── */
+@keyframes rz-tooltip-in {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.rz-tooltip {
+  animation: rz-tooltip-in 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Bonus: Badge Pulse (for new/unread counters) ────────── */
+@keyframes rz-badge-pop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.rz-badge-new {
+  animation: rz-badge-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Bonus: Ambient Glow on Feature Cards ────────────────── */
+.rz-ambient-glow {
+  position: relative;
+}
+
+.rz-ambient-glow::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  background: radial-gradient(
+    300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(240, 168, 78, 0.06) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.rz-ambient-glow:hover::after {
+  opacity: 1;
+}
+
+/* ── Bonus: Smooth Chart Bars ────────────────────────────── */
+@keyframes rz-bar-rise {
+  from {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+  to {
+    transform: scaleY(1);
+    transform-origin: bottom;
+  }
+}
+
+.rz-chart-bar {
+  animation: rz-bar-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: bottom;
+}
+
+.rz-chart-bar:nth-child(1) { animation-delay: 0.00s; }
+.rz-chart-bar:nth-child(2) { animation-delay: 0.05s; }
+.rz-chart-bar:nth-child(3) { animation-delay: 0.10s; }
+.rz-chart-bar:nth-child(4) { animation-delay: 0.15s; }
+.rz-chart-bar:nth-child(5) { animation-delay: 0.20s; }
+.rz-chart-bar:nth-child(6) { animation-delay: 0.25s; }
+.rz-chart-bar:nth-child(7) { animation-delay: 0.30s; }
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE — Reduce motion intensity on mobile
+═══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .rz-gradient-border::before { display: none; }
+  .rz-ambient-glow::after { display: none; }
+  .rz-live-indicator::after { display: none; }
+
+  .rz-kpi-value {
+    animation-duration: 0.3s;
+  }
+
+  .rz-page-transition,
+  main,
+  [data-page-content] {
+    animation-duration: 0.2s;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ACCESSIBILITY — Respect reduced motion preferences
+═══════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .rz-live-indicator::after,
+  .rz-gradient-border::before,
+  .rz-ambient-glow::after,
+  .rz-progress-bar::after {
+    display: none !important;
+  }
+}
