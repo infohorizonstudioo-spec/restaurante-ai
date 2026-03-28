@@ -41,7 +41,7 @@ const SECURITY_HEADERS: [string, string][] = [
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.elevenlabs.io https://api.stripe.com https://api.twilio.com https://*.sentry.io",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.elevenlabs.io https://api.retellai.com wss://api.retellai.com https://api.stripe.com https://api.twilio.com https://*.sentry.io",
     "frame-src https://js.stripe.com https://elevenlabs.io",
     "media-src 'self' blob:",
     "object-src 'none'",
@@ -126,6 +126,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/stripe/webhook') ||
     pathname.startsWith('/api/whatsapp/webhook') ||
     pathname.startsWith('/api/email/webhook') ||
+    pathname.startsWith('/api/retell/') ||
+    pathname.startsWith('/api/agent/') ||
     pathname.startsWith('/api/cron/')
   ) {
     const response = NextResponse.next()
