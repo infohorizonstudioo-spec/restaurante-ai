@@ -2,15 +2,14 @@
  * RESERVO.AI — Inbound Voice Handler
  *
  * Twilio llama aquí cuando entra una llamada.
- * Soporta DOS motores de voz:
- * - Retell AI (preferido) → usa retell_agent_id
- * - ElevenLabs (legacy) → usa el_agent_id
- *
- * Descuelga INMEDIATAMENTE sin ring.
+ * Registra la llamada en Retell via create-web-call, obtiene el access_token,
+ * y conecta Twilio al WebSocket de Retell via <Connect><Stream>.
  */
 import { NextResponse } from 'next/server'
 import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
+
+const RETELL_API_KEY = process.env.RETELL_API_KEY || ''
 
 export async function POST(req: Request) {
   const rl = rateLimitByIp(req, RATE_LIMITS.webhook, 'voice:inbound')
@@ -31,7 +30,6 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Limpiar número para buscar en DB
     const cleanNumber = calledNumber.replace(/\s/g, '')
     const { data: tenant } = await supabase
       .from('tenants')
@@ -39,22 +37,18 @@ export async function POST(req: Request) {
       .or(`agent_phone.eq.${cleanNumber},agent_phone.eq.${cleanNumber.replace('+', '')}`)
       .maybeSingle()
 
-    // Preferir Retell sobre ElevenLabs
     const retellAgentId = tenant?.retell_agent_id || ''
     const elAgentId = tenant?.el_agent_id || process.env.ELEVENLABS_AGENT_ID || ''
 
     if (!retellAgentId && !elAgentId) {
-      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+      return new NextResponse(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say language="es-ES" voice="Polly.Lucia">Lo sentimos, este número no tiene un agente configurado. Por favor, inténtelo más tarde.</Say>
+  <Say language="es-ES" voice="Polly.Lucia">Lo sentimos, este número no tiene un agente configurado.</Say>
   <Hangup/>
-</Response>`
-      return new NextResponse(twiml, {
-        headers: { 'Content-Type': 'text/xml' },
-      })
+</Response>`, { headers: { 'Content-Type': 'text/xml' } })
     }
 
-    // Registrar la llamada en DB
+    // Register call in DB
     if (tenant?.id) {
       void supabase.from('calls').insert({
         tenant_id: tenant.id,
@@ -63,7 +57,6 @@ export async function POST(req: Request) {
         status: 'activa',
         intent: 'pendiente',
         started_at: new Date().toISOString(),
-        session_state: 'escuchando',
         source: retellAgentId ? 'retell' : 'elevenlabs',
       })
     }
@@ -72,15 +65,57 @@ export async function POST(req: Request) {
 
     if (retellAgentId) {
       // ── RETELL AI ──
-      // Reenviar la llamada a Retell vía SIP.
-      // Retell identifica el número importado y asigna el agente configurado.
-      const sipUri = `sip:${calledNumber.replace('+', '')}@sip.retellai.com`
-      twiml = `<?xml version="1.0" encoding="UTF-8"?>
+      // Register a web call to get the WebSocket access
+      const retellRes = await fetch('https://api.retellai.com/v2/create-web-call', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RETELL_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          agent_id: retellAgentId,
+          metadata: {
+            tenant_id: tenant?.id || '',
+            caller_phone: callerPhone,
+            call_sid: callSid,
+            twilio_call: true,
+          },
+        }),
+      })
+
+      if (!retellRes.ok) {
+        logger.error('Retell create-web-call failed', { status: retellRes.status })
+        // Fallback to ElevenLabs if available
+        if (elAgentId) {
+          twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Dial callerId="${callerPhone}" timeout="30">
-    <Sip>${sipUri}</Sip>
-  </Dial>
+  <Connect>
+    <ConversationRelay url="wss://api.elevenlabs.io/v1/convai/twilio/audio" dtmfDetection="true">
+      <Parameter name="agent_id" value="${elAgentId}" />
+    </ConversationRelay>
+  </Connect>
 </Response>`
+        } else {
+          twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say language="es-ES">Perdona, hay un problemilla técnico. Llama en un momento.</Say>
+  <Hangup/>
+</Response>`
+        }
+      } else {
+        const retellData = await retellRes.json()
+        const wsUrl = `wss://api.retellai.com/audio-websocket/${retellData.call_id}`
+
+        twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Connect>
+    <Stream url="${wsUrl}">
+      <Parameter name="caller_phone" value="${callerPhone}" />
+      <Parameter name="call_sid" value="${callSid}" />
+    </Stream>
+  </Connect>
+</Response>`
+      }
     } else {
       // ── ELEVENLABS (legacy) ──
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -104,13 +139,10 @@ export async function POST(req: Request) {
     })
   } catch (err) {
     logger.error('Inbound voice error', {}, err)
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    return new NextResponse(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say language="es-ES">Perdona, ha habido un problemilla técnico. Inténtalo en un momento.</Say>
   <Hangup/>
-</Response>`
-    return new NextResponse(twiml, {
-      headers: { 'Content-Type': 'text/xml' },
-    })
+</Response>`, { headers: { 'Content-Type': 'text/xml' } })
   }
 }
