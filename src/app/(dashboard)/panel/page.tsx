@@ -179,7 +179,7 @@ function LiveFeed({ events, demoMode, onToggleDemo, lang='es' }: { events:LiveEv
             display:'flex', gap:12, padding:'10px 18px',
             borderBottom: i < display.length-1 ? `1px solid ${C.border}` : 'none',
             background: evt.priority==='high' ? `${evt.color}05` : 'transparent',
-            animation: i===0 ? 'rzSlideIn 0.35s ease' : 'none',
+            animation: i===0 ? 'rzSlideIn 0.35s ease' : `rzFeedFadeIn 0.4s cubic-bezier(.4,0,.2,1) ${i*0.05}s both`,
             transition:'background 0.15s',
           }}>
             <div style={{ width:30, height:30, borderRadius:8, background:`${evt.color}15`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>
@@ -210,7 +210,11 @@ function KpiCard({ value, label, sub, color=C.amber, href, icon, accent=false }:
       background: accent ? `linear-gradient(135deg,${color}14,transparent 70%)` : C.surface,
       border:`1px solid ${accent?color+'22':C.border}`, borderRadius:14, padding:'16px 18px',
       position:'relative', overflow:'hidden', cursor:href?'pointer':'default',
-    }}>
+      transition:'transform 0.2s cubic-bezier(.4,0,.2,1), box-shadow 0.2s cubic-bezier(.4,0,.2,1)',
+    }}
+    onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow=`0 8px 24px ${color}15` }}
+    onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='none' }}
+    >
       {accent && <div style={{ position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${color},transparent)`,borderRadius:'14px 14px 0 0' }}/>}
       <div style={{ position:'absolute',top:'-30%',right:'-10%',width:100,height:100,background:`radial-gradient(circle,${color}08,transparent 70%)`,pointerEvents:'none' }}/>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', position:'relative' }}>
@@ -733,7 +737,52 @@ export default function PanelPage() {
     return () => { if(demoTimer.current) clearInterval(demoTimer.current) }
   }, [demoMode, pushEvent, tenant])
 
-  if (loading) return <PageSkeleton variant="cards"/>
+  if (loading) return (
+    <div style={{ minHeight:'100vh', background:'#0C1018' }}>
+      {/* Header skeleton */}
+      <div style={{ background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', height:56 }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+          <div className="rz-skeleton" style={{ width:140, height:16, borderRadius:8 }}/>
+          <div className="rz-skeleton" style={{ width:200, height:10, borderRadius:5 }}/>
+        </div>
+        <div className="rz-skeleton" style={{ width:32, height:32, borderRadius:8 }}/>
+      </div>
+      <div style={{ maxWidth:960, margin:'0 auto', padding:'24px 28px', display:'flex', flexDirection:'column', gap:16 }}>
+        {/* KPI row skeleton — 4 cards */}
+        <div className="rz-grid-4col" style={{ gap:10 }}>
+          {[0,1,2,3].map(i => (
+            <div key={i} style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'16px 18px', animation:`rz-skel-fade 0.4s cubic-bezier(.4,0,.2,1) ${i*0.08}s both` }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+                <div>
+                  <div className="rz-skeleton" style={{ width:60, height:28, borderRadius:7, marginBottom:6 }}/>
+                  <div className="rz-skeleton" style={{ width:90, height:10, borderRadius:5 }}/>
+                </div>
+                <div className="rz-skeleton" style={{ width:34, height:34, borderRadius:10 }}/>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Main content skeleton — live feed placeholder */}
+        <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, overflow:'hidden', animation:'rz-skel-fade 0.4s cubic-bezier(.4,0,.2,1) 0.35s both' }}>
+          <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', gap:10 }}>
+            <div className="rz-skeleton" style={{ width:8, height:8, borderRadius:'50%' }}/>
+            <div className="rz-skeleton" style={{ width:120, height:14, borderRadius:6 }}/>
+          </div>
+          {[0,1,2,3,4].map(i => (
+            <div key={i} style={{ display:'flex', gap:12, padding:'10px 18px', borderBottom:`1px solid ${C.border}`, animation:`rz-skel-fade 0.4s cubic-bezier(.4,0,.2,1) ${0.4+i*0.06}s both` }}>
+              <div className="rz-skeleton" style={{ width:30, height:30, borderRadius:8, flexShrink:0 }}/>
+              <div style={{ flex:1, display:'flex', flexDirection:'column', gap:5 }}>
+                <div className="rz-skeleton" style={{ width:`${70-i*8}%`, height:12, borderRadius:5 }}/>
+                <div className="rz-skeleton" style={{ width:`${50-i*5}%`, height:10, borderRadius:4 }}/>
+              </div>
+              <div className="rz-skeleton" style={{ width:28, height:10, borderRadius:4, flexShrink:0 }}/>
+            </div>
+          ))}
+        </div>
+      </div>
+      <style>{`@keyframes rz-skel-fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
+    </div>
+  )
   if (!tenant) return null
 
   const lang      = tenant.language||'es'
@@ -841,6 +890,7 @@ export default function PanelPage() {
     <div style={{ minHeight:'100vh',background:C.bg,fontFamily:'var(--rz-font)' }}>
       <style>{`
         @keyframes rzSlideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes rzFeedFadeIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
         @keyframes rz-pulse{0%,100%{opacity:1}50%{opacity:0.4}}
         .rz-live-dot{width:8px;height:8px;border-radius:50%;background:#34D399;animation:rz-pulse 1.5s ease-in-out infinite}
       `}</style>

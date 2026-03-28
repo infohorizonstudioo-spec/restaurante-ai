@@ -100,7 +100,41 @@ export default function ProductosPage() {
     await load(tid)
   }
 
-  if (loading) return <PageLoader />
+  if (loading) return (
+    <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "'Sora',-apple-system,sans-serif" }}>
+      <style>{`@keyframes rzShimmer{0%{opacity:0.5}50%{opacity:1}100%{opacity:0.5}}.rz-skel{animation:rzShimmer 1.5s ease-in-out infinite}`}</style>
+      <div style={{ background:'rgba(19,25,32,0.85)', borderBottom:`1px solid ${C.border}`, padding:'14px 24px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div>
+          <div className="rz-skel" style={{ width:160, height:18, borderRadius:6, background:'rgba(255,255,255,0.06)' }} />
+          <div className="rz-skel" style={{ width:220, height:12, borderRadius:4, background:'rgba(255,255,255,0.04)', marginTop:8 }} />
+        </div>
+        <div className="rz-skel" style={{ width:120, height:36, borderRadius:10, background:'rgba(255,255,255,0.06)' }} />
+      </div>
+      <div style={{ maxWidth:900, margin:'0 auto', padding:'20px 24px' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:10, marginBottom:20 }}>
+          {[1,2,3,4].map(i => (
+            <div key={i} style={{ background:'rgba(255,255,255,0.03)', border:`1px solid ${C.border}`, borderRadius:12, padding:'14px 16px' }}>
+              <div className="rz-skel" style={{ width:40, height:22, borderRadius:6, background:'rgba(255,255,255,0.06)', marginBottom:6 }} />
+              <div className="rz-skel" style={{ width:70, height:10, borderRadius:4, background:'rgba(255,255,255,0.04)' }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ display:'flex', gap:6, marginBottom:16 }}>
+          {[80,110,100,90,100].map((w,i) => <div key={i} className="rz-skel" style={{ width:w, height:30, borderRadius:9, background:'rgba(255,255,255,0.04)' }} />)}
+        </div>
+        {[1,2,3,4,5].map(i => (
+          <div key={i} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 16px', marginBottom:6, display:'flex', alignItems:'center', gap:14 }}>
+            <div className="rz-skel" style={{ width:36, height:36, borderRadius:10, background:'rgba(255,255,255,0.06)', flexShrink:0 }} />
+            <div style={{ flex:1 }}>
+              <div className="rz-skel" style={{ width:`${50 + i*15}%`, maxWidth:200, height:14, borderRadius:4, background:'rgba(255,255,255,0.06)', marginBottom:6 }} />
+              <div className="rz-skel" style={{ width:`${70 + i*5}%`, maxWidth:300, height:10, borderRadius:4, background:'rgba(255,255,255,0.03)' }} />
+            </div>
+            <div className="rz-skel" style={{ width:60, height:30, borderRadius:8, background:'rgba(255,255,255,0.04)', flexShrink:0 }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 
   const filtered = filter === 'all' ? items : filter === 'limited' ? items.filter(i => i.availability_type === 'limited_daily') : items.filter(i => i.availability_type === filter)
 
@@ -114,7 +148,7 @@ export default function ProductosPage() {
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "'Sora',-apple-system,sans-serif" }}>
-      <style>{`*{box-sizing:border-box}.rz-inp{background:rgba(255,255,255,0.04);border:1px solid ${C.border};border-radius:10px;padding:10px 14px;color:${C.text};font-size:13px;font-family:inherit;outline:none;width:100%;transition:border-color 0.15s}.rz-inp:focus{border-color:${C.amber}!important}.rz-inp::placeholder{color:${C.muted}}`}</style>
+      <style>{`*{box-sizing:border-box}.rz-inp{background:rgba(255,255,255,0.04);border:1px solid ${C.border};border-radius:10px;padding:10px 14px;color:${C.text};font-size:13px;font-family:inherit;outline:none;width:100%;transition:border-color 0.15s}.rz-inp:focus{border-color:${C.amber}!important}.rz-inp::placeholder{color:${C.muted}}.rz-product-card{transition:transform 0.2s ease,box-shadow 0.2s ease,border-color 0.2s ease}.rz-product-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.3);border-color:rgba(255,255,255,0.12)!important}@keyframes rzModalIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes rzOverlayIn{from{opacity:0}to{opacity:1}}.rz-modal-overlay{animation:rzOverlayIn 0.2s ease}.rz-modal-content{animation:rzModalIn 0.25s ease}`}</style>
 
       {/* Header */}
       <div style={{ background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom:`1px solid ${C.border}`, padding:'14px 24px', position:'sticky', top:0, zIndex:30, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -147,24 +181,31 @@ export default function ProductosPage() {
         </div>
 
         {/* Filtros */}
-        <div style={{ display:'flex', gap:6, marginBottom:16, flexWrap:'wrap' }}>
-          {[['all',tx('Todas')], ['always_available',tx('Siempre disponible')], ['limited_daily',tx('Limitado por día')], ['by_request',tx('Por encargo')], ['unavailable',tx('No disponible')]].map(([k,l]) => (
+        <div style={{ display:'flex', gap:4, marginBottom:16, flexWrap:'wrap' }}>
+          {([['all',tx('Todas'), items.length], ['always_available',tx('Siempre disponible'), items.filter(i=>i.availability_type==='always_available').length], ['limited_daily',tx('Limitado por día'), items.filter(i=>i.availability_type==='limited_daily').length], ['by_request',tx('Por encargo'), byRequest], ['unavailable',tx('No disponible'), items.filter(i=>i.availability_type==='unavailable').length]] as [string,string,number][]).map(([k,l,count]) => (
             <button key={k} onClick={() => setFilter(k)} style={{
-              padding:'5px 14px', fontSize:12, fontWeight:600, borderRadius:9,
-              border:`1px solid ${filter===k ? C.amber+'44' : C.border}`,
+              padding:'7px 14px', fontSize:12, fontWeight:600, borderRadius:9, position:'relative',
+              border:`1px solid ${filter===k ? C.amber+'44' : 'transparent'}`,
               background: filter===k ? C.amberDim : 'transparent',
-              color: filter===k ? C.amber : C.sub, cursor:'pointer', fontFamily:'inherit'
-            }}>{l}</button>
+              color: filter===k ? C.amber : C.sub, cursor:'pointer', fontFamily:'inherit',
+              transition:'all 0.2s ease', display:'flex', alignItems:'center', gap:6
+            }}>
+              {l}
+              {count > 0 && <span style={{ fontSize:10, fontWeight:700, padding:'1px 6px', borderRadius:6, background: filter===k ? C.amber+'22' : 'rgba(255,255,255,0.06)', color: filter===k ? C.amber : C.muted, lineHeight:'16px' }}>{count}</span>}
+              <span style={{ position:'absolute', bottom:-1, left:'50%', transform:'translateX(-50%)', width: filter===k ? '60%' : '0%', height:2, background:C.amber, borderRadius:1, transition:'width 0.25s ease' }} />
+            </button>
           ))}
         </div>
 
         {/* Lista por categoría */}
         {filtered.length === 0 ? (
-          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:'60px 24px', textAlign:'center' }}>
-            <p style={{ fontSize:32, marginBottom:12 }}>🍽️</p>
-            <p style={{ fontSize:15, fontWeight:600, color:C.text, marginBottom:6 }}>{tx('Sin productos en carta')}</p>
-            <p style={{ fontSize:13, color:C.muted }}>{tx('Añade productos para que se gestione la disponibilidad en tiempo real.')}</p>
-            <button onClick={() => setModal({ _new: true })} style={{ marginTop:16, padding:'10px 24px', fontSize:13, fontWeight:700, background:`linear-gradient(135deg,${C.amber},#E8923A)`, color:'#0C1018', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'inherit' }}>+ {tx('Nuevo producto')}</button>
+          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:'80px 24px', textAlign:'center' }}>
+            <div style={{ width:64, height:64, borderRadius:16, background:C.amberDim, display:'inline-flex', alignItems:'center', justifyContent:'center', marginBottom:16 }}>
+              <span style={{ fontSize:28 }}>🍽️</span>
+            </div>
+            <p style={{ fontSize:17, fontWeight:700, color:C.text, marginBottom:8 }}>{tx('Sin productos en carta')}</p>
+            <p style={{ fontSize:13, color:C.muted, maxWidth:320, margin:'0 auto', lineHeight:1.5 }}>{tx('Añade productos para que se gestione la disponibilidad en tiempo real.')}</p>
+            <button onClick={() => setModal({ _new: true })} style={{ marginTop:20, padding:'11px 28px', fontSize:13, fontWeight:700, background:`linear-gradient(135deg,${C.amber},#E8923A)`, color:'#0C1018', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'inherit', boxShadow:'0 4px 16px rgba(240,168,78,0.25)' }}>+ {tx('Nuevo producto')}</button>
           </div>
         ) : (
           Object.entries(
@@ -174,8 +215,12 @@ export default function ProductosPage() {
               return acc
             }, {})
           ).map(([cat, catItems]) => (
-            <div key={cat} style={{ marginBottom:20 }}>
-              <p style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:10 }}>{tx(cat)}</p>
+            <div key={cat} style={{ marginBottom:24 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
+                <p style={{ fontSize:11, fontWeight:700, color:C.sub, letterSpacing:'0.06em', textTransform:'uppercase' }}>{tx(cat)}</p>
+                <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:6, background:'rgba(255,255,255,0.05)', color:C.muted }}>{(catItems as any[]).length}</span>
+                <div style={{ flex:1, height:1, background:C.border }} />
+              </div>
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 {(catItems as any[]).map(item => {
                   const cfg = AVAIL_CFG[item.availability_type as AvailType] || AVAIL_CFG.always_available
@@ -183,11 +228,12 @@ export default function ProductosPage() {
                   const remaining = item.daily_limit ? item.daily_limit - usedToday : null
                   const isSoldOut = item.availability_type === 'limited_daily' && remaining !== null && remaining <= 0
                   return (
-                    <div key={item.id} style={{
+                    <div key={item.id} className="rz-product-card" style={{
                       background: isSoldOut ? 'rgba(248,113,113,0.04)' : C.card,
                       border: `1px solid ${isSoldOut ? C.red+'22' : C.border}`,
                       borderRadius:12, padding:'12px 16px',
-                      display:'flex', alignItems:'center', gap:14, opacity: isSoldOut ? 0.75 : 1
+                      display:'flex', alignItems:'center', gap:14, opacity: isSoldOut ? 0.75 : 1,
+                      cursor:'default'
                     }}>
                       {/* Indicador disponibilidad */}
                       <div style={{ width:36, height:36, borderRadius:10, background:cfg.bg, border:`1px solid ${cfg.color}33`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>
@@ -281,8 +327,8 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: {
   }
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }} onClick={onClose}>
-      <div ref={focusRef} style={{ background:C.card, borderRadius:16, padding:24, width:'100%', maxWidth:480, maxHeight:'90vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.7)' }} onClick={e => e.stopPropagation()}>
+    <div className="rz-modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16, backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)' }} onClick={onClose}>
+      <div ref={focusRef} className="rz-modal-content" style={{ background:C.card, borderRadius:16, padding:24, width:'100%', maxWidth:480, maxHeight:'90vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.7)', border:`1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
           <p style={{ fontSize:16, fontWeight:700, color:C.text }}>{item ? tx('Editar producto') : tx('Nuevo producto')}</p>
           <button onClick={onClose} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:C.muted }} aria-label="Cerrar">✕</button>
