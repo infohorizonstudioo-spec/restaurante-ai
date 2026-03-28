@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
           .eq('tenant_id', tenant.id)
           .eq('phone', callerPhone)
           .eq('status', 'pending')
-          .eq('reason', 'supplier_order')
+          .in('reason', ['supplier_order', 'missed_call_sms'])
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle()
