@@ -4,6 +4,7 @@ import { addToWaitlistTool } from "@/lib/agent-tools"
 import { rateLimitByIp, RATE_LIMITS } from "@/lib/rate-limit"
 import { sanitizeUUID, sanitizeName, sanitizePhone, sanitizeDate, sanitizeTime, sanitizePositiveInt } from "@/lib/sanitize"
 import { logger } from "@/lib/logger"
+import { parseRetellBody } from "@/lib/retell-parse"
 
 export const dynamic = "force-dynamic"
 
@@ -13,7 +14,8 @@ export async function POST(req: NextRequest) {
     if (rl.blocked) return rl.response
 
     if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-    const body = await req.json()
+    const rawBody = await req.json()
+    const body = parseRetellBody(rawBody)
 
     const tenant_id = sanitizeUUID(body.tenant_id)
     const customer_name = sanitizeName(body.customer_name)

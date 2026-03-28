@@ -4,6 +4,7 @@ import { updateOrderTool } from "@/lib/agent-tools"
 import { rateLimitByIp, RATE_LIMITS } from "@/lib/rate-limit"
 import { sanitizeUUID, sanitizeName, sanitizePhone, sanitizeString, sanitizePositiveInt } from "@/lib/sanitize"
 import { logger } from "@/lib/logger"
+import { parseRetellBody } from "@/lib/retell-parse"
 
 export const dynamic = "force-dynamic"
 
@@ -13,7 +14,8 @@ export async function POST(req: NextRequest) {
     if (rl.blocked) return rl.response
 
     if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-    const body = await req.json()
+    const rawBody = await req.json()
+    const body = parseRetellBody(rawBody)
 
     // Retell envía items como string JSON — parsear si es necesario
     let items = body.items
