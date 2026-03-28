@@ -19,7 +19,8 @@ export function validateAgentKey(req: NextRequest): boolean {
   if (!expected) return false
 
   // 2. API key explícita con comparación timing-safe
-  const key = req.headers.get('x-agent-key')
+  // Retell convierte headers con guiones a guiones bajos (x-agent-key → x_agent_key)
+  const key = req.headers.get('x-agent-key') || req.headers.get('x_agent_key')
   if (!key) return false
 
   try {

@@ -15,8 +15,15 @@ export async function POST(req: NextRequest) {
     if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
     const body = await req.json()
 
+    // Retell envía items como string JSON — parsear si es necesario
+    let items = body.items
+    if (typeof items === 'string') {
+      try { items = JSON.parse(items) } catch { items = [] }
+    }
+
     const sanitized = {
       ...body,
+      items,
       tenant_id: sanitizeUUID(body.tenant_id),
       customer_name: body.customer_name ? sanitizeName(body.customer_name) : undefined,
       customer_phone: body.customer_phone ? sanitizePhone(body.customer_phone) : undefined,
