@@ -32,7 +32,7 @@ const TABS = [
   { id: 'proveedores', label: 'Proveedores', icon: '🏭' },
   { id: 'faltantes', label: 'Faltantes', icon: '⚠️' },
   { id: 'pedidos', label: 'Pedidos', icon: '📦' },
-  { id: 'llamar', label: 'Llamar', icon: '📞' },
+  { id: 'llamar', label: 'Avisar', icon: '💬' },
 ] as const
 type TabId = typeof TABS[number]['id']
 
@@ -459,7 +459,7 @@ function SuppliersTab({ suppliers, onEdit, onToggle, onCall, calling }: {
           <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
             {s.phone && (
               <button onClick={() => onCall(s.id)} disabled={calling} style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600, borderRadius: 7, border: `1px solid ${C.teal}30`, background: C.tealDim, color: C.teal, cursor: calling ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                📞 Llamar
+                💬 Avisar
               </button>
             )}
             <button onClick={() => onEdit(s)} style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600, borderRadius: 7, border: `1px solid ${C.border}`, background: 'transparent', color: C.text3, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -697,7 +697,7 @@ function LlamarTab({ cartItems, suppliers, inventory, cart, onAddToCart, callSup
                 background: calling ? C.surface2 : `linear-gradient(135deg, ${C.teal}, #1aa89a)`, color: calling ? C.text3 : '#0C1018',
                 cursor: calling ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
               }}>
-                {calling ? 'Llamando...' : '📞 Llamar al proveedor'}
+                {calling ? 'Enviando...' : '💬 Avisar al proveedor'}
               </button>
             )}
           </div>
