@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { provisionElevenAgent } from "@/lib/provision-agent"
+import { provisionRetellAgent } from "@/lib/provision-retell"
+import { provisionPhoneNumber } from "@/lib/provision-number"
 import { requireAuth } from "@/lib/api-auth"
 import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
@@ -226,11 +227,22 @@ export async function POST(req: NextRequest) {
       await supabase.from("alert_rules").insert(alertRules)
     }
 
-    // ── 7. PROVISION AI AGENT ───────────────────────────────────────────────
-    const provision = await provisionElevenAgent(tenant_id)
+    // ── 7. PROVISION AI AGENT (Retell) ──────────────────────────────────────
+    const provision = await provisionRetellAgent(tenant_id)
 
-    logger.info('Onboarding complete', { tenantId: tenant_id })
-    return NextResponse.json({ success: true, agent_id: provision.agent_id })
+    // ── 8. PROVISION PHONE NUMBER (Twilio + SIP + Retell) ────────────────
+    let phoneResult = null
+    if (provision.success && provision.agent_id) {
+      phoneResult = await provisionPhoneNumber(tenant_id, provision.agent_id)
+    }
+
+    logger.info('Onboarding complete', { tenantId: tenant_id, agentId: provision.agent_id, phone: phoneResult?.agent_phone })
+    return NextResponse.json({
+      success: true,
+      agent_id: provision.agent_id,
+      agent_phone: phoneResult?.agent_phone,
+      phone_instructions: phoneResult?.instructions,
+    })
   } catch (err: any) {
     logger.error('Onboarding complete: error', {}, err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
