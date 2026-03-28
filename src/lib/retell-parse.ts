@@ -173,26 +173,42 @@ function extractFromTranscript(transcript: string, menu: MenuItem[]): Record<str
   const result: Record<string, any> = {}
   const lower = transcript.toLowerCase()
 
-  // Date
+  // Date — check "pasado mañana" BEFORE "mañana" to avoid false match
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
   const dayAfter = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10)
   const today = new Date().toISOString().slice(0, 10)
 
-  if (lower.includes('mañana') || lower.includes('manana')) result.date = tomorrow
-  else if (lower.includes('pasado mañana') || lower.includes('pasado manana')) result.date = dayAfter
+  if (lower.includes('pasado mañana') || lower.includes('pasado manana')) result.date = dayAfter
+  else if (lower.includes('mañana') || lower.includes('manana')) result.date = tomorrow
   else if (lower.includes('hoy')) result.date = today
   else {
-    // Try to find day of week
-    const days: Record<string, number> = { lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5, sabado: 6, domingo: 0 }
-    for (const [day, num] of Object.entries(days)) {
-      if (lower.includes(day)) {
-        const now = new Date()
-        const currentDay = now.getDay()
-        let diff = num - currentDay
-        if (diff <= 0) diff += 7
-        const target = new Date(now.getTime() + diff * 86400000)
-        result.date = target.toISOString().slice(0, 10)
-        break
+    // Try explicit date format: "el 15 de marzo", "el 3 de abril", "día 22"
+    const monthMap: Record<string, number> = {
+      enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+      julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
+    }
+    const explicitDate = lower.match(/(?:el |dia |día )?(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i)
+    if (explicitDate) {
+      const day = parseInt(explicitDate[1])
+      const month = monthMap[explicitDate[2].toLowerCase()]
+      const now = new Date()
+      let year = now.getFullYear()
+      const target = new Date(year, month, day)
+      if (target < now) { target.setFullYear(year + 1) }
+      result.date = target.toISOString().slice(0, 10)
+    } else {
+      // Try to find day of week
+      const days: Record<string, number> = { lunes: 1, martes: 2, miercoles: 3, miércoles: 3, jueves: 4, viernes: 5, sabado: 6, sábado: 6, domingo: 0 }
+      for (const [day, num] of Object.entries(days)) {
+        if (lower.includes(day)) {
+          const now = new Date()
+          const currentDay = now.getDay()
+          let diff = num - currentDay
+          if (diff <= 0) diff += 7
+          const target = new Date(now.getTime() + diff * 86400000)
+          result.date = target.toISOString().slice(0, 10)
+          break
+        }
       }
     }
   }
@@ -214,33 +230,40 @@ function extractFromTranscript(transcript: string, menu: MenuItem[]): Record<str
   ]
 
   // Extract ALL time mentions and use the LAST one (the confirmed one)
+  // Include all hours that a restaurant might use, with "y media" and "y cuarto" variants
   const timeMap: Record<string, string> = {
-    'una y media': '13:30', 'la una': '13:00',
-    'dos y media': '14:30', 'las dos': '14:00',
-    'tres y media': '15:30', 'las tres': '15:00',
-    'cuatro y media': '16:30', 'las cuatro': '16:00',
-    'ocho y media': '20:30', 'las ocho': '20:00',
-    'nueve y media': '21:30', 'las nueve': '21:00',
-    'diez y media': '22:30', 'las diez': '22:00',
-    'once y media': '23:30', 'las once': '23:00',
+    'una y media': '13:30', 'una y cuarto': '13:15', 'la una': '13:00', 'a la una': '13:00',
+    'dos y media': '14:30', 'dos y cuarto': '14:15', 'las dos': '14:00',
+    'tres y media': '15:30', 'tres y cuarto': '15:15', 'las tres': '15:00',
+    'cuatro y media': '16:30', 'cuatro y cuarto': '16:15', 'las cuatro': '16:00',
+    'cinco y media': '17:30', 'cinco y cuarto': '17:15', 'las cinco': '17:00',
+    'seis y media': '18:30', 'seis y cuarto': '18:15', 'las seis': '18:00',
+    'siete y media': '19:30', 'siete y cuarto': '19:15', 'las siete': '19:00',
+    'ocho y media': '20:30', 'ocho y cuarto': '20:15', 'las ocho': '20:00',
+    'nueve y media': '21:30', 'nueve y cuarto': '21:15', 'las nueve': '21:00',
+    'diez y media': '22:30', 'diez y cuarto': '22:15', 'las diez': '22:00',
+    'once y media': '23:30', 'once y cuarto': '23:15', 'las once': '23:00',
+    'doce y media': '12:30', 'las doce': '12:00',
   }
-  // Find ALL matches and keep last
+  // Find ALL matches and keep the one with the highest index (last mention = confirmed)
   let lastTime = ''
+  let lastTimeIdx = -1
   for (const [phrase, time] of Object.entries(timeMap)) {
     const idx = lower.lastIndexOf(phrase)
-    if (idx >= 0) {
-      // Check if this is the latest mention
-      if (!lastTime || idx > lower.lastIndexOf(Object.entries(timeMap).find(([,v]) => v === lastTime)?.[0] || '')) {
-        lastTime = time
-      }
+    if (idx >= 0 && idx > lastTimeIdx) {
+      lastTimeIdx = idx
+      lastTime = time
     }
   }
   if (lastTime) result.time = lastTime
   else {
     // Try numeric patterns - use last match
-    const matches = [...lower.matchAll(/a las? (\d{1,2})(?:\s*y\s*(media|cuarto))?/g)]
-    if (matches.length) {
-      const m = matches[matches.length - 1]
+    const timeRe = /a las? (\d{1,2})(?:\s*y\s*(media|cuarto))?/g
+    let tm: RegExpExecArray | null
+    let lastTm: RegExpExecArray | null = null
+    while ((tm = timeRe.exec(lower)) !== null) { lastTm = tm }
+    if (lastTm) {
+      const m = lastTm
       let h = parseInt(m[1])
       if (h < 6) h += 12
       const min = m[2] === 'media' ? '30' : m[2] === 'cuarto' ? '15' : '00'
@@ -249,31 +272,71 @@ function extractFromTranscript(transcript: string, menu: MenuItem[]): Record<str
   }
   if (!result.time) result.time = '13:00'
 
-  // Party size
+  // Party size — support Spanish number words and digit patterns
+  const spanishNums: Record<string, number> = {
+    un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5,
+    seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12,
+  }
+
+  // First try digit-based patterns (most reliable)
   const sizePatterns = [
     /(\d+)\s*personas/i,
     /para\s*(\d+)/i,
     /somos\s*(\d+)/i,
     /seremos\s*(\d+)/i,
+    /mesa\s+(?:para|de)\s*(\d+)/i,
   ]
   for (const p of sizePatterns) {
     const m = transcript.match(p)
     if (m) { result.party_size = parseInt(m[1]); break }
   }
-  if (lower.includes('dos personas') || lower.includes('dos dos')) result.party_size = 2
-  if (lower.includes('tres personas')) result.party_size = 3
-  if (lower.includes('cuatro personas')) result.party_size = 4
+
+  // Then try Spanish number words if no digit match found
+  if (!result.party_size) {
+    const wordPatterns = [
+      /(?:para|somos|seremos)\s+(un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)\b/i,
+      /(un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)\s+personas?/i,
+      /mesa\s+(?:para|de)\s+(un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)\b/i,
+    ]
+    for (const p of wordPatterns) {
+      const m = lower.match(p)
+      if (m && spanishNums[m[1].toLowerCase()]) {
+        result.party_size = spanishNums[m[1].toLowerCase()]
+        break
+      }
+    }
+  }
+
   if (!result.party_size) result.party_size = 2
 
-  // Customer name
+  // Customer name — robust extraction with multiple patterns
+  // Support: "me llamo X", "soy X", "a nombre de X", "para X Apellido", "mi nombre es X"
+  // Allow 1-3 word names (first + optional last names), capitalized words
+  const capName = '[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+'
+  const fullName = `(${capName}(?:\\s+${capName}){0,2})`
   const namePatterns = [
-    /(?:nombre|nombre de|a nombre de|me llamo|soy)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/i,
-    /(?:Arturo|Pedro|Juan|Maria|Ana|Carlos|Luis|Miguel|Jose|Antonio|David|Pablo|Laura|Sara|Elena)/i,
+    new RegExp(`(?:me llamo|mi nombre es|soy)\\s+${fullName}`, 'i'),
+    new RegExp(`(?:a nombre de|el nombre es|nombre)\\s+${fullName}`, 'i'),
+    new RegExp(`(?:para|de parte de)\\s+${fullName}`, 'i'),
   ]
+  // Use last match in transcript (the confirmed name, not an early mention)
+  let lastNameMatch = ''
   for (const p of namePatterns) {
-    const m = transcript.match(p)
-    if (m) { result.customer_name = m[1] || m[0]; break }
+    const globalP = new RegExp(p.source, 'gi')
+    let m: RegExpExecArray | null
+    let lastM: RegExpExecArray | null = null
+    while ((m = globalP.exec(transcript)) !== null) { lastM = m }
+    if (lastM && lastM[1]) { lastNameMatch = lastM[1].trim(); break }
   }
+  // Fallback: detect common Spanish first names anywhere in transcript
+  if (!lastNameMatch) {
+    const commonNames = /\b(Arturo|Pedro|Juan|María|Maria|Ana|Carlos|Luis|Miguel|José|Jose|Antonio|David|Pablo|Laura|Sara|Elena|Carmen|Marta|Lucia|Lucía|Javier|Fernando|Manuel|Diego|Raúl|Raul|Sergio|Alejandro|Alejandra|Patricia|Isabel|Rosa|Pilar|Roberto|Ricardo|Jorge|Ángel|Angel|Andrés|Andres|Daniel|Adrián|Adrian|Álvaro|Alvaro|Marcos|Cristina|Silvia|Sandra|Beatriz|Rocío|Rocio|Alberto|Francisco|Paco|Sofía|Sofia|Paula|Claudia|Nuria|Inés|Ines|Teresa|Natalia|Irene|Alicia|Mario|Iván|Ivan|Víctor|Victor|Hugo|Gonzalo|Tomás|Tomas|Emilio|Gabriel|Samuel|Hector|Héctor|Rubén|Ruben|Óscar|Oscar|Enrique|Guillermo)\b/g
+    let nm: RegExpExecArray | null
+    let lastNm: RegExpExecArray | null = null
+    while ((nm = commonNames.exec(transcript)) !== null) { lastNm = nm }
+    if (lastNm) lastNameMatch = lastNm[0]
+  }
+  if (lastNameMatch) result.customer_name = lastNameMatch
 
   // Intent
   if (lower.includes('reserv') || lower.includes('mesa') || lower.includes('comer')) result.intent = 'reserva'
