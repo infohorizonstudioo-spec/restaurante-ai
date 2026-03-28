@@ -389,11 +389,13 @@ export default function LlamadasPage() {
                                 <button onClick={async () => {
                                   const sess = await supabase.auth.getSession()
                                   if (!sess.data.session) return
-                                  await fetch('/api/voice/outbound', {
+                                  const r = await fetch('/api/retell/outbound', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
-                                    body: JSON.stringify({ phone_number: call.caller_phone, reason: 'callback', customer_name: call.customer_name })
+                                    body: JSON.stringify({ tenant_id: tid, call_type: 'callback', phone: call.caller_phone, customer_name: call.customer_name || 'cliente' })
                                   })
+                                  if (r.ok) toast.push({ title: 'Llamando de vuelta a ' + (call.caller_phone || 'cliente'), type: 'call', priority: 'info', icon: '📞' })
+                                  else toast.push({ title: 'Error al llamar', type: 'call', priority: 'critical', icon: '❌' })
                                 }}
                                 style={{fontSize:11, padding:'5px 12px', borderRadius:7, border:`1px solid ${C.teal}40`, background:C.tealDim, color:C.teal, cursor:'pointer', fontFamily:'inherit', fontWeight:500, marginRight:8}}>
                                   📞 {cs.callBack}
