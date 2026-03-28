@@ -89,6 +89,27 @@ export default function ProveedoresPage() {
   // Auto-order trigger
   const [autoOrdering, setAutoOrdering] = useState(false)
 
+  // Inventory intelligence alerts
+  const [invAlerts, setInvAlerts] = useState<{ type: string; urgency: string; product?: string; message: string; suggestedMultiplier?: number }[]>([])
+  const [alertsLoading, setAlertsLoading] = useState(false)
+
+  /* ── Load alerts from inventory intelligence ─────────────────────── */
+  const loadAlerts = useCallback(async (tenantId: string) => {
+    setAlertsLoading(true)
+    try {
+      const sess = await supabase.auth.getSession()
+      if (!sess.data.session) return
+      const res = await fetch(`/api/inventory-alerts?tenant_id=${tenantId}`, {
+        headers: { 'Authorization': 'Bearer ' + sess.data.session.access_token },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setInvAlerts(data.alerts || [])
+      }
+    } catch { /* silent */ }
+    finally { setAlertsLoading(false) }
+  }, [])
+
   /* ── Load data ───────────────────────────────────────────────────── */
   const loadAll = useCallback(async (tenantId: string) => {
     const [s, i, o] = await Promise.all([
@@ -100,7 +121,8 @@ export default function ProveedoresPage() {
     setInventory(i.data || [])
     setOrders(o.data || [])
     setLoading(false)
-  }, [])
+    loadAlerts(tenantId)
+  }, [loadAlerts])
 
   useEffect(() => {
     (async () => {
@@ -343,6 +365,41 @@ export default function ProveedoresPage() {
           </button>
         ))}
       </div>
+
+      {/* Inventory Intelligence Alerts */}
+      {invAlerts.length > 0 && (
+        <div style={{ maxWidth: 860, margin: '0 auto', padding: '16px 24px 0' }}>
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <span style={{ fontSize: 15 }}>🧠</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: C.amber, letterSpacing: '-0.01em' }}>Inteligencia de Inventario</span>
+              {alertsLoading && <span style={{ fontSize: 11, color: C.text3, marginLeft: 'auto' }}>Actualizando...</span>}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {invAlerts.map((alert, idx) => {
+                const badgeColor = alert.urgency === 'critical' ? C.red
+                  : alert.urgency === 'warning' ? C.amber
+                  : C.teal
+                const badgeBg = alert.urgency === 'critical' ? C.redDim
+                  : alert.urgency === 'warning' ? C.amberDim
+                  : C.tealDim
+                const badgeLabel = alert.urgency === 'critical' ? 'CRITICO'
+                  : alert.urgency === 'warning' ? 'ATENCION'
+                  : 'INFO'
+                return (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', background: C.surface2, borderRadius: 8, border: `1px solid ${alert.urgency === 'critical' ? 'rgba(248,113,113,0.20)' : C.border}` }}>
+                    <span style={{
+                      flexShrink: 0, padding: '2px 8px', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+                      color: badgeColor, background: badgeBg, borderRadius: 6,
+                    }}>{badgeLabel}</span>
+                    <span style={{ fontSize: 12, color: C.text, lineHeight: '1.45' }}>{alert.message}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '20px 24px' }}>

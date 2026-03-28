@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
+import { generateInventoryAlerts, getOrderMultiplier, summarizeAlertsForSms } from '@/lib/inventory-intelligence'
 
 export const dynamic = 'force-dynamic'
 
@@ -70,6 +71,19 @@ interface OrderResult {
 async function processSupplierOrders(tenantId: string, tenantName: string, agentPhone: string, businessPhone: string): Promise<OrderResult> {
   const result: OrderResult = { tenant_id: tenantId, orders_created: 0, sms_sent: 0, errors: [] }
 
+  // 0. Run inventory intelligence — get alerts and order multiplier
+  let alerts: Awaited<ReturnType<typeof generateInventoryAlerts>> = []
+  let orderMultiplier = 1.0
+  try {
+    alerts = await generateInventoryAlerts(tenantId)
+    orderMultiplier = getOrderMultiplier()
+    if (orderMultiplier > 1.0) {
+      logger.info('Inventory intelligence: applying order multiplier', { tenantId, orderMultiplier, alertCount: alerts.length })
+    }
+  } catch (err) {
+    logger.error('Inventory intelligence failed, proceeding with normal quantities', { tenantId }, err)
+  }
+
   // 1. Find low-stock items with a supplier assigned
   // Supabase PostgREST doesn't support column-to-column comparison,
   // so we fetch all active items with a supplier and filter in JS.
@@ -111,22 +125,32 @@ async function processSupplierOrders(tenantId: string, tenantName: string, agent
       if (!supplier) continue
 
       // Build order items with suggested quantity (fill up to max_stock)
-      const orderItems = items.map(i => ({
-        item_id: i.id,
-        name: i.name,
-        qty: Math.max(1, (i.max_stock || i.min_stock * 2) - i.current_stock),
-        unit: i.unit,
-        price: i.price_per_unit || 0,
-      }))
+      // Apply inventory intelligence multiplier for seasonal/event spikes
+      const orderItems = items.map(i => {
+        const baseQty = Math.max(1, (i.max_stock || i.min_stock * 2) - i.current_stock)
+        const adjustedQty = Math.ceil(baseQty * orderMultiplier)
+        return {
+          item_id: i.id,
+          name: i.name,
+          qty: adjustedQty,
+          unit: i.unit,
+          price: i.price_per_unit || 0,
+        }
+      })
       const total = orderItems.reduce((s, i) => s + i.qty * i.price, 0)
 
-      // Create supply_order
+      // Create supply_order (include intelligence context in notes)
+      const alertSummary = summarizeAlertsForSms(alerts)
+      const orderNotes = orderMultiplier > 1.0
+        ? `Pedido automatico — stock bajo + ajuste inteligente (x${orderMultiplier}). ${alertSummary}`
+        : 'Pedido automatico — stock bajo detectado'
+
       const { error: orderErr } = await supabase.from('supply_orders').insert({
         tenant_id: tenantId,
         supplier_id: supplierId,
         items: orderItems,
         total,
-        notes: 'Pedido automático — stock bajo detectado',
+        notes: orderNotes,
         status: 'pending',
         ordered_by: 'system',
         priority: items.some(i => i.current_stock === 0) ? 'urgent' : 'normal',
@@ -148,7 +172,8 @@ async function processSupplierOrders(tenantId: string, tenantName: string, agent
       if (supplier.phone) {
         const contactName = supplier.contact_name || supplier.name
         const fromNumber = agentPhone || '+12138753573'
-        const smsBody = `Hola ${contactName}, te escribimos de ${tenantName}. Necesitamos: ${itemsText}${moreText}. Llamanos al ${businessPhone} cuando puedas para confirmar. Gracias.`
+        const alertNote = alertSummary ? ` (${alertSummary})` : ''
+        const smsBody = `Hola ${contactName}, te escribimos de ${tenantName}. Necesitamos: ${itemsText}${moreText}${alertNote}. Llamanos al ${businessPhone} cuando puedas para confirmar. Gracias.`
 
         const smsResult = await sendSms(fromNumber, supplier.phone, smsBody)
         if (smsResult.ok) {
