@@ -63,9 +63,17 @@ export default function AssistantChat() {
     setLoading(true)
 
     try {
+      // Obtener sesión para auth
+      const { supabase } = await import('@/lib/supabase')
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token || ''
+
       const res = await fetch('/api/stream', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
           tenant_id: tenant?.id,
