@@ -214,12 +214,34 @@ export default function ProveedoresPage() {
     if (!tid) return
     setCalling(true)
     try {
-      const sess = await supabase.auth.getSession()
-      if (!sess.data.session) { toast.push({ title: 'Sesion expirada', type: 'error', priority: 'critical', icon: '❌' }); return }
+      // Resolver datos del proveedor para la llamada
+      const supplier = suppliers.find(s => s.id === supplierId)
+      if (!supplier?.phone) {
+        toast.push({ title: 'El proveedor no tiene teléfono', type: 'error', priority: 'critical', icon: '❌' }); return
+      }
+      // Buscar pedido pendiente si hay
+      let products: string[] = supplier.products || []
+      let notes = ''
+      if (orderId) {
+        const order = orders.find(o => o.id === orderId)
+        if (order?.items) {
+          products = (order.items as any[]).map(i => `${i.quantity || 1}x ${i.name}`)
+          notes = order.notes || ''
+        }
+      }
       const res = await fetch('/api/retell/outbound', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
-        body: JSON.stringify({ call_type: 'supplier', supplier_id: supplierId, order_id: orderId || undefined }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: tid,
+          call_type: 'supplier',
+          phone: supplier.phone,
+          supplier_name: supplier.name,
+          supplier_id: supplierId,
+          order_id: orderId || undefined,
+          products,
+          notes,
+        }),
       })
       const data = await res.json()
       if (res.ok) {

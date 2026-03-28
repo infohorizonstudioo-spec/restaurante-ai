@@ -144,11 +144,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'tenant_id, phone, and call_type required' }, { status: 400 })
     }
 
-    // Verificar autenticación
-    const apiKey = req.headers.get('x-agent-key') || req.headers.get('authorization')?.replace('Bearer ', '')
+    // Verificar autenticación: API key O sesión de usuario autenticado
+    const apiKey = req.headers.get('x-agent-key')
     const validKey = process.env.AGENT_API_KEY
-    if (validKey && apiKey !== validKey) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    const isApiKeyAuth = validKey && apiKey === validKey
+
+    if (!isApiKeyAuth) {
+      // Intentar auth por sesión de usuario
+      const { requireAuth } = await import('@/lib/api-auth')
+      const auth = await requireAuth(req)
+      if (!auth.ok || auth.tenantId !== tenantId) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+      }
     }
 
     // Leer tenant
