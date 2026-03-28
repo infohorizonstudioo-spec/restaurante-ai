@@ -72,25 +72,15 @@ export async function POST(req: Request) {
 
     if (retellAgentId) {
       // ── RETELL AI ──
-      // 1. Registrar la llamada en Retell para obtener call_id
-      // 2. Usar call_id en el WebSocket Stream de Twilio
-      const { registerInboundCall } = await import('@/lib/retell')
-      const retellCall = await registerInboundCall({
-        agent_id: retellAgentId,
-        from_number: callerPhone,
-        to_number: calledNumber,
-        metadata: { tenant_id: tenant?.id || '', call_sid: callSid },
-      })
-
-      const retellWsUrl = `wss://api.retellai.com/audio-websocket/${retellCall.call_id}`
+      // Retell maneja inbound calls vía SIP trunking nativo.
+      // Twilio debe reenviar la llamada a Retell vía SIP.
+      // Retell ya tiene el número importado y sabe qué agente usar.
+      const sipUri = `sip:${calledNumber.replace('+', '')}@5t4n6j0wnrl.sip.livekit.cloud`
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Connect>
-    <Stream url="${retellWsUrl}">
-      <Parameter name="caller_phone" value="${callerPhone}" />
-      <Parameter name="call_sid" value="${callSid}" />
-    </Stream>
-  </Connect>
+  <Dial callerId="${callerPhone}">
+    <Sip>${sipUri}</Sip>
+  </Dial>
 </Response>`
     } else {
       // ── ELEVENLABS (legacy) ──
