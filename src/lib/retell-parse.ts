@@ -100,26 +100,41 @@ function extractFromTranscript(transcript: string): Record<string, any> {
     /las? diez/i,
   ]
 
-  if (lower.includes('una y media')) result.time = '13:30'
-  else if (lower.includes('la una')) result.time = '13:00'
-  else if (lower.includes('las dos y media')) result.time = '14:30'
-  else if (lower.includes('las dos')) result.time = '14:00'
-  else if (lower.includes('las tres')) result.time = '15:00'
-  else if (lower.includes('las ocho y media')) result.time = '20:30'
-  else if (lower.includes('las ocho')) result.time = '20:00'
-  else if (lower.includes('las nueve y media')) result.time = '21:30'
-  else if (lower.includes('las nueve')) result.time = '21:00'
-  else if (lower.includes('las diez')) result.time = '22:00'
+  // Extract ALL time mentions and use the LAST one (the confirmed one)
+  const timeMap: Record<string, string> = {
+    'una y media': '13:30', 'la una': '13:00',
+    'dos y media': '14:30', 'las dos': '14:00',
+    'tres y media': '15:30', 'las tres': '15:00',
+    'cuatro y media': '16:30', 'las cuatro': '16:00',
+    'ocho y media': '20:30', 'las ocho': '20:00',
+    'nueve y media': '21:30', 'las nueve': '21:00',
+    'diez y media': '22:30', 'las diez': '22:00',
+    'once y media': '23:30', 'las once': '23:00',
+  }
+  // Find ALL matches and keep last
+  let lastTime = ''
+  for (const [phrase, time] of Object.entries(timeMap)) {
+    const idx = lower.lastIndexOf(phrase)
+    if (idx >= 0) {
+      // Check if this is the latest mention
+      if (!lastTime || idx > lower.lastIndexOf(Object.entries(timeMap).find(([,v]) => v === lastTime)?.[0] || '')) {
+        lastTime = time
+      }
+    }
+  }
+  if (lastTime) result.time = lastTime
   else {
-    const m = lower.match(/a las? (\d{1,2})(?:\s*y\s*(media|cuarto))?/)
-    if (m) {
+    // Try numeric patterns - use last match
+    const matches = [...lower.matchAll(/a las? (\d{1,2})(?:\s*y\s*(media|cuarto))?/g)]
+    if (matches.length) {
+      const m = matches[matches.length - 1]
       let h = parseInt(m[1])
-      if (h < 6) h += 12 // assume PM for small numbers
+      if (h < 6) h += 12
       const min = m[2] === 'media' ? '30' : m[2] === 'cuarto' ? '15' : '00'
       result.time = `${h.toString().padStart(2, '0')}:${min}`
     }
   }
-  if (!result.time) result.time = '13:00' // default lunch
+  if (!result.time) result.time = '13:00'
 
   // Party size
   const sizePatterns = [
