@@ -270,8 +270,10 @@ export default function PedidosPage() {
   const activos = orders.filter(o => !['delivered', 'cancelled'].includes(o.status))
 
   async function cambiarEstado(id: string, status: string) {
+    const { data: { session: s } } = await supabase.auth.getSession()
     const res = await fetch('/api/orders', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...(s?.access_token ? { 'Authorization': 'Bearer ' + s.access_token } : {}) },
       body: JSON.stringify({ id, tenant_id: tid, status })
     })
     if (!res.ok) {
