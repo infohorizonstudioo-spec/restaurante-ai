@@ -220,6 +220,8 @@ export default function OnboardingPage() {
   function prev(){if(step>0)setStep(step-1)}
 
   // Submit
+  const [activationResult, setActivationResult] = useState<{agent_phone?:string;phone_instructions?:string}|null>(null)
+
   async function activate(){
     if(!tid||saving)return; setSaving(true)
     try{
@@ -227,7 +229,16 @@ export default function OnboardingPage() {
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({tenant_id:tid,...d,total_tables:d.total_resources||d.resource_names.length||undefined,reservation_duration:d.appointment_duration}),
       })
-      if(res.ok){localStorage.removeItem('reservo_onboarding_draft');router.push('/panel')}
+      if(res.ok){
+        const data = await res.json()
+        localStorage.removeItem('reservo_onboarding_draft')
+        if(data.agent_phone){
+          // Mostrar instrucciones de desvío antes de ir al panel
+          setActivationResult({ agent_phone: data.agent_phone, phone_instructions: data.phone_instructions })
+        } else {
+          router.push('/panel')
+        }
+      }
     }finally{setSaving(false)}
   }
 
@@ -282,6 +293,39 @@ export default function OnboardingPage() {
   case 'activate':return(<div style={{textAlign:'center',maxWidth:500,margin:'0 auto'}}><div style={{fontSize:64,marginBottom:16}}>🚀</div><h1 style={{fontSize:28,fontWeight:800,color:C.text,lineHeight:1.3}}>¡Tu recepcionista <span style={{color:C.amber}}>{d.agent_name}</span> está lista!</h1><p style={{fontSize:15,color:C.sub,marginTop:16,lineHeight:1.6}}>Al activar, tu negocio empezará a recibir {L.booking.toLowerCase()}s automáticamente.</p><div style={{marginTop:32,display:'flex',flexDirection:'column',gap:12,textAlign:'left',background:C.card2,borderRadius:14,padding:'20px 24px'}}>{[`${d.agent_name} atenderá tus llamadas`,`Gestionará ${L.booking.toLowerCase()}s automáticamente`,d.reminders_enabled?`Enviará recordatorios a tus ${L.client.toLowerCase()}s`:null,d.channels.length>1?`Atenderá por ${d.channels.length} canales`:null,'Puedes cambiar todo después'].filter(Boolean).map((t,i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:10}}><span style={{color:C.green,fontSize:16}}>✓</span><span style={{fontSize:13,color:C.text}}>{t}</span></div>))}</div><button onClick={activate} disabled={saving} style={{marginTop:32,padding:'16px 48px',fontSize:16,fontWeight:800,background:saving?C.muted:`linear-gradient(135deg,${C.amber},#E8923A)`,color:saving?C.sub:'#0C1018',border:'none',borderRadius:14,cursor:saving?'wait':'pointer',fontFamily:'inherit',boxShadow:saving?'none':'0 4px 20px rgba(240,168,78,0.3)',transition:'all 0.2s'}}>{saving?'⏳ Activando...':'🚀 Activar recepcionista'}</button><p style={{fontSize:11,color:C.muted,marginTop:12}}>Puedes pausar o desactivar en cualquier momento</p></div>)
 
   default:return null}}
+
+  // ── PANTALLA DE DESVÍO (después de activar) ────────────────────────────────
+  if (activationResult) {
+    const code = activationResult.agent_phone ? `**21*${activationResult.agent_phone.replace('+', '00')}#` : ''
+    return (
+      <div style={{background:C.bg,minHeight:'100vh',fontFamily:"'Sora',-apple-system,sans-serif",display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div style={{maxWidth:480,width:'100%',padding:32,textAlign:'center'}}>
+          <div style={{width:64,height:64,borderRadius:'50%',background:C.amberDim,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 24px',fontSize:28}}>✅</div>
+          <h1 style={{fontSize:24,fontWeight:800,color:C.text,marginBottom:8}}>Tu agente está listo</h1>
+          <p style={{fontSize:14,color:C.sub,marginBottom:32,lineHeight:1.6}}>Solo queda un paso: desviar las llamadas de tu negocio para que conteste tu recepcionista IA.</p>
+
+          <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:24,marginBottom:24,textAlign:'left'}}>
+            <p style={{fontSize:11,fontWeight:700,color:C.muted,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:12}}>Marca este código desde el teléfono de tu local</p>
+            <div style={{background:C.bg,borderRadius:12,padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:16}}>
+              <span style={{fontSize:22,fontWeight:800,color:C.amber,letterSpacing:'0.05em',fontFamily:'monospace'}}>{code}</span>
+            </div>
+            <p style={{fontSize:12,color:C.sub,lineHeight:1.6}}>
+              Esto activa el desvío de llamadas. Cuando alguien llame a tu número de siempre, contestará tu recepcionista IA automáticamente.
+            </p>
+            <div style={{marginTop:16,padding:'12px 16px',background:C.amberDim,borderRadius:10,border:`1px solid ${C.amber}33`}}>
+              <p style={{fontSize:11,color:C.amber,fontWeight:600}}>Tu número receptor: {activationResult.agent_phone}</p>
+            </div>
+          </div>
+
+          <p style={{fontSize:11,color:C.muted,marginBottom:24}}>Para desactivar el desvío en cualquier momento: marca <b style={{color:C.text}}>##21#</b></p>
+
+          <button onClick={()=>router.push('/panel')} style={{width:'100%',padding:'14px 24px',background:`linear-gradient(135deg,${C.amber},#E8923A)`,border:'none',borderRadius:12,color:'#0C1018',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+            Ir al panel →
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   // ── MAIN RENDER ────────────────────────────────────────────────────────────
   return(
