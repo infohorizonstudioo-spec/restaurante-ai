@@ -139,6 +139,41 @@ function DemoWidget() {
   )
 }
 
+/* ─── ROI CALCULATOR ─── */
+function ROICalculator() {
+  const [calls, setCalls] = useState(5)
+  const lost = calls * 45 * 30
+  return (
+    <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(240,168,78,0.2)',borderRadius:20,padding:'36px 32px',textAlign:'center',boxShadow:'0 8px 40px rgba(0,0,0,0.3)'}}>
+      <p style={{fontSize:13,fontWeight:600,color:'#F0A84E',letterSpacing:'0.06em',marginBottom:16}}>CALCULADORA DE OPORTUNIDADES PERDIDAS</p>
+      <p style={{fontSize:15,color:'rgba(255,255,255,0.6)',marginBottom:24}}>¿Cuántas llamadas pierdes al día?</p>
+      <div style={{display:'flex',alignItems:'center',gap:16,justifyContent:'center',marginBottom:8}}>
+        <span style={{fontSize:14,color:'rgba(255,255,255,0.3)'}}>1</span>
+        <input
+          type="range"
+          min={1}
+          max={20}
+          value={calls}
+          onChange={e => setCalls(Number(e.target.value))}
+          style={{width:280,accentColor:'#F0A84E',cursor:'pointer'}}
+        />
+        <span style={{fontSize:14,color:'rgba(255,255,255,0.3)'}}>20</span>
+      </div>
+      <p style={{fontSize:40,fontWeight:800,color:'#F0A84E',letterSpacing:'-0.04em',marginBottom:4}}>
+        {calls} llamadas/día
+      </p>
+      <div style={{background:'rgba(248,113,113,0.08)',border:'1px solid rgba(248,113,113,0.2)',borderRadius:12,padding:'16px 20px',marginBottom:24,marginTop:16}}>
+        <p style={{fontSize:14,color:'rgba(255,255,255,0.5)',marginBottom:4}}>Estás perdiendo aproximadamente</p>
+        <p style={{fontSize:36,fontWeight:800,color:'#F87171',letterSpacing:'-0.03em'}}>{lost.toLocaleString('es-ES')}€<span style={{fontSize:16,fontWeight:500,color:'rgba(255,255,255,0.35)'}}>/mes</span></p>
+        <p style={{fontSize:12,color:'rgba(255,255,255,0.3)',marginTop:6}}>Basado en un ingreso medio de 45€ por reserva</p>
+      </div>
+      <Link href="/registro" className="btn-primary" style={{display:'inline-block',padding:'14px 32px',fontSize:15,borderRadius:12,boxShadow:'0 6px 24px rgba(240,168,78,0.35)'}}>
+        Recuperalas con Reservo →
+      </Link>
+    </div>
+  )
+}
+
 /* ─── MAIN PAGE ─── */
 export default function HomePage() {
   const C = {
@@ -344,6 +379,11 @@ export default function HomePage() {
           ))}
         </div>
       </div>
+
+      {/* ── ROI CALCULATOR ── */}
+      <section style={{padding:'48px clamp(16px,5vw,64px)',maxWidth:700,margin:'0 auto'}}>
+        <ROICalculator />
+      </section>
 
       {/* ══════════════════════════════════════════
           1.5 FUNCIONALIDADES — Feature cards con stagger
@@ -865,6 +905,37 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── ONBOARDING TIMELINE ── */}
+      <section style={{padding:'0 clamp(16px,5vw,64px) 90px',maxWidth:700,margin:'0 auto'}}>
+        <div style={{textAlign:'center',marginBottom:40}}>
+          <p style={{fontSize:12,fontWeight:600,color:'#2DD4BF',letterSpacing:'0.08em',marginBottom:12}}>TIMELINE REAL</p>
+          <h3 style={{fontSize:'clamp(22px,2.5vw,32px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.2,color:'#E8EEF6'}}>
+            De registrarte a estar en vivo
+          </h3>
+        </div>
+        <div style={{position:'relative',paddingLeft:32}}>
+          {/* Vertical line */}
+          <div style={{position:'absolute',left:11,top:8,bottom:8,width:2,background:'rgba(240,168,78,0.2)',borderRadius:2}}/>
+          {[
+            {time:'Minuto 0',text:'Te registras y configuras tu negocio',color:'#F0A84E'},
+            {time:'Hora 1',text:'Tu agente ya atiende llamadas de prueba',color:'#2DD4BF'},
+            {time:'Día 2',text:'Activas el número real — estás en vivo',color:'#34D399'},
+            {time:'Semana 1',text:'Primeros resultados y ajustes automáticos',color:'#60A5FA'},
+          ].map(({time,text,color},i)=>(
+            <div key={time} style={{display:'flex',alignItems:'flex-start',gap:20,marginBottom:i<3?32:0,position:'relative'}}>
+              {/* Dot */}
+              <div style={{position:'absolute',left:-32,top:4,width:24,height:24,borderRadius:'50%',background:`${color}18`,border:`2px solid ${color}`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:color}}/>
+              </div>
+              <div>
+                <p style={{fontSize:12,fontWeight:700,color,letterSpacing:'0.04em',marginBottom:4}}>{time.toUpperCase()}</p>
+                <p style={{fontSize:15,color:'rgba(255,255,255,0.7)',fontWeight:500}}>{text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ══════════════════════════════════════════
           9. EMPLEADO vs RESERVO — Comparación visual
          ══════════════════════════════════════════ */}
@@ -919,13 +990,23 @@ export default function HomePage() {
             <p style={{fontSize:15,color:C.muted}}>Sin contratos. Sin permanencia. Pagas solo por lo que usas.</p>
           </div>
 
+          {/* Guarantee badge */}
+          <div style={{background:'rgba(52,211,153,0.06)',border:'1px solid rgba(52,211,153,0.15)',borderRadius:14,padding:'18px 28px',marginBottom:40,display:'flex',alignItems:'center',justifyContent:'center',gap:24,flexWrap:'wrap'}}>
+            {['30 días de prueba gratis','Sin tarjeta','Cancela cuando quieras','Devolución garantizada'].map(t=>(
+              <div key={t} style={{display:'flex',alignItems:'center',gap:7}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                <span style={{fontSize:13.5,color:'rgba(255,255,255,0.7)',fontWeight:500}}>{t}</span>
+              </div>
+            ))}
+          </div>
+
           {/* Pricing cards */}
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20,alignItems:'start'}} className="price-grid">
             {[
-              {plan:'Starter',price:'99',calls:'50 llamadas',sub:'Incluidas al mes',features:['Recepcionista 24/7','Llamadas + WhatsApp + Email','Reservas automáticas','Panel de control','Soporte por email'],cta:'Empezar gratis',highlight:false},
-              {plan:'Business',price:'299',calls:'200 llamadas',sub:'Incluidas al mes',features:['Todo lo de Starter','Reconoce clientes habituales','Decisiones personalizadas','Estadísticas avanzadas','SMS de confirmación','Soporte prioritario'],cta:'Más popular',highlight:true},
-              {plan:'Enterprise',price:'499',calls:'600 llamadas',sub:'Incluidas al mes',features:['Todo lo de Business','Hasta 3 locales','Manager dedicado','SLA garantizado','Soporte 24/7'],cta:'Contactar',highlight:false},
-            ].map(({plan,price,calls,sub,features,cta,highlight})=>(
+              {plan:'Starter',price:'99',calls:'50 llamadas/mes',rate:'0,90€/llamada extra',features:['Recepcionista IA 24/7 con voz natural','Gestión de reservas automática','Panel con actividad en tiempo real','Base de clientes con historial','Gestión de mesas y espacios','Control de turnos y equipo','Agenda y calendario','SMS de confirmación y recordatorios','Adaptado a tu tipo de negocio','Soporte por email'],cta:'Empezar Starter',highlight:false},
+              {plan:'Pro',price:'299',calls:'200 llamadas/mes',rate:'0,70€/llamada extra',features:['Todo lo de Starter +','Pedidos y encargos por teléfono','Entregas a domicilio con dirección','Estadísticas avanzadas (conversión, hora pico)','Sugerencias diarias de la IA','Aprendizaje automático de patrones','Canal WhatsApp automático','CRM avanzado (scoring, VIP, at-risk)','Exportación de datos','Soporte prioritario'],cta:'Empezar Pro',highlight:true},
+              {plan:'Business',price:'499',calls:'600 llamadas/mes',rate:'0,50€/llamada extra',features:['Todo lo de Pro +','Canal Email automático','Gestión de proveedores e inventario','Auto-pedidos a proveedores (semanal)','Inteligencia de inventario y predicción','Informes PDF (registro jornada laboral)','Multi-usuario','Soporte dedicado con respuesta rápida'],cta:'Empezar Business',highlight:false},
+            ].map(({plan,price,calls,rate,features,cta,highlight})=>(
               <div key={plan} className="plan-card" style={{
                 background: highlight ? 'linear-gradient(135deg,rgba(240,168,78,0.08),rgba(240,168,78,0.03))' : 'rgba(255,255,255,0.02)',
                 border: highlight ? `2px solid ${C.amber}` : '1px solid rgba(255,255,255,0.07)',
@@ -940,7 +1021,7 @@ export default function HomePage() {
                   <span style={{fontSize:14,color:C.muted,marginBottom:8}}>/mes</span>
                 </div>
                 <p style={{fontSize:13,fontWeight:600,color:highlight?C.amber:C.text,marginBottom:2}}>{calls}</p>
-                <p style={{fontSize:12,color:'rgba(255,255,255,0.3)',marginBottom:24}}>{sub}</p>
+                <p style={{fontSize:12,color:'rgba(255,255,255,0.3)',marginBottom:24}}>{rate}</p>
                 <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:28}}>
                   {features.map(f=>(
                     <div key={f} style={{display:'flex',alignItems:'center',gap:8}}>
@@ -959,7 +1040,7 @@ export default function HomePage() {
           {/* Usage-based note */}
           <div style={{marginTop:32,textAlign:'center'}}>
             <p style={{fontSize:13.5,color:C.muted,lineHeight:1.7}}>
-              Llamadas extra: 0,79€/llamada · Mensajes WhatsApp: desde 0,05€ · SMS: desde 0,08€
+              Precios sin IVA · Se aplica 21% IVA en el checkout · Facturación mensual
             </p>
             <p style={{fontSize:14,fontWeight:600,color:C.text,marginTop:8}}>
               Pagas solo por lo que usas. Sin sorpresas.
@@ -983,7 +1064,10 @@ export default function HomePage() {
               {q:'¿También responde WhatsApp y emails?',a:'Sí. Es una recepcionista completa. Da igual por dónde te contacten: responde con la misma inteligencia y personalización.'},
               {q:'¿De verdad decide por su cuenta?',a:'Sí. Conoce tu negocio: tus horarios, tus reglas, tus excepciones. No sigue un guion — actúa como una persona de tu equipo.'},
               {q:'¿Y si tengo pocas llamadas?',a:'Precisamente. Cada llamada cuenta más cuando tienes pocas. Una sola oportunidad perdida puede ser un cliente que no vuelve.'},
-              {q:'¿Puedo cancelar cuando quiera?',a:'Sí, sin permanencia ni penalizaciones. Es mes a mes.'},
+              {q:'¿Puedo cancelar cuando quiera?',a:'Sí, sin permanencia ni penalización. Es mes a mes.'},
+              {q:'¿Y si la IA se equivoca?',a:'El agente escala a ti automáticamente si no tiene confianza. Tú decides el umbral.'},
+              {q:'¿Se integra con mi sistema actual?',a:'Funciona con cualquier negocio. Solo necesitas un número de teléfono.'},
+              {q:'¿Cuánto tardo en tenerlo funcionando?',a:'Menos de 48 horas. La mayoría activan en el mismo día.'},
             ].map(({q,a})=>(
               <div key={q} style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'20px 24px'}}>
                 <p style={{fontSize:15,fontWeight:600,color:C.text,marginBottom:8}}>{q}</p>
@@ -1010,9 +1094,18 @@ export default function HomePage() {
             <p style={{fontSize:17,color:C.muted,marginBottom:12,lineHeight:1.7}}>
               Llaman, escriben, preguntan. Y tú no siempre puedes responder. Tu recepcionista sí.
             </p>
-            <p style={{fontSize:15.5,fontWeight:600,color:C.text,marginBottom:40}}>
+            <p style={{fontSize:15.5,fontWeight:600,color:C.text,marginBottom:24}}>
               Mientras tú trabajas, esto responde. Siempre.
             </p>
+            {/* Urgency / scarcity */}
+            <div style={{background:'rgba(248,113,113,0.06)',border:'1px solid rgba(248,113,113,0.15)',borderRadius:12,padding:'14px 20px',marginBottom:28,display:'inline-block'}}>
+              <p style={{fontSize:14,color:'rgba(255,255,255,0.7)',fontWeight:600,marginBottom:4}}>
+                Plazas limitadas este mes — onboarding personalizado gratuito para los primeros 50 negocios
+              </p>
+              <p style={{fontSize:13,color:C.amber,fontWeight:700}}>
+                37 negocios ya activos
+              </p>
+            </div>
             <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
               <Link href="/registro" className="btn-primary" style={{padding:'16px 40px',fontSize:16,borderRadius:14,display:'inline-block',boxShadow:'0 8px 32px rgba(240,168,78,0.4)'}}>
                 Empezar gratis →

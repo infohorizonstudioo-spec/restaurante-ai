@@ -636,6 +636,94 @@ input, textarea, select { font-family: var(--rz-font); }
 }
 
 /* ═══════════════════════════════════════════════════════════
+   RESPONSIVE — Mobile Sidebar & Hamburger Menu
+═══════════════════════════════════════════════════════════ */
+
+/* Hamburger button — hidden on desktop */
+.rz-hamburger {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1100;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--rz-r-md);
+  background: var(--rz-surface);
+  border: 1px solid var(--rz-border-md);
+  color: var(--rz-amber);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--rz-shadow-md);
+  transition: background 0.2s ease, border-color 0.2s ease;
+  padding: 0;
+}
+.rz-hamburger:hover {
+  background: var(--rz-surface-2);
+  border-color: var(--rz-amber);
+}
+
+/* Sidebar overlay — hidden by default */
+.rz-sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  /* Show hamburger on mobile */
+  .rz-hamburger {
+    display: flex;
+  }
+
+  /* Sidebar: off-screen by default on mobile */
+  .rz-dashboard > nav {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    z-index: 1050 !important;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: none;
+  }
+
+  /* When sidebar is open */
+  .rz-dashboard.rz-sidebar-open > nav {
+    transform: translateX(0) !important;
+    width: 224px !important;
+    min-width: 224px !important;
+    max-width: 224px !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Show overlay when sidebar is open */
+  .rz-dashboard.rz-sidebar-open .rz-sidebar-overlay {
+    display: block !important;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Main content takes full width */
+  .rz-dashboard > div:not(.rz-sidebar-overlay) {
+    width: 100% !important;
+  }
+
+  /* Add top padding for hamburger button */
+  .rz-main-mobile-pad {
+    padding-top: 56px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
    PREMIUM — Reduced Motion
 ═══════════════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
