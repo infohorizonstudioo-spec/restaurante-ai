@@ -28,20 +28,33 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json()
-    const { tenant_id, phone, notify_type, supplier_id, products, notes } = body
+    const { phone, notify_type, supplier_id, products, notes } = body
 
-    if (!tenant_id || !phone || !notify_type) {
+    // Auth: agent API key (Retell) or authenticated user
+    let tenantId: string
+    const apiKey = req.headers.get('x-agent-key') || req.headers.get('x_agent_key')
+    if (apiKey === process.env.AGENT_API_KEY) {
+      // Agent call — trust body.tenant_id
+      if (!body.tenant_id) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
+      tenantId = body.tenant_id
+    } else {
+      // User call — derive tenant from auth
+      const auth = await requireAuth(req)
+      if (!auth.ok || !auth.tenantId) {
+        return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+      }
+      tenantId = auth.tenantId
+      // If body.tenant_id provided, verify it matches
+      if (body.tenant_id && body.tenant_id !== tenantId) {
+        return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+      }
+    }
+
+    if (!phone || !notify_type) {
       return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
     }
 
-    // Auth
-    const apiKey = req.headers.get('x-agent-key') || req.headers.get('x_agent_key')
-    if (apiKey !== process.env.AGENT_API_KEY) {
-      const auth = await requireAuth(req)
-      if (!auth.ok || auth.tenantId !== tenant_id) {
-        return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-      }
-    }
+    const tenant_id = tenantId
 
     const { data: tenant } = await supabase.from('tenants')
       .select('id,name,agent_phone,phone')

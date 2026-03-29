@@ -117,6 +117,7 @@ export default function LlamadasPage() {
   const agentName = tenantCtx?.agent_name || 'Sofía'
   const [calls,setCalls]       = useState<any[]>([])
   const [loading,setLoading]   = useState(true)
+  const [error,setError]       = useState('')
   const [loadingMore,setLoadingMore] = useState(false)
   const [hasMore,setHasMore]   = useState(false)
   const [page,setPage]         = useState(0)
@@ -132,14 +133,17 @@ export default function LlamadasPage() {
 
   const load = useCallback(async (tenantId:string, reset=true, silent=false) => {
     if (reset && !silent) setLoading(true)
+    try {
     const from = reset ? 0 : page * PAGE_SIZE
-    const { data, count } = await supabase.from('calls').select('id,call_sid,tenant_id,status,intent,summary,started_at,duration_seconds,caller_phone,customer_name,from_number,decision_status,decision_flags,decision_confidence,reasoning_label,action_required,action_suggested,transcript',{count:'exact'})
+    const { data, count, error: qErr } = await supabase.from('calls').select('id,call_sid,tenant_id,status,intent,summary,started_at,duration_seconds,caller_phone,customer_name,from_number,decision_status,decision_flags,decision_confidence,reasoning_label,action_required,action_suggested,transcript',{count:'exact'})
       .eq('tenant_id',tenantId).order('started_at',{ascending:false})
       .range(from, from + PAGE_SIZE - 1)
+    if (qErr) { setError('No se pudieron cargar los datos'); setLoading(false); return }
     if (reset) { setCalls(data||[]); setPage(1) }
     else { setCalls(prev=>[...prev,...(data||[])]); setPage(p=>p+1) }
     setHasMore((count||0) > (reset ? PAGE_SIZE : (page+1)*PAGE_SIZE))
     setLoading(false); setLoadingMore(false)
+    } catch { setError('Error de conexion'); setLoading(false) }
   },[page])
 
   useEffect(() => {
@@ -191,6 +195,12 @@ export default function LlamadasPage() {
     return () => { supabase.removeChannel(ch); clearInterval(syncInterval) }
   },[tid]) // eslint-disable-line
 
+  if (error) return (
+    <div style={{padding:40, textAlign:'center'}}>
+      <p style={{fontSize:16, color:'#F87171'}}>{error}</p>
+      <button onClick={() => window.location.reload()} style={{marginTop:16, padding:'8px 16px', background:'#F0A84E', border:'none', borderRadius:8, cursor:'pointer', color:'#0C1018', fontWeight:600}}>Reintentar</button>
+    </div>
+  )
   if (loading) return <PageSkeleton variant="list"/>
 
   const filtered = filter==='all' ? calls : calls.filter(c => {

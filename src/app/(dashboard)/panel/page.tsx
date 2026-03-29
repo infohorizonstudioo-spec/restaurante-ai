@@ -333,6 +333,7 @@ function ForecastChart({ data, forecastLabel, lang='es' }: { data: { hour: strin
 export default function PanelPage() {
   const router = useRouter()
   const [loading,setLoading]   = useState(true)
+  const [error,setError]       = useState('')
   const [tenant,setTenant]     = useState<any>(null)
   const [calls,setCalls]       = useState<any[]>([])
   const [reservas,setReservas] = useState<any[]>([])
@@ -361,13 +362,14 @@ export default function PanelPage() {
   const load = useCallback(async () => {
     if (loadedRef.current) return
     loadedRef.current = true
+    try {
     const { data:{ user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
     const { data:p } = await supabase.from('profiles').select('tenant_id,role').eq('id',user.id).maybeSingle()
     if (!p?.tenant_id) { if(p?.role==='superadmin') router.push('/admin'); else router.push('/onboarding'); return }
     const tid = p.tenant_id
     const today = new Date().toISOString().split('T')[0]
-    const [{ data:t },{ data:c },{ data:r },{ data:cl },{ data:ac },{ data:ao },{ data:ac2 }] = await Promise.all([
+    const [{ data:t, error:e1 },{ data:c },{ data:r },{ data:cl },{ data:ac },{ data:ao },{ data:ac2 }] = await Promise.all([
       supabase.from('tenants').select('id,name,slug,type,plan,agent_name,agent_phone,free_calls_used,free_calls_limit,plan_calls_used,plan_calls_included,reservation_config,agent_config,language').eq('id',tid).maybeSingle(),
       supabase.from('calls').select('id,call_sid,status,intent,summary,started_at,duration_seconds,caller_phone,customer_name,from_number,decision_status,decision_flags,decision_confidence,session_state').eq('tenant_id',tid).order('started_at',{ascending:false}).limit(8),
       supabase.from('reservations').select('id,customer_name,customer_phone,date,time,reservation_time,people,party_size,status,source,notes').eq('tenant_id',tid).eq('date',today).order('time'),
@@ -376,6 +378,7 @@ export default function PanelPage() {
       supabase.from('order_events').select('*').eq('tenant_id',tid).eq('status','collecting').order('created_at',{ascending:false}).limit(5),
       supabase.from('consultation_events').select('*').eq('tenant_id',tid).eq('status','collecting').order('created_at',{ascending:false}).limit(5),
     ])
+    if (e1) { setError('No se pudieron cargar los datos'); setLoading(false); return }
     setTenant(t); setCalls(c||[]); setReservas(r||[]); setClientes(cl||[]); setActiveCalls(ac||[])
     setActiveOrders(ao||[]); setActiveConsultations(ac2||[])
     setLoading(false)
@@ -393,6 +396,7 @@ export default function PanelPage() {
     supabase.from('daily_summaries')
       .select('*').eq('tenant_id', tid).eq('date', ydStr).maybeSingle()
       .then(({ data }) => { if (data) setDaySummary(data) })
+    } catch { setError('Error de conexion'); setLoading(false) }
   }, [router])
 
   useEffect(() => { load() }, [load])
@@ -606,6 +610,12 @@ export default function PanelPage() {
     return () => { if(demoTimer.current) clearInterval(demoTimer.current) }
   }, [demoMode, pushEvent, tenant])
 
+  if (error) return (
+    <div style={{padding:40, textAlign:'center'}}>
+      <p style={{fontSize:16, color:'#F87171'}}>{error}</p>
+      <button onClick={() => window.location.reload()} style={{marginTop:16, padding:'8px 16px', background:'#F0A84E', border:'none', borderRadius:8, cursor:'pointer', color:'#0C1018', fontWeight:600}}>Reintentar</button>
+    </div>
+  )
   if (loading) return <PageSkeleton variant="cards"/>
   if (!tenant) return null
 

@@ -83,13 +83,7 @@ export default function ReservasPage() {
   useEffect(()=>{
     if (!tid) return
     const ch = supabase.channel('res-rt-' + tid)
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'reservations',filter:'tenant_id=eq.'+tid},(payload)=>{
-        const n = payload.new as any
-        toast.push({ title: `Nueva reserva: ${n.customer_name || 'Cliente'} — ${n.date} ${n.time || ''}`, type: 'reservation', priority: 'info', icon: '📅' })
-        load(tid)
-      })
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'reservations',filter:'tenant_id=eq.'+tid},()=>load(tid))
-      .on('postgres_changes',{event:'DELETE',schema:'public',table:'reservations',filter:'tenant_id=eq.'+tid},()=>load(tid))
+      .on('postgres_changes',{event:'*',schema:'public',table:'reservations',filter:'tenant_id=eq.'+tid},()=>load(tid))
       .subscribe()
     return ()=>{ supabase.removeChannel(ch) }
   },[tid,load])

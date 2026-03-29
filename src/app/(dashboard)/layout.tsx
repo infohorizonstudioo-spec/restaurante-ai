@@ -2,7 +2,8 @@ import { TenantProvider } from '@/contexts/TenantContext'
 import Sidebar from '@/components/Sidebar'
 import { ToastProvider } from '@/components/NotificationToast'
 import DashboardShell from '@/components/DashboardShell'
-import AssistantChat from '@/components/AssistantChat'
+import HelpButton from '@/components/HelpButton'
+import ThemeToggle from '@/components/ThemeToggle'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,7 +14,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <DashboardShell>
             {children}
           </DashboardShell>
-          <AssistantChat/>
+          <HelpButton/>
+          <div style={{ position:'fixed', bottom:72, right:24, zIndex:499 }}>
+            <ThemeToggle/>
+          </div>
         </div>
       </ToastProvider>
     </TenantProvider>

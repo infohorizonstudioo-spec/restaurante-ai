@@ -1,54 +1,33 @@
 /**
  * RESERVO.AI — Inventory Alerts API
  *
- * GET /api/inventory-alerts?tenant_id=X
+ * GET /api/inventory-alerts
  * Returns smart inventory alerts (low stock, seasonal, peak days).
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireAuth } from '@/lib/api-auth'
 import { generateInventoryAlerts } from '@/lib/inventory-intelligence'
 
 export const dynamic = 'force-dynamic'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
-
 export async function GET(req: NextRequest) {
-  const tenantId = req.nextUrl.searchParams.get('tenant_id')
-  if (!tenantId) {
-    return NextResponse.json({ error: 'tenant_id required' }, { status: 400 })
-  }
-
-  // Auth: verify Supabase JWT belongs to this tenant
-  const authHeader = req.headers.get('authorization')
-  const token = authHeader?.replace('Bearer ', '')
-  if (!token) {
+  const auth = await requireAuth(req)
+  if (!auth.ok || !auth.tenantId) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
+  const tenantId = auth.tenantId
 
-  const { data: { user } } = await supabase.auth.getUser(token)
-  if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  if (profile?.tenant_id !== tenantId) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  // If tenant_id is provided as query param, verify it matches authenticated user
+  const queryTenantId = req.nextUrl.searchParams.get('tenant_id')
+  if (queryTenantId && queryTenantId !== tenantId) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 
   try {
     const alerts = await generateInventoryAlerts(tenantId)
     return NextResponse.json({ ok: true, alerts })
   } catch (e: any) {
-    console.error('GET /api/inventory-alerts failed:', e?.message)
     return NextResponse.json({ error: 'Failed to generate inventory alerts' }, { status: 500 })
   }
 }

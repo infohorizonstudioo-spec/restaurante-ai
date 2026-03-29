@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import './globals.css'
-import './globals-premium.css'
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -22,8 +22,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
-      <body>{children}</body>
-    </html>
+    <ThemeProvider>
+      <html lang="es">
+        <body>{children}</body>
+      </html>
+    </ThemeProvider>
   )
 }

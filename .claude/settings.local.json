@@ -153,7 +153,23 @@
       "Bash(echo \"EXIT: $?\")",
       "Bash(echo \"EXIT:$?\")",
       "Bash(find /c/Users/krush/restaurante-ai -type f \\\\\\(-name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js \\\\\\))",
-      "Bash(grep -n \"\\\\.or\\(\" /c/Users/krush/restaurante-ai/src/lib/*.ts)"
+      "Bash(grep -n \"\\\\.or\\(\" /c/Users/krush/restaurante-ai/src/lib/*.ts)",
+      "Bash(2)",
+      "Bash(xargs basename:*)",
+      "Bash(git -C /c/Users/krush/restaurante-ai log --oneline)",
+      "Bash(npm test:*)",
+      "Bash(find C:Userskrushrestaurante-ai -type f \\\\\\(-name .env* -o -name *.config.* \\\\\\))",
+      "Bash(npm ls:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npx vercel:*)",
+      "Bash(xargs cat:*)",
+      "Bash(find C:Userskrushrestaurante-ai/src/app/api -type f \\\\\\(-name *.ts -o -name *.js -o -name *.tsx -o -name *.jsx \\\\\\))",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d, indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d[:2], indent=2\\)\\)\")",
+      "Bash(wc -l /c/Users/krush/restaurante-ai/src/app/\\\\\\(dashboard\\\\\\)/panel/page.tsx)",
+      "Bash(tail -5 /c/Users/krush/restaurante-ai/src/app/\\\\\\(dashboard\\\\\\)/panel/page.tsx)",
+      "Bash(tail:*)",
+      "Bash(diff .claude/worktrees/agent-ad49bb01/src/app/\\\\\\(dashboard\\\\\\)/pedidos/page.tsx .claude/worktrees/agent-a80e18d1/src/app/\\\\\\(dashboard\\\\\\)/pedidos/page.tsx)"
     ]
   }
 }
