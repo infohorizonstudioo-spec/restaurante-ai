@@ -21,7 +21,7 @@ function SlotBar({ label, used, max }: { label: string; used: number; max: numbe
         <span style={{ fontSize:10, color:C.muted }}>{label}</span>
         <span style={{ fontSize:10, fontWeight:700, color: barColor(p) }}>{used}/{max}</span>
       </div>
-      <div style={{ height:4, background:'rgba(255,255,255,0.06)', borderRadius:2, overflow:'hidden' }}>
+      <div style={{ height:4, background:C.border, borderRadius:2, overflow:'hidden' }}>
         <div style={{ height:'100%', width:p+'%', background: barColor(p), borderRadius:2, transition:'width 0.3s' }}/>
       </div>
     </div>
@@ -82,7 +82,7 @@ export default function TurnosPage() {
       <style>{`*{box-sizing:border-box}`}</style>
 
       {/* Header */}
-      <div style={{ background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom:`1px solid ${C.border}`, padding:'14px 24px', position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <div style={{ background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom:`1px solid ${C.border}`, padding:'14px 24px', position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div>
           <h1 style={{ fontSize:17, fontWeight:700, color:C.text }}>{tx('Control de turnos')}</h1>
           <p style={{ fontSize:12, color:C.muted, marginTop:2 }}>{tx('Capacidad por franja')} · {date===today?tx('Hoy'):date}</p>
@@ -155,7 +155,7 @@ export default function TurnosPage() {
                     <span style={{ fontSize:16, fontWeight:800, color: isFull ? C.red : isActive ? C.amber : C.text }}>{slot.time}</span>
                     <span style={{
                       fontSize:9, fontWeight:700, padding:'2px 7px', borderRadius:8,
-                      background: isFull ? C.redDim : isActive ? C.amberDim : 'rgba(255,255,255,0.04)',
+                      background: isFull ? C.redDim : isActive ? C.amberDim : C.surface2,
                       color: isFull ? C.red : isActive ? C.amber : C.muted,
                     }}>{isFull ? tx('COMPLETO') : isActive ? tx('ACTIVO') : tx('LIBRE')}</span>
                   </div>

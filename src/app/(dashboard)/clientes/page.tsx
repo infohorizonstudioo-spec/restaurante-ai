@@ -110,7 +110,7 @@ function DefaultClientesView() {
 
   return (
     <div style={{background:C.bg,minHeight:'100vh',display:'flex',flexDirection:'column'}}>
-      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,position:'sticky',top:0,zIndex:20}}>
+      <div style={{background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,position:'sticky',top:0,zIndex:20}}>
         <div>
           <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{clientesLabel}</h1>
           <p style={{fontSize:11,color:C.text3,marginTop:2}}>{clientes.length} {tx('registrados')}</p>
@@ -214,12 +214,12 @@ function DefaultClientesView() {
                 <div style={{marginTop:14,background:C.surface2,borderRadius:9,padding:14}}>
                   <label style={{fontSize:10,fontWeight:700,color:C.text3,textTransform:'uppercase' as const,letterSpacing:'0.06em',display:'block',marginBottom:6}}>{tx('Notas')}</label>
                   <textarea value={editNotes} onChange={e=>setEditNotes(e.target.value)} placeholder={tx('Añadir notas sobre este cliente…')}
-                    style={{width:'100%',minHeight:60,resize:'vertical',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:7,padding:'8px 10px',color:C.text,fontSize:13,fontFamily:'inherit',outline:'none'}}/>
+                    style={{width:'100%',minHeight:60,resize:'vertical',background:C.surface2,border:`1px solid ${C.border}`,borderRadius:7,padding:'8px 10px',color:C.text,fontSize:13,fontFamily:'inherit',outline:'none'}}/>
                   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:10}}>
                     <button onClick={()=>setEditVip(!editVip)} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 12px',borderRadius:7,border:`1px solid ${editVip?C.yellow:C.border}`,background:editVip?C.yellowDim:'transparent',color:editVip?C.yellow:C.text3,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'all 0.12s'}}>
                       {editVip?`⭐ ${t.clients.vip}`:`☆ ${t.clients.vip}`}
                     </button>
-                    <button onClick={saveCustomerNotes} style={{padding:'6px 16px',borderRadius:7,border:'none',background:C.amber,color:'#0C1018',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                    <button onClick={saveCustomerNotes} style={{padding:'6px 16px',borderRadius:7,border:'none',background:C.amber,color:C.bg,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
                       {t.common.save}
                     </button>
                   </div>

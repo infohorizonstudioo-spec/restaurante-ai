@@ -196,7 +196,7 @@ export default function LlamadasPage() {
   return (
     <div style={{background:C.bg, minHeight:'100vh'}}>
       {/* Header */}
-      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom:`1px solid ${C.border}`, padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10, position:'sticky', top:0, zIndex:20}}>
+      <div style={{background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom:`1px solid ${C.border}`, padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10, position:'sticky', top:0, zIndex:20}}>
         <div>
           <h1 style={{fontSize:16, fontWeight:700, color:C.text, letterSpacing:'-0.02em'}}>{t.nav.calls}</h1>
           <p style={{fontSize:11, color:C.text3, marginTop:2}}>{calls.length} {cs.callsTotal}</p>
@@ -359,7 +359,7 @@ export default function LlamadasPage() {
                               </div>
                               <input value={feedbackNote} onChange={e=>setFeedbackNote(e.target.value)}
                                 placeholder={tx('Comentario opcional (ej: el cliente confirmó por teléfono)')}
-                                style={{width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'7px 10px', fontSize:12, color:C.text, fontFamily:'inherit', boxSizing:'border-box' as const, marginBottom:8}}/>
+                                style={{width:'100%', background:C.surface2, border:'1px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'7px 10px', fontSize:12, color:C.text, fontFamily:'inherit', boxSizing:'border-box' as const, marginBottom:8}}/>
                               <button onClick={()=>{setCorrecting(null);setFeedbackNote('')}}
                                 style={{fontSize:11, color:C.text3, background:'none', border:'none', cursor:'pointer', fontFamily:'inherit'}}>
                                 {tx('Cancelar')}
