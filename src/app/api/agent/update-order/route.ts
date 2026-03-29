@@ -5,6 +5,7 @@ import { rateLimitByIp, RATE_LIMITS } from "@/lib/rate-limit"
 import { sanitizeUUID, sanitizeName, sanitizePhone, sanitizeString, sanitizePositiveInt } from "@/lib/sanitize"
 import { logger } from "@/lib/logger"
 import { parseRetellBody } from "@/lib/retell-parse"
+import { checkAvailability } from "@/lib/harmonize-engine"
 
 export const dynamic = "force-dynamic"
 
@@ -66,6 +67,25 @@ export async function POST(req: NextRequest) {
     }
 
     logger.info('agent:update-order', { tenant_id: sanitized.tenant_id, order_id: sanitized.order_id })
+
+    // Check availability for each item before creating/updating order
+    if (sanitized.items && Array.isArray(sanitized.items) && sanitized.items.length > 0) {
+      const unavailable: string[] = []
+      for (const item of sanitized.items) {
+        if (!item.name) continue
+        const avail = await checkAvailability(sanitized.tenant_id, item.name).catch(() => ({ available: true, remaining: null, message: 'Disponible' }))
+        if (!avail.available) {
+          unavailable.push(avail.message || `${item.name} no disponible`)
+        }
+      }
+      if (unavailable.length > 0) {
+        return NextResponse.json({
+          success: false,
+          error: unavailable.join('. '),
+          message: `Lo siento, ${unavailable.join('. ')}. ¿Quieres pedir otra cosa?`,
+        })
+      }
+    }
 
     const result = await updateOrderTool(sanitized as any)
     if (result.error && !result.success) {

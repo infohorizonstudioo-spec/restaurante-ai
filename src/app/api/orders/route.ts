@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/api-auth'
 import { rateLimitByIp, RATE_LIMITS } from '@/lib/rate-limit'
 import { sanitizeString, sanitizeName, sanitizePhone, sanitizePositiveInt } from '@/lib/sanitize'
 import { logger } from '@/lib/logger'
+import { notifyOrderCreated } from '@/lib/harmonize-engine'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -115,6 +116,18 @@ export async function PATCH(req: Request) {
       .select().single()
 
     if (error) throw error
+
+    // Harmonize: notify on confirmed orders (non-blocking)
+    if (status === 'confirmed' && data) {
+      notifyOrderCreated(tenant_id, {
+        customer_name: data.customer_name,
+        items: Array.isArray(data.items) ? data.items : [],
+        total: data.total_estimate || 0,
+        order_type: data.order_type || 'mesa',
+        source: 'panel',
+      }).catch(() => {})
+    }
+
     return NextResponse.json({ success: true, order: data })
   } catch (e: any) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

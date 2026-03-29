@@ -6,7 +6,7 @@ import { PageSkeleton } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import { C } from '@/lib/colors'
 import { getTPVLayout } from '@/lib/tpv-engine'
-import type { MenuItem, TPVLayout } from '@/lib/tpv-engine'
+import type { MenuItem, TPVLayout, SaleRecord } from '@/lib/tpv-engine'
 
 /* ── CSS injected once ──────────────────────────────────────────────── */
 const TPV_STYLES = `
@@ -104,8 +104,21 @@ export default function TPVPage() {
       }))
       setMenuItems(mi)
 
+      // Fetch sales history for intelligent layout
+      let salesHistory: SaleRecord[] = []
+      try {
+        const { data: { session: authSession } } = await supabase.auth.getSession()
+        const histRes = await fetch('/api/tpv/sales-history', {
+          headers: authSession?.access_token ? { Authorization: 'Bearer ' + authSession.access_token } : {},
+        })
+        if (histRes.ok) {
+          const histData = await histRes.json()
+          salesHistory = histData.history || []
+        }
+      } catch { /* sales history is optional — layout works without it */ }
+
       const hour = new Date().getHours()
-      const lyt = getTPVLayout(mi, hour)
+      const lyt = getTPVLayout(mi, hour, salesHistory)
       setLayout(lyt)
       if (lyt.categories.length > 0) {
         setActiveCategory(lyt.categories[0]!.name)
@@ -222,6 +235,16 @@ export default function TPVPage() {
             },
             body: JSON.stringify({ id: d.order.id, tenant_id: tid, status: 'confirmed' }),
           })
+
+          // Harmonize: sync stock, notifications, and operational state
+          fetch('/api/harmonize/order-created', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(session?.access_token ? { Authorization: 'Bearer ' + session.access_token } : {}),
+            },
+            body: JSON.stringify({ order_id: d.order.id }),
+          }).catch(() => {})
         }
       }
 

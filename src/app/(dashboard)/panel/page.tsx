@@ -347,6 +347,7 @@ export default function PanelPage() {
   const [orderAlert, setOrderAlert] = useState<{name:string;type:string;id:string}|null>(null)
   const [daySummary, setDaySummary] = useState<any>(null)
   const [suggestions, setSuggestions] = useState<any[]>([])
+  const [opContext, setOpContext] = useState<any>(null)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const demoTimer              = useRef<ReturnType<typeof setInterval>|null>(null)
   const demoIdx                = useRef(0)
@@ -393,6 +394,7 @@ export default function PanelPage() {
     fetch('/api/insights', { headers }).then(r => r.json()).then(d => setInsights(d.insights || [])).catch(() => {})
     fetch('/api/peak-prediction', { headers }).then(r => r.json()).then(d => setForecast(d.forecast || [])).catch(() => {})
     fetch('/api/suggestions', { headers }).then(r => r.json()).then(d => setSuggestions(d.suggestions || [])).catch(() => {})
+    fetch('/api/operational-context', { headers }).then(r => r.json()).then(d => setOpContext(d.context || null)).catch(() => {})
 
     // Load yesterday's summary
     const yd = new Date(); yd.setDate(yd.getDate() - 1)
@@ -881,6 +883,78 @@ export default function PanelPage() {
           <KpiCard value={clientes.length} label={L.clientes} icon="👥" color={C.violet} href="/clientes"/>
           <KpiCard value={isTrial?callsLeft:`${callsUsed}/${callsLimit}`} label={isTrial?_tx('Llamadas restantes'):_tx('Uso del plan')} sub={planLabel} icon={isTrial?'⚡':'📊'} color={callsLeft<=3?C.red:planColor} accent={isTrial} href="/facturacion"/>
         </div>
+
+        {/* ── Contexto operativo ── */}
+        {opContext && (
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            {/* Smart suggestion — prominent amber card */}
+            {opContext.suggestion && (
+              <div style={{
+                background:`linear-gradient(135deg, rgba(240,168,78,0.12) 0%, rgba(240,168,78,0.04) 100%)`,
+                border:`1px solid ${C.amberBorder}`,
+                borderRadius:14, padding:'16px 20px',
+                display:'flex', alignItems:'flex-start', gap:12,
+              }}>
+                <div style={{ width:36, height:36, borderRadius:10, background:C.amberDim, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>
+                  🧠
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <p style={{ fontSize:11, fontWeight:700, color:C.amber, letterSpacing:'0.04em', textTransform:'uppercase' as const, marginBottom:4 }}>
+                    {_tx('Contexto operativo')}
+                  </p>
+                  <p style={{ fontSize:14, fontWeight:600, color:C.text, lineHeight:1.5 }}>
+                    {opContext.suggestion}
+                  </p>
+                </div>
+              </div>
+            )}
+            {/* Compact operational pills */}
+            <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+              {/* Orders today + revenue */}
+              {opContext.todayOrders > 0 && (
+                <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:10, padding:'8px 14px', display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:14 }}>🛍️</span>
+                  <span style={{ fontSize:12, fontWeight:600, color:C.text }}>
+                    {_tx('Pedidos hoy')}: {opContext.todayOrders}
+                  </span>
+                  {opContext.todayRevenue > 0 && (
+                    <span style={{ fontSize:11, color:C.text2 }}>
+                      ({opContext.todayRevenue.toFixed(0)}€)
+                    </span>
+                  )}
+                </div>
+              )}
+              {/* Top selling */}
+              {opContext.topSellingNow?.length > 0 && (
+                <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:10, padding:'8px 14px', display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:14 }}>🔥</span>
+                  <span style={{ fontSize:12, fontWeight:600, color:C.text }}>Top:</span>
+                  <span style={{ fontSize:12, color:C.text2 }}>
+                    {opContext.topSellingNow.slice(0, 3).map((i: any) => i.name).join(', ')}
+                  </span>
+                </div>
+              )}
+              {/* Low stock */}
+              {opContext.lowStockItems?.length > 0 && (
+                <div style={{ background:'rgba(248,113,113,0.06)', border:`1px solid rgba(248,113,113,0.2)`, borderRadius:10, padding:'8px 14px', display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:14 }}>⚠️</span>
+                  <span style={{ fontSize:12, fontWeight:600, color:C.red }}>
+                    Stock bajo: {opContext.lowStockItems.length} {opContext.lowStockItems.length === 1 ? 'producto' : 'productos'}
+                  </span>
+                </div>
+              )}
+              {/* Upcoming reservations */}
+              {opContext.upcomingReservations?.length > 0 && (
+                <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:10, padding:'8px 14px', display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:14 }}>📅</span>
+                  <span style={{ fontSize:12, fontWeight:600, color:C.text }}>
+                    {_tx('Reservas')}: {opContext.upcomingReservations.length}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── Sugerencias inteligentes ── */}
         {suggestions.length > 0 && (

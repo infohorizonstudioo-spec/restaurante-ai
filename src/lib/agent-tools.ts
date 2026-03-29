@@ -11,6 +11,7 @@ import { scheduleReminders, cancelReminders } from './reminder-engine'
 import { classifyInteraction, detectConflicts, generateSummary, learnFromInteraction } from './intelligence-engine'
 import { saveCustomerMemory, getCustomerProfile } from './customer-memory'
 import { sendPush } from './notifications'
+import { alertLargeReservation } from './harmonize-engine'
 import { logger } from './logger'
 
 const supabase = createClient(
@@ -643,6 +644,13 @@ export async function createReservationTool(params: {
     url: reservation?.id ? `/reservas?id=${reservation.id}` : '/reservas',
     tag: 'new_reservation',
   }).catch(() => {})
+
+  // Harmonize: alert on large groups (>= 8 people)
+  if (finalPartySize >= 8 && reservation?.id) {
+    alertLargeReservation(tenant_id, {
+      customer_name, party_size: finalPartySize, date: finalDate, time: finalTime,
+    }).catch(() => {})
+  }
 
   const largeGroupMsg = isLargeGroup
     ? ' El propietario debe confirmar la reserva para grupos grandes.'
