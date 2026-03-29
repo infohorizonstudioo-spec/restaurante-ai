@@ -15,12 +15,29 @@ export async function GET(req: NextRequest) {
   const rl = rateLimitByIp(req, RATE_LIMITS.api, 'tables:get')
   if (rl.blocked) return rl.response
 
+  // Try auth first, fallback to tenant_id param with basic token check
+  let tenantId: string | null = null
+
   const auth = await requireAuth(req)
-  if (!auth.ok || !auth.tenantId) return NextResponse.json({ tables: [] })
+  if (auth.ok && auth.tenantId) {
+    tenantId = auth.tenantId
+  } else {
+    // Fallback: verify user has a valid session via Supabase and get tenant
+    const token = req.headers.get('authorization')?.replace('Bearer ', '')
+    if (token) {
+      const { data: { user } } = await admin.auth.getUser(token)
+      if (user) {
+        const { data: profile } = await admin.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle()
+        tenantId = profile?.tenant_id || null
+      }
+    }
+  }
+
+  if (!tenantId) return NextResponse.json({ tables: [] })
 
   const { data } = await admin.from('tables')
     .select('id, number, name, capacity, zone_id, zone_name, x_pos, y_pos, w, h, shape_type, status, rotation')
-    .eq('tenant_id', auth.tenantId)
+    .eq('tenant_id', tenantId)
     .order('number')
 
   return NextResponse.json({ tables: data || [] })

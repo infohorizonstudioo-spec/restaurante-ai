@@ -243,12 +243,25 @@ export default function TPVPage() {
       if (!p?.tenant_id) return
       setTid(p.tenant_id)
 
-      // Fetch real tables via API (bypasses RLS)
-      const { data: { session: tSession } } = await supabase.auth.getSession()
-      const tHeaders: Record<string, string> = {}
-      if (tSession?.access_token) tHeaders.Authorization = 'Bearer ' + tSession.access_token
-      const tablesRes = await fetch('/api/tables', { headers: tHeaders }).then(r => r.json()).catch(() => ({ tables: [] }))
-      setDbTables((tablesRes.tables || []) as DBTable[])
+      // Fetch real tables — try API, then direct Supabase
+      let fetchedTables: DBTable[] = []
+      try {
+        const { data: { session: tSession } } = await supabase.auth.getSession()
+        if (tSession?.access_token) {
+          const res = await fetch('/api/tables', { headers: { Authorization: 'Bearer ' + tSession.access_token } })
+          const d = await res.json()
+          fetchedTables = (d.tables || []) as DBTable[]
+        }
+      } catch {}
+      if (fetchedTables.length === 0) {
+        try {
+          const { data } = await supabase.from('tables')
+            .select('id, number, name, capacity, zone_id, zone_name, x_pos, y_pos, w, h, shape_type, status, rotation')
+            .eq('tenant_id', p.tenant_id).order('number')
+          fetchedTables = (data || []) as DBTable[]
+        } catch {}
+      }
+      setDbTables(fetchedTables)
 
       // Fetch today's reservations
       const todayStr = new Date().toISOString().slice(0, 10)
