@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
@@ -151,7 +151,9 @@ export default function ConfiguracionPage() {
   const [saved, setSaved]     = useState(false)
   const [openSection, setOpen]= useState<string|null>('automation')
   const [cfg, setCfg]         = useState<AgentConfig>(DEFAULT)
-  const [basicForm, setBasic] = useState({agent_name:'',business_name:'',agent_phone:'',transfer_phone:'',language:'es'})
+  const [basicForm, setBasic] = useState({agent_name:'',business_name:'',agent_phone:'',transfer_phone:'',language:'es',address:'',phone:'',logo_url:''})
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const logoInputRef = useRef<HTMLInputElement>(null)
   const [schedCfg, setSchedCfg] = useState<ReservationConfig>({...DEFAULT_SCHED})
   const [isHosb, setIsHosb]   = useState(false)
 
@@ -162,7 +164,7 @@ export default function ConfiguracionPage() {
       const {data:t} = await supabase.from('tenants').select('*').eq('id',p.tenant_id).maybeSingle()
       if(!t) return
       setTenant(t)
-      setBasic({agent_name:t.agent_name||'Sofía', business_name:t.name||'', agent_phone:t.agent_phone||'', transfer_phone:t.transfer_phone||'', language:t.language||'es'})
+      setBasic({agent_name:t.agent_name||'Sofía', business_name:t.name||'', agent_phone:t.agent_phone||'', transfer_phone:t.transfer_phone||'', language:t.language||'es', address:t.address||'', phone:t.phone||'', logo_url:t.logo_url||''})
       setIsHosb(isHosteleria(t.type||'otro'))
       setSchedCfg(parseReservationConfig(t.reservation_config))
       const saved = t.agent_config && Object.keys(t.agent_config).length > 0 ? t.agent_config : DEFAULT
@@ -187,6 +189,9 @@ export default function ConfiguracionPage() {
       agent_phone: basicForm.agent_phone.trim() || null,
       transfer_phone: basicForm.transfer_phone.trim() || null,
       language: basicForm.language || 'es',
+      address: basicForm.address.trim() || null,
+      phone: basicForm.phone.trim() || null,
+      logo_url: basicForm.logo_url || null,
       agent_config: cfg,
       reservation_config: schedCfg,
     }
@@ -291,6 +296,44 @@ export default function ConfiguracionPage() {
             <div>
               <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>{tx('NOMBRE DEL AGENTE')}</label>
               <input className="rz-inp" value={basicForm.agent_name} onChange={e=>setBasic(f=>({...f,agent_name:e.target.value}))} placeholder={agentName}/>
+            </div>
+            <div>
+              <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>DIRECCIÓN</label>
+              <input className="rz-inp" value={basicForm.address} onChange={e=>setBasic(f=>({...f,address:e.target.value}))} placeholder="Calle Gran Vía 42, Madrid"/>
+            </div>
+            <div>
+              <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>TELÉFONO DEL LOCAL</label>
+              <input className="rz-inp" value={basicForm.phone} onChange={e=>setBasic(f=>({...f,phone:e.target.value}))} placeholder="+34 912 345 678"/>
+            </div>
+            <div style={{gridColumn:'1/-1'}}>
+              <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>LOGO DEL NEGOCIO</label>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                {basicForm.logo_url && (
+                  <img src={basicForm.logo_url} alt="Logo" style={{width:48,height:48,objectFit:'contain',borderRadius:8,border:`1px solid ${C.border}`,background:C.surface2}}/>
+                )}
+                <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp" style={{display:'none'}} onChange={async e=>{
+                  const file = e.target.files?.[0]; if(!file||!tenant) return
+                  if(file.size>2*1024*1024){alert('Máximo 2MB');return}
+                  setUploadingLogo(true)
+                  const ext=file.name.split('.').pop()||'png'
+                  const path=`${tenant.id}/logo.${ext}`
+                  const {error}=await supabase.storage.from('product-images').upload(path,file,{upsert:true})
+                  if(!error){
+                    const url=`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/${path}`
+                    setBasic(f=>({...f,logo_url:url}))
+                  }
+                  setUploadingLogo(false)
+                }}/>
+                <button onClick={()=>logoInputRef.current?.click()} style={{padding:'8px 16px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${C.border}`,background:C.surface2,color:C.text2,cursor:'pointer',fontFamily:'inherit'}}>
+                  {uploadingLogo ? 'Subiendo...' : basicForm.logo_url ? 'Cambiar logo' : '📷 Subir logo'}
+                </button>
+                {basicForm.logo_url && (
+                  <button onClick={()=>setBasic(f=>({...f,logo_url:''}))} style={{padding:'8px 12px',fontSize:11,borderRadius:8,border:'none',background:'rgba(248,113,113,0.1)',color:'#F87171',cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>
+                    Quitar
+                  </button>
+                )}
+              </div>
+              <p style={{fontSize:10,color:C.muted,marginTop:4}}>Aparecerá en los tickets de cobro. PNG, JPG o WebP, máximo 2MB.</p>
             </div>
             <div style={{gridColumn:'1/-1'}}>
               <label style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em',display:'block',marginBottom:5}}>{tx('NÚMERO DE TELÉFONO DEL AGENTE')}</label>
