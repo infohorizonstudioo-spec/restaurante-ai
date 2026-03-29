@@ -48,7 +48,7 @@ function analyzeRequest(req: NextRequest): { blocked: boolean; score: number; re
   const entry = ipCounts.get(ip)
   if (entry && now - entry.ts < 10000) {
     entry.count++
-    if (entry.count > 50) { score += 40; reasons.push('rate') }
+    if (entry.count > 200) { score += 40; reasons.push('rate') }
   } else {
     ipCounts.set(ip, { count: 1, ts: now })
   }
@@ -83,7 +83,7 @@ function analyzeRequest(req: NextRequest): { blocked: boolean; score: number; re
   if (!ua || ua.length < 5) { score += 15; reasons.push('no_ua') }
 
   // Block if score >= 50
-  const blocked = score >= 50
+  const blocked = score >= 70
   if (blocked) blockedIps.add(ip)
 
   return { blocked, score, reason: reasons.join(',') }
