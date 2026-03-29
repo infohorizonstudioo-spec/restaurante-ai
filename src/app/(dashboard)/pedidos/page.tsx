@@ -264,8 +264,10 @@ export default function PedidosPage() {
   async function nuevoOrder() {
     if (!tid) return
     try {
+      const { data: { session: s } } = await supabase.auth.getSession()
       const r = await fetch('/api/orders', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(s?.access_token ? { 'Authorization': 'Bearer ' + s.access_token } : {}) },
         body: JSON.stringify({ tenant_id: tid, customer_name: locale === 'en' ? 'New order' : locale === 'fr' ? 'Nouvelle commande' : locale === 'pt' ? 'Novo pedido' : 'Nuevo pedido', order_type: 'mesa' })
       })
       const d = await r.json()
