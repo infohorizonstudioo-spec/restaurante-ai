@@ -388,6 +388,7 @@ export default function TPVPage() {
         price: Number(i.price) || 0,
         category: (i.category as string) || 'Otro',
         active: true,
+        image_url: (i.image_url as string) || undefined,
       }))
       setMenuItems(mi)
 
@@ -469,7 +470,7 @@ export default function TPVPage() {
     if (!layout) return []
     if (search.trim()) {
       const q = search.toLowerCase()
-      const all: { id: string; name: string; price: number }[] = []
+      const all: { id: string; name: string; price: number; image_url?: string }[] = []
       for (const cat of layout.categories) {
         for (const item of cat.items) {
           if (item.name.toLowerCase().includes(q)) all.push(item)
@@ -1151,15 +1152,20 @@ export default function TPVPage() {
                           onClick={() => addItem(item)}
                           style={{
                             position: 'relative',
-                            background: `linear-gradient(145deg, ${C.surface2}, ${C.surface})`,
+                            background: item.image_url ? 'none' : `linear-gradient(145deg, ${C.surface2}, ${C.surface})`,
+                            backgroundImage: item.image_url ? `url(${item.image_url})` : undefined,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
                             border: '1px solid rgba(255,255,255,0.08)',
                             borderRadius: 12,
-                            padding: '10px 8px',
+                            padding: item.image_url ? 0 : '10px 8px',
                             cursor: 'pointer',
                             display: 'flex', flexDirection: 'column',
-                            alignItems: 'center', justifyContent: 'center',
-                            gap: 4, minHeight: 100,
+                            alignItems: item.image_url ? 'stretch' : 'center',
+                            justifyContent: item.image_url ? 'flex-end' : 'center',
+                            gap: item.image_url ? 0 : 4, minHeight: 100,
                             boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                            overflow: 'hidden',
                           }}
                         >
                           {/* Price badge top-right */}
@@ -1168,6 +1174,7 @@ export default function TPVPage() {
                             background: C.amber, color: '#0C1018',
                             fontSize: 12, fontWeight: 800,
                             padding: '3px 9px', borderRadius: 6,
+                            zIndex: 2,
                           }}>
                             {item.price.toFixed(2)}{'\u20AC'}
                           </span>
@@ -1176,22 +1183,41 @@ export default function TPVPage() {
                             <span style={{
                               position: 'absolute', top: 6, left: 6,
                               fontSize: 12,
+                              zIndex: 2,
                             }}>
                               {'\u2B50'}
                             </span>
                           )}
-                          {/* Name centered */}
-                          <span style={{
-                            fontSize: 14, fontWeight: 700, color: C.text,
-                            textAlign: 'center', lineHeight: 1.3,
-                            overflow: 'hidden',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            marginTop: 6,
-                          }}>
-                            {item.name}
-                          </span>
+                          {item.image_url ? (
+                            <div style={{
+                              position: 'absolute', bottom: 0, left: 0, right: 0,
+                              background: 'linear-gradient(transparent, rgba(0,0,0,0.85))',
+                              padding: '20px 8px 8px', borderRadius: '0 0 12px 12px',
+                            }}>
+                              <span style={{
+                                fontSize: 13, fontWeight: 700, color: C.text,
+                                textAlign: 'center', lineHeight: 1.3,
+                                display: 'block',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}>
+                                {item.name}
+                              </span>
+                            </div>
+                          ) : (
+                            <span style={{
+                              fontSize: 14, fontWeight: 700, color: C.text,
+                              textAlign: 'center', lineHeight: 1.3,
+                              overflow: 'hidden',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              marginTop: 6,
+                            }}>
+                              {item.name}
+                            </span>
+                          )}
                         </button>
                       )
                     })

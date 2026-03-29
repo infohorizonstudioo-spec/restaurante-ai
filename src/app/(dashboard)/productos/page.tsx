@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
@@ -237,10 +237,16 @@ export default function ProductosPage() {
                       display:'flex', alignItems:'center', gap:14, opacity: isSoldOut ? 0.75 : 1,
                       cursor:'default'
                     }}>
-                      {/* Indicador disponibilidad */}
-                      <div style={{ width:36, height:36, borderRadius:10, background:cfg.bg, border:`1px solid ${cfg.color}33`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>
-                        {cfg.icon}
-                      </div>
+                      {/* Thumbnail */}
+                      {item.image_url ? (
+                        <div style={{ width:36, height:36, borderRadius:10, overflow:'hidden', flexShrink:0, border:`1px solid ${C.border}` }}>
+                          <img src={item.image_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                        </div>
+                      ) : (
+                        <div style={{ width:36, height:36, borderRadius:10, background:cfg.bg, border:`1px solid ${cfg.color}33`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>
+                          {cfg.icon}
+                        </div>
+                      )}
                       {/* Info */}
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
@@ -288,14 +294,14 @@ export default function ProductosPage() {
       </div>
 
       {/* Modal */}
-      {modal && <ProductModal item={modal._new ? null : modal} onSave={saveItem} onClose={() => setModal(null)} categories={CATEGORIES} tx={tx} />}
+      {modal && <ProductModal item={modal._new ? null : modal} onSave={saveItem} onClose={() => setModal(null)} categories={CATEGORIES} tx={tx} tenantId={tid} />}
     </div>
     </UpgradeGate>
   )
 }
 
 
-function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: { item: any | null, onSave: (d: any) => void, onClose: () => void, categories: string[], tx?:(s:string)=>string }) {
+function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s, tenantId }: { item: any | null, onSave: (d: any) => void, onClose: () => void, categories: string[], tx?:(s:string)=>string, tenantId?: string|null }) {
   const focusRef = useFocusTrap(onClose)
   const CATEGORIES = categories
   const [form, setForm] = useState({
@@ -309,10 +315,38 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: {
     alternatives:         (item?.alternatives || []).join(', '),
     price:                item?.price || '',
     sort_order:           item?.sort_order || 0,
+    image_url:            item?.image_url || '',
   })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const up = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
-  const lbl = { fontSize:11, fontWeight:600, color:C.text2, letterSpacing:'0.03em', display:'block', marginBottom:5 }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !tenantId) return
+    if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { setFormErrors(f => ({...f, image: tx('Solo JPG, PNG o WebP')})); return }
+    if (file.size > 2 * 1024 * 1024) { setFormErrors(f => ({...f, image: tx('Maximo 2MB')})); return }
+    setUploading(true)
+    setFormErrors(f => { const {image, ...rest} = f; return rest })
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `${tenantId}/${crypto.randomUUID()}.${ext}`
+      const { data, error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true })
+      if (error) throw error
+      if (data) {
+        const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/${path}`
+        up('image_url', url)
+      }
+    } catch (err) {
+      setFormErrors(f => ({...f, image: tx('Error al subir imagen')}))
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const lbl = { fontSize:11, fontWeight:600, color:C.text2, letterSpacing:'0.03em', display:'block', marginBottom:5 } as const
 
   function submit() {
     const errors: Record<string, string> = {}
@@ -326,6 +360,7 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: {
       daily_limit: form.daily_limit ? parseInt(String(form.daily_limit)) : null,
       price: form.price ? parseFloat(String(form.price)) : null,
       alternatives: form.alternatives ? form.alternatives.split(',').map((s:string) => s.trim()).filter(Boolean) : [],
+      image_url: form.image_url || null,
     })
   }
 
@@ -359,6 +394,31 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: {
               <label style={lbl}>{tx('Descripción').toUpperCase()} ({tx('opcional')})</label>
               <input className="rz-inp" value={form.description} onChange={e => up('description', e.target.value)} placeholder={tx('Descripción breve del producto')} />
             </div>
+          </div>
+
+          {/* Imagen */}
+          <div>
+            <label style={lbl}>{tx('Imagen').toUpperCase()} ({tx('opcional')})</label>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+              {form.image_url && (
+                <div style={{ position:'relative', width:64, height:64, borderRadius:10, overflow:'hidden', border:`1px solid ${C.border}`, flexShrink:0 }}>
+                  <img src={form.image_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                  <button onClick={() => up('image_url', '')} style={{ position:'absolute', top:2, right:2, width:18, height:18, borderRadius:'50%', background:'rgba(0,0,0,0.7)', border:'none', color:'white', fontSize:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }} aria-label="Quitar imagen">✕</button>
+                </div>
+              )}
+              <div style={{ flex:1 }}>
+                <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageUpload} style={{ display:'none' }} />
+                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} style={{
+                  padding:'8px 14px', fontSize:12, fontWeight:600, borderRadius:8, cursor: uploading ? 'wait' : 'pointer',
+                  background:C.surface2, border:`1px solid ${C.border}`, color:C.sub, fontFamily:'inherit',
+                  opacity: uploading ? 0.6 : 1,
+                }}>
+                  {uploading ? tx('Subiendo...') : form.image_url ? tx('Cambiar imagen') : tx('Subir imagen')}
+                </button>
+                <p style={{ fontSize:10, color:C.muted, marginTop:4 }}>JPG, PNG, WebP · Max 2MB</p>
+              </div>
+            </div>
+            {formErrors.image && <p style={{ fontSize:11, color:C.red, marginTop:3 }}>{formErrors.image}</p>}
           </div>
 
           {/* Disponibilidad */}

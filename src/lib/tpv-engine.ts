@@ -9,6 +9,7 @@ export interface MenuItem {
   price: number
   category: string
   active: boolean
+  image_url?: string
 }
 
 export interface SaleRecord {
@@ -22,9 +23,9 @@ export interface TPVLayout {
   categories: {
     name: string
     priority: number
-    items: { id: string; name: string; price: number }[]
+    items: { id: string; name: string; price: number; image_url?: string }[]
   }[]
-  quickAccess: { id: string; name: string; price: number }[]
+  quickAccess: { id: string; name: string; price: number; image_url?: string }[]
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -245,7 +246,7 @@ export function getTPVLayout(
     categoryEntries.push({
       name: catName,
       priority,
-      items: catItems.map((i) => ({ id: i.id, name: i.name, price: i.price })),
+      items: catItems.map((i) => ({ id: i.id, name: i.name, price: i.price, image_url: i.image_url })),
     })
   }
 
@@ -275,7 +276,7 @@ export function getTPVLayout(
       if (quickAccess.length >= 8) break
       const item = itemMap.get(normName)
       if (item) {
-        quickAccess.push({ id: item.id, name: item.name, price: item.price })
+        quickAccess.push({ id: item.id, name: item.name, price: item.price, image_url: item.image_url })
       }
     }
   }
