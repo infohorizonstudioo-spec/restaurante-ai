@@ -115,7 +115,7 @@ function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDrag
       {isCombo && (
         <g>
           <rect x={w-18} y={-6} width={24} height={16} rx={8} fill={C.teal} />
-          <text x={w-6} y={5} textAnchor="middle" fill="#0C1018"
+          <text x={w-6} y={5} textAnchor="middle" fill={C.bg}
             fontSize={9} fontWeight={800} style={{pointerEvents:'none',userSelect:'none'}}>
             🔗
           </text>
@@ -222,9 +222,9 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
         <div>
           <label style={lbl}>{isRoom?tx('Aforo'):tx('Capacidad')}</label>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
-            <button onClick={()=>up('capacity',Math.max(1,f.capacity-1))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.sub,fontSize:16,cursor:'pointer',fontFamily:'inherit'}} aria-label="Menos">−</button>
+            <button onClick={()=>up('capacity',Math.max(1,f.capacity-1))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:C.surface2,color:C.sub,fontSize:16,cursor:'pointer',fontFamily:'inherit'}} aria-label="Menos">−</button>
             <span style={{fontSize:18,fontWeight:800,color:C.amber,minWidth:30,textAlign:'center'}}>{f.capacity}</span>
-            <button onClick={()=>up('capacity',Math.min(100,f.capacity+1))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.sub,fontSize:16,cursor:'pointer',fontFamily:'inherit'}} aria-label="Más">+</button>
+            <button onClick={()=>up('capacity',Math.min(100,f.capacity+1))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:C.surface2,color:C.sub,fontSize:16,cursor:'pointer',fontFamily:'inherit'}} aria-label="Más">+</button>
             <span style={{fontSize:11,color:C.muted,marginLeft:4}}>{tx('personas')}</span>
           </div>
         </div>
@@ -340,7 +340,7 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
               {tx('Eliminar')}
             </button>
           ) : (
-            <button onClick={onDelete} style={{flex:1,padding:'8px',fontSize:11,fontWeight:700,borderRadius:8,border:'none',background:C.red,color:'white',cursor:'pointer',fontFamily:'inherit'}}>
+            <button onClick={onDelete} style={{flex:1,padding:'8px',fontSize:11,fontWeight:700,borderRadius:8,border:'none',background:C.red,color:C.text,cursor:'pointer',fontFamily:'inherit'}}>
               {tx('Confirmar')}
             </button>
           )}
@@ -359,12 +359,12 @@ function LibraryItem({preset,onAdd,tx}:{preset:ElementPreset;onAdd:()=>void;tx:(
       e.dataTransfer.effectAllowed = 'copy'
     }} style={{
       display:'flex',alignItems:'center',gap:10,padding:'10px 12px',
-      background:'rgba(255,255,255,0.02)',border:`1px solid ${C.border}`,borderRadius:10,
+      background:C.surface2,border:`1px solid ${C.border}`,borderRadius:10,
       cursor:'grab',width:'100%',textAlign:'left',fontFamily:'inherit',
       transition:'all 0.15s',
     }}
-    onMouseOver={e=>(e.currentTarget.style.background='rgba(255,255,255,0.05)',e.currentTarget.style.borderColor=C.amber+'33')}
-    onMouseOut={e=>(e.currentTarget.style.background='rgba(255,255,255,0.02)',e.currentTarget.style.borderColor=C.border)}
+    onMouseOver={e=>(e.currentTarget.style.background=C.border,e.currentTarget.style.borderColor=C.amber+'33')}
+    onMouseOut={e=>(e.currentTarget.style.background=C.surface2,e.currentTarget.style.borderColor=C.border)}
     >
       <span style={{fontSize:20,width:32,textAlign:'center'}}>{preset.icon}</span>
       <div style={{flex:1}}>
@@ -381,12 +381,12 @@ function StarterCard({layout,onApply,tx}:{layout:{label:string;description:strin
   return (
     <button onClick={onApply} style={{
       display:'flex',flexDirection:'column',alignItems:'center',gap:8,
-      padding:'20px 16px',background:'rgba(255,255,255,0.02)',
+      padding:'20px 16px',background:C.surface2,
       border:`1px solid ${C.border}`,borderRadius:14,cursor:'pointer',
       width:'100%',textAlign:'center',fontFamily:'inherit',transition:'all 0.15s',
     }}
     onMouseOver={e=>(e.currentTarget.style.background=C.amberDim,e.currentTarget.style.borderColor=C.amber+'33')}
-    onMouseOut={e=>(e.currentTarget.style.background='rgba(255,255,255,0.02)',e.currentTarget.style.borderColor=C.border)}
+    onMouseOut={e=>(e.currentTarget.style.background=C.surface2,e.currentTarget.style.borderColor=C.border)}
     >
       <span style={{fontSize:36}}>{layout.icon}</span>
       <p style={{fontSize:14,fontWeight:700,color:C.text}}>{layout.label}</p>
@@ -411,20 +411,20 @@ function ZoneRow({zone,color,tableCount,onRename,onDelete,unitP,tx}:{
         {editing?(
           <input value={name} onChange={e=>setName(e.target.value)} onBlur={commit}
             onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();if(e.key==='Escape')setEditing(false)}}
-            autoFocus style={{flex:1,fontSize:13,border:`1px solid ${C.amber}`,borderRadius:7,padding:'4px 8px',outline:'none',fontFamily:'inherit',background:'rgba(255,255,255,0.04)',color:C.text}}/>
+            autoFocus style={{flex:1,fontSize:13,border:`1px solid ${C.amber}`,borderRadius:7,padding:'4px 8px',outline:'none',fontFamily:'inherit',background:C.surface2,color:C.text}}/>
         ):(
           <p style={{flex:1,fontSize:14,fontWeight:600,color:C.text,cursor:'pointer'}} onClick={()=>setEditing(true)}>{zone.name}</p>
         )}
         <span style={{fontSize:12,color:C.muted}}>{tableCount} {unitP.toLowerCase()}</span>
-        <button onClick={()=>{setEditing(true);setName(zone.name)}} style={{padding:'4px 10px',fontSize:11,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>{tx('Editar')}</button>
+        <button onClick={()=>{setEditing(true);setName(zone.name)}} style={{padding:'4px 10px',fontSize:11,background:C.surface2,border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>{tx('Editar')}</button>
         <button onClick={()=>setConfirmDel(true)} style={{padding:'4px 10px',fontSize:11,background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:7,cursor:'pointer',color:C.red,fontFamily:'inherit'}}>{tx('Borrar')}</button>
       </div>
       {confirmDel&&(
         <div style={{marginTop:10,padding:'10px 12px',background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
           <p style={{fontSize:12,color:C.red}}>{tx('Eliminar')} &quot;{zone.name}&quot;?</p>
           <div style={{display:'flex',gap:6}}>
-            <button onClick={()=>setConfirmDel(false)} style={{padding:'5px 12px',fontSize:11,background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>{tx('Cancelar')}</button>
-            <button onClick={()=>{setConfirmDel(false);onDelete()}} style={{padding:'5px 12px',fontSize:11,background:C.red,border:'none',borderRadius:7,cursor:'pointer',color:'white',fontFamily:'inherit',fontWeight:700}}>{tx('Eliminar')}</button>
+            <button onClick={()=>setConfirmDel(false)} style={{padding:'5px 12px',fontSize:11,background:C.borderMd,border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>{tx('Cancelar')}</button>
+            <button onClick={()=>{setConfirmDel(false);onDelete()}} style={{padding:'5px 12px',fontSize:11,background:C.red,border:'none',borderRadius:7,cursor:'pointer',color:C.text,fontFamily:'inherit',fontWeight:700}}>{tx('Eliminar')}</button>
           </div>
         </div>
       )}
@@ -823,13 +823,13 @@ export default function MesasPage() {
       <style>{`*{box-sizing:border-box;margin:0;padding:0}.rz-inp{background:rgba(255,255,255,0.04);border:1px solid ${C.border};border-radius:9px;padding:8px 10px;color:${C.text};font-size:12px;font-family:inherit;outline:none;width:100%;transition:border-color 0.15s}.rz-inp:focus{border-color:${C.amber}!important}.rz-inp::placeholder{color:${C.muted}}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.14)}@keyframes pulse-glow{0%,100%{box-shadow:0 0 0 0 rgba(45,212,191,0)}50%{box-shadow:0 0 8px 2px rgba(45,212,191,0.3)}}`}</style>
 
       {/* ── HEADER ──────────────────────────────────────────────────────────────── */}
-      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexShrink:0,zIndex:20}}>
+      <div style={{background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexShrink:0,zIndex:20}}>
         <div style={{display:'flex',alignItems:'center',gap:14}}>
           <div>
             <h1 style={{fontSize:15,fontWeight:700,color:C.text,display:'flex',alignItems:'center',gap:8}}>
               {tx('Diseñador de espacio')}
-              {saveStatus === 'saving' && <span style={{ fontSize:11, color:'#F0A84E', fontWeight:600 }}>{tx('Guardando...')}</span>}
-              {saveStatus === 'saved' && <span style={{ fontSize:11, color:'#34D399', fontWeight:600 }}>✓ {tx('Guardado')}</span>}
+              {saveStatus === 'saving' && <span style={{ fontSize:11, color:C.amber, fontWeight:600 }}>{tx('Guardando...')}</span>}
+              {saveStatus === 'saved' && <span style={{ fontSize:11, color:C.green, fontWeight:600 }}>✓ {tx('Guardado')}</span>}
             </h1>
             <p style={{fontSize:10,color:C.muted,marginTop:1}}>
               {tables.length} {unitP.toLowerCase()} · {zones.length} {zonesLabel.toLowerCase()}
@@ -859,7 +859,7 @@ export default function MesasPage() {
           <button onClick={addQuick} style={{
             padding:'6px 14px',fontSize:11,fontWeight:700,
             background:`linear-gradient(135deg,${C.amber},#E8923A)`,
-            color:'#0C1018',border:'none',borderRadius:8,cursor:'pointer',fontFamily:'inherit',
+            color:C.bg,border:'none',borderRadius:8,cursor:'pointer',fontFamily:'inherit',
           }}>+ {unitS}</button>
           <NotifBell />
         </div>
@@ -899,7 +899,7 @@ export default function MesasPage() {
             {/* Toolbar */}
             <div style={{padding:'6px 12px',background:C.card2,borderBottom:`1px solid ${C.border}`,display:'flex',gap:6,alignItems:'center',flexWrap:'wrap',flexShrink:0}}>
               {!showLibrary && (
-                <button onClick={()=>setShowLibrary(true)} style={{padding:'3px 8px',fontSize:11,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:6,color:C.sub,cursor:'pointer',fontFamily:'inherit',marginRight:4}}>▶ {tx('Elementos')}</button>
+                <button onClick={()=>setShowLibrary(true)} style={{padding:'3px 8px',fontSize:11,background:C.surface2,border:`1px solid ${C.border}`,borderRadius:6,color:C.sub,cursor:'pointer',fontFamily:'inherit',marginRight:4}}>▶ {tx('Elementos')}</button>
               )}
               {/* Zone filters */}
               <button onClick={()=>setZoneFilter('all')} style={{
@@ -926,14 +926,14 @@ export default function MesasPage() {
                   background:snapEnabled?'rgba(45,212,191,0.08)':'transparent',
                   color:snapEnabled?C.teal:C.sub,
                 }}>⊞ Grid</button>
-                <button onClick={()=>setZoom(z=>Math.max(0.3,z-0.15))} style={{padding:'3px 7px',fontSize:12,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:5,color:C.sub,cursor:'pointer'}} aria-label="Menos">−</button>
+                <button onClick={()=>setZoom(z=>Math.max(0.3,z-0.15))} style={{padding:'3px 7px',fontSize:12,background:C.surface2,border:`1px solid ${C.border}`,borderRadius:5,color:C.sub,cursor:'pointer'}} aria-label="Menos">−</button>
                 <span style={{fontSize:10,color:C.muted,minWidth:32,textAlign:'center'}}>{Math.round(zoom*100)}%</span>
-                <button onClick={()=>setZoom(z=>Math.min(3,z+0.15))} style={{padding:'3px 7px',fontSize:12,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:5,color:C.sub,cursor:'pointer'}} aria-label="Más">+</button>
-                <button onClick={()=>{setZoom(1);setPanOffset({x:0,y:0})}} style={{padding:'3px 7px',fontSize:10,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:5,color:C.sub,cursor:'pointer',fontFamily:'inherit'}}>Fit</button>
+                <button onClick={()=>setZoom(z=>Math.min(3,z+0.15))} style={{padding:'3px 7px',fontSize:12,background:C.surface2,border:`1px solid ${C.border}`,borderRadius:5,color:C.sub,cursor:'pointer'}} aria-label="Más">+</button>
+                <button onClick={()=>{setZoom(1);setPanOffset({x:0,y:0})}} style={{padding:'3px 7px',fontSize:10,background:C.surface2,border:`1px solid ${C.border}`,borderRadius:5,color:C.sub,cursor:'pointer',fontFamily:'inherit'}}>Fit</button>
                 <div style={{width:1,height:16,background:C.border}}/>
                 <button onClick={undo} disabled={undoStack.length===0} style={{
                   padding:'3px 8px',fontSize:10,fontWeight:600,borderRadius:6,
-                  border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',
+                  border:`1px solid ${C.border}`,background:C.surface2,
                   color:undoStack.length>0?C.sub:C.muted,cursor:undoStack.length>0?'pointer':'default',
                   fontFamily:'inherit',opacity:undoStack.length>0?1:0.4,
                 }}>↩ {tx('Deshacer')}</button>
@@ -990,7 +990,7 @@ export default function MesasPage() {
                     <button onClick={addQuick} style={{
                       padding:'10px 24px',fontSize:13,fontWeight:700,
                       background:`linear-gradient(135deg,${C.amber},#E8923A)`,
-                      color:'#0C1018',border:'none',borderRadius:10,cursor:'pointer',fontFamily:'inherit',
+                      color:C.bg,border:'none',borderRadius:10,cursor:'pointer',fontFamily:'inherit',
                     }}>+ {tx('Añadir')} {unitS.toLowerCase()}</button>
                   </div>
 
@@ -1071,7 +1071,7 @@ export default function MesasPage() {
                           <rect x={cx-28} y={cy-11} width={56} height={22} rx={11}
                             fill={C.teal} opacity={0.9} />
                           <text x={cx} y={cy+4} textAnchor="middle"
-                            fill="#0C1018" fontSize={11} fontWeight={800}
+                            fill={C.bg} fontSize={11} fontWeight={800}
                             style={{userSelect:'none'}}>
                             🔗 {totalCap}p
                           </text>
@@ -1153,7 +1153,7 @@ export default function MesasPage() {
                 padding:'9px 18px',fontSize:12,fontWeight:700,
                 background:newZone.trim()?`linear-gradient(135deg,${C.amber},#E8923A)`:'rgba(255,255,255,0.06)',
                 border:'none',borderRadius:10,cursor:newZone.trim()?'pointer':'not-allowed',
-                color:newZone.trim()?'#0C1018':C.muted,fontFamily:'inherit',flexShrink:0,
+                color:newZone.trim()?C.bg:C.muted,fontFamily:'inherit',flexShrink:0,
               }}>+ {zoneLabel}</button>
             </div>
             {zones.length === 0 ? (

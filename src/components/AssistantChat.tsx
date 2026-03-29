@@ -166,7 +166,7 @@ export default function AssistantChat() {
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)' }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
         >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0C1018" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={C.bg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
         </button>
@@ -189,7 +189,7 @@ export default function AssistantChat() {
             flexDirection: 'column',
             background: C.surface,
             border: `1px solid ${C.border}`,
-            boxShadow: '0 12px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
+            boxShadow: `0 12px 48px rgba(0,0,0,0.5), 0 0 0 1px ${C.border}`,
             zIndex: 9999,
             opacity: mounted ? 1 : 0,
             transform: mounted ? 'translateY(0) scale(1)' : 'translateY(16px) scale(0.97)',
@@ -220,7 +220,7 @@ export default function AssistantChat() {
                 flexShrink: 0,
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0C1018" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.bg} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 8V4H8" /><rect x="2" y="2" width="20" height="8" rx="2" /><rect x="2" y="14" width="20" height="8" rx="2" /><path d="M6 18h.01" /><path d="M10 18h.01" />
               </svg>
             </div>
@@ -296,7 +296,7 @@ export default function AssistantChat() {
                     'Añadir a la carta',
                   ].map(s => (
                     <button key={s} onClick={() => { setInput(s); setTimeout(() => sendMessage(), 100) }}
-                      style={{ fontSize: 11, padding: '5px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'rgba(255,255,255,0.03)', color: C.text2, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+                      style={{ fontSize: 11, padding: '5px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface2, color: C.text2, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
                       onMouseEnter={e => { (e.target as HTMLElement).style.borderColor = C.amber + '44'; (e.target as HTMLElement).style.color = C.amber }}
                       onMouseLeave={e => { (e.target as HTMLElement).style.borderColor = C.border; (e.target as HTMLElement).style.color = C.text2 }}
                     >{s}</button>
@@ -324,7 +324,7 @@ export default function AssistantChat() {
                     background: msg.role === 'user'
                       ? `linear-gradient(135deg, ${C.amber}, ${C.amber2})`
                       : C.surface2,
-                    color: msg.role === 'user' ? '#0C1018' : C.text,
+                    color: msg.role === 'user' ? C.bg : C.text,
                     fontSize: 13,
                     lineHeight: 1.55,
                     fontWeight: msg.role === 'user' ? 500 : 400,
@@ -432,7 +432,7 @@ export default function AssistantChat() {
               }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={!input.trim() || loading ? C.text3 : '#0C1018'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={!input.trim() || loading ? C.text3 : C.bg} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
               </svg>
             </button>

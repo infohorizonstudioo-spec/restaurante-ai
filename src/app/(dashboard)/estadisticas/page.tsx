@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import Link from 'next/link'
+import { C } from '@/lib/colors'
 
 export default function EstadisticasPage(){
   const { template, t, tx } = useTenant()
@@ -88,14 +89,14 @@ export default function EstadisticasPage(){
   const isPro = plan==='pro'||plan==='business'||plan==='enterprise'
 
   if(!isPro) return (
-    <div style={{background:'#0C1018',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+    <div style={{background:C.bg,minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
       <div style={{maxWidth:440,textAlign:'center'}}>
         <div style={{width:64,height:64,borderRadius:16,background:'linear-gradient(135deg,#F0A84E,#E8923A)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',boxShadow:'0 8px 24px rgba(240,168,78,0.25)'}}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="#0C1018"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill={C.bg}><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         </div>
-        <h2 style={{fontSize:22,fontWeight:700,color:'#E8EEF6',marginBottom:10}}>{tx('Estadísticas avanzadas')}</h2>
-        <p style={{fontSize:14,color:'#8895A7',lineHeight:1.6,marginBottom:24}}>{tx('Analiza el rendimiento de tu recepcionista: tasa de conversión, hora pico, tendencias de reservas y más. Disponible en Pro y Business.')}</p>
-        <Link href="/precios" style={{display:'inline-block',padding:'12px 28px',fontSize:14,fontWeight:600,color:'#0C1018',background:'linear-gradient(135deg,#F0A84E,#E8923A)',borderRadius:10,textDecoration:'none',boxShadow:'0 4px 16px rgba(240,168,78,0.3)'}}>
+        <h2 style={{fontSize:22,fontWeight:700,color:C.text,marginBottom:10}}>{tx('Estadísticas avanzadas')}</h2>
+        <p style={{fontSize:14,color:C.text2,lineHeight:1.6,marginBottom:24}}>{tx('Analiza el rendimiento de tu recepcionista: tasa de conversión, hora pico, tendencias de reservas y más. Disponible en Pro y Business.')}</p>
+        <Link href="/precios" style={{display:'inline-block',padding:'12px 28px',fontSize:14,fontWeight:600,color:C.bg,background:'linear-gradient(135deg,#F0A84E,#E8923A)',borderRadius:10,textDecoration:'none',boxShadow:'0 4px 16px rgba(240,168,78,0.3)'}}>
           {tx('Ver planes →')}
         </Link>
       </div>
@@ -106,11 +107,11 @@ export default function EstadisticasPage(){
   if (!d) return null
 
   return (
-    <div style={{background:'#0C1018',minHeight:'100vh'}}>
-      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}}>
+    <div style={{background:C.bg,minHeight:'100vh'}}>
+      <div style={{background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}}>
         <div>
-          <h1 style={{fontSize:16,fontWeight:700,color:'#E8EEF6',letterSpacing:'-0.02em'}}>{t.nav.stats}</h1>
-          <p style={{fontSize:12,color:'#49566A',marginTop:1}}>{tx('Rendimiento de tu recepcionista y reservas')}</p>
+          <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{t.nav.stats}</h1>
+          <p style={{fontSize:12,color:C.muted,marginTop:1}}>{tx('Rendimiento de tu recepcionista y reservas')}</p>
         </div>
         <NotifBell/>
       </div>
@@ -119,23 +120,23 @@ export default function EstadisticasPage(){
         {/* KPIs */}
         <div className="rz-grid-4col" style={{gap:12,marginBottom:20}}>
           {[
-            {label:tx('Llamadas este mes'),value:d.callsMonth,sub:tx('Completadas')+': '+d.callsMonthCompleted,color:'#F0A84E'},
-            {label:`${L?.reservas||tx('Reservas')} ${tx('este mes')}`, value:d.resMonth,  sub:tx('Via agente')+': '+d.resVoiceMonth,   color:'#34D399'},
+            {label:tx('Llamadas este mes'),value:d.callsMonth,sub:tx('Completadas')+': '+d.callsMonthCompleted,color:C.amber},
+            {label:`${L?.reservas||tx('Reservas')} ${tx('este mes')}`, value:d.resMonth,  sub:tx('Via agente')+': '+d.resVoiceMonth,   color:C.green},
             {label:tx('Tasa conversión'),   value:d.convRate+'%',sub:`${L?.reservas||tx('Reservas')} ${tx('voz / llamadas completadas')}`, color:d.convRate>=30?'#059669':d.convRate>=15?'#d97706':'#dc2626'},
-            {label:L?.clientes||tx('Clientes'), value:d.custs, sub:`${tx('Media por')} ${L?.reserva?.toLowerCase()||tx('reserva')}: ${d.avgPeople}`, color:'#A78BFA'},
+            {label:L?.clientes||tx('Clientes'), value:d.custs, sub:`${tx('Media por')} ${L?.reserva?.toLowerCase()||tx('reserva')}: ${d.avgPeople}`, color:C.violet},
           ].map(k=>(
-            <div key={k.label} style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'18px 20px'}}>
+            <div key={k.label} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'18px 20px'}}>
               <p style={{fontSize:28,fontWeight:700,color:k.color,letterSpacing:'-0.025em'}}>{k.value}</p>
-              <p style={{fontSize:12,color:'#C4CDD8',fontWeight:500,marginTop:4}}>{k.label}</p>
-              <p style={{fontSize:11,color:'#49566A',marginTop:1}}>{k.sub}</p>
+              <p style={{fontSize:12,color:C.text2,fontWeight:500,marginTop:4}}>{k.label}</p>
+              <p style={{fontSize:11,color:C.muted,marginTop:1}}>{k.sub}</p>
             </div>
           ))}
         </div>
 
         <div className="rz-grid-2col-equal" style={{gap:16,marginBottom:16}}>
           {/* Reservas por día */}
-          <div className="rz-card-interactive" style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'18px 20px'}}>
-            <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:14}}>{tx('Reservas por día de la semana')}</p>
+          <div className="rz-card-interactive" style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'18px 20px'}}>
+            <p style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>{tx('Reservas por día de la semana')}</p>
             <div style={{display:'flex',gap:8,alignItems:'flex-end',height:100}}>
               {[1,2,3,4,5,6,0].map(day=>{
                 const cnt = d.dayCounts[day]||0
@@ -143,9 +144,9 @@ export default function EstadisticasPage(){
                 const isPeak = cnt===d.maxDay&&cnt>0
                 return (
                   <div key={day} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
-                    <p style={{fontSize:10,color:'#C4CDD8',fontWeight:600}}>{cnt||''}</p>
-                    <div style={{width:'100%',height:h+'%',minHeight:4,background:isPeak?'#F0A84E':'rgba(240,168,78,0.35)',borderRadius:4,transition:'height 0.5s'}}/>
-                    <p style={{fontSize:10,color:'#49566A'}}>{d.dayNames[day]}</p>
+                    <p style={{fontSize:10,color:C.text2,fontWeight:600}}>{cnt||''}</p>
+                    <div style={{width:'100%',height:h+'%',minHeight:4,background:isPeak?C.amber:C.amberDim,borderRadius:4,transition:'height 0.5s'}}/>
+                    <p style={{fontSize:10,color:C.muted}}>{d.dayNames[day]}</p>
                   </div>
                 )
               })}
@@ -154,28 +155,28 @@ export default function EstadisticasPage(){
 
           {/* Hora pico + fuente */}
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
-            <div style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'16px 20px',flex:1}}>
-              <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:8}}>{tx('Hora pico')}</p>
+            <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'16px 20px',flex:1}}>
+              <p style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:8}}>{tx('Hora pico')}</p>
               {d.peakHour ? (
                 <div style={{display:'flex',alignItems:'center',gap:12}}>
-                  <div style={{fontSize:32,fontWeight:800,color:'#F0A84E'}}>{d.peakHour[0]}h</div>
+                  <div style={{fontSize:32,fontWeight:800,color:C.amber}}>{d.peakHour[0]}h</div>
                   <div>
-                    <p style={{fontSize:13,color:'#C4CDD8'}}>{d.peakHour[1]} {tx('llamadas')}</p>
-                    <p style={{fontSize:11,color:'#49566A'}}>{tx('El horario más activo')}</p>
+                    <p style={{fontSize:13,color:C.text2}}>{d.peakHour[1]} {tx('llamadas')}</p>
+                    <p style={{fontSize:11,color:C.muted}}>{tx('El horario más activo')}</p>
                   </div>
                 </div>
-              ) : <p style={{fontSize:13,color:'#49566A'}}>{tx('Sin datos de llamadas')}</p>}
+              ) : <p style={{fontSize:13,color:C.muted}}>{tx('Sin datos de llamadas')}</p>}
             </div>
-            <div style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'16px 20px',flex:1}}>
-              <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:8}}>{tx('Origen reservas')}</p>
+            <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'16px 20px',flex:1}}>
+              <p style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:8}}>{tx('Origen reservas')}</p>
               <div style={{display:'flex',gap:16}}>
                 <div>
-                  <p style={{fontSize:22,fontWeight:700,color:'#A78BFA'}}>{d.srcVoice}</p>
-                  <p style={{fontSize:11,color:'#49566A'}}>{tx('Via agente voz')}</p>
+                  <p style={{fontSize:22,fontWeight:700,color:C.violet}}>{d.srcVoice}</p>
+                  <p style={{fontSize:11,color:C.muted}}>{tx('Via agente voz')}</p>
                 </div>
                 <div>
-                  <p style={{fontSize:22,fontWeight:700,color:'#8895A7'}}>{d.srcManual}</p>
-                  <p style={{fontSize:11,color:'#49566A'}}>{tx('Manuales')}</p>
+                  <p style={{fontSize:22,fontWeight:700,color:C.text2}}>{d.srcManual}</p>
+                  <p style={{fontSize:11,color:C.muted}}>{tx('Manuales')}</p>
                 </div>
               </div>
             </div>
@@ -184,18 +185,18 @@ export default function EstadisticasPage(){
 
         {/* Intenciones */}
         {d.topIntents.length>0&&(
-          <div style={{background:'#131920',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'18px 20px'}}>
-            <p style={{fontSize:13,fontWeight:600,color:'#E8EEF6',marginBottom:14}}>{tx('Intenciones detectadas')}</p>
+          <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'18px 20px'}}>
+            <p style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>{tx('Intenciones detectadas')}</p>
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
               {d.topIntents.map(([intent,cnt]:any)=>{
                 const pct = Math.round((cnt/d.callsTotal)*100)
                 return (
                   <div key={intent} style={{display:'flex',alignItems:'center',gap:10}}>
-                    <p style={{fontSize:13,color:'#C4CDD8',width:160,flexShrink:0,textTransform:'capitalize'}}>{intent.replace(/_/g,' ')}</p>
-                    <div style={{flex:1,height:8,background:'rgba(255,255,255,0.05)',borderRadius:4,overflow:'hidden'}}>
-                      <div style={{height:'100%',width:pct+'%',background:'#F0A84E',borderRadius:4}}/>
+                    <p style={{fontSize:13,color:C.text2,width:160,flexShrink:0,textTransform:'capitalize'}}>{intent.replace(/_/g,' ')}</p>
+                    <div style={{flex:1,height:8,background:C.border,borderRadius:4,overflow:'hidden'}}>
+                      <div style={{height:'100%',width:pct+'%',background:C.amber,borderRadius:4}}/>
                     </div>
-                    <p style={{fontSize:12,color:'#49566A',width:40,textAlign:'right',flexShrink:0}}>{cnt}</p>
+                    <p style={{fontSize:12,color:C.muted,width:40,textAlign:'right',flexShrink:0}}>{cnt}</p>
                   </div>
                 )
               })}

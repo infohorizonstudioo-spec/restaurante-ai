@@ -253,20 +253,20 @@ export default function ConfiguracionPage() {
     <div style={{background:C.bg,minHeight:'100vh',fontFamily:"'Sora',-apple-system,sans-serif"}}>
       <style>{`
         *{box-sizing:border-box}
-        .rz-inp{background:rgba(255,255,255,0.04);border:1px solid ${C.border};border-radius:10px;padding:10px 14px;color:${C.text};font-size:13px;font-family:inherit;outline:none;width:100%;transition:border-color 0.15s}
+        .rz-inp{background:${C.surface2};border:1px solid ${C.border};border-radius:10px;padding:10px 14px;color:${C.text};font-size:13px;font-family:inherit;outline:none;width:100%;transition:border-color 0.15s}
         .rz-inp:focus{border-color:${C.amber}!important;box-shadow:0 0 0 3px rgba(240,168,78,0.1)!important}
         .rz-inp::placeholder{color:${C.muted}}
         .rz-ta{background:${C.card2};border:1px solid ${C.border};border-radius:10px;padding:10px 12px;color:${C.text};font-size:13px;font-family:monospace;resize:vertical;outline:none;width:100%;line-height:1.6;transition:border-color 0.15s}
         .rz-ta:focus{border-color:${C.amber}!important}
         .rz-ta::placeholder{color:${C.muted}}
-        .save-btn{background:linear-gradient(135deg,#F0A84E,#E8923A);color:#0C1018;font-weight:700;font-size:14px;padding:11px 28px;border:none;border-radius:11px;cursor:pointer;font-family:inherit;transition:all 0.15s}
+        .save-btn{background:linear-gradient(135deg,${C.amber},#E8923A);color:${C.bg};font-weight:700;font-size:14px;padding:11px 28px;border:none;border-radius:11px;cursor:pointer;font-family:inherit;transition:all 0.15s}
         .save-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 16px rgba(240,168,78,0.3)}
         .save-btn:disabled{opacity:0.6;cursor:not-allowed}
         .flow-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.12s;user-select:none}
       `}</style>
 
       {/* Header */}
-      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 24px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+      <div style={{background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 24px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div>
           <h1 style={{fontSize:17,fontWeight:700,color:C.text}}>{tx('Cómo trabaja tu recepcionista')}</h1>
           <p style={{fontSize:12,color:C.muted,marginTop:2}}>{tx('Enséñale cómo funciona tu negocio y cómo quieres que actúe')}</p>
@@ -402,9 +402,9 @@ export default function ConfiguracionPage() {
                   <p style={{fontSize:11,color:C.muted,marginTop:2}}>{tx('Cuántas reservas/citas puedes atender a la vez')}</p>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
-                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_reservations_per_slot:Math.max(1,s.max_new_reservations_per_slot-1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}} aria-label="Menos">−</button>
+                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_reservations_per_slot:Math.max(1,s.max_new_reservations_per_slot-1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:C.surface2,color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}} aria-label="Menos">−</button>
                   <span style={{fontSize:18,fontWeight:700,color:C.amber,minWidth:32,textAlign:'center'}}>{schedCfg.max_new_reservations_per_slot}</span>
-                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_reservations_per_slot:Math.min(50,s.max_new_reservations_per_slot+1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}} aria-label="Más">+</button>
+                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_reservations_per_slot:Math.min(50,s.max_new_reservations_per_slot+1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:C.surface2,color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}} aria-label="Más">+</button>
                 </div>
               </div>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -413,9 +413,9 @@ export default function ConfiguracionPage() {
                   <p style={{fontSize:11,color:C.muted,marginTop:2}}>{tx('Total de personas que caben en una misma franja horaria')}</p>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
-                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_people_per_slot:Math.max(1,s.max_new_people_per_slot-1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}} aria-label="Menos">−</button>
+                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_people_per_slot:Math.max(1,s.max_new_people_per_slot-1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:C.surface2,color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}} aria-label="Menos">−</button>
                   <span style={{fontSize:18,fontWeight:700,color:C.amber,minWidth:32,textAlign:'center'}}>{schedCfg.max_new_people_per_slot}</span>
-                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_people_per_slot:Math.min(100,s.max_new_people_per_slot+1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}} aria-label="Más">+</button>
+                  <button onClick={()=>setSchedCfg(s=>({...s,max_new_people_per_slot:Math.min(100,s.max_new_people_per_slot+1)}))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:C.surface2,color:C.text,fontSize:16,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}} aria-label="Más">+</button>
                 </div>
               </div>
             </div>
@@ -574,7 +574,7 @@ export default function ConfiguracionPage() {
             </div>
             <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
               {FLOW_OPTIONS.filter(o=>!cfg.conversation_flow.includes(o)).map(o=>(
-                <button key={o} onClick={()=>setCfg(c=>({...c,conversation_flow:[...c.conversation_flow,o]}))} className="flow-chip" style={{background:'rgba(255,255,255,0.03)',border:`1px solid ${C.border}`,color:C.muted}}>
+                <button key={o} onClick={()=>setCfg(c=>({...c,conversation_flow:[...c.conversation_flow,o]}))} className="flow-chip" style={{background:C.surface2,border:`1px solid ${C.border}`,color:C.muted}}>
                   + {o}
                 </button>
               ))}
@@ -793,7 +793,7 @@ function AlertRulesSection({ tenantId, tx: _tx }: { tenantId?: string; tx: (s: s
           <button onClick={saveRules} disabled={saving} style={{
             marginTop: 12, padding: '10px 24px', borderRadius: 10, border: 'none',
             background: `linear-gradient(135deg, ${C.amber}, #E8923A)`,
-            color: '#0C1018', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            color: C.bg, fontSize: 13, fontWeight: 700, cursor: 'pointer',
             opacity: saving ? 0.6 : 1,
           }}>
             {saving ? _tx('Guardando...') : _tx('Guardar alertas')}

@@ -105,31 +105,31 @@ export default function ProductosPage() {
       <style>{`@keyframes rzShimmer{0%{opacity:0.5}50%{opacity:1}100%{opacity:0.5}}.rz-skel{animation:rzShimmer 1.5s ease-in-out infinite}`}</style>
       <div style={{ background:'rgba(19,25,32,0.85)', borderBottom:`1px solid ${C.border}`, padding:'14px 24px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div>
-          <div className="rz-skel" style={{ width:160, height:18, borderRadius:6, background:'rgba(255,255,255,0.06)' }} />
-          <div className="rz-skel" style={{ width:220, height:12, borderRadius:4, background:'rgba(255,255,255,0.04)', marginTop:8 }} />
+          <div className="rz-skel" style={{ width:160, height:18, borderRadius:6, background:C.borderMd }} />
+          <div className="rz-skel" style={{ width:220, height:12, borderRadius:4, background:C.surface2, marginTop:8 }} />
         </div>
-        <div className="rz-skel" style={{ width:120, height:36, borderRadius:10, background:'rgba(255,255,255,0.06)' }} />
+        <div className="rz-skel" style={{ width:120, height:36, borderRadius:10, background:C.borderMd }} />
       </div>
       <div style={{ maxWidth:900, margin:'0 auto', padding:'20px 24px' }}>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:10, marginBottom:20 }}>
           {[1,2,3,4].map(i => (
-            <div key={i} style={{ background:'rgba(255,255,255,0.03)', border:`1px solid ${C.border}`, borderRadius:12, padding:'14px 16px' }}>
-              <div className="rz-skel" style={{ width:40, height:22, borderRadius:6, background:'rgba(255,255,255,0.06)', marginBottom:6 }} />
-              <div className="rz-skel" style={{ width:70, height:10, borderRadius:4, background:'rgba(255,255,255,0.04)' }} />
+            <div key={i} style={{ background:C.surface2, border:`1px solid ${C.border}`, borderRadius:12, padding:'14px 16px' }}>
+              <div className="rz-skel" style={{ width:40, height:22, borderRadius:6, background:C.borderMd, marginBottom:6 }} />
+              <div className="rz-skel" style={{ width:70, height:10, borderRadius:4, background:C.surface2 }} />
             </div>
           ))}
         </div>
         <div style={{ display:'flex', gap:6, marginBottom:16 }}>
-          {[80,110,100,90,100].map((w,i) => <div key={i} className="rz-skel" style={{ width:w, height:30, borderRadius:9, background:'rgba(255,255,255,0.04)' }} />)}
+          {[80,110,100,90,100].map((w,i) => <div key={i} className="rz-skel" style={{ width:w, height:30, borderRadius:9, background:C.surface2 }} />)}
         </div>
         {[1,2,3,4,5].map(i => (
           <div key={i} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 16px', marginBottom:6, display:'flex', alignItems:'center', gap:14 }}>
-            <div className="rz-skel" style={{ width:36, height:36, borderRadius:10, background:'rgba(255,255,255,0.06)', flexShrink:0 }} />
+            <div className="rz-skel" style={{ width:36, height:36, borderRadius:10, background:C.borderMd, flexShrink:0 }} />
             <div style={{ flex:1 }}>
-              <div className="rz-skel" style={{ width:`${50 + i*15}%`, maxWidth:200, height:14, borderRadius:4, background:'rgba(255,255,255,0.06)', marginBottom:6 }} />
-              <div className="rz-skel" style={{ width:`${70 + i*5}%`, maxWidth:300, height:10, borderRadius:4, background:'rgba(255,255,255,0.03)' }} />
+              <div className="rz-skel" style={{ width:`${50 + i*15}%`, maxWidth:200, height:14, borderRadius:4, background:C.borderMd, marginBottom:6 }} />
+              <div className="rz-skel" style={{ width:`${70 + i*5}%`, maxWidth:300, height:10, borderRadius:4, background:C.surface2 }} />
             </div>
-            <div className="rz-skel" style={{ width:60, height:30, borderRadius:8, background:'rgba(255,255,255,0.04)', flexShrink:0 }} />
+            <div className="rz-skel" style={{ width:60, height:30, borderRadius:8, background:C.surface2, flexShrink:0 }} />
           </div>
         ))}
       </div>
@@ -157,7 +157,7 @@ export default function ProductosPage() {
           <p style={{ fontSize:12, color:C.muted, marginTop:2 }}>{available} {tx('disponibles')} · {soldOut} {tx('agotados')} · {byRequest} {tx('por encargo')}</p>
         </div>
         <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-          <button onClick={() => setModal({ _new: true })} style={{ background:`linear-gradient(135deg,${C.amber},#E8923A)`, color:'#0C1018', fontWeight:700, fontSize:13, padding:'9px 18px', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'inherit' }}>+ {tx('Nuevo producto')}</button>
+          <button onClick={() => setModal({ _new: true })} style={{ background:`linear-gradient(135deg,${C.amber},#E8923A)`, color:C.bg, fontWeight:700, fontSize:13, padding:'9px 18px', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'inherit' }}>+ {tx('Nuevo producto')}</button>
           <NotifBell />
         </div>
       </div>
@@ -205,7 +205,7 @@ export default function ProductosPage() {
             </div>
             <p style={{ fontSize:17, fontWeight:700, color:C.text, marginBottom:8 }}>{tx('Sin productos en carta')}</p>
             <p style={{ fontSize:13, color:C.muted, maxWidth:320, margin:'0 auto', lineHeight:1.5 }}>{tx('Añade productos para que se gestione la disponibilidad en tiempo real.')}</p>
-            <button onClick={() => setModal({ _new: true })} style={{ marginTop:20, padding:'11px 28px', fontSize:13, fontWeight:700, background:`linear-gradient(135deg,${C.amber},#E8923A)`, color:'#0C1018', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'inherit', boxShadow:'0 4px 16px rgba(240,168,78,0.25)' }}>+ {tx('Nuevo producto')}</button>
+            <button onClick={() => setModal({ _new: true })} style={{ marginTop:20, padding:'11px 28px', fontSize:13, fontWeight:700, background:`linear-gradient(135deg,${C.amber},#E8923A)`, color:C.bg, border:'none', borderRadius:10, cursor:'pointer', fontFamily:'inherit', boxShadow:'0 4px 16px rgba(240,168,78,0.25)' }}>+ {tx('Nuevo producto')}</button>
           </div>
         ) : (
           Object.entries(
@@ -218,7 +218,7 @@ export default function ProductosPage() {
             <div key={cat} style={{ marginBottom:24 }}>
               <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
                 <p style={{ fontSize:11, fontWeight:700, color:C.sub, letterSpacing:'0.06em', textTransform:'uppercase' }}>{tx(cat)}</p>
-                <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:6, background:'rgba(255,255,255,0.05)', color:C.muted }}>{(catItems as any[]).length}</span>
+                <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:6, background:C.border, color:C.muted }}>{(catItems as any[]).length}</span>
                 <div style={{ flex:1, height:1, background:C.border }} />
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
@@ -251,7 +251,7 @@ export default function ProductosPage() {
                         {/* Stock bar para limitados */}
                         {item.availability_type === 'limited_daily' && item.daily_limit && (
                           <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:6 }}>
-                            <div style={{ flex:1, height:5, background:'rgba(255,255,255,0.06)', borderRadius:3, overflow:'hidden' }}>
+                            <div style={{ flex:1, height:5, background:C.borderMd, borderRadius:3, overflow:'hidden' }}>
                               <div style={{ height:'100%', width:`${Math.min(100, (usedToday/item.daily_limit)*100)}%`, background: isSoldOut ? C.red : usedToday/item.daily_limit > 0.7 ? C.yellow : C.green, transition:'width 0.3s', borderRadius:3 }}/>
                             </div>
                             <span style={{ fontSize:11, fontWeight:700, color: isSoldOut ? C.red : remaining! <= 1 ? C.yellow : C.green, flexShrink:0 }}>
@@ -264,14 +264,14 @@ export default function ProductosPage() {
                       </div>
                       {/* Acciones */}
                       <div style={{ display:'flex', gap:6, flexShrink:0, position:'relative' }}>
-                        <button onClick={() => setModal(item)} style={{ padding:'6px 12px', fontSize:12, fontWeight:600, background:'rgba(255,255,255,0.04)', border:`1px solid ${C.border}`, borderRadius:8, cursor:'pointer', color:C.sub, fontFamily:'inherit' }}>{tx('Editar')}</button>
+                        <button onClick={() => setModal(item)} style={{ padding:'6px 12px', fontSize:12, fontWeight:600, background:C.surface2, border:`1px solid ${C.border}`, borderRadius:8, cursor:'pointer', color:C.sub, fontFamily:'inherit' }}>{tx('Editar')}</button>
                         <button onClick={() => setDeleteConfirm(item.id)} style={{ padding:'6px 10px', fontSize:12, background:C.redDim, border:`1px solid ${C.red}33`, borderRadius:8, cursor:'pointer', color:C.red, fontFamily:'inherit' }} aria-label="Cerrar">✕</button>
                         {deleteConfirm===item.id&&(
                           <div style={{position:'absolute',right:0,top:'100%',marginTop:6,background:C.card,border:`1px solid ${C.red}44`,borderRadius:10,padding:'10px 14px',zIndex:20,width:220,boxShadow:'0 8px 24px rgba(0,0,0,0.4)'}}>
                             <p style={{fontSize:12,color:C.red,marginBottom:8}}>{tx('Eliminar')} "{item.name}"?</p>
                             <div style={{display:'flex',gap:6}}>
-                              <button onClick={()=>setDeleteConfirm(null)} style={{flex:1,padding:'5px',fontSize:11,background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>{tx('Cancelar')}</button>
-                              <button onClick={()=>deleteItem(item.id)} style={{flex:1,padding:'5px',fontSize:11,background:C.red,border:'none',borderRadius:7,cursor:'pointer',color:'white',fontFamily:'inherit',fontWeight:700}}>{tx('Eliminar')}</button>
+                              <button onClick={()=>setDeleteConfirm(null)} style={{flex:1,padding:'5px',fontSize:11,background:C.borderMd,border:`1px solid ${C.border}`,borderRadius:7,cursor:'pointer',color:C.sub,fontFamily:'inherit'}}>{tx('Cancelar')}</button>
+                              <button onClick={()=>deleteItem(item.id)} style={{flex:1,padding:'5px',fontSize:11,background:C.red,border:'none',borderRadius:7,cursor:'pointer',color:C.text,fontFamily:'inherit',fontWeight:700}}>{tx('Eliminar')}</button>
                             </div>
                           </div>
                         )}
@@ -309,7 +309,7 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: {
   })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const up = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
-  const lbl = { fontSize:11, fontWeight:600, color:'#8895A7', letterSpacing:'0.03em', display:'block', marginBottom:5 }
+  const lbl = { fontSize:11, fontWeight:600, color:C.text2, letterSpacing:'0.03em', display:'block', marginBottom:5 }
 
   function submit() {
     const errors: Record<string, string> = {}
@@ -407,8 +407,8 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: {
           </div>
 
           <div style={{ display:'flex', gap:10, marginTop:4 }}>
-            <button onClick={onClose} style={{ flex:1, padding:'11px', background:'rgba(255,255,255,0.04)', border:`1px solid ${C.border}`, borderRadius:10, cursor:'pointer', color:C.sub, fontSize:13, fontFamily:'inherit' }}>{tx('Cancelar')}</button>
-            <button onClick={submit} disabled={!form.name.trim()} style={{ flex:2, padding:'11px', background:`linear-gradient(135deg,${C.amber},#E8923A)`, border:'none', borderRadius:10, cursor:'pointer', color:'#0C1018', fontSize:13, fontWeight:700, fontFamily:'inherit', opacity: form.name.trim() ? 1 : 0.5 }}>{tx('Guardar')}</button>
+            <button onClick={onClose} style={{ flex:1, padding:'11px', background:C.surface2, border:`1px solid ${C.border}`, borderRadius:10, cursor:'pointer', color:C.sub, fontSize:13, fontFamily:'inherit' }}>{tx('Cancelar')}</button>
+            <button onClick={submit} disabled={!form.name.trim()} style={{ flex:2, padding:'11px', background:`linear-gradient(135deg,${C.amber},#E8923A)`, border:'none', borderRadius:10, cursor:'pointer', color:C.bg, fontSize:13, fontWeight:700, fontFamily:'inherit', opacity: form.name.trim() ? 1 : 0.5 }}>{tx('Guardar')}</button>
           </div>
         </div>
       </div>

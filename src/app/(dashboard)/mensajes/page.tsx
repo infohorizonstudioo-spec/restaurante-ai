@@ -34,21 +34,6 @@ type Message = {
   content_type: string; status: string; created_at: string; metadata?: any
 }
 
-// ── Animation keyframes (injected once) ───────────────────────
-const STYLE_ID = 'mensajes-animations'
-function injectAnimations() {
-  if (typeof document === 'undefined' || document.getElementById(STYLE_ID)) return
-  const style = document.createElement('style')
-  style.id = STYLE_ID
-  style.textContent = `
-    @keyframes rz-pulse-ring { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(2.2); opacity: 0; } }
-    @keyframes rz-bounce-dot { 0%,80%,100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
-    @keyframes rz-status-fade { 0% { opacity: 0; transform: scale(0.6); } 100% { opacity: 1; transform: scale(1); } }
-    @keyframes rz-msg-in { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }
-  `
-  document.head.appendChild(style)
-}
-
 export default function MensajesPage() {
   const { tenant, t, tx } = useTenant()
   const toast = useToast()
@@ -59,12 +44,7 @@ export default function MensajesPage() {
   const [loading, setLoading] = useState(true)
   const [replyText, setReplyText] = useState('')
   const [sending, setSending] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
-  const [lastMsgPreview, setLastMsgPreview] = useState<Record<string, string>>({})
-  const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set())
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => { injectAnimations() }, [])
 
   const tid = tenant?.id
 
@@ -104,14 +84,8 @@ export default function MensajesPage() {
         () => loadConversations(tid))
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `tenant_id=eq.${tid}` },
         (payload: any) => {
-          const convId = payload.new?.conversation_id
-          if (selected && convId === selected.id) {
+          if (selected && payload.new?.conversation_id === selected.id) {
             loadMessages(selected.id)
-          } else if (convId) {
-            setUnreadIds(prev => new Set(prev).add(convId))
-          }
-          if (convId && payload.new?.content) {
-            setLastMsgPreview(prev => ({ ...prev, [convId]: payload.new.content }))
           }
           loadConversations(tid)
         })
@@ -124,7 +98,6 @@ export default function MensajesPage() {
   const selectConversation = (conv: Conversation) => {
     setSelected(conv)
     loadMessages(conv.id)
-    setUnreadIds(prev => { const next = new Set(prev); next.delete(conv.id); return next })
   }
 
   // ── Send reply ─────────────────────────────────────────────
@@ -150,9 +123,7 @@ export default function MensajesPage() {
       })
       if (!res.ok) throw new Error()
       setReplyText('')
-      setIsTyping(true)
       loadMessages(selected.id)
-      setTimeout(() => setIsTyping(false), 2000)
     } catch {
       toast.push({ title: tx('Error'), body: tx('No se pudo enviar el mensaje'), type: 'message', priority: 'critical', icon: '⚠️' })
     } finally {
@@ -204,17 +175,6 @@ export default function MensajesPage() {
     return `${Math.floor(hrs / 24)}d`
   }
 
-  const dateLabel = (ts: string) => {
-    const d = new Date(ts)
-    const now = new Date()
-    const isToday = d.toDateString() === now.toDateString()
-    const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1)
-    const isYesterday = d.toDateString() === yesterday.toDateString()
-    if (isToday) return tx('Hoy')
-    if (isYesterday) return tx('Ayer')
-    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined })
-  }
-
   return (
     <div className="rz-panel-split rz-page-enter" style={{ display: 'flex', height: 'calc(100vh - 64px)', background: C.bg }}>
       {/* ── LEFT: Conversation List ─────────────────────────────── */}
@@ -257,113 +217,42 @@ export default function MensajesPage() {
           {loading ? (
             <div style={{ padding: 40, textAlign: 'center', color: C.text3 }}>{tx('Cargando...')}</div>
           ) : filtered.length === 0 ? (
-            <div style={{ padding: '60px 24px', textAlign: 'center' }}>
-              <div style={{ position: 'relative', display: 'inline-block', marginBottom: 24 }}>
-                <div style={{
-                  width: 64, height: 64, borderRadius: 20,
-                  background: 'linear-gradient(135deg, rgba(240,168,78,0.12), rgba(45,212,191,0.06))',
-                  border: '1px solid rgba(240,168,78,0.15)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
-                }}>💬</div>
-                <div style={{
-                  position: 'absolute', inset: -8, borderRadius: 26,
-                  border: '1px dashed rgba(240,168,78,0.12)', pointerEvents: 'none',
-                }} />
-                {/* Decorative channel icons */}
-                <div style={{
-                  position: 'absolute', top: -6, right: -10, fontSize: 14,
-                  background: C.surface, borderRadius: 8, padding: '2px 4px',
-                  border: `1px solid ${C.border}`,
-                }}>✉️</div>
-                <div style={{
-                  position: 'absolute', bottom: -6, left: -10, fontSize: 14,
-                  background: C.surface, borderRadius: 8, padding: '2px 4px',
-                  border: `1px solid ${C.border}`,
-                }}>📱</div>
+            <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+              <div style={{position:'relative',display:'inline-block',marginBottom:20}}>
+                <div style={{width:56,height:56,borderRadius:16,background:`linear-gradient(135deg,rgba(240,168,78,0.10),rgba(240,168,78,0.04))`,border:'1px solid rgba(240,168,78,0.12)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22}}>💬</div>
+                <div style={{position:'absolute',inset:-6,borderRadius:22,border:'1px dashed rgba(240,168,78,0.12)',pointerEvents:'none'}}/>
               </div>
-              <p style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 6 }}>
-                {tx('Sin conversaciones')}
-              </p>
-              <p style={{ fontSize: 13, color: C.text2, lineHeight: 1.7, maxWidth: 240, margin: '0 auto' }}>
-                {tx('Los mensajes de WhatsApp, email y SMS aparecerán aquí cuando lleguen.')}
-              </p>
+              <p style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:6}}>{tx('Sin conversaciones')}</p>
+              <p style={{fontSize:12,color:C.text2,lineHeight:1.6}}>{tx('Los mensajes de WhatsApp, email y SMS aparecerán aquí.')}</p>
             </div>
           ) : filtered.map(conv => {
             const ch = CHANNEL_META[conv.channel] || CHANNEL_META.sms
             const stk = STATUS_META_KEYS[conv.status] || STATUS_META_KEYS.closed
             const isSelected = selected?.id === conv.id
-            const isUnread = unreadIds.has(conv.id)
             const customerName = conv.customer?.name || conv.from_identifier || tx('Sin contacto')
-            const preview = lastMsgPreview[conv.id] || conv.summary || conv.intent || ''
-            const initials = customerName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
 
             return (
               <div key={conv.id} onClick={() => selectConversation(conv)} style={{
                 padding: '14px 20px', cursor: 'pointer',
                 borderBottom: `1px solid ${C.border}`,
-                background: isSelected ? C.surface2 : isUnread ? 'rgba(240,168,78,0.04)' : 'transparent',
+                background: isSelected ? C.surface2 : 'transparent',
                 borderLeft: isSelected ? `3px solid ${ch.color}` : '3px solid transparent',
-                transition: 'background 0.2s ease',
               }}>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  {/* Avatar with channel badge + unread pulse */}
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: 12,
-                      background: `linear-gradient(135deg, ${ch.color}22, ${ch.color}08)`,
-                      border: `1px solid ${ch.color}30`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 13, fontWeight: 700, color: ch.color,
-                    }}>
-                      {initials || ch.icon}
-                    </div>
-                    <div style={{
-                      position: 'absolute', bottom: -3, right: -3,
-                      width: 18, height: 18, borderRadius: 6,
-                      background: C.surface, border: `1.5px solid ${C.border}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10,
-                    }}>{ch.icon}</div>
-                    {isUnread && (
-                      <div style={{ position: 'absolute', top: -2, right: -2 }}>
-                        <div style={{
-                          width: 10, height: 10, borderRadius: '50%',
-                          background: C.amber, border: `2px solid ${C.surface}`,
-                        }} />
-                        <div style={{
-                          position: 'absolute', inset: 0,
-                          width: 10, height: 10, borderRadius: '50%',
-                          background: C.amber,
-                          animation: 'rz-pulse-ring 1.5s ease-out infinite',
-                        }} />
-                      </div>
-                    )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>{ch.icon}</span>
+                    <span style={{ color: C.text, fontSize: 14, fontWeight: 600 }}>{customerName}</span>
                   </div>
-                  {/* Content */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: C.text, fontSize: 14, fontWeight: isUnread ? 700 : 600 }}>{customerName}</span>
-                      <span style={{ color: isUnread ? C.amber : C.text3, fontSize: 11, flexShrink: 0 }}>{timeAgo(conv.last_message_at)}</span>
-                    </div>
-                    <div style={{
-                      color: isUnread ? C.text2 : C.text3, fontSize: 12, marginTop: 4,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      fontWeight: isUnread ? 500 : 400,
-                    }}>
-                      {conv.status === 'escalated'
-                        ? `⚠️ ${conv.escalated_reason || tx('Escalada')}`
-                        : preview || ch.label}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                      <span style={{
-                        fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
-                        color: stk.color, background: stk.color + '18',
-                        transition: 'color 0.3s ease, background 0.3s ease',
-                      }}>{tx(stk.key)}</span>
-                      {conv.priority === 'high' && (
-                        <span style={{ fontSize: 10, color: C.red }}>● {tx('Alta')}</span>
-                      )}
-                    </div>
-                  </div>
+                  <span style={{ color: C.text3, fontSize: 11 }}>{timeAgo(conv.last_message_at)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                  <span style={{ color: C.text2, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
+                    {conv.status === 'escalated' ? `⚠️ ${conv.escalated_reason || tx('Escalada')}` : conv.summary || conv.intent || ch.label}
+                  </span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
+                    color: stk.color, background: stk.color + '18',
+                  }}>{tx(stk.key)}</span>
                 </div>
               </div>
             )
@@ -374,37 +263,10 @@ export default function MensajesPage() {
       {/* ── RIGHT: Message Thread ───────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: C.bg }}>
         {!selected ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
-            <div style={{ position: 'relative', marginBottom: 8 }}>
-              <div style={{
-                width: 72, height: 72, borderRadius: 22,
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))',
-                border: `1px solid ${C.border}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
-              }}>💬</div>
-              <div style={{
-                position: 'absolute', inset: -10, borderRadius: 30,
-                border: '1px dashed rgba(255,255,255,0.05)', pointerEvents: 'none',
-              }} />
-            </div>
-            <p style={{ color: C.text, fontSize: 16, fontWeight: 700 }}>{tx('Selecciona una conversación')}</p>
-            <p style={{ color: C.text3, fontSize: 13, maxWidth: 280, textAlign: 'center', lineHeight: 1.6 }}>
-              {tx('Elige un mensaje del panel izquierdo para ver el hilo completo')}
-            </p>
-            {conversations.length > 0 && (
-              <div style={{
-                marginTop: 8, display: 'flex', gap: 8,
-              }}>
-                {Object.entries(channelCounts).slice(0, 3).map(([ch, count]) => (
-                  <span key={ch} style={{
-                    fontSize: 11, padding: '4px 10px', borderRadius: 8,
-                    background: C.surface2, border: `1px solid ${C.border}`, color: C.text2,
-                  }}>
-                    {CHANNEL_META[ch]?.icon} {count}
-                  </span>
-                ))}
-              </div>
-            )}
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+            <div className="rz-card-interactive" style={{width:56,height:56,borderRadius:16,background:'rgba(255,255,255,0.03)',border:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,marginBottom:4}}>💬</div>
+            <p style={{ color: C.text, fontSize: 14, fontWeight: 600 }}>{tx('Selecciona una conversación')}</p>
+            <p style={{ color: C.text3, fontSize: 12 }}>{tx('Elige un mensaje del panel izquierdo para ver el hilo completo')}</p>
           </div>
         ) : (
           <>
@@ -486,90 +348,45 @@ export default function MensajesPage() {
 
             {/* Messages */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-              {messages.map((msg, idx) => {
+              {messages.map(msg => {
                 const isAgent = msg.role === 'agent'
                 const isSystem = msg.role === 'system'
-                const prevMsg = messages[idx - 1]
-                const showDateDivider = idx === 0 || (prevMsg && dateLabel(msg.created_at) !== dateLabel(prevMsg.created_at))
-                const statusColor = msg.status === 'read' ? C.teal : msg.status === 'delivered' ? C.blue : msg.status === 'failed' ? C.red : C.text3
-
                 return (
-                  <div key={msg.id}>
-                    {/* Date divider */}
-                    {showDateDivider && (
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: 12,
-                        margin: '20px 0 16px', padding: '0 8px',
-                      }}>
-                        <div style={{ flex: 1, height: 1, background: C.border }} />
-                        <span style={{
-                          fontSize: 11, fontWeight: 600, color: C.text3,
-                          padding: '4px 12px', borderRadius: 10,
-                          background: C.surface2, border: `1px solid ${C.border}`,
-                        }}>
-                          {dateLabel(msg.created_at)}
-                        </span>
-                        <div style={{ flex: 1, height: 1, background: C.border }} />
-                      </div>
-                    )}
-                    {/* Bubble */}
+                  <div key={msg.id} style={{
+                    display: 'flex',
+                    justifyContent: isAgent ? 'flex-end' : isSystem ? 'center' : 'flex-start',
+                    marginBottom: 12,
+                  }}>
                     <div style={{
-                      display: 'flex',
-                      justifyContent: isAgent ? 'flex-end' : isSystem ? 'center' : 'flex-start',
-                      marginBottom: 8,
-                      animation: 'rz-msg-in 0.25s ease-out',
+                      maxWidth: '70%', padding: '10px 16px', borderRadius: 16,
+                      background: isAgent ? C.amberDim : isSystem ? C.surface2 : C.surface2,
+                      border: `1px solid ${isAgent ? C.amber + '30' : C.border}`,
+                      borderBottomRightRadius: isAgent ? 4 : 16,
+                      borderBottomLeftRadius: isAgent ? 16 : 4,
                     }}>
+                      {isSystem && (
+                        <div style={{ fontSize: 10, color: C.text3, marginBottom: 4, fontWeight: 600 }}>{tx('Sistema')}</div>
+                      )}
                       <div style={{
-                        maxWidth: '70%', padding: '10px 16px', borderRadius: 16,
-                        background: isAgent ? C.amberDim : isSystem ? C.surface2 : C.surface2,
-                        border: `1px solid ${isAgent ? C.amber + '30' : C.border}`,
-                        borderBottomRightRadius: isAgent ? 4 : 16,
-                        borderBottomLeftRadius: isAgent ? 16 : 4,
-                        boxShadow: isSystem ? 'none' : `0 2px 8px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.12)`,
+                        color: C.text, fontSize: 14, lineHeight: 1.5,
+                        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                       }}>
-                        {isSystem && (
-                          <div style={{ fontSize: 10, color: C.text3, marginBottom: 4, fontWeight: 600 }}>{tx('Sistema')}</div>
+                        {msg.content}
+                      </div>
+                      <div style={{
+                        fontSize: 10, color: C.text3, marginTop: 6, textAlign: isAgent ? 'right' : 'left',
+                      }}>
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {isAgent && msg.status && (
+                          <span style={{ marginLeft: 6 }}>
+                            {msg.status === 'delivered' ? '✓✓' : msg.status === 'read' ? '✓✓' : msg.status === 'sent' ? '✓' : msg.status === 'failed' ? '✗' : ''}
+                          </span>
                         )}
-                        <div style={{
-                          color: C.text, fontSize: 14, lineHeight: 1.5,
-                          whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                        }}>
-                          {msg.content}
-                        </div>
-                        <div style={{
-                          fontSize: 10, color: C.text3, marginTop: 6, textAlign: isAgent ? 'right' : 'left',
-                          display: 'flex', alignItems: 'center', justifyContent: isAgent ? 'flex-end' : 'flex-start', gap: 4,
-                        }}>
-                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          {isAgent && msg.status && (
-                            <span style={{ color: statusColor, transition: 'color 0.3s ease' }}>
-                              {msg.status === 'delivered' ? '✓✓' : msg.status === 'read' ? '✓✓' : msg.status === 'sent' ? '✓' : msg.status === 'failed' ? '✗' : ''}
-                            </span>
-                          )}
-                        </div>
                       </div>
                     </div>
                   </div>
                 )
               })}
-              {/* Typing indicator */}
-              {isTyping && (
-                <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
-                  <div style={{
-                    padding: '12px 18px', borderRadius: 16, borderBottomLeftRadius: 4,
-                    background: C.surface2, border: `1px solid ${C.border}`,
-                    display: 'flex', alignItems: 'center', gap: 5,
-                  }}>
-                    {[0, 1, 2].map(i => (
-                      <div key={i} style={{
-                        width: 7, height: 7, borderRadius: '50%',
-                        background: C.text3,
-                        animation: `rz-bounce-dot 1.2s ease-in-out ${i * 0.15}s infinite`,
-                      }} />
-                    ))}
-                  </div>
-                </div>
-              )}
               <div ref={messagesEndRef} />
             </div>
 

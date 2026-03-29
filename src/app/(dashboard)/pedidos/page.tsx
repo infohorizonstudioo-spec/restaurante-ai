@@ -7,6 +7,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import Link from 'next/link'
 import { useToast } from '@/components/NotificationToast'
 import { ORDER_STATUS } from '@/lib/status-config'
+import { C } from '@/lib/colors'
 
 /* ── Status flow (matches agent update-order) ──────────────────────── */
 const STATUS_FLOW = ['collecting','confirmed','preparing','ready','delivered'] as const
@@ -206,12 +207,12 @@ export default function PedidosPage() {
   // Guard: orders only available for hospitality
   if (template && !template.hasOrders) {
     return (
-      <div style={{ background: '#0C1018', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ textAlign: 'center', maxWidth: 400 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🚫</div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#E8EEF6', marginBottom: 8 }}>{L.moduleUnavailable}</h2>
-          <p style={{ fontSize: 14, color: '#8895A7', lineHeight: 1.6, marginBottom: 24 }}>{L.moduleDesc}</p>
-          <Link href="/panel" style={{ padding: '10px 24px', fontSize: 14, fontWeight: 600, color: 'white', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', borderRadius: 9, textDecoration: 'none' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 8 }}>{L.moduleUnavailable}</h2>
+          <p style={{ fontSize: 14, color: C.text2, lineHeight: 1.6, marginBottom: 24 }}>{L.moduleDesc}</p>
+          <Link href="/panel" style={{ padding: '10px 24px', fontSize: 14, fontWeight: 600, color: C.text, background: 'linear-gradient(135deg,#F0A84E,#E8923A)', borderRadius: 9, textDecoration: 'none' }}>
             {L.backToPanel}
           </Link>
         </div>
@@ -222,14 +223,14 @@ export default function PedidosPage() {
   const isPro = plan === 'pro' || plan === 'business' || plan === 'enterprise'
 
   if (!isPro) return (
-    <div style={{ background: '#0C1018', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ maxWidth: 440, textAlign: 'center' }}>
         <div style={{ width: 64, height: 64, borderRadius: 16, background: 'linear-gradient(135deg,#F0A84E,#E8923A)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 24px rgba(240,168,78,0.25)' }}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="#0C1018"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill={C.bg}><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
         </div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#E8EEF6', marginBottom: 10 }}>{L.orderMgmt}</h2>
-        <p style={{ fontSize: 14, color: '#8895A7', lineHeight: 1.6, marginBottom: 24 }}>{L.orderMgmtDesc}</p>
-        <Link href="/precios" style={{ display: 'inline-block', padding: '12px 28px', fontSize: 14, fontWeight: 600, color: '#0C1018', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', borderRadius: 10, textDecoration: 'none', boxShadow: '0 4px 16px rgba(240,168,78,0.3)' }}>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>{L.orderMgmt}</h2>
+        <p style={{ fontSize: 14, color: C.text2, lineHeight: 1.6, marginBottom: 24 }}>{L.orderMgmtDesc}</p>
+        <Link href="/precios" style={{ display: 'inline-block', padding: '12px 28px', fontSize: 14, fontWeight: 600, color: C.bg, background: 'linear-gradient(135deg,#F0A84E,#E8923A)', borderRadius: 10, textDecoration: 'none', boxShadow: '0 4px 16px rgba(240,168,78,0.3)' }}>
           {L.viewPlans}
         </Link>
       </div>
@@ -283,15 +284,15 @@ export default function PedidosPage() {
   const localeTag = locale === 'en' ? 'en-GB' : locale === 'fr' ? 'fr-FR' : locale === 'pt' ? 'pt-PT' : 'es-ES'
 
   return (
-    <div style={{ background: '#0C1018', minHeight: '100vh' }}>
+    <div style={{ background: C.bg, minHeight: '100vh' }}>
       {/* ── Header ────────────────────────────────────────────── */}
-      <div style={{ background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20 }}>
+      <div style={{ background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom: '1px solid ' + C.border, padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20 }}>
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 700, color: '#E8EEF6', letterSpacing: '-0.02em' }}>{L.title}</h1>
-          <p style={{ fontSize: 12, color: '#49566A', marginTop: 2 }}>{activos.length} {L.active} · {orders.length} {L.total}</p>
+          <h1 style={{ fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }}>{L.title}</h1>
+          <p style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{activos.length} {L.active} · {orders.length} {L.total}</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={nuevoOrder} style={{ padding: '9px 18px', fontSize: 13, fontWeight: 700, color: '#0C1018', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', border: 'none', borderRadius: 9, cursor: 'pointer', boxShadow: '0 2px 12px rgba(240,168,78,0.25)' }}>
+          <button onClick={nuevoOrder} style={{ padding: '9px 18px', fontSize: 13, fontWeight: 700, color: C.bg, background: 'linear-gradient(135deg,#F0A84E,#E8923A)', border: 'none', borderRadius: 9, cursor: 'pointer', boxShadow: '0 2px 12px rgba(240,168,78,0.25)' }}>
             {L.newOrder}
           </button>
           <NotifBell />
@@ -299,12 +300,12 @@ export default function PedidosPage() {
       </div>
 
       {/* ── Filter bar ────────────────────────────────────────── */}
-      <div style={{ background: '#131920', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '0 24px', display: 'flex', gap: 0 }}>
+      <div style={{ background: C.surface, borderBottom: '1px solid ' + C.border, padding: '0 24px', display: 'flex', gap: 0 }}>
         {ORDER_TYPES.map(tp => (
           <button key={tp} onClick={() => setTipoFilter(tp)} style={{
             padding: '10px 16px', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer',
-            borderBottom: tipoFilter === tp ? '2px solid #F0A84E' : '2px solid transparent',
-            color: tipoFilter === tp ? '#F0A84E' : '#8895A7',
+            borderBottom: tipoFilter === tp ? `2px solid ${C.amber}` : '2px solid transparent',
+            color: tipoFilter === tp ? C.amber : C.text2,
             fontWeight: tipoFilter === tp ? 600 : 400, fontFamily: 'inherit', textTransform: 'capitalize'
           }}>
             {tp === 'todos'
@@ -323,7 +324,7 @@ export default function PedidosPage() {
               const cnt = orders.filter(o => o.status === s).length
               const sm = ORDER_STATUS[s]
               return (
-                <div key={s} style={{ background: '#1A2230', border: '1px solid ' + sm.color + '33', borderRadius: 12, padding: '12px 16px' }}>
+                <div key={s} style={{ background: C.surface2, border: '1px solid ' + sm.color + '33', borderRadius: 12, padding: '12px 16px' }}>
                   <p style={{ fontSize: 22, fontWeight: 700, color: sm.color }}>{cnt}</p>
                   <p style={{ fontSize: 12, color: sm.color, fontWeight: 600 }}>{sm.icon} {SL[s]}</p>
                 </div>
@@ -334,14 +335,14 @@ export default function PedidosPage() {
 
         {/* ── Order cards ─────────────────────────────────────── */}
         {filtered.length === 0 ? (
-          <div style={{ background: '#131920', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '64px 24px', textAlign: 'center' }}>
+          <div style={{ background: C.surface, border: '1px solid ' + C.border, borderRadius: 14, padding: '64px 24px', textAlign: 'center' }}>
             <div style={{ position: 'relative', display: 'inline-block', marginBottom: 20 }}>
               <div style={{ width: 64, height: 64, background: 'linear-gradient(135deg,rgba(240,168,78,0.10),rgba(240,168,78,0.04))', borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, border: '1px solid rgba(240,168,78,0.12)' }}>🛍️</div>
               <div style={{ position: 'absolute', inset: -8, borderRadius: 24, border: '1px dashed rgba(240,168,78,0.12)', pointerEvents: 'none' }}/>
             </div>
-            <p style={{ fontSize: 15, fontWeight: 700, color: '#E8EEF6', marginBottom: 8 }}>{L.noOrders}</p>
-            <p style={{ fontSize: 13, color: '#8895A7', lineHeight: 1.6, maxWidth: 320, margin: '0 auto 20px' }}>{L.noOrdersDesc}</p>
-            <button onClick={nuevoOrder} style={{ padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#0C1018', background: 'linear-gradient(135deg,#F0A84E,#E8923A)', border: 'none', borderRadius: 9, cursor: 'pointer' }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 8 }}>{L.noOrders}</p>
+            <p style={{ fontSize: 13, color: C.text2, lineHeight: 1.6, maxWidth: 320, margin: '0 auto 20px' }}>{L.noOrdersDesc}</p>
+            <button onClick={nuevoOrder} style={{ padding: '9px 20px', fontSize: 13, fontWeight: 600, color: C.bg, background: 'linear-gradient(135deg,#F0A84E,#E8923A)', border: 'none', borderRadius: 9, cursor: 'pointer' }}>
               {L.createManual}
             </button>
           </div>
@@ -356,7 +357,7 @@ export default function PedidosPage() {
 
           return (
             <div key={o.id} onClick={() => setModal(o)} style={{
-              background: '#131920', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12,
+              background: C.surface, border: '1px solid ' + C.border, borderRadius: 12,
               padding: '14px 16px', marginBottom: 10, cursor: 'pointer',
               borderLeft: '3px solid ' + sm.color,
               transition: 'box-shadow 0.15s'
@@ -371,14 +372,14 @@ export default function PedidosPage() {
                 {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: '#E8EEF6' }}>{o.customer_name}</p>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{o.customer_name}</p>
                     <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, background: sm.color + '18', color: sm.color, fontWeight: 700 }}>{SL[o.status] || o.status}</span>
-                    <span style={{ fontSize: 10, color: '#49566A' }}>{typeLabel}</span>
-                    {o.table_id && <span style={{ fontSize: 10, color: '#60A5FA', fontWeight: 600 }}>{L.table} {o.table_id}</span>}
+                    <span style={{ fontSize: 10, color: C.muted }}>{typeLabel}</span>
+                    {o.table_id && <span style={{ fontSize: 10, color: C.blue, fontWeight: 600 }}>{L.table} {o.table_id}</span>}
                   </div>
                   {/* Items preview */}
                   {items.length > 0 && (
-                    <p style={{ fontSize: 12, color: '#8895A7', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
+                    <p style={{ fontSize: 12, color: C.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
                       {items.map((it: any) => {
                         const qty = it.quantity && it.quantity > 1 ? it.quantity + 'x ' : ''
                         return qty + (it.name || it.toString())
@@ -387,36 +388,36 @@ export default function PedidosPage() {
                   )}
                   {/* Delivery address */}
                   {address && (
-                    <p style={{ fontSize: 11, color: '#2DD4BF', marginTop: 2, fontWeight: 600 }}>📍 {address}</p>
+                    <p style={{ fontSize: 11, color: C.teal, marginTop: 2, fontWeight: 600 }}>📍 {address}</p>
                   )}
                   {/* Notes (non-address) */}
                   {o.notes && !o.notes.startsWith('DIRECCION:') && !o.notes.startsWith('DIRECCIÓN:') && (
-                    <p style={{ fontSize: 11, color: '#49566A', marginTop: 2, fontStyle: 'italic' }}>{o.notes.length > 80 ? o.notes.slice(0, 80) + '...' : o.notes}</p>
+                    <p style={{ fontSize: 11, color: C.muted, marginTop: 2, fontStyle: 'italic' }}>{o.notes.length > 80 ? o.notes.slice(0, 80) + '...' : o.notes}</p>
                   )}
                   {/* Time */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
-                    <span style={{ fontSize: 11, color: o.status === 'collecting' || o.status === 'confirmed' ? '#F0A84E' : '#49566A', fontWeight: o.status === 'collecting' ? 600 : 400 }}>
+                    <span style={{ fontSize: 11, color: o.status === 'collecting' || o.status === 'confirmed' ? C.amber : C.muted, fontWeight: o.status === 'collecting' ? 600 : 400 }}>
                       {timeAgo(o.created_at, locale)}
                     </span>
-                    <span style={{ fontSize: 11, color: '#49566A' }}>
+                    <span style={{ fontSize: 11, color: C.muted }}>
                       {new Date(o.created_at).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     {o.pickup_time && (
-                      <span style={{ fontSize: 11, color: '#A78BFA', fontWeight: 600 }}>{L.pickup} {o.pickup_time}</span>
+                      <span style={{ fontSize: 11, color: C.violet, fontWeight: 600 }}>{L.pickup} {o.pickup_time}</span>
                     )}
                   </div>
                 </div>
                 {/* Right side: total + quick action */}
                 <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                  {total > 0 && <p style={{ fontSize: 16, fontWeight: 700, color: '#34D399' }}>{total.toFixed(2)}€</p>}
+                  {total > 0 && <p style={{ fontSize: 16, fontWeight: 700, color: C.green }}>{total.toFixed(2)}€</p>}
                   {ns && o.status !== 'delivered' && o.status !== 'cancelled' && (
                     <button
                       onClick={(e) => { e.stopPropagation(); avanzarEstado(o.id, o.status) }}
                       style={{
                         padding: '5px 12px', fontSize: 11, fontWeight: 600, borderRadius: 7,
-                        border: '1px solid ' + (ORDER_STATUS[ns]?.color || '#F0A84E') + '44',
-                        background: (ORDER_STATUS[ns]?.color || '#F0A84E') + '18',
-                        color: ORDER_STATUS[ns]?.color || '#F0A84E',
+                        border: '1px solid ' + (ORDER_STATUS[ns]?.color || C.amber) + '44',
+                        background: (ORDER_STATUS[ns]?.color || C.amber) + '18',
+                        color: ORDER_STATUS[ns]?.color || C.amber,
                         cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap'
                       }}>
                       {nextLabel(o.status, locale)} →
@@ -432,27 +433,27 @@ export default function PedidosPage() {
       {/* ── Order detail modal ────────────────────────────────── */}
       {modal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 16 }} onClick={() => setModal(null)} onKeyDown={e => { if (e.key === 'Escape') setModal(null) }} tabIndex={-1} ref={el => { if (el) el.focus() }}>
-          <div style={{ background: '#131920', border: '1px solid rgba(255,255,255,0.11)', borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-              <p style={{ fontSize: 15, fontWeight: 700, color: '#E8EEF6' }}>{modal.customer_name}</p>
-              <button onClick={() => setModal(null)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#49566A' }} aria-label="Cerrar">&times;</button>
+          <div style={{ background: C.surface, border: `1px solid ${C.borderMd}`, borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid ' + C.border }}>
+              <p style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{modal.customer_name}</p>
+              <button onClick={() => setModal(null)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, color: C.muted }} aria-label="Cerrar">&times;</button>
             </div>
             <div style={{ padding: '20px 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: (ORDER_STATUS[modal.status]?.color || '#8895A7') + '18', color: ORDER_STATUS[modal.status]?.color || '#8895A7', fontWeight: 700 }}>
+              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: (ORDER_STATUS[modal.status]?.color || C.text2) + '18', color: ORDER_STATUS[modal.status]?.color || C.text2, fontWeight: 700 }}>
                 {ORDER_STATUS[modal.status]?.icon} {SL[modal.status] || modal.status}
               </span>
-              <span style={{ fontSize: 11, color: '#49566A' }}>
+              <span style={{ fontSize: 11, color: C.muted }}>
                 {(TYPE_ICONS[modal.order_type] || '📦') + ' ' + (TL[modal.order_type] || modal.order_type)}
               </span>
-              {modal.table_id && <span style={{ fontSize: 11, color: '#60A5FA', fontWeight: 600 }}>{L.table} {modal.table_id}</span>}
+              {modal.table_id && <span style={{ fontSize: 11, color: C.blue, fontWeight: 600 }}>{L.table} {modal.table_id}</span>}
             </div>
 
             {/* Customer info */}
             <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {modal.customer_phone && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <p style={{ fontSize: 13, color: '#C4CDD8' }}>📞 {modal.customer_phone}</p>
+                  <p style={{ fontSize: 13, color: C.text2 }}>📞 {modal.customer_phone}</p>
                   <button onClick={async () => {
                     const sess = await supabase.auth.getSession()
                     if (!sess.data.session) return
@@ -462,48 +463,48 @@ export default function PedidosPage() {
                       body: JSON.stringify({ phone_number: modal.customer_phone, reason: 'general', customer_name: modal.customer_name })
                     })
                   }}
-                    style={{ fontSize: 11, padding: '4px 10px', borderRadius: 7, border: '1px solid rgba(45,212,191,0.3)', background: 'rgba(45,212,191,0.08)', color: '#2DD4BF', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
+                    style={{ fontSize: 11, padding: '4px 10px', borderRadius: 7, border: '1px solid rgba(45,212,191,0.3)', background: 'rgba(45,212,191,0.08)', color: C.teal, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
                     {L.call}
                   </button>
                 </div>
               )}
               {extractAddress(modal) && (
-                <p style={{ fontSize: 13, color: '#2DD4BF' }}>📍 {extractAddress(modal)}</p>
+                <p style={{ fontSize: 13, color: C.teal }}>📍 {extractAddress(modal)}</p>
               )}
               {modal.pickup_time && (
-                <p style={{ fontSize: 13, color: '#A78BFA' }}>🕐 {L.pickup} {modal.pickup_time}</p>
+                <p style={{ fontSize: 13, color: C.violet }}>🕐 {L.pickup} {modal.pickup_time}</p>
               )}
               {modal.notes && (
-                <p style={{ fontSize: 13, color: '#C4CDD8' }}>📝 {modal.notes}</p>
+                <p style={{ fontSize: 13, color: C.text2 }}>📝 {modal.notes}</p>
               )}
             </div>
 
             {/* Items list */}
             {Array.isArray(modal.items) && modal.items.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: '#49566A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{L.products}</p>
-                <div style={{ background: '#1A2230', borderRadius: 10, overflow: 'hidden' }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{L.products}</p>
+                <div style={{ background: C.surface2, borderRadius: 10, overflow: 'hidden' }}>
                   {modal.items.map((item: any, idx: number) => (
                     <div key={idx} style={{
                       padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      borderBottom: idx < modal.items.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none'
+                      borderBottom: idx < modal.items.length - 1 ? `1px solid ${C.border}` : 'none'
                     }}>
                       <div>
-                        <p style={{ fontSize: 13, color: '#E8EEF6', fontWeight: 500 }}>{item.name || item.toString()}</p>
+                        <p style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{item.name || item.toString()}</p>
                         {item.quantity && item.quantity > 1 && (
-                          <p style={{ fontSize: 11, color: '#49566A' }}>x{item.quantity}</p>
+                          <p style={{ fontSize: 11, color: C.muted }}>x{item.quantity}</p>
                         )}
                       </div>
                       {item.price != null && (
-                        <p style={{ fontSize: 13, color: '#34D399', fontWeight: 600 }}>{(item.price * (item.quantity || 1)).toFixed(2)}€</p>
+                        <p style={{ fontSize: 13, color: C.green, fontWeight: 600 }}>{(item.price * (item.quantity || 1)).toFixed(2)}€</p>
                       )}
                     </div>
                   ))}
                   {/* Total row */}
                   {(modal.total_estimate || 0) > 0 && (
-                    <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', background: '#0C1018', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                      <p style={{ fontSize: 13, color: '#E8EEF6', fontWeight: 700 }}>{L.totalLabel}</p>
-                      <p style={{ fontSize: 15, color: '#34D399', fontWeight: 700 }}>{(modal.total_estimate || 0).toFixed(2)}€</p>
+                    <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', background: C.bg, borderTop: '1px solid ' + C.border }}>
+                      <p style={{ fontSize: 13, color: C.text, fontWeight: 700 }}>{L.totalLabel}</p>
+                      <p style={{ fontSize: 15, color: C.green, fontWeight: 700 }}>{(modal.total_estimate || 0).toFixed(2)}€</p>
                     </div>
                   )}
                 </div>
@@ -512,7 +513,7 @@ export default function PedidosPage() {
 
             {/* Status flow buttons */}
             <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: '#49566A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{L.changeStatus}</p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{L.changeStatus}</p>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {STATUS_FLOW.map(s => {
                   const sm = ORDER_STATUS[s]
@@ -525,8 +526,8 @@ export default function PedidosPage() {
                     <button key={s} onClick={() => cambiarEstado(modal.id, s)} style={{
                       padding: '7px 14px', fontSize: 12, fontWeight: 600, borderRadius: 8,
                       border: '1px solid ' + sm.color + '44',
-                      background: isActive ? sm.color + '30' : '#1A2230',
-                      color: isActive ? sm.color : isPast ? '#49566A' : sm.color + 'aa',
+                      background: isActive ? sm.color + '30' : C.surface2,
+                      color: isActive ? sm.color : isPast ? C.muted : sm.color + 'aa',
                       cursor: 'pointer', fontFamily: 'inherit',
                       opacity: isPast ? 0.5 : 1,
                     }}>
@@ -548,7 +549,7 @@ export default function PedidosPage() {
             </div>
 
             {/* Timestamps */}
-            <div style={{ fontSize: 11, color: '#49566A', display: 'flex', gap: 16 }}>
+            <div style={{ fontSize: 11, color: C.muted, display: 'flex', gap: 16 }}>
               <span>{L.created} {new Date(modal.created_at).toLocaleString(localeTag, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
               {modal.updated_at && modal.updated_at !== modal.created_at && (
                 <span>{L.updated} {new Date(modal.updated_at).toLocaleString(localeTag, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>

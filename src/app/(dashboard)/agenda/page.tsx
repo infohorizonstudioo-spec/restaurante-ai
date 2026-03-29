@@ -7,6 +7,7 @@ import { PageLoader } from '@/components/ui'
 import { RESERVATION_STATUS } from '@/lib/status-config'
 import NotifBell from '@/components/NotifBell'
 import Link from 'next/link'
+import { C } from '@/lib/colors'
 
 const DEFAULT_HOURS = Array.from({length:15},(_,i)=>i+8)  // 08:00 → 22:00
 
@@ -71,7 +72,7 @@ function ResTooltip({r, tx}: {r:any, anchorRef?: React.RefObject<HTMLDivElement>
     }}>
       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
         <div style={{width:10,height:10,borderRadius:'50%',background:cfg.color,flexShrink:0}}/>
-        <span style={{fontSize:13,fontWeight:700,color:'#E8EEF6',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.customer_name||tx('Sin nombre')}</span>
+        <span style={{fontSize:13,fontWeight:700,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.customer_name||tx('Sin nombre')}</span>
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:5}}>
         <Row icon="🕐" text={`${fmtTime(r.time||r.reservation_time||'')} · ${ppl} ${ppl!==1?tx('personas'):tx('persona')}`}/>
@@ -92,7 +93,7 @@ function Row({icon,text,muted}:{icon:string,text:string,muted?:boolean}) {
   return (
     <div style={{display:'flex',gap:7,alignItems:'flex-start'}}>
       <span style={{fontSize:11,flexShrink:0,marginTop:1}}>{icon}</span>
-      <span style={{fontSize:12,color:muted?'#49566A':'#94a3b8',lineHeight:1.4,wordBreak:'break-word'}}>{text}</span>
+      <span style={{fontSize:12,color:muted?C.muted:'#94a3b8',lineHeight:1.4,wordBreak:'break-word'}}>{text}</span>
     </div>
   )
 }
@@ -115,8 +116,8 @@ function ResBlock({r, onHover, onLeave, tx}: {r:any, onHover:(e:React.MouseEvent
         borderLeftWidth:3, borderLeftColor:cfg.color,
       }}
     >
-      <p style={{fontSize:11.5,fontWeight:700,color:'#E8EEF6',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.3}}>{r.customer_name||tx('Sin nombre')}</p>
-      <p style={{fontSize:10,color:'#8895A7',marginTop:1}}>{time} · {ppl}p</p>
+      <p style={{fontSize:11.5,fontWeight:700,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.3}}>{r.customer_name||tx('Sin nombre')}</p>
+      <p style={{fontSize:10,color:C.text2,marginTop:1}}>{time} · {ppl}p</p>
     </div>
   )
 }
@@ -198,11 +199,8 @@ export default function AgendaPage() {
   }
 
 
-  const C = {
-    bg:'#0C1018', card:'#131920', border:'rgba(255,255,255,0.07)',
-    text:'#E8EEF6', muted:'#49566A', sub:'#8895A7', amber:'#F0A84E',
-    today:'rgba(240,168,78,0.06)', todayBorder:'rgba(240,168,78,0.25)',
-  }
+  const today_bg = 'rgba(240,168,78,0.06)'
+  const todayBorder = 'rgba(240,168,78,0.25)'
 
   return (
     <div style={{background:C.bg,minHeight:'100vh',display:'flex',flexDirection:'column',fontFamily:"'Sora',-apple-system,sans-serif"}}>
@@ -211,17 +209,17 @@ export default function AgendaPage() {
         ::-webkit-scrollbar{width:5px;height:5px}
         ::-webkit-scrollbar-track{background:transparent}
         ::-webkit-scrollbar-thumb{background:#2d3748;border-radius:3px}
-        .nav-btn{background:transparent;border:1px solid ${C.border};border-radius:9px;padding:7px 14px;color:${C.sub};font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.15s}
-        .nav-btn:hover{background:rgba(255,255,255,0.05);color:${C.text}}
+        .nav-btn{background:transparent;border:1px solid ${C.border};border-radius:9px;padding:7px 14px;color:${C.text2};font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.15s}
+        .nav-btn:hover{background:${C.surface2};color:${C.text}}
         .today-btn{background:rgba(240,168,78,0.10);border:1px solid rgba(240,168,78,0.30);border-radius:9px;padding:7px 16px;color:${C.amber};font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s}
         .today-btn:hover{background:rgba(240,168,78,0.18)}
-        .res-cell:hover{background:rgba(255,255,255,0.02)}
-        .new-btn{background:linear-gradient(135deg,#F0A84E,#E8923A);color:#0C1018;font-weight:700;font-size:13px;padding:8px 18px;border:none;border-radius:10px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;text-decoration:none;transition:all 0.15s}
+        .res-cell:hover{background:${C.surface2}}
+        .new-btn{background:linear-gradient(135deg,${C.amber},#E8923A);color:${C.bg};font-weight:700;font-size:13px;padding:8px 18px;border:none;border-radius:10px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;text-decoration:none;transition:all 0.15s}
         .new-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(240,168,78,0.3)}
       `}</style>
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:isMobile?'10px 12px':'14px 24px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
+      <div style={{background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:isMobile?'10px 12px':'14px 24px',position:'sticky',top:0,zIndex:30,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
         <div style={{display:'flex',alignItems:'center',gap:isMobile?10:20}}>
           <div>
             <h1 style={{fontSize:isMobile?15:17,fontWeight:700,color:C.text,lineHeight:1.2}}>{tx('Agenda')}</h1>
@@ -247,7 +245,7 @@ export default function AgendaPage() {
 
       {/* ── Mobile day selector ──────────────────────────────────────────── */}
       {isMobile && (
-        <div style={{display:'flex',gap:4,padding:'8px 12px',background:C.card,borderBottom:`1px solid ${C.border}`,overflowX:'auto'}}>
+        <div style={{display:'flex',gap:4,padding:'8px 12px',background:C.surface,borderBottom:`1px solid ${C.border}`,overflowX:'auto'}}>
           {week.map((d,i)=>{
             const iso = d.toISOString().slice(0,10)
             const isToday = iso===todayIso
@@ -256,11 +254,11 @@ export default function AgendaPage() {
             return (
               <button key={iso} onClick={()=>setMobileDay(i)} style={{
                 flex:'1 0 0',minWidth:42,padding:'6px 4px',borderRadius:10,border:'none',cursor:'pointer',
-                background:isSelected?(isToday?C.amber:'rgba(255,255,255,0.10)'):'transparent',
+                background:isSelected?(isToday?C.amber:C.surface2):'transparent',
                 display:'flex',flexDirection:'column',alignItems:'center',gap:2,fontFamily:'inherit',
               }}>
-                <span style={{fontSize:9,fontWeight:600,color:isSelected&&isToday?'#0C1018':isToday?C.amber:C.muted}}>{DAY_SHORT[i]}</span>
-                <span style={{fontSize:14,fontWeight:isSelected?700:500,color:isSelected&&isToday?'#0C1018':isSelected?C.text:C.sub}}>{d.getDate()}</span>
+                <span style={{fontSize:9,fontWeight:600,color:isSelected&&isToday?C.bg:isToday?C.amber:C.muted}}>{DAY_SHORT[i]}</span>
+                <span style={{fontSize:14,fontWeight:isSelected?700:500,color:isSelected&&isToday?C.bg:isSelected?C.text:C.text2}}>{d.getDate()}</span>
                 {cnt>0&&<span style={{fontSize:8,fontWeight:700,color:isToday?C.amber:'#818cf8'}}>{cnt}</span>}
               </button>
             )
@@ -275,7 +273,7 @@ export default function AgendaPage() {
 
           {/* Cabecera días (hidden on mobile — day selector above replaces it) */}
           {!isMobile && (
-          <div style={{display:'grid',gridTemplateColumns:`64px repeat(${colCount},1fr)`,background:C.card,borderBottom:`2px solid ${C.border}`,position:'sticky',top:0,zIndex:20}}>
+          <div style={{display:'grid',gridTemplateColumns:`64px repeat(${colCount},1fr)`,background:C.surface,borderBottom:`2px solid ${C.border}`,position:'sticky',top:0,zIndex:20}}>
             <div style={{padding:'12px 0',borderRight:`1px solid ${C.border}`}}/>
             {visibleDays.map((d,i)=>{
               const iso = d.toISOString().slice(0,10)
@@ -283,10 +281,10 @@ export default function AgendaPage() {
               const dayIdx = week.indexOf(d)
               const cnt = res.filter(r=>(r.date||r.reservation_date)===iso).length
               return (
-                <div key={iso} style={{padding:'10px 8px',textAlign:'center',borderRight:`1px solid ${C.border}`,background:isToday?C.today:'transparent'}}>
+                <div key={iso} style={{padding:'10px 8px',textAlign:'center',borderRight:`1px solid ${C.border}`,background:isToday?today_bg:'transparent'}}>
                   <p style={{fontSize:10,fontWeight:600,letterSpacing:'0.06em',color:isToday?C.amber:C.muted,marginBottom:4}}>{DAY_SHORT[dayIdx]}</p>
                   <div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:32,height:32,borderRadius:'50%',background:isToday?C.amber:'transparent',margin:'0 auto'}}>
-                    <span style={{fontSize:16,fontWeight:isToday?700:500,color:isToday?'#0C1018':C.text}}>{d.getDate()}</span>
+                    <span style={{fontSize:16,fontWeight:isToday?700:500,color:isToday?C.bg:C.text}}>{d.getDate()}</span>
                   </div>
                   {cnt>0&&<div style={{marginTop:5}}><span style={{fontSize:10,fontWeight:600,color:isToday?C.amber:'#818cf8',background:isToday?'rgba(240,168,78,0.15)':'rgba(129,140,248,0.15)',padding:'2px 8px',borderRadius:10}}>{cnt}</span></div>}
                 </div>
@@ -299,7 +297,7 @@ export default function AgendaPage() {
           {HOURS.map(hour=>{
             const hasAny = visibleDays.some(d=>getResForCell(d.toISOString().slice(0,10),hour).length>0)
             return (
-              <div key={hour} style={{display:'grid',gridTemplateColumns:`${isMobile?'48px':'64px'} repeat(${colCount},1fr)`,borderBottom:`1px solid rgba(255,255,255,0.04)`,minHeight:isMobile?50:60,background:hasAny?'rgba(255,255,255,0.005)':'transparent'}}>
+              <div key={hour} style={{display:'grid',gridTemplateColumns:`${isMobile?'48px':'64px'} repeat(${colCount},1fr)`,borderBottom:`1px solid ${C.border}`,minHeight:isMobile?50:60,background:hasAny?C.surface2:'transparent'}}>
                 <div style={{padding:isMobile?'8px 6px 0 0':'10px 10px 0 0',textAlign:'right',borderRight:`1px solid ${C.border}`,flexShrink:0}}>
                   <span style={{fontSize:11,fontWeight:600,color:C.muted}}>{hour.toString().padStart(2,'0')}:00</span>
                 </div>
@@ -308,7 +306,7 @@ export default function AgendaPage() {
                   const isToday = iso===todayIso
                   const cellRes = getResForCell(iso,hour)
                   return (
-                    <div key={di} className="res-cell" style={{borderRight:`1px solid ${C.border}`,padding:'4px 5px',background:isToday?C.today:'transparent',transition:'background 0.1s',minHeight:isMobile?50:60}}>
+                    <div key={di} className="res-cell" style={{borderRight:`1px solid ${C.border}`,padding:'4px 5px',background:isToday?today_bg:'transparent',transition:'background 0.1s',minHeight:isMobile?50:60}}>
                       {cellRes.map(r=>(
                         <ResBlock key={r.id} r={r} onHover={handleHover} onLeave={()=>setTooltip(null)} tx={tx}/>
                       ))}
@@ -343,7 +341,7 @@ function Stat({label,value,color}:{label:string,value:number,color:string}) {
   return (
     <div style={{textAlign:'center'}}>
       <p style={{fontSize:20,fontWeight:800,color,lineHeight:1}}>{value}</p>
-      <p style={{fontSize:10,color:'#49566A',marginTop:2}}>{label}</p>
+      <p style={{fontSize:10,color:C.muted,marginTop:2}}>{label}</p>
     </div>
   )
 }

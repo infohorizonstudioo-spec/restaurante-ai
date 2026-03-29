@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import { useToast } from '@/components/NotificationToast'
+import { C } from '@/lib/colors'
 
 const HOURS = Array.from({length:30},(_,i)=>{
   const h = Math.floor(i/2)+8
@@ -103,16 +104,12 @@ export default function NuevaReservaPage() {
   }
 
 
-  const C = {
-    bg:'#0C1018', card:'#131920', border:'rgba(255,255,255,0.07)',
-    text:'#E8EEF6', muted:'#49566A', sub:'#8895A7', amber:'#F0A84E', red:'#F87171'
-  }
   const inp = {
-    width:'100%', background:'rgba(255,255,255,0.04)', border:`1px solid ${C.border}`,
+    width:'100%', background:C.surface2, border:`1px solid ${C.border}`,
     borderRadius:10, padding:'11px 14px', color:C.text, fontSize:14,
     outline:'none', fontFamily:'inherit', transition:'border-color 0.15s'
   } as React.CSSProperties
-  const label = { fontSize:12, fontWeight:600, color:C.sub, letterSpacing:'0.03em', display:'block', marginBottom:6 }
+  const label = { fontSize:12, fontWeight:600, color:C.text2, letterSpacing:'0.03em', display:'block', marginBottom:6 }
 
   if (loading) return <PageLoader/>
 
@@ -125,9 +122,9 @@ export default function NuevaReservaPage() {
       `}</style>
 
       {/* Header */}
-      <div style={{background:C.card, borderBottom:`1px solid ${C.border}`, padding:'14px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:20}}>
+      <div style={{background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:20}}>
         <div style={{display:'flex', alignItems:'center', gap:12}}>
-          <Link href="/agenda" style={{display:'flex', alignItems:'center', justifyContent:'center', width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`, color:C.sub, textDecoration:'none', fontSize:16}}>←</Link>
+          <Link href="/agenda" style={{display:'flex', alignItems:'center', justifyContent:'center', width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`, color:C.text2, textDecoration:'none', fontSize:16}}>←</Link>
           <div>
             <h1 style={{fontSize:17, fontWeight:700, color:C.text}}>{tx('Nueva')} {L?.reserva?.toLowerCase() || tx('reserva')}</h1>
             <p style={{fontSize:12, color:C.muted, marginTop:1}}>{tx('Añadir manualmente')}</p>
@@ -137,7 +134,7 @@ export default function NuevaReservaPage() {
 
       {/* Formulario */}
       <div style={{maxWidth:520, margin:'32px auto', padding:'0 20px'}}>
-        <div style={{background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:28, display:'flex', flexDirection:'column', gap:20}}>
+        <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:28, display:'flex', flexDirection:'column', gap:20}}>
 
           {/* Nombre */}
           <div>
@@ -160,7 +157,7 @@ export default function NuevaReservaPage() {
             <div>
               <label style={label}>{tx('HORA')} *</label>
               <select className="rz-inp" style={{...inp, appearance:'none', cursor:'pointer'}} value={form.time} onChange={e=>up('time',e.target.value)}>
-                {HOURS.map(h=><option key={h} value={h} style={{background:C.card}}>{h}</option>)}
+                {HOURS.map(h=><option key={h} value={h} style={{background:C.surface}}>{h}</option>)}
               </select>
             </div>
           </div>
@@ -174,7 +171,7 @@ export default function NuevaReservaPage() {
                   width:44, height:44, borderRadius:10, border:`1px solid`,
                   borderColor: form.people===n ? C.amber : C.border,
                   background: form.people===n ? 'rgba(240,168,78,0.12)' : 'transparent',
-                  color: form.people===n ? C.amber : C.sub,
+                  color: form.people===n ? C.amber : C.text2,
                   fontWeight:600, fontSize:14, cursor:'pointer', transition:'all 0.12s', fontFamily:'inherit'
                 }}>{n}</button>
               ))}
@@ -192,10 +189,10 @@ export default function NuevaReservaPage() {
 
           {/* Botones */}
           <div style={{display:'flex', gap:10, marginTop:4}}>
-            <Link href="/agenda" style={{flex:1, padding:'12px 0', textAlign:'center', background:'transparent', border:`1px solid ${C.border}`, borderRadius:10, color:C.sub, fontSize:14, fontWeight:600, textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center'}}>{tx('Cancelar')}</Link>
+            <Link href="/agenda" style={{flex:1, padding:'12px 0', textAlign:'center', background:'transparent', border:`1px solid ${C.border}`, borderRadius:10, color:C.text2, fontSize:14, fontWeight:600, textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center'}}>{tx('Cancelar')}</Link>
             <button onClick={handleSubmit} disabled={saving||!tid} style={{
-              flex:2, padding:'12px 0', background: saving ? 'rgba(240,168,78,0.5)' : 'linear-gradient(135deg,#F0A84E,#E8923A)',
-              border:'none', borderRadius:10, color:'#0C1018', fontSize:14, fontWeight:700,
+              flex:2, padding:'12px 0', background: saving ? 'rgba(240,168,78,0.5)' : `linear-gradient(135deg,${C.amber},#E8923A)`,
+              border:'none', borderRadius:10, color:C.bg, fontSize:14, fontWeight:700,
               cursor: saving ? 'not-allowed' : 'pointer', fontFamily:'inherit', transition:'all 0.15s'
             }}>
               {saving ? tx('Guardando...') : `✓ ${tx('Confirmar')} ${L?.reserva?.toLowerCase() || tx('reserva')}`}
