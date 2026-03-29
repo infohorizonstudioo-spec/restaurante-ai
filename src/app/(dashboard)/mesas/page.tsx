@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
@@ -436,6 +437,8 @@ function ZoneRow({zone,color,tableCount,onRename,onDelete,unitP,tx}:{
 // MAIN PAGE — SPACE DESIGNER
 // ═════════════════════════════════════════════════════════════════════════════
 export default function MesasPage() {
+  const searchParams = useSearchParams()
+  const isTPVMode = searchParams.get('mode') === 'tpv'
   const { tenant, template, tx } = useTenant()
   const unitS      = template?.labels?.unit?.singular  || 'Mesa'
   const unitP      = template?.labels?.unit?.plural    || 'Mesas'
@@ -611,6 +614,16 @@ export default function MesasPage() {
 
   // ── Table combining (juntar/separar) ────────────────────────────────────
   function handleSelect(id:string, shiftKey:boolean) {
+    // TPV mode: click table → go back to TPV with that table selected
+    if (isTPVMode) {
+      const t = tables.find(tbl => tbl.id === id)
+      if (t) {
+        // Store selected table in sessionStorage so TPV can read it
+        sessionStorage.setItem('tpv_selected_table', t.number)
+        window.location.href = '/tpv'
+      }
+      return
+    }
     if (shiftKey) {
       // Multi-select mode
       setMultiSelect(prev => {
@@ -822,6 +835,30 @@ export default function MesasPage() {
     <div style={{background:C.bg,height:'100vh',fontFamily:"'Sora',-apple-system,sans-serif",display:'flex',flexDirection:'column',overflow:'hidden'}}>
       <style>{`*{box-sizing:border-box;margin:0;padding:0}.rz-inp{background:rgba(255,255,255,0.04);border:1px solid ${C.border};border-radius:9px;padding:8px 10px;color:${C.text};font-size:12px;font-family:inherit;outline:none;width:100%;transition:border-color 0.15s}.rz-inp:focus{border-color:${C.amber}!important}.rz-inp::placeholder{color:${C.muted}}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.14)}@keyframes pulse-glow{0%,100%{box-shadow:0 0 0 0 rgba(45,212,191,0)}50%{box-shadow:0 0 8px 2px rgba(45,212,191,0.3)}}`}</style>
 
+      {/* ── TPV MODE BANNER ───────────────────────────────────────────────────── */}
+      {isTPVMode && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(240,168,78,0.15), rgba(240,168,78,0.05))',
+          borderBottom: `2px solid ${C.amber}`,
+          padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 20 }}>🪑</span>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 700, color: C.amber }}>Modo TPV — Selecciona una mesa</p>
+              <p style={{ fontSize: 11, color: C.text2 }}>Pulsa en una mesa para abrir su pedido en la TPV</p>
+            </div>
+          </div>
+          <button onClick={() => window.location.href = '/tpv'} style={{
+            padding: '8px 20px', borderRadius: 10, border: `1px solid ${C.amber}`,
+            background: C.amberDim, color: C.amber, fontSize: 13, fontWeight: 700,
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            ← Volver a TPV
+          </button>
+        </div>
+      )}
+
       {/* ── HEADER ──────────────────────────────────────────────────────────────── */}
       <div style={{background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexShrink:0,zIndex:20}}>
         <div style={{display:'flex',alignItems:'center',gap:14}}>
@@ -869,8 +906,8 @@ export default function MesasPage() {
       {tab === 'floor' && (
         <div className="rz-page-enter" style={{flex:1,display:'flex',overflow:'hidden'}}>
 
-          {/* LEFT — Element Library */}
-          {showLibrary && (
+          {/* LEFT — Element Library (hidden in TPV mode) */}
+          {showLibrary && !isTPVMode && (
             <div style={{width:220,background:C.card,borderRight:`1px solid ${C.border}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}}>
               <div style={{padding:'10px 12px',borderBottom:`1px solid ${C.border}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <p style={{fontSize:11,fontWeight:700,color:C.sub,letterSpacing:'0.06em',textTransform:'uppercase'}}>{tx('Elementos')}</p>
