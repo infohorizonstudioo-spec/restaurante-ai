@@ -19,12 +19,41 @@ const TPV_STYLES = `
   transform: scale(0.95);
   opacity: 0.8;
 }
+.tpv-product:hover {
+  border-color: rgba(255,255,255,0.15) !important;
+}
 .tpv-flash {
   animation: tpv-pulse 0.3s ease-out;
 }
 @keyframes tpv-pulse {
   0% { box-shadow: 0 0 0 0 rgba(240,168,78,0.5); }
   100% { box-shadow: 0 0 0 12px rgba(240,168,78,0); }
+}
+.tpv-cat-sidebar { display: flex; flex-direction: column; }
+.tpv-center-area { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.tpv-ticket-panel { display: flex; flex-direction: column; }
+@media (max-width: 768px) {
+  .tpv-cat-sidebar {
+    flex-direction: row !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--rz-border) !important;
+  }
+  .tpv-cat-sidebar .tpv-cat-utils { display: none !important; }
+  .tpv-mobile-utils { display: flex !important; }
+  .tpv-3col { flex-wrap: wrap !important; }
+  .tpv-center-area { width: 100% !important; flex: 1 1 100% !important; }
+  .tpv-ticket-panel {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    border-left: none !important;
+    border-top: 2px solid var(--rz-border) !important;
+  }
+  .tpv-mobile-ticket-toggle { display: flex !important; }
 }
 `
 
@@ -69,8 +98,28 @@ interface TodayReservation {
   party_size: number
 }
 
-/* ── Mini Floor Plan ──────────────────────────────────────────────── */
-function MiniFloorPlan({ tables, selectedTable, tableOrders, currentOrder, reservedTableIds, onSelect }: {
+/* ── Category icon map ───────────────────────────────────────────── */
+const CAT_ICONS: Record<string, string> = {
+  'caf\u00e9s': '\u2615', 'caf\u00e9': '\u2615', 'cafes': '\u2615', 'desayunos': '\uD83E\uDD50',
+  'bebidas': '\uD83E\uDD64', 'refrescos': '\uD83E\uDD64',
+  'cervezas': '\uD83C\uDF7A', 'vinos': '\uD83C\uDF77',
+  'c\u00f3cteles': '\uD83C\uDF78', 'cocktails': '\uD83C\uDF78', 'cocteles': '\uD83C\uDF78', 'combinados': '\uD83C\uDF79',
+  'entrantes': '\uD83E\uDD57', 'raciones': '\uD83C\uDF56', 'tapas': '\uD83C\uDF56', 'pinchos': '\uD83D\uDCCC',
+  'platos': '\uD83C\uDF72', 'carnes': '\uD83E\uDD69', 'pescados': '\uD83D\uDC1F', 'arroces': '\uD83C\uDF72',
+  'bocadillos': '\uD83E\uDD56', 'postres': '\uD83C\uDF70', 'boller\u00eda': '\uD83E\uDD50',
+  'ensaladas': '\uD83E\uDD57', 'sandwich': '\uD83E\uDD56', 'zumos': '\uD83E\uDDC3',
+}
+
+function getCategoryIcon(name: string): string {
+  const lower = name.toLowerCase()
+  for (const [key, icon] of Object.entries(CAT_ICONS)) {
+    if (lower.includes(key)) return icon
+  }
+  return '\uD83D\uDCE6'
+}
+
+/* ── Full Floor Plan ────────────────────────────────────────────── */
+function FullFloorPlan({ tables, selectedTable, tableOrders, currentOrder, reservedTableIds, onSelect }: {
   tables: DBTable[]
   selectedTable: string | null
   tableOrders: Record<string, TPVItem[]>
@@ -78,30 +127,100 @@ function MiniFloorPlan({ tables, selectedTable, tableOrders, currentOrder, reser
   reservedTableIds: Set<string>
   onSelect: (tableNumber: string | null) => void
 }) {
-  if (!tables.length) return null
-
-  const maxX = Math.max(...tables.map(t => (t.x_pos || 0) + (t.w || 80)))
-  const maxY = Math.max(...tables.map(t => (t.y_pos || 0) + (t.h || 80)))
-
   const statusColor: Record<string, string> = {
     libre: '#34D399', ocupada: '#F87171', reservada: '#F0A84E', bloqueada: '#49566A',
   }
+  const statusFill: Record<string, string> = {
+    libre: '#34D39933', ocupada: '#F8717133', reservada: '#F0A84E33', bloqueada: '#49566A33',
+  }
+
+  function getPersonIcons(count: number): string {
+    if (count === 0) return ''
+    if (count === 1) return '\uD83D\uDC64'
+    if (count === 2) return '\uD83D\uDC64\uD83D\uDC64'
+    if (count <= 3) return '\uD83D\uDC64\uD83D\uDC64\uD83D\uDC64'
+    return '\uD83D\uDC64\uD83D\uDC64\uD83D\uDC64...'
+  }
+
+  if (!tables.length) {
+    const cols = 5
+    const spacing = 80
+    const r = 28
+    const pad = 40
+    return (
+      <svg
+        viewBox={`0 0 ${cols * spacing + pad} ${Math.ceil(20 / cols) * spacing + pad + 50}`}
+        style={{ width: '100%', height: '100%', minHeight: 300 }}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {Array.from({ length: 20 }, (_, i) => {
+          const col = i % cols
+          const row = Math.floor(i / cols)
+          const cx = pad / 2 + col * spacing + spacing / 2
+          const cy = pad / 2 + row * spacing + spacing / 2
+          const num = String(i + 1)
+          const isSelected = selectedTable === num
+          const orderItems = num === selectedTable ? currentOrder : (tableOrders[num] || [])
+          const itemCount = orderItems.reduce((s, it) => s + it.quantity, 0)
+          return (
+            <g key={num} onClick={() => onSelect(num)} style={{ cursor: 'pointer' }}>
+              <circle
+                cx={cx} cy={cy} r={r}
+                fill={isSelected ? 'rgba(240,168,78,0.3)' : itemCount > 0 ? '#F8717133' : '#34D39933'}
+                stroke={isSelected ? '#F0A84E' : itemCount > 0 ? '#F87171' : '#34D399'}
+                strokeWidth={isSelected ? 3 : 1.5}
+              />
+              <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle"
+                fill={isSelected ? '#F0A84E' : '#E8EEF6'} fontSize={14} fontWeight={700}>
+                {num}
+              </text>
+              {itemCount > 0 && (
+                <text x={cx} y={cy + 16} textAnchor="middle" fontSize={9}>
+                  {getPersonIcons(itemCount)}
+                </text>
+              )}
+            </g>
+          )
+        })}
+        {/* Barra at bottom */}
+        <g onClick={() => onSelect(null)} style={{ cursor: 'pointer' }}>
+          <rect
+            x={20} y={Math.ceil(20 / cols) * spacing + pad / 2 + 10}
+            width={cols * spacing} height={36} rx={8}
+            fill={selectedTable === null ? 'rgba(240,168,78,0.3)' : 'rgba(52,211,153,0.08)'}
+            stroke={selectedTable === null ? '#F0A84E' : '#34D399'}
+            strokeWidth={selectedTable === null ? 3 : 1.5}
+          />
+          <text
+            x={20 + cols * spacing / 2}
+            y={Math.ceil(20 / cols) * spacing + pad / 2 + 28}
+            textAnchor="middle" dominantBaseline="middle"
+            fill={selectedTable === null ? '#F0A84E' : '#E8EEF6'} fontSize={13} fontWeight={700}
+          >
+            BARRA
+          </text>
+        </g>
+      </svg>
+    )
+  }
+
+  const maxX = Math.max(...tables.map(t => (t.x_pos || 0) + (t.w || 80)))
+  const maxY = Math.max(...tables.map(t => (t.y_pos || 0) + (t.h || 80)))
+  const hasBarra = tables.some(t => t.name?.toLowerCase() === 'barra' || t.number.toLowerCase() === 'barra')
 
   return (
     <svg
-      viewBox={`0 0 ${maxX} ${maxY}`}
-      style={{
-        width: '100%', height: 200,
-        background: 'rgba(255,255,255,0.02)',
-        borderRadius: 12,
-        border: `1px solid ${C.border}`,
-      }}
+      viewBox={`0 0 ${maxX} ${maxY + (hasBarra ? 0 : 50)}`}
+      style={{ width: '100%', height: '100%', minHeight: 300 }}
+      preserveAspectRatio="xMidYMid meet"
     >
       {tables.map(t => {
         const isSelected = selectedTable === t.number
         const orderItems = t.number === selectedTable ? currentOrder : (tableOrders[t.number] || [])
         const itemCount = orderItems.reduce((s, i) => s + i.quantity, 0)
-        const sc = statusColor[t.status] || '#49566A'
+        const status = t.status || 'libre'
+        const sc = statusColor[status] || '#49566A'
+        const sf = isSelected ? 'rgba(240,168,78,0.3)' : (statusFill[status] || '#49566A33')
         const isReserved = reservedTableIds.has(t.id)
         const w = t.w || 60
         const h = t.h || 60
@@ -113,20 +232,20 @@ function MiniFloorPlan({ tables, selectedTable, tableOrders, currentOrder, reser
             {t.shape_type === 'round' ? (
               <ellipse
                 cx={cx} cy={cy} rx={w / 2 - 2} ry={h / 2 - 2}
-                fill={isSelected ? 'rgba(240,168,78,0.3)' : `${sc}22`}
+                fill={sf}
                 stroke={isSelected ? '#F0A84E' : sc}
                 strokeWidth={isSelected ? 3 : 1.5}
               />
             ) : (
               <rect
                 x={t.x_pos || 0} y={t.y_pos || 0} width={w} height={h} rx={8}
-                fill={isSelected ? 'rgba(240,168,78,0.3)' : `${sc}22`}
+                fill={sf}
                 stroke={isSelected ? '#F0A84E' : sc}
                 strokeWidth={isSelected ? 3 : 1.5}
               />
             )}
             <text
-              x={cx} y={cy}
+              x={cx} y={cy - (itemCount > 0 || isReserved ? 6 : 0)}
               textAnchor="middle" dominantBaseline="middle"
               fill={isSelected ? '#F0A84E' : '#E8EEF6'}
               fontSize={14} fontWeight={700}
@@ -134,29 +253,36 @@ function MiniFloorPlan({ tables, selectedTable, tableOrders, currentOrder, reser
               {t.number}
             </text>
             {itemCount > 0 && (
-              <>
-                <circle cx={(t.x_pos || 0) + w - 8} cy={(t.y_pos || 0) + 8} r={10} fill="#F0A84E" />
-                <text
-                  x={(t.x_pos || 0) + w - 8} y={(t.y_pos || 0) + 8}
-                  textAnchor="middle" dominantBaseline="middle"
-                  fill="#0C1018" fontSize={10} fontWeight={700}
-                >
-                  {itemCount}
-                </text>
-              </>
+              <text x={cx} y={cy + 12} textAnchor="middle" fontSize={10}>
+                {getPersonIcons(itemCount)}
+              </text>
             )}
             {isReserved && itemCount === 0 && (
-              <text
-                x={(t.x_pos || 0) + w - 10} y={(t.y_pos || 0) + 10}
-                textAnchor="middle" dominantBaseline="middle"
-                fontSize={12}
-              >
+              <text x={cx} y={cy + 12} textAnchor="middle" dominantBaseline="middle" fontSize={12}>
                 {'\uD83D\uDCC5'}
               </text>
             )}
           </g>
         )
       })}
+      {!hasBarra && (
+        <g onClick={() => onSelect(null)} style={{ cursor: 'pointer' }}>
+          <rect
+            x={10} y={maxY + 5}
+            width={maxX - 20} height={36} rx={8}
+            fill={selectedTable === null ? 'rgba(240,168,78,0.3)' : 'rgba(52,211,153,0.08)'}
+            stroke={selectedTable === null ? '#F0A84E' : '#34D399'}
+            strokeWidth={selectedTable === null ? 3 : 1.5}
+          />
+          <text
+            x={maxX / 2} y={maxY + 23}
+            textAnchor="middle" dominantBaseline="middle"
+            fill={selectedTable === null ? '#F0A84E' : '#E8EEF6'} fontSize={13} fontWeight={700}
+          >
+            BARRA
+          </text>
+        </g>
+      )}
     </svg>
   )
 }
@@ -170,6 +296,8 @@ export default function TPVPage() {
   const [layout, setLayout] = useState<TPVLayout | null>(null)
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [search, setSearch] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
+  const [view, setView] = useState<'products' | 'tables'>('products')
   const [order, setOrder] = useState<TPVItem[]>([])
   const [parked, setParked] = useState<ParkedOrder[]>([])
   const [parkedOpen, setParkedOpen] = useState(false)
@@ -182,7 +310,7 @@ export default function TPVPage() {
   const [showCustom, setShowCustom] = useState(false)
   const [customName, setCustomName] = useState('')
   const [customPrice, setCustomPrice] = useState('')
-  const [intel, setIntel] = useState<any>(null)
+  const [intel, setIntel] = useState<Record<string, unknown> | null>(null)
   const [comboSuggestion, setComboSuggestion] = useState<{ name: string; price: number; id: string } | null>(null)
   const [alertsDismissed, setAlertsDismissed] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
@@ -190,39 +318,12 @@ export default function TPVPage() {
   const [tableOrders, setTableOrders] = useState<Record<string, TPVItem[]>>({})
   const [dbTables, setDbTables] = useState<DBTable[]>([])
   const [todayReservations, setTodayReservations] = useState<TodayReservation[]>([])
-  const [rightWidth, setRightWidth] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('tpv_right_width')
-      if (saved) return Math.max(20, Math.min(50, parseInt(saved)))
-    }
-    return 30
-  })
-  const dragging = useRef(false)
+  const [mobileTicketOpen, setMobileTicketOpen] = useState(false)
+
   const flashRef = useRef<string | null>(null)
   const stylesInjected = useRef(false)
   const comboTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const alertTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Resize handler for right panel
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (!dragging.current) return
-      const pct = 100 - (e.clientX / window.innerWidth * 100)
-      const clamped = Math.max(20, Math.min(50, pct))
-      setRightWidth(clamped)
-    }
-    const onUp = () => {
-      if (dragging.current) {
-        dragging.current = false
-        document.body.style.cursor = ''
-        document.body.style.userSelect = ''
-        localStorage.setItem('tpv_right_width', String(Math.round(rightWidth)))
-      }
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-  }, [rightWidth])
 
   // Inject styles once
   useEffect(() => {
@@ -243,7 +344,7 @@ export default function TPVPage() {
       if (!p?.tenant_id) return
       setTid(p.tenant_id)
 
-      // Fetch real tables — try API, then direct Supabase
+      // Fetch real tables -- try API, then direct Supabase
       let fetchedTables: DBTable[] = []
       try {
         const { data: { session: tSession } } = await supabase.auth.getSession()
@@ -252,14 +353,14 @@ export default function TPVPage() {
           const d = await res.json()
           fetchedTables = (d.tables || []) as DBTable[]
         }
-      } catch {}
+      } catch { /* ignore */ }
       if (fetchedTables.length === 0) {
         try {
           const { data } = await supabase.from('tables')
             .select('id, number, name, capacity, zone_id, zone_name, x_pos, y_pos, w, h, shape_type, status, rotation')
             .eq('tenant_id', p.tenant_id).order('number')
           fetchedTables = (data || []) as DBTable[]
-        } catch {}
+        } catch { /* ignore */ }
       }
       setDbTables(fetchedTables)
 
@@ -299,7 +400,7 @@ export default function TPVPage() {
           const histData = await histRes.json()
           salesHistory = histData.history || []
         }
-      } catch { /* sales history is optional — layout works without it */ }
+      } catch { /* sales history is optional */ }
 
       const hour = new Date().getHours()
       const lyt = getTPVLayout(mi, hour, salesHistory)
@@ -320,10 +421,10 @@ export default function TPVPage() {
 
   // Auto-dismiss alerts after 30 seconds, then refresh
   useEffect(() => {
-    if (!intel?.alerts || intel.alerts.length === 0 || alertsDismissed) return
+    const alerts = intel?.alerts as unknown[] | undefined
+    if (!alerts || alerts.length === 0 || alertsDismissed) return
     alertTimer.current = setTimeout(() => {
       setAlertsDismissed(true)
-      // Refresh intelligence after dismissal
       supabase.auth.getSession().then(({ data: { session: s } }) => {
         const h: Record<string, string> = {}
         if (s?.access_token) h.Authorization = 'Bearer ' + s.access_token
@@ -378,7 +479,7 @@ export default function TPVPage() {
     return cat?.items || []
   }, [layout, activeCategory, search])
 
-  // Actions
+  // ── Actions ──────────────────────────────────────────────────────────
   function addItem(item: { id: string; name: string; price: number }) {
     flashRef.current = item.id
     setTimeout(() => { flashRef.current = null }, 300)
@@ -404,7 +505,8 @@ export default function TPVPage() {
     // Check combo suggestions
     if (intel?.combos) {
       const nameLow = item.name.toLowerCase()
-      const combo = intel.combos.find((c: any) =>
+      const combos = intel.combos as { itemA?: string; itemB?: string }[]
+      const combo = combos.find((c) =>
         c.itemA?.toLowerCase() === nameLow || c.itemB?.toLowerCase() === nameLow
       )
       if (combo) {
@@ -467,7 +569,6 @@ export default function TPVPage() {
       })
 
       if (res.ok) {
-        // Now update status to confirmed
         const d = await res.json()
         if (d.order?.id) {
           await fetch('/api/orders', {
@@ -570,7 +671,6 @@ export default function TPVPage() {
       : []
     setOrder(items)
     setParkedOpen(false)
-    // Delete the parked order
     if (tid) {
       supabase.from('order_events').delete().eq('id', po.id).eq('tenant_id', tid).then(() => {
         loadParked(tid)
@@ -583,7 +683,7 @@ export default function TPVPage() {
   }
 
   // ── Ticket helpers ──────────────────────────────────────────────────
-  const DRINK_CATEGORIES = ['Cafés', 'Bebidas', 'Cervezas', 'Vinos', 'Cócteles', 'Refrescos', 'Zumos']
+  const DRINK_CATEGORIES = ['Cafes', 'Caf\u00e9s', 'Bebidas', 'Cervezas', 'Vinos', 'Cocteles', 'C\u00f3cteles', 'Refrescos', 'Zumos']
 
   function isFood(item: TPVItem): boolean {
     const menuItem = menuItems.find(m => m.name === item.name)
@@ -695,7 +795,6 @@ export default function TPVPage() {
     if (selectedTable && order.length > 0) {
       setTableOrders(prev => ({ ...prev, [selectedTable]: order }))
     } else if (selectedTable && order.length === 0) {
-      // Clear table if order is empty
       setTableOrders(prev => {
         const next = { ...prev }
         delete next[selectedTable]
@@ -729,12 +828,22 @@ export default function TPVPage() {
     return items ? items.reduce((s, i) => s + i.quantity, 0) : 0
   }, [tableOrders, selectedTable, order])
 
-  const hasDbTables = dbTables.length > 0
-  const FALLBACK_TABLES = ['Barra', ...Array.from({ length: 20 }, (_, i) => `${i + 1}`)]
   const reservedTableIds = useMemo(() => new Set(todayReservations.map(r => r.table_id).filter(Boolean)), [todayReservations])
 
   // Find zone name for selected table
   const selectedDbTable = useMemo(() => dbTables.find(t => t.number === selectedTable), [dbTables, selectedTable])
+
+  // Trending item IDs for badge
+  const trendingNames = useMemo(() => {
+    if (!intel?.trending) return new Set<string>()
+    const arr = intel.trending as { name?: string }[]
+    return new Set(arr.map((t) => (t.name || String(t)).toLowerCase()))
+  }, [intel?.trending])
+
+  // Suppress unused var warning
+  void getTableItemCount
+  void mobileTicketOpen
+  void setMobileTicketOpen
 
   if (loading) return <PageSkeleton variant="cards" />
 
@@ -742,13 +851,16 @@ export default function TPVPage() {
     return (
       <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ textAlign: 'center', maxWidth: 400 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🚫</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>{'\uD83D\uDEAB'}</div>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 8 }}>Modulo no disponible</h2>
           <p style={{ fontSize: 14, color: C.text2, lineHeight: 1.6 }}>El TPV esta disponible para negocios de hosteleria.</p>
         </div>
       </div>
     )
   }
+
+  const intelAlerts = (intel?.alerts || []) as { priority?: string; message?: string }[]
+  const intelTrending = (intel?.trending || []) as { name?: string }[]
 
   return (
     <UpgradeGate feature="pedidos">
@@ -757,97 +869,231 @@ export default function TPVPage() {
         ...(fullscreen ? { position: 'fixed' as const, inset: 0, zIndex: 9999 } : {}),
       }}>
 
-        {/* ── Main layout ─────────────────────────────────────────── */}
-        <div style={{
-          display: 'flex', flex: 1, gap: 0,
-          flexDirection: 'row',
-        }}>
+        {/* ── Alerts banner ─────────────────────────────────────── */}
+        {intelAlerts.length > 0 && !alertsDismissed && (() => {
+          const alert = intelAlerts[0]!
+          const bgMap: Record<string, string> = { critical: '#F87171', warning: '#F0A84E', info: '#2DD4BF' }
+          const iconMap: Record<string, string> = { critical: '\uD83D\uDEA8', warning: '\u26A0\uFE0F', info: '\u2139\uFE0F' }
+          const level = alert.priority || 'info'
+          return (
+            <div style={{
+              padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8,
+              background: `color-mix(in srgb, ${bgMap[level] || '#2DD4BF'} 15%, transparent)`,
+              borderBottom: `1px solid ${bgMap[level] || '#2DD4BF'}`,
+              fontSize: 13, fontWeight: 600, color: bgMap[level] || '#2DD4BF',
+              flexShrink: 0,
+            }}>
+              <span>{iconMap[level] || '\u2139\uFE0F'}</span>
+              <span style={{ flex: 1 }}>{alert.message}</span>
+              <button onClick={() => setAlertsDismissed(true)} style={{
+                background: 'none', border: 'none', color: 'inherit', cursor: 'pointer',
+                fontSize: 14, fontWeight: 700, fontFamily: 'inherit', padding: '0 4px',
+              }}>{'\u2715'}</button>
+            </div>
+          )
+        })()}
 
-          {/* ── LEFT: Product grid ──────────────────────────────────── */}
-          <div style={{ flex: `0 0 ${100 - rightWidth}%`, maxWidth: `${100 - rightWidth}%`, display: 'flex', flexDirection: 'column' }}
-               className="tpv-left">
+        {/* ── Mobile ticket toggle ──────────────────────────────── */}
+        {order.length > 0 && (
+          <button
+            className="tpv-mobile-ticket-toggle"
+            onClick={() => setMobileTicketOpen(prev => !prev)}
+            style={{
+              display: 'none',
+              position: 'fixed', bottom: 16, right: 16, zIndex: 50,
+              padding: '14px 20px', borderRadius: 16,
+              background: 'linear-gradient(135deg, #F0A84E, #E8923A)',
+              border: 'none', color: '#0C1018', fontSize: 15, fontWeight: 800,
+              cursor: 'pointer', fontFamily: 'inherit',
+              boxShadow: '0 4px 20px rgba(240,168,78,0.4)',
+              alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            {total.toFixed(2)}{'\u20AC'} ({order.reduce((s, i) => s + i.quantity, 0)})
+          </button>
+        )}
 
-            {/* Service alerts banner */}
-            {intel?.alerts && intel.alerts.length > 0 && !alertsDismissed && (() => {
-              const alert = intel.alerts[0]
-              const bgMap: Record<string, string> = { critical: C.red, warning: C.amber, info: C.teal }
-              const iconMap: Record<string, string> = { critical: '🚨', warning: '⚠️', info: 'ℹ️' }
-              const level = alert.priority || 'info'
+        {/* ── 3-Column Main Layout ────────────────────────────── */}
+        <div className="tpv-3col" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+
+          {/* ═══════════════════════════════════════════════════════
+              LEFT: Category Sidebar (160px)
+              ═══════════════════════════════════════════════════════ */}
+          <div
+            className="tpv-cat-sidebar"
+            style={{
+              width: 160, minWidth: 160, maxWidth: 160,
+              background: C.surface,
+              borderRight: `1px solid ${C.border}`,
+              overflowY: 'auto',
+              flexShrink: 0,
+            }}
+          >
+            {/* Category buttons */}
+            {layout?.categories.map(cat => {
+              const isActive = activeCategory === cat.name && view === 'products' && !search.trim()
               return (
-                <div style={{
-                  padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8,
-                  background: `color-mix(in srgb, ${bgMap[level] || C.teal} 15%, transparent)`,
-                  borderBottom: `1px solid ${bgMap[level] || C.teal}`,
-                  fontSize: 13, fontWeight: 600, color: bgMap[level] || C.teal,
-                }}>
-                  <span>{iconMap[level] || 'ℹ️'}</span>
-                  <span style={{ flex: 1 }}>{alert.message}</span>
-                  <button onClick={() => setAlertsDismissed(true)} style={{
-                    background: 'none', border: 'none', color: 'inherit', cursor: 'pointer',
-                    fontSize: 14, fontWeight: 700, fontFamily: 'inherit', padding: '0 4px',
-                  }}>✕</button>
-                </div>
-              )
-            })()}
-
-            {/* Search bar */}
-            <div style={{ padding: '12px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 8 }}>
-              <div style={{ flex: 1, position: 'relative' }}>
-                <input
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Buscar producto..."
-                  style={{
-                    width: '100%', padding: '12px 16px 12px 40px',
-                    background: C.surface2, border: `1px solid ${C.border}`,
-                    borderRadius: 12, color: C.text, fontSize: 15,
-                    outline: 'none', fontFamily: 'inherit',
+                <button
+                  key={cat.name}
+                  onClick={() => {
+                    setActiveCategory(cat.name)
+                    setSearch('')
+                    setShowSearch(false)
+                    setView('products')
                   }}
-                />
-                <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: C.text3 }}>
-                  🔍
-                </span>
-              </div>
+                  style={{
+                    width: '100%', padding: '12px 14px',
+                    background: isActive ? C.amberDim : 'transparent',
+                    border: 'none',
+                    borderLeft: isActive ? '3px solid' : '3px solid transparent',
+                    borderLeftColor: isActive ? C.amber : 'transparent',
+                    borderBottom: `1px solid ${C.border}`,
+                    color: isActive ? C.amber : C.text2,
+                    fontSize: 13, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    textAlign: 'left',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    transition: 'background 0.15s, color 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = C.surface2; e.currentTarget.style.color = C.text } }}
+                  onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = C.text2 } }}
+                >
+                  <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>{getCategoryIcon(cat.name)}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</span>
+                </button>
+              )
+            })}
+
+            {/* ── Utility buttons (bottom) ──────────────────────────── */}
+            <div className="tpv-cat-utils" style={{ marginTop: 'auto', borderTop: `1px solid ${C.border}` }}>
+              <button
+                onClick={() => { setShowSearch(!showSearch); setView('products') }}
+                style={{
+                  width: '100%', padding: '12px 14px',
+                  background: showSearch ? C.surface2 : 'transparent',
+                  border: 'none', borderBottom: `1px solid ${C.border}`,
+                  color: showSearch ? C.amber : C.text3,
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
+                }}
+              >
+                <span style={{ fontSize: 15 }}>{'\uD83D\uDD0D'}</span> Buscar
+              </button>
+              <button
+                onClick={() => setView(view === 'tables' ? 'products' : 'tables')}
+                style={{
+                  width: '100%', padding: '12px 14px',
+                  background: view === 'tables' ? C.surface2 : 'transparent',
+                  border: 'none', borderBottom: `1px solid ${C.border}`,
+                  color: view === 'tables' ? C.amber : C.text3,
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
+                }}
+              >
+                <span style={{ fontSize: 15 }}>{'\uD83E\uDE91'}</span> Mesas
+              </button>
               <button
                 onClick={() => setShowCustom(true)}
                 style={{
-                  padding: '12px 16px', background: C.surface2,
-                  border: `1px solid ${C.border}`, borderRadius: 12,
-                  color: C.text2, fontSize: 13, fontWeight: 600,
-                  cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit',
+                  width: '100%', padding: '12px 14px',
+                  background: 'transparent',
+                  border: 'none', borderBottom: `1px solid ${C.border}`,
+                  color: C.text3,
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
                 }}
               >
-                + Precio manual
+                <span style={{ fontSize: 15 }}>{'\u2795'}</span> Manual
               </button>
               <button
                 onClick={toggleFullscreen}
-                title={fullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
                 style={{
-                  padding: '12px 14px', background: C.surface2,
-                  border: `1px solid ${C.border}`, borderRadius: 12,
-                  color: C.text2, fontSize: 15, cursor: 'pointer',
-                  fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6,
+                  width: '100%', padding: '12px 14px',
+                  background: fullscreen ? C.surface2 : 'transparent',
+                  border: 'none',
+                  color: fullscreen ? C.amber : C.text3,
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
                 }}
               >
-                {fullscreen ? '⛶' : '⛶'}
-                <span style={{ fontSize: 12, fontWeight: 600 }}>
-                  {fullscreen ? 'Salir' : 'Completa'}
-                </span>
+                <span style={{ fontSize: 15 }}>{'\u26F6'}</span> {fullscreen ? 'Salir' : 'Completa'}
               </button>
             </div>
+          </div>
 
-            {/* Trending / Populares ahora */}
-            {intel?.trending && intel.trending.length > 0 && !search.trim() && (
+          {/* ── Mobile utility row (hidden on desktop) ──────────── */}
+          <div className="tpv-mobile-utils" style={{
+            display: 'none', gap: 4, padding: '6px 8px',
+            background: C.surface, borderBottom: `1px solid ${C.border}`,
+            overflowX: 'auto', width: '100%', flexShrink: 0,
+          }}>
+            <button onClick={() => { setShowSearch(!showSearch); setView('products') }}
+              style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: showSearch ? C.surface2 : 'transparent', color: showSearch ? C.amber : C.text3, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+              {'\uD83D\uDD0D'} Buscar
+            </button>
+            <button onClick={() => setView(view === 'tables' ? 'products' : 'tables')}
+              style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: view === 'tables' ? C.surface2 : 'transparent', color: view === 'tables' ? C.amber : C.text3, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+              {'\uD83E\uDE91'} Mesas
+            </button>
+            <button onClick={() => setShowCustom(true)}
+              style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: 'transparent', color: C.text3, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+              {'\u2795'} Manual
+            </button>
+            <button onClick={toggleFullscreen}
+              style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: fullscreen ? C.surface2 : 'transparent', color: fullscreen ? C.amber : C.text3, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+              {'\u26F6'} {fullscreen ? 'Salir' : 'Completa'}
+            </button>
+          </div>
+
+          {/* ═══════════════════════════════════════════════════════
+              CENTER: Products Grid or Floor Plan (flex: 1)
+              ═══════════════════════════════════════════════════════ */}
+          <div className="tpv-center-area" style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+
+            {/* Search bar */}
+            {showSearch && view === 'products' && (
+              <div style={{ padding: '10px 12px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 8, flexShrink: 0 }}>
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Buscar producto..."
+                    autoFocus
+                    style={{
+                      width: '100%', padding: '10px 14px 10px 36px',
+                      background: C.surface2, border: `1px solid ${C.border}`,
+                      borderRadius: 10, color: C.text, fontSize: 14,
+                      outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+                    }}
+                  />
+                  <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: C.text3 }}>
+                    {'\uD83D\uDD0D'}
+                  </span>
+                </div>
+                {search && (
+                  <button onClick={() => setSearch('')} style={{
+                    padding: '10px 14px', background: C.surface2, border: `1px solid ${C.border}`,
+                    borderRadius: 10, color: C.text3, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                    {'\u2715'}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Trending / Popular now (only in products view) */}
+            {view === 'products' && intelTrending.length > 0 && !search.trim() && (
               <div style={{
-                display: 'flex', gap: 6, padding: '8px 16px', overflowX: 'auto',
+                display: 'flex', gap: 6, padding: '8px 12px', overflowX: 'auto',
                 borderBottom: `1px solid ${C.border}`, alignItems: 'center',
-                WebkitOverflowScrolling: 'touch',
+                WebkitOverflowScrolling: 'touch', flexShrink: 0,
               }}>
                 <span style={{ fontSize: 11, color: C.text3, fontWeight: 600, whiteSpace: 'nowrap', marginRight: 4 }}>
                   Populares ahora
                 </span>
-                {intel.trending.slice(0, 6).map((t: any, idx: number) => {
-                  const mi = menuItems.find(m => m.name.toLowerCase() === (t.name || t).toString().toLowerCase())
+                {intelTrending.slice(0, 6).map((t, idx: number) => {
+                  const tName = t.name || String(t)
+                  const mi = menuItems.find(m => m.name.toLowerCase() === tName.toLowerCase())
                   return (
                     <button
                       key={idx}
@@ -858,248 +1104,163 @@ export default function TPVPage() {
                         whiteSpace: 'nowrap', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 3,
                       }}
                     >
-                      {t.name || t} <span style={{ fontSize: 10 }}>{'\u2191'}</span>
+                      {tName} <span style={{ fontSize: 10 }}>{'\u2191'}</span>
                     </button>
                   )
                 })}
               </div>
             )}
 
-            {/* Category tabs */}
-            {!search.trim() && layout && (
-              <div style={{
-                display: 'flex', gap: 6, padding: '10px 16px',
-                overflowX: 'auto', borderBottom: `1px solid ${C.border}`,
-                WebkitOverflowScrolling: 'touch',
-              }}>
-                {layout.categories.map(cat => (
-                  <button
-                    key={cat.name}
-                    onClick={() => setActiveCategory(cat.name)}
-                    style={{
-                      padding: '10px 20px', borderRadius: 10,
-                      border: 'none', cursor: 'pointer',
-                      fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap',
-                      fontFamily: 'inherit',
-                      background: activeCategory === cat.name
-                        ? `linear-gradient(135deg, ${C.amber}, #E8923A)`
-                        : C.surface2,
-                      color: activeCategory === cat.name ? '#0C1018' : C.text2,
-                      boxShadow: activeCategory === cat.name ? '0 2px 12px rgba(240,168,78,0.25)' : 'none',
-                    }}
-                  >
-                    {cat.name} ({cat.items.length})
-                  </button>
-                ))}
-              </div>
-            )}
+            {view === 'products' ? (
+              /* ── Product Grid ────────────────────────────────────── */
+              <div style={{ flex: 1, overflow: 'auto', padding: 12, position: 'relative' }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                  gap: 8, alignContent: 'start',
+                }}>
+                  {filteredItems.length === 0 ? (
+                    <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 40, color: C.text3 }}>
+                      <div style={{ fontSize: 32, marginBottom: 8 }}>{'\uD83D\uDCE6'}</div>
+                      <p style={{ fontSize: 14 }}>
+                        {search.trim() ? 'Sin resultados' : 'Sin productos en esta categoria'}
+                      </p>
+                    </div>
+                  ) : (
+                    filteredItems.map(item => {
+                      const isTrending = trendingNames.has(item.name.toLowerCase())
+                      return (
+                        <button
+                          key={item.id}
+                          className={`tpv-product ${flashRef.current === item.id ? 'tpv-flash' : ''}`}
+                          onClick={() => addItem(item)}
+                          style={{
+                            position: 'relative',
+                            background: C.surface2,
+                            border: `1px solid ${C.border}`,
+                            borderRadius: 12,
+                            padding: '10px 8px',
+                            cursor: 'pointer',
+                            display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', justifyContent: 'center',
+                            gap: 4, minHeight: 85,
+                          }}
+                        >
+                          {/* Price badge top-right */}
+                          <span style={{
+                            position: 'absolute', top: 6, right: 6,
+                            background: C.amber, color: '#0C1018',
+                            fontSize: 11, fontWeight: 800,
+                            padding: '2px 7px', borderRadius: 6,
+                          }}>
+                            {item.price.toFixed(2)}{'\u20AC'}
+                          </span>
+                          {/* Trending star top-left */}
+                          {isTrending && (
+                            <span style={{
+                              position: 'absolute', top: 6, left: 6,
+                              fontSize: 12,
+                            }}>
+                              {'\u2B50'}
+                            </span>
+                          )}
+                          {/* Name centered */}
+                          <span style={{
+                            fontSize: 13, fontWeight: 600, color: C.text,
+                            textAlign: 'center', lineHeight: 1.3,
+                            overflow: 'hidden',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            marginTop: 6,
+                          }}>
+                            {item.name}
+                          </span>
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
 
-            {/* Table selector */}
-            <div style={{
-              padding: '8px 16px',
-              borderBottom: `1px solid ${C.border}`,
-            }}>
-              {/* Barra button always on top */}
-              <div style={{ display: 'flex', gap: 6, marginBottom: hasDbTables ? 8 : 0, alignItems: 'center' }}>
-                <span style={{ fontSize: 11, color: C.text3, fontWeight: 600, whiteSpace: 'nowrap', marginRight: 4 }}>
-                  Mesas
-                </span>
-                <button
-                  onClick={() => selectTable(null)}
-                  style={{
-                    padding: '8px 16px', borderRadius: 10,
-                    border: selectedTable === null ? `2px solid ${C.amber}` : `1px solid ${C.border}`,
-                    background: selectedTable === null ? C.amberDim : C.surface2,
-                    color: selectedTable === null ? C.amber : C.text3,
-                    fontSize: 12, fontWeight: 700,
-                    cursor: 'pointer', fontFamily: 'inherit',
-                  }}
-                >
-                  Barra
-                </button>
-                {selectedTable && selectedDbTable && (
-                  <span style={{ fontSize: 12, color: C.text2, fontWeight: 600 }}>
-                    Mesa {selectedTable}{selectedDbTable.zone_name ? ` \u00B7 ${selectedDbTable.zone_name}` : ''}
-                  </span>
+                {/* Combo suggestion toast */}
+                {comboSuggestion && (
+                  <div style={{
+                    position: 'absolute', bottom: 16, right: 16, zIndex: 10,
+                    background: C.surface, border: `1px solid ${C.amberBorder}`,
+                    borderRadius: 12, padding: '10px 14px', boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                    display: 'flex', alignItems: 'center', gap: 10, maxWidth: 280,
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 11, color: C.text3, marginBottom: 2 }}>Suele ir con:</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{comboSuggestion.name}</div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        addItem(comboSuggestion)
+                        setComboSuggestion(null)
+                        if (comboTimer.current) clearTimeout(comboTimer.current)
+                      }}
+                      style={{
+                        padding: '6px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                        background: C.amberDim, color: C.amber, fontSize: 12, fontWeight: 700,
+                        fontFamily: 'inherit', whiteSpace: 'nowrap',
+                      }}
+                    >
+                      + Anadir
+                    </button>
+                  </div>
                 )}
               </div>
-
-              {/* Visual mini floor plan OR fallback buttons */}
-              {hasDbTables ? (
-                <MiniFloorPlan
+            ) : (
+              /* ── Floor Plan View ─────────────────────────────────── */
+              <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
+                <FullFloorPlan
                   tables={dbTables}
                   selectedTable={selectedTable}
                   tableOrders={tableOrders}
                   currentOrder={order}
                   reservedTableIds={reservedTableIds}
-                  onSelect={(num) => selectTable(num)}
+                  onSelect={(num) => {
+                    selectTable(num)
+                    setView('products')
+                  }}
                 />
-              ) : (
-                <div style={{
-                  display: 'flex', gap: 6, overflowX: 'auto',
-                  alignItems: 'center', WebkitOverflowScrolling: 'touch',
-                }}>
-                  {FALLBACK_TABLES.filter(t => t !== 'Barra').map(table => {
-                    const isSelected = selectedTable === table
-                    const count = getTableItemCount(table)
-                    const hasItems = count > 0
-                    return (
-                      <button
-                        key={table}
-                        onClick={() => selectTable(table)}
-                        style={{
-                          position: 'relative',
-                          width: 48, minWidth: 48, height: 48,
-                          borderRadius: 10, border: isSelected
-                            ? `2px solid ${C.amber}`
-                            : hasItems
-                              ? `2px solid ${C.amber}`
-                              : `1px solid ${C.border}`,
-                          background: isSelected ? C.amberDim : C.surface2,
-                          color: isSelected ? C.amber : hasItems ? C.amber : C.text3,
-                          fontSize: 16, fontWeight: 700,
-                          cursor: 'pointer', fontFamily: 'inherit',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {table}
-                        {hasItems && !isSelected && (
-                          <div style={{
-                            position: 'absolute', top: -4, right: -4,
-                            width: 18, height: 18, borderRadius: 9,
-                            background: C.amber, color: '#0C1018',
-                            fontSize: 10, fontWeight: 800,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}>
-                            {count}
-                          </div>
-                        )}
-                        {hasItems && isSelected && (
-                          <span style={{ fontSize: 10, marginLeft: 2 }}>({count})</span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Product grid */}
-            <div style={{
-              flex: 1, overflow: 'auto', padding: 16, position: 'relative',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-              gap: 10, alignContent: 'start',
-            }}>
-              {filteredItems.length === 0 ? (
-                <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 40, color: C.text3 }}>
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>📦</div>
-                  <p style={{ fontSize: 14 }}>
-                    {search.trim() ? 'Sin resultados' : 'Sin productos en esta categoria'}
-                  </p>
-                </div>
-              ) : (
-                filteredItems.map(item => (
-                  <button
-                    key={item.id}
-                    className={`tpv-product ${flashRef.current === item.id ? 'tpv-flash' : ''}`}
-                    onClick={() => addItem(item)}
-                    style={{
-                      background: C.surface,
-                      border: `1px solid ${C.border}`,
-                      borderRadius: 14,
-                      padding: '20px 12px',
-                      cursor: 'pointer',
-                      display: 'flex', flexDirection: 'column',
-                      alignItems: 'center', justifyContent: 'center',
-                      gap: 8, minHeight: 100,
-                    }}
-                  >
-                    <span style={{ fontSize: 14, fontWeight: 600, color: C.text, textAlign: 'center', lineHeight: 1.3 }}>
-                      {item.name}
-                    </span>
-                    <span style={{
-                      fontSize: 16, fontWeight: 700, color: C.amber,
-                    }}>
-                      {item.price.toFixed(2)}€
-                    </span>
-                  </button>
-                ))
-              )}
-
-              {/* Combo suggestion toast */}
-              {comboSuggestion && (
-                <div style={{
-                  position: 'absolute', bottom: 16, right: 16, zIndex: 10,
-                  background: C.surface, border: `1px solid ${C.amberBorder}`,
-                  borderRadius: 12, padding: '10px 14px', boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-                  display: 'flex', alignItems: 'center', gap: 10, maxWidth: 280,
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, color: C.text3, marginBottom: 2 }}>Suele ir con:</div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{comboSuggestion.name}</div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      addItem(comboSuggestion)
-                      setComboSuggestion(null)
-                      if (comboTimer.current) clearTimeout(comboTimer.current)
-                    }}
-                    style={{
-                      padding: '6px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                      background: C.amberDim, color: C.amber, fontSize: 12, fontWeight: 700,
-                      fontFamily: 'inherit', whiteSpace: 'nowrap',
-                    }}
-                  >
-                    + Anadir
-                  </button>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
-          {/* ── DIVIDER (draggable) ──────────────────────────────────── */}
+          {/* ═══════════════════════════════════════════════════════
+              RIGHT: Ticket Panel (280px)
+              ═══════════════════════════════════════════════════════ */}
           <div
-            onMouseDown={() => { dragging.current = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none' }}
+            className="tpv-ticket-panel"
             style={{
-              width: 6, cursor: 'col-resize', background: C.border,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, transition: 'background 0.15s',
+              width: 280, minWidth: 280, maxWidth: 280,
+              background: C.surface,
+              borderLeft: `1px solid ${C.border}`,
+              display: 'flex', flexDirection: 'column',
+              flexShrink: 0,
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = C.amber)}
-            onMouseLeave={e => { if (!dragging.current) e.currentTarget.style.background = C.border }}
           >
-            <div style={{ width: 2, height: 32, borderRadius: 1, background: 'rgba(255,255,255,0.2)' }} />
-          </div>
-
-          {/* ── RIGHT: Order panel ──────────────────────────────────── */}
-          <div style={{
-            flex: `0 0 ${rightWidth}%`, maxWidth: `${rightWidth}%`,
-            display: 'flex', flexDirection: 'column',
-            background: C.surface,
-          }}
-               className="tpv-right">
-
             {/* Parked orders */}
             {parked.length > 0 && (
-              <div style={{ borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
                 <button
                   onClick={() => setParkedOpen(!parkedOpen)}
                   style={{
-                    width: '100%', padding: '10px 16px',
+                    width: '100%', padding: '10px 14px',
                     background: 'none', border: 'none', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     fontFamily: 'inherit',
                   }}
                 >
-                  <span style={{ fontSize: 13, fontWeight: 600, color: C.amber }}>
-                    🅿️ Pedidos aparcados ({parked.length})
+                  <span style={{ fontSize: 12, fontWeight: 600, color: C.amber }}>
+                    {'\uD83C\uDD7F\uFE0F'} Aparcados ({parked.length})
                   </span>
-                  <span style={{ fontSize: 12, color: C.text3 }}>{parkedOpen ? '▲' : '▼'}</span>
+                  <span style={{ fontSize: 11, color: C.text3 }}>{parkedOpen ? '\u25B2' : '\u25BC'}</span>
                 </button>
                 {parkedOpen && (
-                  <div style={{ padding: '0 12px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ padding: '0 10px 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {parked.map(po => {
                       const pitems = Array.isArray(po.items) ? po.items : []
                       return (
@@ -1108,14 +1269,14 @@ export default function TPVPage() {
                           onClick={() => loadParkedOrder(po)}
                           style={{
                             background: C.surface2, border: `1px solid ${C.border}`,
-                            borderRadius: 10, padding: '10px 14px',
+                            borderRadius: 8, padding: '8px 10px',
                             cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
                           }}
                         >
-                          <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
-                            {pitems.length} items - {(po.total_estimate || 0).toFixed(2)}€
+                          <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>
+                            {pitems.length} items - {(po.total_estimate || 0).toFixed(2)}{'\u20AC'}
                           </div>
-                          <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>
+                          <div style={{ fontSize: 10, color: C.text3, marginTop: 2 }}>
                             {new Date(po.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </button>
@@ -1127,68 +1288,74 @@ export default function TPVPage() {
             )}
 
             {/* Order header */}
-            <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: 0 }}>
+            <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+              <h2 style={{ fontSize: 15, fontWeight: 700, color: C.text, margin: 0 }}>
                 {selectedTable
                   ? selectedDbTable?.zone_name
                     ? `Mesa ${selectedTable} \u00B7 ${selectedDbTable.zone_name}`
                     : `Mesa ${selectedTable}`
                   : 'Barra'}
-                {order.length > 0 && (
-                  <span style={{ fontSize: 13, fontWeight: 500, color: C.text3, marginLeft: 8 }}>
-                    ({order.reduce((s, i) => s + i.quantity, 0)} items)
-                  </span>
-                )}
               </h2>
+              {selectedTable && selectedDbTable && selectedDbTable.capacity > 0 && (
+                <div style={{ fontSize: 12, color: C.text3, marginTop: 2 }}>
+                  {Array.from({ length: Math.min(selectedDbTable.capacity, 6) }).map(() => '\uD83D\uDC64').join('')}
+                  {' '}{selectedDbTable.capacity} personas
+                </div>
+              )}
+              {order.length > 0 && (
+                <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>
+                  {order.reduce((s, i) => s + i.quantity, 0)} items
+                </div>
+              )}
             </div>
 
             {/* Order items */}
-            <div style={{ flex: 1, overflow: 'auto', padding: '8px 0' }}>
+            <div style={{ flex: 1, overflow: 'auto', padding: '4px 0' }}>
               {order.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 16px', color: C.text3 }}>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>🛒</div>
-                  <p style={{ fontSize: 13 }}>Toca un producto para agregarlo</p>
+                <div style={{ textAlign: 'center', padding: '32px 14px', color: C.text3 }}>
+                  <div style={{ fontSize: 24, marginBottom: 6 }}>{'\uD83D\uDED2'}</div>
+                  <p style={{ fontSize: 12 }}>Toca un producto para agregarlo</p>
                 </div>
               ) : (
                 order.map(item => (
                   <div key={item.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '8px 16px',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '6px 14px',
                     borderBottom: `1px solid ${C.border}`,
                   }}>
-                    {/* Name + unit price */}
+                    {/* Name */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{
+                        fontSize: 13, fontWeight: 600, color: C.text,
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}>
                         {item.name}
-                      </div>
-                      <div style={{ fontSize: 12, color: C.text3 }}>
-                        {item.price.toFixed(2)}€
                       </div>
                     </div>
 
                     {/* Quantity controls */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
                       <button
                         onClick={() => updateQty(item.id, -1)}
                         style={{
-                          width: 32, height: 32, borderRadius: 8,
+                          width: 28, height: 28, borderRadius: 6,
                           background: C.surface2, border: `1px solid ${C.border}`,
-                          color: C.text, fontSize: 16, fontWeight: 700,
+                          color: C.text, fontSize: 14, fontWeight: 700,
                           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontFamily: 'inherit',
                         }}
                       >
                         -
                       </button>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: C.text, width: 28, textAlign: 'center' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text, width: 22, textAlign: 'center' }}>
                         {item.quantity}
                       </span>
                       <button
                         onClick={() => updateQty(item.id, 1)}
                         style={{
-                          width: 32, height: 32, borderRadius: 8,
+                          width: 28, height: 28, borderRadius: 6,
                           background: C.surface2, border: `1px solid ${C.border}`,
-                          color: C.text, fontSize: 16, fontWeight: 700,
+                          color: C.text, fontSize: 14, fontWeight: 700,
                           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontFamily: 'inherit',
                         }}
@@ -1198,42 +1365,44 @@ export default function TPVPage() {
                     </div>
 
                     {/* Subtotal */}
-                    <span style={{ fontSize: 14, fontWeight: 700, color: C.amber, minWidth: 60, textAlign: 'right' }}>
-                      {(item.price * item.quantity).toFixed(2)}€
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.amber, minWidth: 48, textAlign: 'right', flexShrink: 0 }}>
+                      {(item.price * item.quantity).toFixed(2)}{'\u20AC'}
                     </span>
 
                     {/* Delete */}
                     <button
                       onClick={() => removeItem(item.id)}
                       style={{
-                        width: 28, height: 28, borderRadius: 7,
+                        width: 24, height: 24, borderRadius: 6,
                         background: C.redDim, border: 'none',
-                        color: C.red, fontSize: 13, fontWeight: 700,
+                        color: C.red, fontSize: 11, fontWeight: 700,
                         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontFamily: 'inherit',
+                        fontFamily: 'inherit', flexShrink: 0,
                       }}
                     >
-                      ✕
+                      {'\u2715'}
                     </button>
                   </div>
                 ))
               )}
             </div>
 
-            {/* Divider + total */}
+            {/* Total */}
             <div style={{
               borderTop: `2px solid ${C.border}`,
-              padding: '16px 16px 8px',
+              padding: '12px 14px 8px',
               display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+              flexShrink: 0,
             }}>
-              <span style={{ fontSize: 16, fontWeight: 600, color: C.text2 }}>TOTAL</span>
-              <span style={{ fontSize: 36, fontWeight: 800, color: C.text, letterSpacing: '-0.02em' }}>
-                {total.toFixed(2)}€
+              <span style={{ fontSize: 14, fontWeight: 600, color: C.text2 }}>TOTAL</span>
+              <span style={{ fontSize: 32, fontWeight: 800, color: C.text, letterSpacing: '-0.02em' }}>
+                {total.toFixed(2)}{'\u20AC'}
               </span>
             </div>
 
             {/* Action buttons */}
-            <div style={{ padding: '8px 16px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ padding: '8px 14px 14px', display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+              {/* Cobrar */}
               <button
                 onClick={() => {
                   if (order.length === 0) return
@@ -1248,67 +1417,69 @@ export default function TPVPage() {
                 }}
                 disabled={order.length === 0}
                 style={{
-                  width: '100%', padding: '16px',
+                  width: '100%', height: 48,
                   background: order.length > 0 ? 'linear-gradient(135deg, #F0A84E, #E8923A)' : C.surface2,
-                  border: 'none', borderRadius: 14,
+                  border: 'none', borderRadius: 12,
                   color: order.length > 0 ? '#0C1018' : C.text3,
-                  fontSize: 18, fontWeight: 800,
+                  fontSize: 16, fontWeight: 800,
                   cursor: order.length > 0 ? 'pointer' : 'default',
                   boxShadow: order.length > 0 ? '0 4px 20px rgba(240,168,78,0.3)' : 'none',
                   fontFamily: 'inherit',
                 }}
               >
-                Cobrar
+                COBRAR
               </button>
-              <div style={{ display: 'flex', gap: 8 }}>
+
+              {/* Cocina */}
+              <button
+                onClick={sendToKitchen}
+                disabled={!hasFoodItems}
+                style={{
+                  width: '100%', height: 40,
+                  background: hasFoodItems ? 'rgba(45,212,191,0.12)' : C.surface2,
+                  border: hasFoodItems ? `1px solid ${C.teal}` : `1px solid ${C.border}`,
+                  borderRadius: 10,
+                  color: hasFoodItems ? C.teal : C.text3,
+                  fontSize: 13, fontWeight: 600,
+                  cursor: hasFoodItems ? 'pointer' : 'default',
+                  fontFamily: 'inherit',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}
+              >
+                {'\uD83C\uDF73'} Cocina
+              </button>
+
+              {/* Aparcar + Cancelar row */}
+              <div style={{ display: 'flex', gap: 6 }}>
                 <button
                   onClick={aparcar}
                   disabled={order.length === 0 || saving}
                   style={{
-                    flex: 1, padding: '12px',
+                    flex: 1, padding: '10px',
                     background: 'transparent',
-                    border: `1px solid ${order.length > 0 ? C.border : 'transparent'}`,
-                    borderRadius: 12,
+                    border: order.length > 0 ? `1px solid ${C.border}` : 'none',
+                    borderRadius: 10,
                     color: order.length > 0 ? C.text2 : C.text3,
-                    fontSize: 14, fontWeight: 600,
+                    fontSize: 12, fontWeight: 600,
                     cursor: order.length > 0 ? 'pointer' : 'default',
                     fontFamily: 'inherit',
                   }}
                 >
                   Aparcar
                 </button>
-                {hasFoodItems && (
-                  <button
-                    onClick={sendToKitchen}
-                    style={{
-                      padding: '12px 14px',
-                      background: 'rgba(45,212,191,0.12)',
-                      border: `1px solid ${C.teal}`,
-                      borderRadius: 12,
-                      color: C.teal,
-                      fontSize: 13, fontWeight: 600,
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                      whiteSpace: 'nowrap',
-                      display: 'flex', alignItems: 'center', gap: 4,
-                    }}
-                  >
-                    Cocina
-                  </button>
-                )}
                 <button
                   onClick={cancelar}
                   disabled={order.length === 0}
                   style={{
-                    padding: '12px 16px',
+                    padding: '10px 14px',
                     background: 'transparent', border: 'none',
                     color: order.length > 0 ? C.red : C.text3,
-                    fontSize: 14, fontWeight: 500,
+                    fontSize: 12, fontWeight: 500,
                     cursor: order.length > 0 ? 'pointer' : 'default',
-                    fontFamily: 'inherit', textDecoration: order.length > 0 ? 'underline' : 'none',
+                    fontFamily: 'inherit',
                   }}
                 >
-                  Cancelar
+                  {'\u2715'} Cancelar
                 </button>
               </div>
             </div>
@@ -1335,7 +1506,7 @@ export default function TPVPage() {
             >
               <h3 style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 4 }}>Cobrar pedido</h3>
               <p style={{ fontSize: 32, fontWeight: 800, color: C.amber, marginBottom: 20 }}>
-                {total.toFixed(2)}€
+                {total.toFixed(2)}{'\u20AC'}
               </p>
 
               {/* Order type */}
@@ -1344,7 +1515,7 @@ export default function TPVPage() {
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
                 {(['barra', 'mesa', 'recoger', 'domicilio'] as const).map(tp => {
-                  const icons: Record<string, string> = { barra: '🍺', mesa: '🍽️', recoger: '🥡', domicilio: '🛵' }
+                  const icons: Record<string, string> = { barra: '\uD83C\uDF7A', mesa: '\uD83C\uDF7D\uFE0F', recoger: '\uD83E\uDD61', domicilio: '\uD83D\uDEF5' }
                   const labels: Record<string, string> = { barra: 'Barra', mesa: 'Mesa', recoger: 'Recoger', domicilio: 'Domicilio' }
                   return (
                     <button
@@ -1462,7 +1633,7 @@ export default function TPVPage() {
               <input
                 value={customPrice}
                 onChange={e => setCustomPrice(e.target.value)}
-                placeholder="Precio (€)"
+                placeholder="Precio (\u20AC)"
                 type="text"
                 inputMode="decimal"
                 style={{
@@ -1488,18 +1659,6 @@ export default function TPVPage() {
             </div>
           </div>
         )}
-
-        {/* ── Responsive: mobile stack ──────────────────────────────── */}
-        <style>{`
-          @media (max-width: 768px) {
-            .tpv-left { flex: 1 1 100% !important; max-width: 100% !important; border-right: none !important; min-height: 50vh; }
-            .tpv-right { flex: 1 1 100% !important; max-width: 100% !important; }
-            .tpv-left + .tpv-right { border-top: 2px solid ${C.border}; }
-          }
-          @media (max-width: 768px) {
-            .tpv-left ~ .tpv-right { flex: none !important; }
-          }
-        `}</style>
       </div>
     </UpgradeGate>
   )
