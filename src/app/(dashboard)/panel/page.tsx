@@ -376,7 +376,14 @@ export default function PanelPage() {
       supabase.from('order_events').select('*').eq('tenant_id',tid).eq('status','collecting').order('created_at',{ascending:false}).limit(5),
       supabase.from('consultation_events').select('*').eq('tenant_id',tid).eq('status','collecting').order('created_at',{ascending:false}).limit(5),
     ])
-    setTenant(t); setCalls(c||[]); setReservas(r||[]); setClientes(cl||[]); setActiveCalls(ac||[])
+    // Filter stale calls (>10 min = probably ended but webhook didn't arrive)
+    const tenMinAgo = Date.now() - 10 * 60 * 1000
+    const freshCalls = (ac||[]).filter((c: any) => new Date(c.started_at).getTime() > tenMinAgo)
+    // Auto-complete stale calls in background
+    for (const stale of (ac||[]).filter((c: any) => new Date(c.started_at).getTime() <= tenMinAgo)) {
+      supabase.from('calls').update({ status: 'completada', intent: 'completada' }).eq('id', stale.id).then(() => {})
+    }
+    setTenant(t); setCalls(c||[]); setReservas(r||[]); setClientes(cl||[]); setActiveCalls(freshCalls)
     setActiveOrders(ao||[]); setActiveConsultations(ac2||[])
     setLoading(false)
 
