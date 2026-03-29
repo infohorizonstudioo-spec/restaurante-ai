@@ -73,10 +73,39 @@ export default function TPVPage() {
   const [fullscreen, setFullscreen] = useState(false)
   const [selectedTable, setSelectedTable] = useState<string | null>(null)
   const [tableOrders, setTableOrders] = useState<Record<string, TPVItem[]>>({})
+  const [rightWidth, setRightWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('tpv_right_width')
+      if (saved) return Math.max(20, Math.min(50, parseInt(saved)))
+    }
+    return 30
+  })
+  const dragging = useRef(false)
   const flashRef = useRef<string | null>(null)
   const stylesInjected = useRef(false)
   const comboTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const alertTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Resize handler for right panel
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragging.current) return
+      const pct = 100 - (e.clientX / window.innerWidth * 100)
+      const clamped = Math.max(20, Math.min(50, pct))
+      setRightWidth(clamped)
+    }
+    const onUp = () => {
+      if (dragging.current) {
+        dragging.current = false
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+        localStorage.setItem('tpv_right_width', String(Math.round(rightWidth)))
+      }
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [rightWidth])
 
   // Inject styles once
   useEffect(() => {
@@ -563,7 +592,7 @@ export default function TPVPage() {
         }}>
 
           {/* ── LEFT: Product grid ──────────────────────────────────── */}
-          <div style={{ flex: '0 0 65%', maxWidth: '65%', display: 'flex', flexDirection: 'column', borderRight: `1px solid ${C.border}` }}
+          <div style={{ flex: `0 0 ${100 - rightWidth}%`, maxWidth: `${100 - rightWidth}%`, display: 'flex', flexDirection: 'column' }}
                className="tpv-left">
 
             {/* Service alerts banner */}
@@ -822,9 +851,23 @@ export default function TPVPage() {
             </div>
           </div>
 
+          {/* ── DIVIDER (draggable) ──────────────────────────────────── */}
+          <div
+            onMouseDown={() => { dragging.current = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none' }}
+            style={{
+              width: 6, cursor: 'col-resize', background: C.border,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = C.amber)}
+            onMouseLeave={e => { if (!dragging.current) e.currentTarget.style.background = C.border }}
+          >
+            <div style={{ width: 2, height: 32, borderRadius: 1, background: 'rgba(255,255,255,0.2)' }} />
+          </div>
+
           {/* ── RIGHT: Order panel ──────────────────────────────────── */}
           <div style={{
-            flex: '0 0 35%', maxWidth: '35%',
+            flex: `0 0 ${rightWidth}%`, maxWidth: `${rightWidth}%`,
             display: 'flex', flexDirection: 'column',
             background: C.surface,
           }}
