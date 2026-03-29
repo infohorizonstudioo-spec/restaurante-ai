@@ -41,7 +41,7 @@ function getShiftBg(shift: ShiftType): string {
   if (shift === 'morning') return C.amberDim
   if (shift === 'afternoon') return C.blueDim
   if (shift === 'night') return C.violetDim
-  return 'rgba(255,255,255,0.03)'
+  return C.surface2
 }
 
 function getShiftIcon(shift: ShiftType): string {
@@ -210,7 +210,7 @@ export default function HorariosEquipoPage() {
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: 'var(--rz-font)' }}>
       {/* Header */}
       <div style={{
-        background: 'rgba(19,25,32,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+        background: C.surface, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
         borderBottom: `1px solid ${C.border}`, padding: '14px 28px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20,
       }}>
@@ -246,7 +246,7 @@ export default function HorariosEquipoPage() {
             </>
           )}
           <button onClick={() => setShowAddForm(true)} style={{
-            padding: '8px 16px', fontSize: 13, fontWeight: 700, color: '#0C1018', background: C.amber,
+            padding: '8px 16px', fontSize: 13, fontWeight: 700, color: C.bg, background: C.amber,
             borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
           }}>
             + {_tx('Empleado')}
@@ -288,7 +288,7 @@ export default function HorariosEquipoPage() {
             </div>
           ))}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(255,255,255,0.05)', border: `1px solid ${C.border}` }} />
+            <div style={{ width: 12, height: 12, borderRadius: 3, background: C.surface2, border: `1px solid ${C.border}` }} />
             <span style={{ fontSize: 11, color: C.text3 }}>{_tx('Libre')}</span>
           </div>
         </div>
@@ -316,7 +316,7 @@ export default function HorariosEquipoPage() {
                   border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'inherit', outline: 'none',
                 }} />
               <button onClick={addEmployee} style={{
-                padding: '10px 20px', fontSize: 13, fontWeight: 700, color: '#0C1018', background: C.amber,
+                padding: '10px 20px', fontSize: 13, fontWeight: 700, color: C.bg, background: C.amber,
                 borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
               }}>
                 {_tx('Guardar')}
@@ -363,7 +363,7 @@ export default function HorariosEquipoPage() {
             {/* Grid header */}
             <div style={{
               display: 'grid', gridTemplateColumns: '180px repeat(7, 1fr)',
-              borderBottom: `1px solid ${C.border}`, background: 'rgba(255,255,255,0.015)',
+              borderBottom: `1px solid ${C.border}`, background: C.surface2,
             }}>
               <div style={{ padding: '12px 16px', fontSize: 12, fontWeight: 700, color: C.text2 }}>
                 {_tx('Empleado')}
@@ -465,7 +465,7 @@ export default function HorariosEquipoPage() {
             {/* Day totals row */}
             <div style={{
               display: 'grid', gridTemplateColumns: '180px repeat(7, 1fr)',
-              borderTop: `1px solid ${C.border}`, background: 'rgba(255,255,255,0.015)',
+              borderTop: `1px solid ${C.border}`, background: C.surface2,
             }}>
               <div style={{ padding: '10px 16px', fontSize: 11, fontWeight: 700, color: C.text3 }}>
                 {_tx('Total turnos')}

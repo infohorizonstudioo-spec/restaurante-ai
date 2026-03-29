@@ -103,7 +103,7 @@ export default function ProductosPage() {
   if (loading) return (
     <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "'Sora',-apple-system,sans-serif" }}>
       <style>{`@keyframes rzShimmer{0%{opacity:0.5}50%{opacity:1}100%{opacity:0.5}}.rz-skel{animation:rzShimmer 1.5s ease-in-out infinite}`}</style>
-      <div style={{ background:'rgba(19,25,32,0.85)', borderBottom:`1px solid ${C.border}`, padding:'14px 24px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <div style={{ background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'14px 24px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div>
           <div className="rz-skel" style={{ width:160, height:18, borderRadius:6, background:C.borderMd }} />
           <div className="rz-skel" style={{ width:220, height:12, borderRadius:4, background:C.surface2, marginTop:8 }} />
@@ -151,7 +151,7 @@ export default function ProductosPage() {
       <style>{`*{box-sizing:border-box}.rz-inp{background:rgba(255,255,255,0.04);border:1px solid ${C.border};border-radius:10px;padding:10px 14px;color:${C.text};font-size:13px;font-family:inherit;outline:none;width:100%;transition:border-color 0.15s}.rz-inp:focus{border-color:${C.amber}!important}.rz-inp::placeholder{color:${C.muted}}.rz-product-card{transition:transform 0.2s ease,box-shadow 0.2s ease,border-color 0.2s ease}.rz-product-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.3);border-color:rgba(255,255,255,0.12)!important}@keyframes rzModalIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes rzOverlayIn{from{opacity:0}to{opacity:1}}.rz-modal-overlay{animation:rzOverlayIn 0.2s ease}.rz-modal-content{animation:rzModalIn 0.25s ease}`}</style>
 
       {/* Header */}
-      <div style={{ background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom:`1px solid ${C.border}`, padding:'14px 24px', position:'sticky', top:0, zIndex:30, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <div style={{ background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom:`1px solid ${C.border}`, padding:'14px 24px', position:'sticky', top:0, zIndex:30, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div>
           <h1 style={{ fontSize:17, fontWeight:700, color:C.text }}>{tx('Menú operativo')}</h1>
           <p style={{ fontSize:12, color:C.muted, marginTop:2 }}>{available} {tx('disponibles')} · {soldOut} {tx('agotados')} · {byRequest} {tx('por encargo')}</p>
@@ -191,7 +191,7 @@ export default function ProductosPage() {
               transition:'all 0.2s ease', display:'flex', alignItems:'center', gap:6
             }}>
               {l}
-              {count > 0 && <span style={{ fontSize:10, fontWeight:700, padding:'1px 6px', borderRadius:6, background: filter===k ? C.amber+'22' : 'rgba(255,255,255,0.06)', color: filter===k ? C.amber : C.muted, lineHeight:'16px' }}>{count}</span>}
+              {count > 0 && <span style={{ fontSize:10, fontWeight:700, padding:'1px 6px', borderRadius:6, background: filter===k ? C.amber+'22' : C.borderMd, color: filter===k ? C.amber : C.muted, lineHeight:'16px' }}>{count}</span>}
               <span style={{ position:'absolute', bottom:-1, left:'50%', transform:'translateX(-50%)', width: filter===k ? '60%' : '0%', height:2, background:C.amber, borderRadius:1, transition:'width 0.25s ease' }} />
             </button>
           ))}
@@ -393,7 +393,7 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s }: {
             </div>
             <button onClick={() => up('requires_confirmation', !form.requires_confirmation)} style={{
               width:44, height:24, borderRadius:12, border:'none', cursor:'pointer',
-              background: form.requires_confirmation ? C.amber : 'rgba(255,255,255,0.1)', position:'relative', transition:'background 0.2s'
+              background: form.requires_confirmation ? C.amber : C.borderMd, position:'relative', transition:'background 0.2s'
             }}>
               <div style={{ position:'absolute', top:2, left: form.requires_confirmation ? 20 : 2, width:20, height:20, borderRadius:'50%', background:'white', transition:'left 0.2s', boxShadow:'0 1px 4px rgba(0,0,0,0.3)' }}/>
             </button>

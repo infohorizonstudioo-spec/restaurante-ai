@@ -940,7 +940,7 @@ function RemindersSection({ tenantId, tx: _tx }: { tenantId?: string; tx: (s: st
           <button onClick={saveConfig} disabled={saving} style={{
             padding: '10px 24px', borderRadius: 10, border: 'none',
             background: `linear-gradient(135deg, ${C.teal}, #1BB5A0)`,
-            color: '#0C1018', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            color: C.bg, fontSize: 13, fontWeight: 700, cursor: 'pointer',
             opacity: saving ? 0.6 : 1,
           }}>
             {saving ? _tx('Guardando...') : _tx('Guardar recordatorios')}

@@ -330,7 +330,7 @@ export default function ProveedoresPage() {
   return (
     <div style={{ background: C.bg, minHeight: '100vh' }}>
       {/* Header */}
-      <div style={{ background: 'rgba(19,25,32,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.border}`, padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, position: 'sticky', top: 0, zIndex: 20 }}>
+      <div style={{ background: C.surface, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.border}`, padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, position: 'sticky', top: 0, zIndex: 20 }}>
         <div>
           <h1 style={{ fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }}>Proveedores</h1>
           <p style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>{activeSuppliers.length} proveedores activos · {lowStock.length} productos bajo stock</p>
@@ -340,8 +340,8 @@ export default function ProveedoresPage() {
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar proveedor..."
               style={{ padding: '8px 14px', fontSize: 13, border: `1px solid ${C.borderMd}`, borderRadius: 9, outline: 'none', width: 200, background: C.surface2, color: C.text, fontFamily: 'inherit' }} />
           </div>
-          <button onClick={triggerAutoOrder} disabled={autoOrdering} style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700, background: autoOrdering ? C.surface2 : C.teal, color: autoOrdering ? C.text3 : '#0C1018', borderRadius: 8, border: 'none', cursor: autoOrdering ? 'wait' : 'pointer', fontFamily: 'inherit', opacity: autoOrdering ? 0.7 : 1 }}>{autoOrdering ? 'Revisando...' : 'Revisar stock y pedir'}</button>
-          <button onClick={openNewForm} style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700, background: C.amber, color: '#0C1018', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>+ Nuevo proveedor</button>
+          <button onClick={triggerAutoOrder} disabled={autoOrdering} style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700, background: autoOrdering ? C.surface2 : C.teal, color: autoOrdering ? C.text3 : C.bg, borderRadius: 8, border: 'none', cursor: autoOrdering ? 'wait' : 'pointer', fontFamily: 'inherit', opacity: autoOrdering ? 0.7 : 1 }}>{autoOrdering ? 'Revisando...' : 'Revisar stock y pedir'}</button>
+          <button onClick={openNewForm} style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700, background: C.amber, color: C.bg, borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>+ Nuevo proveedor</button>
           <NotifBell />
         </div>
       </div>
@@ -457,7 +457,7 @@ export default function ProveedoresPage() {
             </FormRow>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
               <button onClick={() => setShowForm(false)} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.text2, cursor: 'pointer', fontFamily: 'inherit' }}>Cancelar</button>
-              <button onClick={saveSupplier} style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', background: C.amber, color: '#0C1018', cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={saveSupplier} style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', background: C.amber, color: C.bg, cursor: 'pointer', fontFamily: 'inherit' }}>
                 {editing ? 'Guardar cambios' : 'Crear proveedor'}
               </button>
             </div>
@@ -781,7 +781,7 @@ function LlamarTab({ cartItems, suppliers, inventory, cart, onAddToCart, callSup
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={onCreateOrder} disabled={cartItems.length === 0} style={{
               flex: 1, padding: '10px 18px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none',
-              background: cartItems.length > 0 ? C.amber : C.surface2, color: cartItems.length > 0 ? '#0C1018' : C.text3,
+              background: cartItems.length > 0 ? C.amber : C.surface2, color: cartItems.length > 0 ? C.bg : C.text3,
               cursor: cartItems.length > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
             }}>
               Crear pedido
@@ -789,7 +789,7 @@ function LlamarTab({ cartItems, suppliers, inventory, cart, onAddToCart, callSup
             {selectedSup?.phone && (
               <button onClick={() => onCall(callSupplierId!)} disabled={calling} style={{
                 flex: 1, padding: '10px 18px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none',
-                background: calling ? C.surface2 : `linear-gradient(135deg, ${C.teal}, #1aa89a)`, color: calling ? C.text3 : '#0C1018',
+                background: calling ? C.surface2 : `linear-gradient(135deg, ${C.teal}, #1aa89a)`, color: calling ? C.text3 : C.bg,
                 cursor: calling ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
               }}>
                 {calling ? 'Enviando...' : '💬 Avisar al proveedor'}

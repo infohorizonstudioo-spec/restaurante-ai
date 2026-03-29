@@ -291,7 +291,7 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
             </div>
             <button onClick={()=>up('combinable',!f.combinable)} style={{
               width:40,height:22,borderRadius:11,border:'none',cursor:'pointer',
-              background:f.combinable?C.amber:'rgba(255,255,255,0.1)',
+              background:f.combinable?C.amber:C.borderMd,
               position:'relative',transition:'background 0.2s',
             }}>
               <div style={{position:'absolute',top:2,left:f.combinable?18:2,width:18,height:18,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.3)'}}/>
@@ -312,7 +312,7 @@ function PropertiesPanel({table,zones,onSave,onDelete,onDuplicate,onClose,onSepa
               {comboMembers.map(m=>(
                 <span key={m.id} style={{
                   padding:'2px 8px',fontSize:10,fontWeight:600,borderRadius:6,
-                  background:m.id===table.id?C.teal+'22':'rgba(255,255,255,0.04)',
+                  background:m.id===table.id?C.teal+'22':C.surface2,
                   color:m.id===table.id?C.teal:C.sub,
                   border:`1px solid ${m.id===table.id?C.teal+'44':C.border}`,
                 }}>{m.name||`#${m.number}`}</span>
@@ -1151,7 +1151,7 @@ export default function MesasPage() {
                 onKeyDown={e=>e.key==='Enter'&&addZone()} placeholder={zonePlaceholder} />
               <button onClick={()=>addZone()} disabled={!newZone.trim()} style={{
                 padding:'9px 18px',fontSize:12,fontWeight:700,
-                background:newZone.trim()?`linear-gradient(135deg,${C.amber},#E8923A)`:'rgba(255,255,255,0.06)',
+                background:newZone.trim()?`linear-gradient(135deg,${C.amber},#E8923A)`:C.borderMd,
                 border:'none',borderRadius:10,cursor:newZone.trim()?'pointer':'not-allowed',
                 color:newZone.trim()?C.bg:C.muted,fontFamily:'inherit',flexShrink:0,
               }}>+ {zoneLabel}</button>
