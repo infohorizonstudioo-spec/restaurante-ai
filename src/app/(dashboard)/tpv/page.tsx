@@ -34,6 +34,10 @@ const TPV_STYLES = `
 .tpv-cat-sidebar { display: flex; flex-direction: column; }
 .tpv-center-area { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .tpv-ticket-panel { display: flex; flex-direction: column; }
+@keyframes tpv-skeleton {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
 @media (max-width: 768px) {
   .tpv-cat-sidebar {
     flex-direction: row !important;
@@ -402,8 +406,10 @@ export default function TPVPage() {
         setActiveCategory(lyt.categories[0]!.name)
       }
 
-      // Fetch intelligence data (fire-and-forget, not blocking)
-      fetch('/api/tpv/intelligence', { headers: authHeaders }).then(r => r.json()).then(d => setIntel(d.intelligence)).catch(() => {})
+      // Delay intelligence fetch to not compete with critical data loading
+      setTimeout(() => {
+        fetch('/api/tpv/intelligence', { headers: authHeaders }).then(r => r.json()).then(d => setIntel(d.intelligence)).catch(() => {})
+      }, 2000)
 
       setLoading(false)
     })()
@@ -423,7 +429,7 @@ export default function TPVPage() {
           setAlertsDismissed(false)
         }).catch(() => {})
       })
-    }, 30000)
+    }, 60000)
     return () => { if (alertTimer.current) clearTimeout(alertTimer.current) }
   }, [intel?.alerts, alertsDismissed])
 
@@ -890,7 +896,23 @@ export default function TPVPage() {
   void mobileTicketOpen
   void setMobileTicketOpen
 
-  if (loading) return <PageSkeleton variant="cards" />
+  if (loading) return (
+    <div style={{ display: 'flex', height: '100vh', background: C.bg }}>
+      <div style={{ width: 160, background: C.surface, borderRight: `1px solid ${C.border}` }}>
+        {Array.from({length: 6}).map((_, i) => (
+          <div key={i} style={{ height: 44, margin: '4px 8px', borderRadius: 8, background: C.surface2, animation: 'tpv-skeleton 1.5s infinite', animationDelay: `${i * 0.1}s` }} />
+        ))}
+      </div>
+      <div style={{ flex: 1, padding: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+          {Array.from({length: 12}).map((_, i) => (
+            <div key={i} style={{ height: 100, borderRadius: 12, background: C.surface2, animation: 'tpv-skeleton 1.5s infinite', animationDelay: `${i * 0.05}s` }} />
+          ))}
+        </div>
+      </div>
+      <div style={{ width: 280, background: C.surface, borderLeft: `1px solid ${C.border}` }} />
+    </div>
+  )
 
   if (template && !template.hasOrders) {
     return (
