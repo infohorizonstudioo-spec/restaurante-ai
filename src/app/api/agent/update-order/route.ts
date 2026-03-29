@@ -11,8 +11,8 @@ export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
   try {
-    // const rl = rateLimitByIp(req, RATE_LIMITS.agent, 'agent:update-order')
-    // if (rl.blocked) return rl.response
+    const rl = rateLimitByIp(req, RATE_LIMITS.agent, 'agent:update-order')
+    if (rl.blocked) return rl.response
 
     if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
     const rawBody = await req.json()
@@ -48,12 +48,13 @@ export async function POST(req: NextRequest) {
       let q = sb.from('order_events').select('id,items').eq('tenant_id', sanitized.tenant_id).eq('status', 'collecting').gte('created_at', thirtyMinAgo).order('created_at', { ascending: false }).limit(1)
       if (phone) q = q.eq('customer_phone', phone)
       else if (name) q = q.ilike('customer_name', `%${name}%`)
-      else q = q // buscar cualquier collecting reciente
+      else { /* no identifier — skip merge, create new */ }
 
-      const { data: existing } = await q.maybeSingle()
+      const hasIdentifier = !!(phone || name)
+      const { data: existing } = hasIdentifier ? await q.maybeSingle() : { data: null }
 
-      // Si hay pedido existente, merge items
-      if (existing && sanitized.items && Array.isArray(sanitized.items) && sanitized.items.length > 0) {
+      // Si hay pedido existente con identifier, merge items
+      if (existing && hasIdentifier && sanitized.items && Array.isArray(sanitized.items) && sanitized.items.length > 0) {
         const existingItems = Array.isArray(existing.items) ? existing.items : []
         const mergedItems = [...existingItems]
         for (const newItem of sanitized.items) {
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
         }
         sanitized.items = mergedItems
       }
-      if (existing) sanitized.order_id = existing.id
+      if (existing && hasIdentifier) sanitized.order_id = existing.id
     }
 
     logger.info('agent:update-order', { tenant_id: sanitized.tenant_id, order_id: sanitized.order_id })

@@ -481,7 +481,7 @@ export async function POST(req: NextRequest) {
     admin.from('business_knowledge').select('category, content').eq('tenant_id', tenantId).eq('active', true),
     // Operational: today's orders + revenue
     admin.from('order_events')
-      .select('id, total')
+      .select('id, total_estimate')
       .eq('tenant_id', tenantId)
       .gte('created_at', `${today}T00:00:00`)
       .lte('created_at', `${today}T23:59:59`),
@@ -508,7 +508,7 @@ export async function POST(req: NextRequest) {
 
   // Compute operational metrics
   const ordersCount = todayOrders.length
-  const ordersRevenue = todayOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0)
+  const ordersRevenue = todayOrders.reduce((sum, o) => sum + (Number(o.total_estimate) || 0), 0)
   const reservationsCount = todayReservations.length
   const nextReservation = todayReservations.find(r => r.time >= currentTime)
   const lowStockItems = allInventory.filter(i => (i.current_stock ?? 0) <= (i.min_stock ?? 0))

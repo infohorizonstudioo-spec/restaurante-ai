@@ -933,7 +933,9 @@ export async function updateOrderTool(params: {
   notes?: string; table_id?: string;
 }) {
   const { tenant_id, order_id, action, customer_name, customer_phone, items, order_type, pickup_time, delivery_address, notes, table_id } = params
-  const callSid = params.call_sid || 'channel_' + Date.now()
+  const callSid = params.call_sid || 'voice_' + Date.now().toString(36)
+  const validOrderTypes = ['mesa', 'recoger', 'domicilio']
+  const safeOrderType = order_type && validOrderTypes.includes(order_type) ? order_type : 'recoger'
 
   if (order_id) {
     const updates: Record<string, any> = { updated_at: new Date().toISOString() }
@@ -1013,7 +1015,7 @@ export async function updateOrderTool(params: {
 
   const { data: order, error } = await supabase.from('order_events').insert({
     tenant_id, call_sid: callSid, status: 'collecting',
-    order_type: order_type || 'recoger', customer_name,
+    order_type: safeOrderType, customer_name,
     customer_phone: customer_phone || null, items: orderItems,
     notes: [delivery_address ? `DIRECCIÓN: ${delivery_address}` : null, notes].filter(Boolean).join(' | ') || null,
     pickup_time: pickup_time || null, total_estimate: total,
