@@ -3,18 +3,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
-
-const C = {
-  amber:'#F0A84E', amberDim:'rgba(240,168,78,0.10)',
-  teal:'#2DD4BF', tealDim:'rgba(45,212,191,0.10)',
-  green:'#34D399', greenDim:'rgba(52,211,153,0.10)',
-  red:'#F87171', redDim:'rgba(248,113,113,0.10)',
-  violet:'#A78BFA', violetDim:'rgba(167,139,250,0.12)',
-  blue:'#60A5FA', blueDim:'rgba(96,165,250,0.10)',
-  text:'#E8EEF6', text2:'#8895A7', text3:'#49566A',
-  bg:'#0C1018', surface:'#131920', surface2:'#1A2230',
-  border:'rgba(255,255,255,0.07)',
-}
+import { UpgradeGate } from '@/components/UpgradeGate'
+import type { Feature } from '@/lib/feature-flags'
+import { C } from '@/lib/colors'
 
 const CHANNELS = [
   {
@@ -150,7 +141,9 @@ export default function CanalesPage() {
         {CHANNELS.map(ch => {
           const cfg = configs[ch.key]
           const isConnected = cfg?.enabled
-          return (
+          const gateFeature: Record<string, Feature> = { whatsapp: 'multichannel_whatsapp', email: 'multichannel_email' }
+          const gate = gateFeature[ch.key]
+          const card = (
             <div key={ch.key} style={{
               background: C.surface, borderRadius: 16, padding: 28,
               border: `1px solid ${isConnected ? ch.color + '40' : C.border}`,
@@ -305,6 +298,8 @@ export default function CanalesPage() {
               )}
             </div>
           )
+          if (gate) return <div key={ch.key}><UpgradeGate feature={gate}>{card}</UpgradeGate></div>
+          return card
         })}
       </div>
     </div>

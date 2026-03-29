@@ -5,6 +5,7 @@ import { getSessionTenant } from '@/lib/session-cache'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
 import { useTenant } from '@/contexts/TenantContext'
+import { UpgradeGate } from '@/components/UpgradeGate'
 import PeluProductosView from './PeluProductosView'
 import BarbeProductosView from './BarbeProductosView'
 import { C } from '@/lib/colors'
@@ -147,6 +148,7 @@ export default function ProductosPage() {
   }).length
 
   return (
+    <UpgradeGate feature="productos">
     <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "'Sora',-apple-system,sans-serif" }}>
       <style>{`*{box-sizing:border-box}.rz-inp{background:rgba(255,255,255,0.04);border:1px solid ${C.border};border-radius:10px;padding:10px 14px;color:${C.text};font-size:13px;font-family:inherit;outline:none;width:100%;transition:border-color 0.15s}.rz-inp:focus{border-color:${C.amber}!important}.rz-inp::placeholder{color:${C.muted}}.rz-product-card{transition:transform 0.2s ease,box-shadow 0.2s ease,border-color 0.2s ease}.rz-product-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.3);border-color:rgba(255,255,255,0.12)!important}@keyframes rzModalIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes rzOverlayIn{from{opacity:0}to{opacity:1}}.rz-modal-overlay{animation:rzOverlayIn 0.2s ease}.rz-modal-content{animation:rzModalIn 0.25s ease}`}</style>
 
@@ -288,6 +290,7 @@ export default function ProductosPage() {
       {/* Modal */}
       {modal && <ProductModal item={modal._new ? null : modal} onSave={saveItem} onClose={() => setModal(null)} categories={CATEGORIES} tx={tx} />}
     </div>
+    </UpgradeGate>
   )
 }
 

@@ -1,4 +1,5 @@
 'use client'
+import { UpgradeGate } from '@/components/UpgradeGate'
 import NotifBell from '@/components/NotifBell'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -86,27 +87,11 @@ export default function EstadisticasPage(){
 
   if(loading) return <PageLoader/>
 
-  const isPro = plan==='pro'||plan==='business'||plan==='enterprise'
-
-  if(!isPro) return (
-    <div style={{background:C.bg,minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
-      <div style={{maxWidth:440,textAlign:'center'}}>
-        <div style={{width:64,height:64,borderRadius:16,background:'linear-gradient(135deg,#F0A84E,#E8923A)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',boxShadow:'0 8px 24px rgba(240,168,78,0.25)'}}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill={C.bg}><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-        </div>
-        <h2 style={{fontSize:22,fontWeight:700,color:C.text,marginBottom:10}}>{tx('Estadísticas avanzadas')}</h2>
-        <p style={{fontSize:14,color:C.text2,lineHeight:1.6,marginBottom:24}}>{tx('Analiza el rendimiento de tu recepcionista: tasa de conversión, hora pico, tendencias de reservas y más. Disponible en Pro y Business.')}</p>
-        <Link href="/precios" style={{display:'inline-block',padding:'12px 28px',fontSize:14,fontWeight:600,color:C.bg,background:'linear-gradient(135deg,#F0A84E,#E8923A)',borderRadius:10,textDecoration:'none',boxShadow:'0 4px 16px rgba(240,168,78,0.3)'}}>
-          {tx('Ver planes →')}
-        </Link>
-      </div>
-    </div>
-  )
-
   const d = data
   if (!d) return null
 
   return (
+    <UpgradeGate feature="estadisticas">
     <div style={{background:C.bg,minHeight:'100vh'}}>
       <div style={{background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}}>
         <div>
@@ -205,5 +190,6 @@ export default function EstadisticasPage(){
         )}
       </div>
     </div>
+    </UpgradeGate>
   )
 }

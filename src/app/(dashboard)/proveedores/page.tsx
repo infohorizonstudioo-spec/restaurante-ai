@@ -1,4 +1,5 @@
 'use client'
+import { UpgradeGate } from '@/components/UpgradeGate'
 import NotifBell from '@/components/NotifBell'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -328,6 +329,7 @@ export default function ProveedoresPage() {
 
   /* ── Render ──────────────────────────────────────────────────────── */
   return (
+    <UpgradeGate feature="proveedores">
     <div style={{ background: C.bg, minHeight: '100vh' }}>
       {/* Header */}
       <div style={{ background: C.surface, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.border}`, padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, position: 'sticky', top: 0, zIndex: 20 }}>
@@ -508,6 +510,7 @@ export default function ProveedoresPage() {
         </Modal>
       )}
     </div>
+    </UpgradeGate>
   )
 }
 

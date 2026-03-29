@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { UpgradeGate } from '@/components/UpgradeGate'
 
 // ── Types ──
 interface Employee {
@@ -413,12 +414,14 @@ function WorkHoursReportContent() {
 
 export default function WorkHoursReportPage() {
   return (
-    <Suspense fallback={
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
-        <p>Cargando...</p>
-      </div>
-    }>
-      <WorkHoursReportContent />
-    </Suspense>
+    <UpgradeGate feature="informes_pdf">
+      <Suspense fallback={
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
+          <p>Cargando...</p>
+        </div>
+      }>
+        <WorkHoursReportContent />
+      </Suspense>
+    </UpgradeGate>
   )
 }

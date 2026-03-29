@@ -1,4 +1,5 @@
 'use client'
+import { UpgradeGate } from '@/components/UpgradeGate'
 import NotifBell from '@/components/NotifBell'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -220,23 +221,6 @@ export default function PedidosPage() {
     )
   }
 
-  const isPro = plan === 'pro' || plan === 'business' || plan === 'enterprise'
-
-  if (!isPro) return (
-    <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ maxWidth: 440, textAlign: 'center' }}>
-        <div style={{ width: 64, height: 64, borderRadius: 16, background: 'linear-gradient(135deg,#F0A84E,#E8923A)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 24px rgba(240,168,78,0.25)' }}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill={C.bg}><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
-        </div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>{L.orderMgmt}</h2>
-        <p style={{ fontSize: 14, color: C.text2, lineHeight: 1.6, marginBottom: 24 }}>{L.orderMgmtDesc}</p>
-        <Link href="/precios" style={{ display: 'inline-block', padding: '12px 28px', fontSize: 14, fontWeight: 600, color: C.bg, background: 'linear-gradient(135deg,#F0A84E,#E8923A)', borderRadius: 10, textDecoration: 'none', boxShadow: '0 4px 16px rgba(240,168,78,0.3)' }}>
-          {L.viewPlans}
-        </Link>
-      </div>
-    </div>
-  )
-
   const filtered = tipoFilter === 'todos' ? orders : orders.filter(o => o.order_type === tipoFilter)
   const activos = orders.filter(o => !['delivered', 'cancelled'].includes(o.status))
 
@@ -286,6 +270,7 @@ export default function PedidosPage() {
   const localeTag = locale === 'en' ? 'en-GB' : locale === 'fr' ? 'fr-FR' : locale === 'pt' ? 'pt-PT' : 'es-ES'
 
   return (
+    <UpgradeGate feature="pedidos">
     <div style={{ background: C.bg, minHeight: '100vh' }}>
       {/* ── Header ────────────────────────────────────────────── */}
       <div style={{ background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom: '1px solid ' + C.border, padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20 }}>
@@ -562,6 +547,7 @@ export default function PedidosPage() {
         </div>
       )}
     </div>
+    </UpgradeGate>
   )
 }
 
