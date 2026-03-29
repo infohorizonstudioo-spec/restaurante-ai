@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       customer_name: order.customer_name,
       items,
       total: order.total_estimate || 0,
-      order_type: order.order_type || 'barra',
+      order_type: order.order_type || 'mesa',
       source: 'tpv',
     }).catch(() => {})
 

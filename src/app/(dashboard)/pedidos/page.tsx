@@ -147,7 +147,10 @@ export default function PedidosPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const load = useCallback(async (tenantId: string) => {
-    const r = await fetch('/api/orders?tenant_id=' + tenantId + '&limit=100')
+    const { data: { session } } = await supabase.auth.getSession()
+    const headers: Record<string, string> = {}
+    if (session?.access_token) headers.Authorization = 'Bearer ' + session.access_token
+    const r = await fetch('/api/orders?tenant_id=' + tenantId + '&limit=100', { headers })
     const d = await r.json()
     setOrders(d.orders || [])
   }, [])
@@ -225,8 +228,11 @@ export default function PedidosPage() {
   const activos = orders.filter(o => !['delivered', 'cancelled'].includes(o.status))
 
   async function cambiarEstado(id: string, status: string) {
+    const { data: { session } } = await supabase.auth.getSession()
+    const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (session?.access_token) authHeaders.Authorization = 'Bearer ' + session.access_token
     const res = await fetch('/api/orders', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: authHeaders,
       body: JSON.stringify({ id, tenant_id: tid, status })
     })
     if (!res.ok) {
