@@ -500,7 +500,7 @@ export default function TPVPage() {
         supabase.auth.getSession().then(({ data: { session: s } }) => {
           const h: Record<string, string> = { 'Content-Type': 'application/json' }
           if (s?.access_token) h.Authorization = 'Bearer ' + s.access_token
-          fetch('/api/tables', { method: 'PATCH', headers: h, body: JSON.stringify({ id: dbTable.id, status: 'ocupada' }) }).catch(() => {})
+          fetch('/api/tables', { method: 'PATCH', headers: h, body: JSON.stringify({ id: dbTable.id, status: 'ocupada' }) }).catch(e => console.error('table update error:', e))
         })
         setDbTables(prev => prev.map(t => t.id === dbTable.id ? { ...t, status: 'ocupada' } : t))
       }
@@ -596,7 +596,7 @@ export default function TPVPage() {
               ...(session?.access_token ? { Authorization: 'Bearer ' + session.access_token } : {}),
             },
             body: JSON.stringify({ order_id: d.order.id }),
-          }).catch(() => {})
+          }).catch(e => console.error('harmonize error:', e))
         }
 
         // Print customer receipt
@@ -626,7 +626,7 @@ export default function TPVPage() {
           const { data: { session: tblSession } } = await supabase.auth.getSession()
           const tblH: Record<string, string> = { 'Content-Type': 'application/json' }
           if (tblSession?.access_token) tblH.Authorization = 'Bearer ' + tblSession.access_token
-          await fetch('/api/tables', { method: 'PATCH', headers: tblH, body: JSON.stringify({ id: dbTable.id, status: 'libre' }) }).catch(() => {})
+          await fetch('/api/tables', { method: 'PATCH', headers: tblH, body: JSON.stringify({ id: dbTable.id, status: 'libre' }) }).catch(e => console.error('table update error:', e))
           setDbTables(prev => prev.map(t => t.id === dbTable.id ? { ...t, status: 'libre' } : t))
         }
       }
