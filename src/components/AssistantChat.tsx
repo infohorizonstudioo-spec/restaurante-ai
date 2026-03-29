@@ -14,7 +14,7 @@ const PANEL_W = 400
 const PANEL_H = 500
 
 function getSmartChips(hour: number): string[] {
-  if (hour >= 7 && hour < 12) return ['¿Cómo va la mañana?', 'Reservas de hoy', 'Stock bajo?', 'Subir precio café']
+  if (hour >= 7 && hour < 12) return ['¿Cómo va la mañana?', 'Reservas de hoy', 'Stock bajo?', 'Añadir a la carta']
   if (hour >= 12 && hour < 16) return ['¿Cómo va el mediodía?', 'Pedidos de hoy', 'Reservas pendientes', 'Carta del día']
   if (hour >= 16 && hour < 20) return ['¿Cómo va la tarde?', 'Preparar para noche', 'Stock para mañana?', 'Llamadas perdidas']
   if (hour >= 20 || hour < 2) return ['¿Cómo va la noche?', 'Resumen del día', 'Cerrar caja', 'Reservas de mañana']

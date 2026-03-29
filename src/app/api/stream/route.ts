@@ -157,20 +157,7 @@ const TOOLS = [
       required: ['new_name'],
     },
   },
-  // BULK + CONFIRMATION tools
-  {
-    name: 'bulk_update_prices',
-    description: 'Sube o baja el precio de todos los productos de una categoría. Ejemplo: "sube todos los cafés un 10%"',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        category: { type: 'string', description: 'La categoría a modificar' },
-        change_type: { type: 'string', description: 'Tipo de cambio', enum: ['percentage', 'absolute'] },
-        amount: { type: 'number', description: 'Porcentaje (ej: 10 para +10%) o cantidad en euros (ej: 0.50 para +0.50€). Negativo para bajar.' },
-      },
-      required: ['category', 'change_type', 'amount'],
-    },
-  },
+  // CONFIRMATION tool
   {
     name: 'request_confirmation',
     description: 'Pide confirmación al usuario antes de hacer algo peligroso. Usa esto antes de borrar múltiples productos o cambiar precios masivamente.',
@@ -441,35 +428,7 @@ async function executeTool(
         return `Nombre del asistente cambiado a "${newName}".`
       }
 
-      case 'bulk_update_prices': {
-        const category = input.category as string
-        const changeType = input.change_type as string
-        const amount = input.amount as number
 
-        const { data: items, error: fetchErr } = await admin.from('menu_items')
-          .select('id, name, price')
-          .eq('tenant_id', tenantId)
-          .eq('active', true)
-          .ilike('category', `%${category}%`)
-        if (fetchErr) return `Error: ${fetchErr.message}`
-        if (!items?.length) return `No encontré productos en la categoría "${category}".`
-
-        const updates: string[] = []
-        for (const item of items) {
-          const oldPrice = item.price as number
-          const newPrice = changeType === 'percentage'
-            ? Math.round((oldPrice * (1 + amount / 100)) * 100) / 100
-            : Math.round((oldPrice + amount) * 100) / 100
-          if (newPrice < 0) continue
-          await admin.from('menu_items')
-            .update({ price: newPrice })
-            .eq('id', item.id)
-            .eq('tenant_id', tenantId)
-          updates.push(`${item.name}: ${oldPrice}€ → ${newPrice}€`)
-        }
-        if (!updates.length) return 'No se actualizó ningún precio (los nuevos precios serían negativos).'
-        return `Actualizados ${updates.length} productos:\n` + updates.join('\n')
-      }
 
       case 'request_confirmation': {
         const action = input.action as string
@@ -606,7 +565,7 @@ Contexto operativo ahora mismo:
   const systemPrompt = `Eres el asistente operativo de ${businessName}. Te llamas ${agentName}.
 
 CAPACIDADES:
-- Gestionar carta: añadir, quitar, cambiar precios, mover categorías, subir precios por categoría
+- Gestionar carta: añadir, quitar, cambiar precio de un producto, mover categorías
 - Gestionar reservas: ver, crear, cancelar
 - Ver actividad: llamadas, pedidos, estadísticas
 - Cambiar configuración: horarios, nombre del agente, info del negocio
