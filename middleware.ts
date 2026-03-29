@@ -159,7 +159,12 @@ export async function middleware(request: NextRequest) {
     if (!user && PROTECTED.some(p => pathname === p || pathname.startsWith(p + '/'))) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
-  } catch {}
+  } catch (err) {
+    // Auth failed — redirect to login for protected routes instead of silently allowing
+    if (PROTECTED.some(p => pathname === p || pathname.startsWith(p + '/'))) {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+  }
 
   return response
 }

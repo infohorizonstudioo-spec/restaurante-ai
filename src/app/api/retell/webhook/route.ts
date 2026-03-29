@@ -92,7 +92,7 @@ async function handleCallStarted(body: any): Promise<NextResponse> {
         phone: callerPhone,
         channel: 'voice',
       })
-    } catch {}
+    } catch (e) { logger.error('retell webhook: customer resolve failed', { callId }, e) }
   }
 
   logger.info('Retell call_started processed', { callId, tenantId: tenant.id })
@@ -180,7 +180,7 @@ async function handleCallEnded(body: any): Promise<NextResponse> {
       body: `Duración: ${durationSeconds}s. ${disconnectionReason === 'user_hangup' ? 'Cliente colgó.' : ''}`,
       call_sid: callId,
     })
-  } catch {}
+  } catch (e) { logger.error('retell webhook: call_ended notification failed', { callId }, e) }
 
   logger.info('Retell call_ended processed', { callId, duration: durationSeconds })
   return NextResponse.json({ ok: true })
