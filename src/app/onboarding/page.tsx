@@ -341,7 +341,7 @@ export default function OnboardingWizard() {
         setBusinessType(typeId)
         setLockedToast(null)
       } else {
-        setLockedToast('Estamos trabajando en esta vertical. Muy pronto estará disponible.')
+        setLockedToast('Estamos trabajando para este tipo de negocio. Muy pronto estará disponible.')
         setTimeout(() => setLockedToast(null), 3500)
       }
     }
