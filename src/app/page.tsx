@@ -437,18 +437,18 @@ export default function HomePage() {
               color:'rgba(96,165,250,0.1)',bc:'rgba(96,165,250,0.2)'
             },
             {
-              icon:'👥',title:'Tu equipo organizado',
-              body:'Horarios, turnos, disponibilidad. Cada persona sabe lo que le toca. Tú no tienes que estar encima.',
+              icon:'💳',title:'Cobras en segundos',
+              body:'TPV inteligente que se organiza sola. Destaca lo que más vendes según la hora. Sin configurar nada.',
               color:'rgba(167,139,250,0.1)',bc:'rgba(167,139,250,0.2)'
             },
             {
-              icon:'🔮',title:'Sabes lo que va a pasar',
-              body:'Te avisa antes de que se acabe el stock, te dice qué día viene más carga, detecta clientes que dejaron de venir.',
+              icon:'👥',title:'Turnos y caja controlados',
+              body:'Cada turno tiene su caja. Sabes quién vendió qué, cuánto se facturó y si cuadra. Sin Excel.',
               color:'rgba(52,211,153,0.1)',bc:'rgba(52,211,153,0.2)'
             },
             {
-              icon:'❤️',title:'Cada cliente es único',
-              body:'Recuerda alergias, preferencias, mesas favoritas. Atiendes como si conocieras a cada uno de memoria.',
+              icon:'🔮',title:'El sistema piensa por ti',
+              body:'Avisa antes de que se acabe el stock, predice carga, detecta clientes que dejaron de venir y te dice qué hacer.',
               color:'rgba(248,113,113,0.1)',bc:'rgba(248,113,113,0.2)'
             },
           ].map(({icon,title,body,color,bc})=>(
@@ -582,14 +582,15 @@ export default function HomePage() {
           </div>
           <div style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:20,padding:'8px 32px',overflow:'hidden'}}>
             {[
-              {tool:'TPV'},
+              {tool:'TPV tradicional'},
               {tool:'Agenda de reservas'},
               {tool:'CRM de clientes'},
-              {tool:'Recepcionista'},
+              {tool:'Recepcionista / telefonista'},
               {tool:'Gestor de pedidos'},
-              {tool:'Control de turnos'},
+              {tool:'Control de turnos y caja'},
+              {tool:'Gestión de stock y proveedores'},
             ].map(({tool},i)=>(
-              <div key={tool} style={{display:'grid',gridTemplateColumns:'1fr auto',gap:20,padding:'18px 0',borderBottom:i<5?'1px solid rgba(255,255,255,0.06)':'none',alignItems:'center'}} className="replace-grid">
+              <div key={tool} style={{display:'grid',gridTemplateColumns:'1fr auto',gap:20,padding:'18px 0',borderBottom:i<6?'1px solid rgba(255,255,255,0.06)':'none',alignItems:'center'}} className="replace-grid">
                 <div style={{display:'flex',alignItems:'center',gap:12}}>
                   <span style={{fontSize:14,color:'rgba(255,255,255,0.25)',textDecoration:'line-through'}}>{tool}</span>
                 </div>
@@ -793,19 +794,19 @@ export default function HomePage() {
               {
                 plan:'Starter',headline:'Empieza a automatizar',sub:'Para restaurantes que quieren dejar de perder llamadas',
                 price:'99',calls:'50 llamadas/mes',rate:'0,90€/llamada extra',
-                features:['Recepcionista IA 24/7','Reservas automáticas','Panel en tiempo real','Base de clientes','Gestión de mesas','Control de turnos','SMS de confirmación','Adaptado a tu negocio','Soporte por email'],
+                features:['Recepcionista IA 24/7','Reservas automáticas','Panel en tiempo real','Base de clientes','Gestión de mesas','Control de turnos','TPV simple y visual','Caja por turnos','SMS de confirmación','Soporte por email'],
                 cta:'Empieza a automatizar',highlight:false
               },
               {
                 plan:'Pro',headline:'Automatiza tu operación',sub:'Para restaurantes que quieren crecer sin contratar',
                 price:'299',calls:'200 llamadas/mes',rate:'0,70€/llamada extra',
-                features:['Todo lo de Starter +','Pedidos por teléfono','Entregas a domicilio','Estadísticas avanzadas','Sugerencias de la IA','Canal WhatsApp','CRM avanzado (VIP, scoring)','Exportación de datos','Soporte prioritario'],
+                features:['Todo lo de Starter +','Pedidos por teléfono','Entregas a domicilio','TPV inteligente por hora','Estadísticas avanzadas','Sugerencias de la IA','Canal WhatsApp','CRM avanzado (VIP, scoring)','Exportación de datos','Soporte prioritario'],
                 cta:'Automatiza tu operación',highlight:true
               },
               {
                 plan:'Business',headline:'Control total',sub:'Para restaurantes con alta demanda',
                 price:'499',calls:'600 llamadas/mes',rate:'0,50€/llamada extra',
-                features:['Todo lo de Pro +','Canal Email','Inventario y proveedores','Auto-pedidos semanales','Predicción de demanda','Informes PDF','Multi-usuario','Soporte dedicado'],
+                features:['Todo lo de Pro +','Canal Email','Stock inteligente y proveedores','Auto-pedidos semanales','Predicción de demanda','Cierres de caja avanzados','Informes PDF','Multi-usuario','Soporte dedicado'],
                 cta:'Toma el control total',highlight:false
               },
             ].map(({plan,headline,sub,price,calls,rate,features,cta,highlight})=>(
