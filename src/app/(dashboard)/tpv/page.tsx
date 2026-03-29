@@ -70,6 +70,9 @@ export default function TPVPage() {
   const [intel, setIntel] = useState<any>(null)
   const [comboSuggestion, setComboSuggestion] = useState<{ name: string; price: number; id: string } | null>(null)
   const [alertsDismissed, setAlertsDismissed] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
+  const [selectedTable, setSelectedTable] = useState<string | null>(null)
+  const [tableOrders, setTableOrders] = useState<Record<string, TPVItem[]>>({})
   const flashRef = useRef<string | null>(null)
   const stylesInjected = useRef(false)
   const comboTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -300,6 +303,14 @@ export default function TPVPage() {
         }
       }
 
+      // Clear table order
+      if (selectedTable) {
+        setTableOrders(prev => {
+          const next = { ...prev }
+          delete next[selectedTable]
+          return next
+        })
+      }
       setOrder([])
       setShowCobrar(false)
       setCobroName('')
@@ -361,6 +372,65 @@ export default function TPVPage() {
     setOrder([])
   }
 
+  // ── Fullscreen ──────────────────────────────────────────────────────
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {})
+      setFullscreen(true)
+    } else {
+      document.exitFullscreen().catch(() => {})
+      setFullscreen(false)
+    }
+  }
+
+  useEffect(() => {
+    const handler = () => setFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', handler)
+    return () => document.removeEventListener('fullscreenchange', handler)
+  }, [])
+
+  // ── Table management ────────────────────────────────────────────────
+  function selectTable(table: string | null) {
+    // Save current order to current table
+    if (selectedTable && order.length > 0) {
+      setTableOrders(prev => ({ ...prev, [selectedTable]: order }))
+    } else if (selectedTable && order.length === 0) {
+      // Clear table if order is empty
+      setTableOrders(prev => {
+        const next = { ...prev }
+        delete next[selectedTable]
+        return next
+      })
+    }
+    // Load order from new table
+    setSelectedTable(table)
+    const savedOrder = table ? (tableOrders[table] || []) : []
+    setOrder(savedOrder)
+  }
+
+  // Persist tableOrders to localStorage
+  useEffect(() => {
+    if (!tid) return
+    const saved = localStorage.getItem(`tpv_tables_${tid}`)
+    if (saved) {
+      try { setTableOrders(JSON.parse(saved)) } catch { /* ignore */ }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tid])
+
+  useEffect(() => {
+    if (tid) localStorage.setItem(`tpv_tables_${tid}`, JSON.stringify(tableOrders))
+  }, [tableOrders, tid])
+
+  // Table count helper
+  const getTableItemCount = useCallback((table: string) => {
+    if (table === selectedTable) return order.reduce((s, i) => s + i.quantity, 0)
+    const items = tableOrders[table]
+    return items ? items.reduce((s, i) => s + i.quantity, 0) : 0
+  }, [tableOrders, selectedTable, order])
+
+  const TABLES = ['Barra', ...Array.from({ length: 20 }, (_, i) => `${i + 1}`)]
+
   if (loading) return <PageSkeleton variant="cards" />
 
   if (template && !template.hasOrders) {
@@ -377,7 +447,10 @@ export default function TPVPage() {
 
   return (
     <UpgradeGate feature="pedidos">
-      <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{
+        background: C.bg, minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        ...(fullscreen ? { position: 'fixed' as const, inset: 0, zIndex: 9999 } : {}),
+      }}>
 
         {/* ── Main layout ─────────────────────────────────────────── */}
         <div style={{
@@ -441,6 +514,21 @@ export default function TPVPage() {
               >
                 + Precio manual
               </button>
+              <button
+                onClick={toggleFullscreen}
+                title={fullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                style={{
+                  padding: '12px 14px', background: C.surface2,
+                  border: `1px solid ${C.border}`, borderRadius: 12,
+                  color: C.text2, fontSize: 15, cursor: 'pointer',
+                  fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                {fullscreen ? '⛶' : '⛶'}
+                <span style={{ fontSize: 12, fontWeight: 600 }}>
+                  {fullscreen ? 'Salir' : 'Completa'}
+                </span>
+              </button>
             </div>
 
             {/* Trending / Populares ahora */}
@@ -500,6 +588,61 @@ export default function TPVPage() {
                 ))}
               </div>
             )}
+
+            {/* Table selector */}
+            <div style={{
+              display: 'flex', gap: 6, padding: '8px 16px', overflowX: 'auto',
+              borderBottom: `1px solid ${C.border}`, alignItems: 'center',
+              WebkitOverflowScrolling: 'touch',
+            }}>
+              <span style={{ fontSize: 11, color: C.text3, fontWeight: 600, whiteSpace: 'nowrap', marginRight: 4 }}>
+                Mesas
+              </span>
+              {TABLES.map(table => {
+                const isBarra = table === 'Barra'
+                const tableKey = isBarra ? null : table
+                const isSelected = selectedTable === tableKey
+                const count = isBarra ? 0 : getTableItemCount(table)
+                const hasItems = count > 0
+                return (
+                  <button
+                    key={table}
+                    onClick={() => selectTable(tableKey)}
+                    style={{
+                      position: 'relative',
+                      width: isBarra ? 'auto' : 48, minWidth: isBarra ? 56 : 48, height: 48,
+                      borderRadius: 10, border: isSelected
+                        ? `2px solid ${C.amber}`
+                        : hasItems
+                          ? `2px solid ${C.amber}`
+                          : `1px solid ${C.border}`,
+                      background: isSelected ? C.amberDim : C.surface2,
+                      color: isSelected ? C.amber : hasItems ? C.amber : C.text3,
+                      fontSize: isBarra ? 12 : 16, fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0, padding: isBarra ? '0 10px' : 0,
+                    }}
+                  >
+                    {isBarra ? 'Barra' : table}
+                    {hasItems && !isSelected && (
+                      <div style={{
+                        position: 'absolute', top: -4, right: -4,
+                        width: 18, height: 18, borderRadius: 9,
+                        background: C.amber, color: '#0C1018',
+                        fontSize: 10, fontWeight: 800,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {count}
+                      </div>
+                    )}
+                    {hasItems && isSelected && (
+                      <span style={{ fontSize: 10, marginLeft: 2 }}>({count})</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
 
             {/* Product grid */}
             <div style={{
@@ -631,7 +774,7 @@ export default function TPVPage() {
             {/* Order header */}
             <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
               <h2 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: 0 }}>
-                Pedido actual
+                {selectedTable ? `Mesa ${selectedTable}` : 'Pedido actual'}
                 {order.length > 0 && (
                   <span style={{ fontSize: 13, fontWeight: 500, color: C.text3, marginLeft: 8 }}>
                     ({order.reduce((s, i) => s + i.quantity, 0)} items)
@@ -733,7 +876,17 @@ export default function TPVPage() {
             {/* Action buttons */}
             <div style={{ padding: '8px 16px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button
-                onClick={() => order.length > 0 && setShowCobrar(true)}
+                onClick={() => {
+                  if (order.length === 0) return
+                  if (selectedTable) {
+                    setCobroType('mesa')
+                    setCobroTable(selectedTable)
+                  } else {
+                    setCobroType('barra')
+                    setCobroTable('')
+                  }
+                  setShowCobrar(true)
+                }}
                 disabled={order.length === 0}
                 style={{
                   width: '100%', padding: '16px',
