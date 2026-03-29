@@ -74,14 +74,8 @@ import { C } from '@/lib/colors'
 const SL:Record<string,string> = {
   completada:'Completada', completed:'Completada',
   activa:'En curso', 'in-progress':'En curso',
-  fallida:'Fallida', failed:'Fallida', 'no-answer':'Llamada perdida', perdida:'Llamada perdida',
+  fallida:'Fallida', failed:'Fallida', 'no-answer':'Perdida', perdida:'Perdida',
   pendiente:'Pendiente', pending:'Pendiente'
-}
-const IL:Record<string,string> = {
-  pendiente:'Pendiente', reserva:'Reserva', pedido:'Pedido', informacion:'Informacion',
-  cancelacion:'Cancelacion', perdida:'Perdida', devuelta:'Devuelta', saliente:'Saliente',
-  completada:'Completada', sin_accion:'Sin accion', callback:'Devuelta',
-  'Pedido_proveedor':'Pedido proveedor', test:'Test',
 }
 const SC:Record<string,string> = {
   completada:C.green, completed:C.green,
@@ -117,7 +111,6 @@ export default function LlamadasPage() {
   const agentName = tenantCtx?.agent_name || 'Sofía'
   const [calls,setCalls]       = useState<any[]>([])
   const [loading,setLoading]   = useState(true)
-  const [error,setError]       = useState('')
   const [loadingMore,setLoadingMore] = useState(false)
   const [hasMore,setHasMore]   = useState(false)
   const [page,setPage]         = useState(0)
@@ -131,19 +124,16 @@ export default function LlamadasPage() {
   const [feedbackDone,setFeedbackDone] = useState<Set<string>>(new Set())
   const [suggestions,setSuggestions] = useState<any[]>([])
 
-  const load = useCallback(async (tenantId:string, reset=true, silent=false) => {
-    if (reset && !silent) setLoading(true)
-    try {
+  const load = useCallback(async (tenantId:string, reset=true) => {
+    if (reset) setLoading(true)
     const from = reset ? 0 : page * PAGE_SIZE
-    const { data, count, error: qErr } = await supabase.from('calls').select('id,call_sid,tenant_id,status,intent,summary,started_at,duration_seconds,caller_phone,customer_name,from_number,decision_status,decision_flags,decision_confidence,reasoning_label,action_required,action_suggested,transcript',{count:'exact'})
+    const { data, count } = await supabase.from('calls').select('id,call_sid,tenant_id,status,intent,summary,started_at,duration_seconds,caller_phone,customer_name,from_number,decision_status,decision_flags,decision_confidence,reasoning_label,action_required,action_suggested,transcript',{count:'exact'})
       .eq('tenant_id',tenantId).order('started_at',{ascending:false})
       .range(from, from + PAGE_SIZE - 1)
-    if (qErr) { setError('No se pudieron cargar los datos'); setLoading(false); return }
     if (reset) { setCalls(data||[]); setPage(1) }
     else { setCalls(prev=>[...prev,...(data||[])]); setPage(p=>p+1) }
     setHasMore((count||0) > (reset ? PAGE_SIZE : (page+1)*PAGE_SIZE))
     setLoading(false); setLoadingMore(false)
-    } catch { setError('Error de conexion'); setLoading(false) }
   },[page])
 
   useEffect(() => {
@@ -155,52 +145,14 @@ export default function LlamadasPage() {
 
   useEffect(() => {
     if (!tid) { setLoading(false); return }
-    // Sync llamadas con Retell al cargar + cada 10s
-    const doSync = async () => {
-      try {
-        const sess = await supabase.auth.getSession()
-        if (sess.data.session) {
-          const r = await fetch('/api/calls/sync', {
-            method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + sess.data.session.access_token },
-          })
-          const d = await r.json().catch(() => ({}))
-          if (d.synced > 0) load(tid, true, true)
-        }
-      } catch {}
-    }
-    doSync()
-    const syncInterval = setInterval(doSync, 10000)
     load(tid, true)
     const ch = supabase.channel('calls-rt-' + tid)
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},(payload)=>{
-        const n = payload.new as any
-        toast.push({ title: `Nueva llamada: ${n.caller_phone || 'Desconocido'} — ${n.intent || 'entrante'}`, type: 'call', priority: 'info', icon: '📞' })
-        load(tid, true, true)
-      })
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},(payload)=>{
-        // Status change (e.g. activa → completada) — update in place for instant feedback
-        const updated = payload.new as any
-        if (updated?.id) {
-          setCalls(prev => {
-            const idx = prev.findIndex(c => c.id === updated.id)
-            if (idx === -1) return prev
-            const next = [...prev]
-            next[idx] = { ...next[idx], ...updated }
-            return next
-          })
-        }
-      })
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},()=>load(tid,true))
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'calls',filter:'tenant_id=eq.'+tid},()=>load(tid,true))
       .subscribe()
-    return () => { supabase.removeChannel(ch); clearInterval(syncInterval) }
+    return () => { supabase.removeChannel(ch) }
   },[tid]) // eslint-disable-line
 
-  if (error) return (
-    <div style={{padding:40, textAlign:'center'}}>
-      <p style={{fontSize:16, color:'#F87171'}}>{error}</p>
-      <button onClick={() => window.location.reload()} style={{marginTop:16, padding:'8px 16px', background:'#F0A84E', border:'none', borderRadius:8, cursor:'pointer', color:'#0C1018', fontWeight:600}}>Reintentar</button>
-    </div>
-  )
   if (loading) return <PageSkeleton variant="list"/>
 
   const filtered = filter==='all' ? calls : calls.filter(c => {
@@ -319,7 +271,7 @@ export default function LlamadasPage() {
                         <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:3}}>
                           <p style={{fontSize:13, fontWeight:600, color:C.text}}>{phone}</p>
                           <span style={{fontSize:10, padding:'2px 8px', borderRadius:8, background:SB[status], color:SC[status], fontWeight:700, flexShrink:0}}>{getStatusLabel(status, t.locale)}</span>
-                          {call.intent&&call.intent!=='consulta'&&call.intent!=='pendiente'&&<span style={{fontSize:10, padding:'2px 8px', borderRadius:8, background:C.violetDim, color:C.violet, fontWeight:600, textTransform:'capitalize'}}>{IL[call.intent]||call.intent}</span>}
+                          {call.intent&&call.intent!=='consulta'&&<span style={{fontSize:10, padding:'2px 8px', borderRadius:8, background:C.violetDim, color:C.violet, fontWeight:600, textTransform:'capitalize'}}>{call.intent}</span>}
                         </div>
                         {call.summary ? <p style={{fontSize:12, color:C.text2, lineHeight:1.5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{call.summary}</p> : <p style={{fontSize:12, color:C.text3}}>{tx('Sin resumen')}</p>}
                       </div>
@@ -417,20 +369,18 @@ export default function LlamadasPage() {
                             <p style={{fontSize:11, color:C.green}}>✓ {tx('Listo') + ' — ' + agentName + ' ' + tx('tendrá esto en cuenta la próxima vez')}</p>
                           ) : (
                             <div style={{display:'flex',alignItems:'center',gap:0}}>
-                              {call.caller_phone && call.caller_phone !== 'anonymous' && call.caller_phone !== 'unknown' && (call.status === 'perdida' || call.status === 'no-answer' || call.intent === 'perdida') && (
+                              {call.caller_phone && call.caller_phone !== 'anonymous' && call.caller_phone !== 'unknown' && (
                                 <button onClick={async () => {
                                   const sess = await supabase.auth.getSession()
                                   if (!sess.data.session) return
-                                  const r = await fetch('/api/voice/notify', {
+                                  await fetch('/api/voice/outbound', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
-                                    body: JSON.stringify({ tenant_id: tid, notify_type: 'missed_call', phone: call.caller_phone })
+                                    body: JSON.stringify({ phone_number: call.caller_phone, reason: 'callback', customer_name: call.customer_name })
                                   })
-                                  if (r.ok) toast.push({ title: 'SMS enviado a ' + call.caller_phone, type: 'call', priority: 'info', icon: '💬' })
-                                  else toast.push({ title: 'Error al enviar SMS', type: 'call', priority: 'critical', icon: '❌' })
                                 }}
                                 style={{fontSize:11, padding:'5px 12px', borderRadius:7, border:`1px solid ${C.teal}40`, background:C.tealDim, color:C.teal, cursor:'pointer', fontFamily:'inherit', fontWeight:500, marginRight:8}}>
-                                  💬 Avisar por SMS
+                                  📞 {cs.callBack}
                                 </button>
                               )}
                               <button onClick={()=>{setCorrecting(call.call_sid);setFeedbackNote('')}}

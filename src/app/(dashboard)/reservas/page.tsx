@@ -53,21 +53,25 @@ export default function ReservasPage() {
   const [selected,setSelected] = useState(new Date().toISOString().slice(0,10))
   const [reservas,setReservas] = useState<any[]>([])
   const [loading,setLoading]   = useState(true)
+  const [error,setError]       = useState('')
   const [tid,setTid]           = useState<string|null>(null)
   const [modal,setModal]       = useState<any|null>(null)
   const [search,setSearch]     = useState('')
   const L = template?.labels   // etiquetas dinámicas
 
   const load = useCallback(async (tenantId:string) => {
-    const week = getWeek(base)
-    const from = week[0].toISOString().slice(0,10)
-    const to   = week[6].toISOString().slice(0,10)
-    const {data} = await supabase.from('reservations')
-      .select('id,tenant_id,customer_id,customer_name,customer_phone,date,time,reservation_time,people,party_size,status,source,notes,table_id').eq('tenant_id',tenantId)
-      .gte('date',from).lte('date',to)
-      .order('date').order('time')
-    setReservas(data||[])
-    setLoading(false)
+    try {
+      const week = getWeek(base)
+      const from = week[0].toISOString().slice(0,10)
+      const to   = week[6].toISOString().slice(0,10)
+      const {data, error: qErr} = await supabase.from('reservations')
+        .select('id,tenant_id,customer_id,customer_name,customer_phone,date,time,reservation_time,people,party_size,status,source,notes,table_id').eq('tenant_id',tenantId)
+        .gte('date',from).lte('date',to)
+        .order('date').order('time')
+      if (qErr) { setError('No se pudieron cargar los datos'); setLoading(false); return }
+      setReservas(data||[])
+      setLoading(false)
+    } catch { setError('Error de conexion'); setLoading(false) }
   },[base])
 
   useEffect(()=>{
@@ -88,6 +92,12 @@ export default function ReservasPage() {
     return ()=>{ supabase.removeChannel(ch) }
   },[tid,load])
 
+  if (error) return (
+    <div style={{padding:40, textAlign:'center'}}>
+      <p style={{fontSize:16, color:'#F87171'}}>{error}</p>
+      <button onClick={() => window.location.reload()} style={{marginTop:16, padding:'8px 16px', background:'#F0A84E', border:'none', borderRadius:8, cursor:'pointer', color:'#0C1018', fontWeight:600}}>Reintentar</button>
+    </div>
+  )
   if (loading) return <PageSkeleton variant="list"/>
 
   const week    = getWeek(base)

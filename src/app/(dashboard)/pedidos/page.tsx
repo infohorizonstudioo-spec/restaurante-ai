@@ -131,7 +131,6 @@ export default function PedidosPage() {
   const toast = useToast()
   const [plan, setPlan] = useState<string>('free')
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [orders, setOrders] = useState<any[]>([])
   const [tid, setTid] = useState<string | null>(null)
   const [tipoFilter, setTipoFilter] = useState<string>('todos')
