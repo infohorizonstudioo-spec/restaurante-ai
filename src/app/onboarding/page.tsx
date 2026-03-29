@@ -78,7 +78,44 @@ const LANGUAGES = [
   { id: 'pt', label: 'Português', flag: '🇧🇷' },
 ]
 
-const STEP_LABELS = ['Tu negocio', 'Tu recepcionista', 'Horarios', '¡Listo!']
+const STEP_LABELS = ['Tu negocio', 'Tu recepcionista', 'Horarios', 'Tu carta', '¡Listo!']
+
+// ── Categories by business type (for menu step) ─────────────────────────────
+const MENU_CATEGORIES_BY_TYPE: Record<string, string[]> = {
+  restaurante: ['Entrantes', 'Platos', 'Postres', 'Bebidas', 'Vinos', 'Cervezas', 'Cafés', 'Otro'],
+  bar: ['Raciones', 'Bocadillos', 'Bebidas', 'Cervezas', 'Vinos', 'Cócteles', 'Cafés', 'Otro'],
+  cafeteria: ['Cafés', 'Desayunos', 'Bocadillos', 'Bebidas', 'Bollería', 'Postres', 'Otro'],
+}
+
+// ── Auto-detect category from product name ──────────────────────────────────
+function autoDetectCategory(name: string, bType: string): string {
+  const n = name.toLowerCase().trim()
+  const rules: [string[], string][] = [
+    [['café', 'cafe', 'cortado', 'americano', 'cappuccino', 'espresso', 'latte'], 'Cafés'],
+    [['coca cola', 'fanta', 'agua', 'refresco', 'zumo', 'nestea'], 'Bebidas'],
+    [['cerveza', 'caña', 'tercio', 'doble', 'ipa', 'lager'], 'Cervezas'],
+    [['vino', 'tinto', 'blanco', 'ribera', 'rioja', 'verdejo', 'rosado'], 'Vinos'],
+    [['tostada', 'croissant', 'bollería', 'magdalena', 'napolitana'], 'Desayunos'],
+    [['hamburguesa', 'filete', 'pollo', 'solomillo', 'entrecot', 'chuleta'], 'Platos'],
+    [['ensalada', 'gazpacho', 'croqueta', 'patatas bravas'], 'Entrantes'],
+    [['tarta', 'helado', 'flan', 'brownie', 'natillas', 'coulant'], 'Postres'],
+    [['ración', 'racion', 'tapa', 'pincho', 'montadito'], 'Raciones'],
+    [['bocadillo', 'sandwich', 'bocata'], 'Bocadillos'],
+    [['gin tonic', 'mojito', 'copa', 'daiquiri', 'margarita', 'sangría'], 'Cócteles'],
+  ]
+  for (const [keywords, cat] of rules) {
+    if (keywords.some(k => n.includes(k))) return cat
+  }
+  const cats = MENU_CATEGORIES_BY_TYPE[bType]
+  return cats ? cats[0] : 'Otro'
+}
+
+interface MenuItem {
+  id?: string
+  name: string
+  price: number
+  category: string
+}
 
 interface DaySchedule {
   closed: boolean
@@ -187,6 +224,14 @@ export default function OnboardingWizard() {
     tenant?.schedule ? (typeof tenant.schedule === 'string' ? JSON.parse(tenant.schedule) : tenant.schedule) : defaultSchedule()
   )
 
+  // Step 4 — Menu
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [newItemName, setNewItemName] = useState('')
+  const [newItemPrice, setNewItemPrice] = useState('')
+  const [newItemCategory, setNewItemCategory] = useState('')
+  const [showBulkPaste, setShowBulkPaste] = useState(false)
+  const [bulkText, setBulkText] = useState('')
+
   // Sync when tenant loads
   useEffect(() => {
     if (tenant) {
@@ -243,7 +288,7 @@ export default function OnboardingWizard() {
         }
       }
 
-      if (nextStep === 4) {
+      if (nextStep === 5) {
         // Mark onboarding done
         if (tenantId) {
           await supabase.from('tenants').update({ onboarding_done: true }).eq('id', tenantId)
@@ -255,7 +300,7 @@ export default function OnboardingWizard() {
     } finally {
       setSaving(false)
     }
-  }, [step, tenantId, businessName, businessType, phone, address, agentName, greetingStyle, language, schedule, reload])
+  }, [step, tenantId, businessName, businessType, phone, address, agentName, greetingStyle, language, schedule, menuItems, reload])
 
   // ── Validation ────────────────────────────────────────────────────────────
   const canAdvance = step === 0
@@ -717,8 +762,328 @@ export default function OnboardingWizard() {
     )
   }
 
-  // ── Step 4: Listo ─────────────────────────────────────────────────────────
-  function Step4() {
+  // ── Step 4: Tu carta ─────────────────────────────────────────────────────
+  function Step4Menu() {
+    const categories = MENU_CATEGORIES_BY_TYPE[businessType] || ['General', 'Otro']
+    const effectiveCategory = newItemCategory || (newItemName.trim() ? autoDetectCategory(newItemName, businessType) : categories[0])
+
+    const addItem = async () => {
+      const name = newItemName.trim()
+      const price = parseFloat(newItemPrice)
+      if (!name || isNaN(price) || price < 0) return
+
+      const category = effectiveCategory
+      const item: MenuItem = { name, price, category }
+
+      // Save to Supabase immediately
+      if (tenantId) {
+        const { data } = await supabase.from('menu_items').insert({
+          tenant_id: tenantId,
+          name,
+          price,
+          category,
+          active: true,
+          sort_order: menuItems.length,
+        }).select('id').single()
+        if (data) item.id = data.id
+      }
+
+      setMenuItems(prev => [...prev, item])
+      setNewItemName('')
+      setNewItemPrice('')
+      setNewItemCategory('')
+    }
+
+    const removeItem = async (index: number) => {
+      const item = menuItems[index]
+      if (item.id && tenantId) {
+        await supabase.from('menu_items').update({ active: false }).eq('id', item.id).eq('tenant_id', tenantId)
+      }
+      setMenuItems(prev => prev.filter((_, i) => i !== index))
+    }
+
+    const parseBulk = async () => {
+      const lines = bulkText.split('\n').filter(l => l.trim())
+      const parsed: MenuItem[] = []
+
+      for (const line of lines) {
+        // Match: "Name - Price" or "Name Price€" or "Name Price"
+        const match = line.match(/^(.+?)[\s\-–]+(\d+[.,]?\d*)\s*€?\s*$/)
+        if (match) {
+          const name = match[1].trim()
+          const price = parseFloat(match[2].replace(',', '.'))
+          if (name && !isNaN(price)) {
+            const category = autoDetectCategory(name, businessType)
+            const item: MenuItem = { name, price, category }
+
+            if (tenantId) {
+              const { data } = await supabase.from('menu_items').insert({
+                tenant_id: tenantId,
+                name,
+                price,
+                category,
+                active: true,
+                sort_order: menuItems.length + parsed.length,
+              }).select('id').single()
+              if (data) item.id = data.id
+            }
+
+            parsed.push(item)
+          }
+        }
+      }
+
+      if (parsed.length > 0) {
+        setMenuItems(prev => [...prev, ...parsed])
+        setBulkText('')
+        setShowBulkPaste(false)
+      }
+    }
+
+    // Group items by category
+    const grouped: Record<string, MenuItem[]> = {}
+    for (const item of menuItems) {
+      if (!grouped[item.category]) grouped[item.category] = []
+      grouped[item.category].push(item)
+    }
+
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+          <div>
+            <h2 style={{ fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 4 }}>
+              Tu carta
+            </h2>
+            <p style={{ fontSize: 14, color: C.text2, marginBottom: 24 }}>
+              Añade tus productos y el sistema organizará tu TPV automáticamente
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setStep(4)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: C.text3,
+              fontSize: 13,
+              cursor: 'pointer',
+              padding: '4px 0',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+          >
+            Omitir y completar después →
+          </button>
+        </div>
+
+        {/* Quick-add form */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 100px 1fr auto',
+          gap: 8,
+          alignItems: 'end',
+          marginBottom: 20,
+        }}>
+          <div>
+            <label style={labelStyle}>Producto</label>
+            <input
+              style={inputStyle}
+              placeholder="Ej: Café con leche"
+              value={newItemName}
+              onChange={e => {
+                setNewItemName(e.target.value)
+                if (!newItemCategory) {
+                  // Auto-detect hint — don't set state, just let effectiveCategory show it
+                }
+              }}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Precio</label>
+            <input
+              style={inputStyle}
+              placeholder="2.50"
+              type="number"
+              step="0.01"
+              min="0"
+              value={newItemPrice}
+              onChange={e => setNewItemPrice(e.target.value)}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Categoría</label>
+            <select
+              style={selectStyle}
+              value={newItemCategory || effectiveCategory}
+              onChange={e => setNewItemCategory(e.target.value)}
+            >
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={addItem}
+            disabled={!newItemName.trim() || !newItemPrice}
+            style={{
+              padding: '12px 18px',
+              borderRadius: 10,
+              border: 'none',
+              backgroundColor: newItemName.trim() && newItemPrice ? C.amber : C.surface2,
+              color: newItemName.trim() && newItemPrice ? '#0C1018' : C.text3,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: newItemName.trim() && newItemPrice ? 'pointer' : 'not-allowed',
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Añadir +
+          </button>
+        </div>
+
+        {/* Bulk paste toggle */}
+        <div style={{ marginBottom: 16 }}>
+          <button
+            type="button"
+            onClick={() => setShowBulkPaste(!showBulkPaste)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: C.amber,
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: 'pointer',
+              padding: 0,
+            }}
+          >
+            {showBulkPaste ? '✕ Cerrar' : '¿Tienes la carta en texto?'}
+          </button>
+
+          {showBulkPaste && (
+            <div style={{ marginTop: 10 }}>
+              <textarea
+                style={{
+                  ...inputStyle,
+                  minHeight: 100,
+                  resize: 'vertical',
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                }}
+                placeholder={'Café con leche - 1.80\nTostada mixta - 3.50\nCoca Cola - 2.50'}
+                value={bulkText}
+                onChange={e => setBulkText(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={parseBulk}
+                disabled={!bulkText.trim()}
+                style={{
+                  marginTop: 8,
+                  padding: '8px 20px',
+                  borderRadius: 8,
+                  border: 'none',
+                  backgroundColor: bulkText.trim() ? C.amber : C.surface2,
+                  color: bulkText.trim() ? '#0C1018' : C.text3,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: bulkText.trim() ? 'pointer' : 'not-allowed',
+                }}
+              >
+                Importar productos
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Product list */}
+        {menuItems.length === 0 ? (
+          <div style={{
+            padding: '32px 16px',
+            textAlign: 'center',
+            color: C.text3,
+            fontSize: 14,
+            backgroundColor: C.surface2,
+            borderRadius: 12,
+            border: `1px solid ${C.border}`,
+          }}>
+            Aún no has añadido productos. Empieza con los más importantes.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {Object.entries(grouped).map(([cat, items]) => (
+              <div key={cat}>
+                <div style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: C.text2,
+                  marginBottom: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}>
+                  {cat}
+                  <span style={{
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: C.text3,
+                    backgroundColor: C.surface2,
+                    padding: '2px 8px',
+                    borderRadius: 10,
+                  }}>
+                    {items.length}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {items.map((item, idx) => {
+                    const globalIdx = menuItems.indexOf(item)
+                    return (
+                      <div
+                        key={globalIdx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 14px',
+                          backgroundColor: C.surface2,
+                          borderRadius: 8,
+                          border: `1px solid ${C.border}`,
+                        }}
+                      >
+                        <span style={{ fontSize: 14, color: C.text, fontWeight: 500 }}>{item.name}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <span style={{ fontSize: 14, color: C.amber, fontWeight: 600 }}>{item.price.toFixed(2)} €</span>
+                          <button
+                            type="button"
+                            onClick={() => removeItem(globalIdx)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: C.text3,
+                              fontSize: 16,
+                              cursor: 'pointer',
+                              padding: '0 4px',
+                              lineHeight: 1,
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── Step 5: Listo ─────────────────────────────────────────────────────────
+  function Step5() {
     const typeName = BUSINESS_TYPES.find(b => b.id === businessType)?.label || businessType
     const typeIcon = BUSINESS_TYPES.find(b => b.id === businessType)?.icon || '🏢'
     const langName = LANGUAGES.find(l => l.id === language)?.label || language
@@ -897,7 +1262,7 @@ export default function OnboardingWizard() {
             minWidth: 140,
           }}
         >
-          {saving ? 'Guardando...' : step === 2 ? 'Finalizar' : 'Siguiente'}
+          {saving ? 'Guardando...' : step === 3 ? 'Finalizar' : 'Siguiente'}
         </button>
       </div>
     )
@@ -930,7 +1295,7 @@ export default function OnboardingWizard() {
           backgroundColor: C.surface,
           border: `1px solid ${C.border}`,
           borderRadius: 20,
-          padding: step === 3 ? '32px 28px' : '28px 28px 32px',
+          padding: step === 4 ? '32px 28px' : '28px 28px 32px',
           boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
         }}>
           <ProgressBar />
@@ -938,9 +1303,10 @@ export default function OnboardingWizard() {
           {step === 0 && <Step1 />}
           {step === 1 && <Step2 />}
           {step === 2 && <Step3 />}
-          {step === 3 && <Step4 />}
+          {step === 3 && <Step4Menu />}
+          {step === 4 && <Step5 />}
 
-          {step < 3 && <NavButtons />}
+          {step < 4 && <NavButtons />}
         </div>
       </div>
     </div>
