@@ -1,32 +1,20 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { validateEnv } from '@/lib/env'
-import { analyzeRequest, isBlocked, getDeceptionResponse, record404 } from '@/lib/security-guardian'
-import { getBlockPage } from '@/lib/block-page'
-import { csrfMiddleware } from '@/lib/csrf-edge'
-import { preloadFromRedis } from '@/lib/rate-limit'
 
-// Validate required env vars on cold start in production
-if (process.env.NODE_ENV === 'production') {
-  validateEnv()
-}
+// ═══════════════════════════════════════════════════════════════
+// RESERVO.AI — MIDDLEWARE (Edge Runtime Safe)
+// Security: inline threat detection (no external imports that crash Edge)
+// Auth: Supabase SSR
+// ═══════════════════════════════════════════════════════════════
 
-// Preload rate limit state from Redis on cold start (fire-and-forget)
-preloadFromRedis()
-
-// Rutas que requieren autenticación
 const PROTECTED = [
   '/panel', '/reservas', '/agenda', '/llamadas', '/clientes',
   '/mesas', '/pedidos', '/estadisticas', '/facturacion', '/configuracion', '/admin',
-  '/dashboard', '/agente', '/turnos', '/productos',
+  '/dashboard', '/agente', '/turnos', '/productos', '/proveedores', '/mensajes',
+  '/horarios-equipo',
 ]
-// Rutas solo para no autenticados
-const AUTH_ONLY = ['/login', '/registro']
-// Rutas siempre públicas (sin verificar sesión)
-const PUBLIC_ALWAYS = ['/', '/precios', '/reset', '/onboarding']
+const PUBLIC_ALWAYS = ['/', '/precios', '/reset', '/onboarding', '/cookies', '/privacidad', '/terminos', '/reports']
 
-// Headers de seguridad exhaustivos
-const isDev = process.env.NODE_ENV === 'development'
 const SECURITY_HEADERS: [string, string][] = [
   ['X-Frame-Options', 'DENY'],
   ['X-Content-Type-Options', 'nosniff'],
@@ -34,136 +22,122 @@ const SECURITY_HEADERS: [string, string][] = [
   ['X-XSS-Protection', '1; mode=block'],
   ['Permissions-Policy', 'camera=(), microphone=(self), geolocation=()'],
   ['Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload'],
-  ['X-DNS-Prefetch-Control', 'off'],
-  ['Content-Security-Policy', [
-    "default-src 'self'",
-    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://js.stripe.com https://elevenlabs.io`,
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
-    "font-src 'self' data:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.elevenlabs.io https://api.stripe.com https://api.twilio.com https://*.sentry.io",
-    "frame-src https://js.stripe.com https://elevenlabs.io",
-    "media-src 'self' blob:",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
-    "upgrade-insecure-requests",
-  ].join('; ')],
 ]
 
+// ═══ INLINE SECURITY GUARDIAN (Edge-safe, zero imports) ═══
+const ipCounts = new Map<string, { count: number; ts: number }>()
+const blockedIps = new Set<string>()
+
+function getIp(req: NextRequest): string {
+  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') || '0.0.0.0'
+}
+
+function analyzeRequest(req: NextRequest): { blocked: boolean; score: number; reason: string } {
+  const ip = getIp(req)
+  const url = req.nextUrl.pathname + (req.nextUrl.search || '')
+  const ua = (req.headers.get('user-agent') || '').toLowerCase()
+  let score = 0
+  const reasons: string[] = []
+
+  // Already blocked
+  if (blockedIps.has(ip)) return { blocked: true, score: 100, reason: 'blocked_ip' }
+
+  // Rate limiting (50 req/10s per IP)
+  const now = Date.now()
+  const entry = ipCounts.get(ip)
+  if (entry && now - entry.ts < 10000) {
+    entry.count++
+    if (entry.count > 50) { score += 40; reasons.push('rate') }
+  } else {
+    ipCounts.set(ip, { count: 1, ts: now })
+  }
+  // Cleanup old entries every 1000 requests
+  if (ipCounts.size > 5000) {
+    for (const [k, v] of ipCounts) { if (now - v.ts > 60000) ipCounts.delete(k) }
+  }
+
+  // Honeypots
+  const honeypots = ['/wp-admin', '/wp-login', '/.env', '/.git', '/phpmyadmin', '/xmlrpc', '/admin.php', '/.htaccess', '/cgi-bin', '/wp-content', '/wp-includes', '/actuator', '/swagger']
+  if (honeypots.some(h => url.startsWith(h))) { score += 80; reasons.push('honeypot') }
+
+  // Path traversal
+  if (url.includes('..') || url.includes('%2e%2e') || url.includes('%252e')) { score += 60; reasons.push('traversal') }
+
+  // SQL injection
+  const sqli = /union\s+select|sleep\s*\(|benchmark\s*\(|information_schema|load_file|into\s+outfile|drop\s+table|delete\s+from|insert\s+into|update\s+set/i
+  if (sqli.test(url) || sqli.test(req.headers.get('referer') || '')) { score += 70; reasons.push('sqli') }
+
+  // XSS
+  const xss = /<script|javascript:|on\w+\s*=|eval\s*\(|document\.cookie|alert\s*\(/i
+  if (xss.test(url)) { score += 60; reasons.push('xss') }
+
+  // Command injection
+  if (/[;|`].*(?:cat|ls|wget|curl|nc|bash|sh)\s/i.test(url)) { score += 70; reasons.push('cmdi') }
+
+  // Bot/scanner detection
+  const bots = ['sqlmap', 'nikto', 'burpsuite', 'nuclei', 'masscan', 'nmap', 'zgrab', 'dirbuster', 'gobuster', 'wpscan', 'acunetix']
+  if (bots.some(b => ua.includes(b))) { score += 80; reasons.push('scanner') }
+
+  // Empty user-agent
+  if (!ua || ua.length < 5) { score += 15; reasons.push('no_ua') }
+
+  // Block if score >= 50
+  const blocked = score >= 50
+  if (blocked) blockedIps.add(ip)
+
+  return { blocked, score, reason: reasons.join(',') }
+}
+
+// ═══ MAIN MIDDLEWARE ═══
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Assets, static → siempre pasar
-  if (
-    pathname.startsWith('/_next/') ||
-    pathname.startsWith('/favicon') ||
-    pathname.includes('.')
-  ) {
+  // Static assets
+  if (pathname.startsWith('/_next/') || pathname.startsWith('/favicon') || pathname.includes('.')) {
     return NextResponse.next()
   }
 
-  // ══ SECURITY GUARDIAN — defensa autónoma en profundidad ══
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') || '0.0.0.0'
-
-  // Fast path: IP ya bloqueada → página de bloqueo intimidante
-  if (isBlocked(ip)) {
-    const assessment = { score: 100, blocked: true, threats: ['blocked'], ip, action: 'block' as const, tarpitMs: 0, fingerprint: 'cached', attackPhase: 'none' as const, riskLevel: 'critical' as const }
-    // APIs reciben JSON, navegadores reciben la página de bloqueo
-    const accept = request.headers.get('accept') || ''
-    if (accept.includes('text/html')) {
-      return new NextResponse(getBlockPage(assessment), {
-        status: 403,
-        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
-      })
-    }
-    return new NextResponse(JSON.stringify({ error: 'Forbidden' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' },
-    })
+  // Security analysis
+  const threat = analyzeRequest(request)
+  if (threat.blocked) {
+    return new Response(
+      JSON.stringify({ error: 'Access denied', reason: threat.reason }),
+      { status: 403, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+    )
   }
 
-  // Análisis completo del request
-  const assessment = analyzeRequest(request)
-
-  // Honeypot: servir respuesta falsa para engañar al atacante
-  if (assessment.action === 'honeypot') {
-    const deception = getDeceptionResponse(pathname)
-    return new NextResponse(deception.body, {
-      status: deception.status,
-      headers: deception.headers,
-    })
-  }
-
-  // Bloqueado: página intimidante para navegadores, JSON para APIs
-  if (assessment.blocked) {
-    const accept = request.headers.get('accept') || ''
-    if (accept.includes('text/html')) {
-      return new NextResponse(getBlockPage(assessment), {
-        status: 403,
-        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
-      })
-    }
-    return new NextResponse(JSON.stringify({ error: 'Forbidden' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
-
-  // Tarpit: el atacante queda marcado, próximo intento será bloqueado
-  if (assessment.action === 'tarpit' && assessment.tarpitMs > 0) {
-    // No bloqueamos aún — dejamos pasar pero el escalamiento progresivo
-    // garantiza que el siguiente intento sospechoso será bloqueado
-  }
-
-  // API webhooks → pasar sin auth (son llamadas externas verificadas internamente)
+  // Webhooks + agent + cron — pass without auth
   if (
-    pathname.startsWith('/api/voice/webhook') ||
-    pathname.startsWith('/api/voice/inbound') ||
-    pathname.startsWith('/api/twilio/webhook') ||
-    pathname.startsWith('/api/stripe/webhook') ||
-    pathname.startsWith('/api/whatsapp/webhook') ||
-    pathname.startsWith('/api/email/webhook') ||
-    pathname.startsWith('/api/cron/')
+    pathname.startsWith('/api/voice/') || pathname.startsWith('/api/twilio/') ||
+    pathname.startsWith('/api/stripe/webhook') || pathname.startsWith('/api/whatsapp/') ||
+    pathname.startsWith('/api/email/webhook') || pathname.startsWith('/api/retell/') ||
+    pathname.startsWith('/api/agent/') || pathname.startsWith('/api/cron/') ||
+    pathname.startsWith('/api/auth/') || pathname.startsWith('/api/shifts/')
   ) {
     const response = NextResponse.next()
     response.headers.set('X-Content-Type-Options', 'nosniff')
     response.headers.set('X-Frame-Options', 'DENY')
-    response.headers.set('Content-Security-Policy', "default-src 'none'")
-    response.headers.set('X-DNS-Prefetch-Control', 'off')
     return response
   }
 
-  // Otras rutas API → pasar (protegidas internamente) con headers básicos + CSRF
+  // Other APIs
   if (pathname.startsWith('/api/')) {
     const response = NextResponse.next()
-    response.headers.set('X-Content-Type-Options', 'nosniff')
-    response.headers.set('X-Frame-Options', 'DENY')
-    response.headers.set('Content-Security-Policy', "default-src 'none'")
-    response.headers.set('X-DNS-Prefetch-Control', 'off')
-    // CSRF protection for state-changing API requests
-    const csrfError = csrfMiddleware(request, response)
-    if (csrfError) return csrfError
+    SECURITY_HEADERS.forEach(([k, v]) => response.headers.set(k, v))
     return response
   }
 
-  // Rutas públicas → pasar sin comprobar
+  // Public routes
   if (PUBLIC_ALWAYS.some(r => pathname === r || pathname.startsWith(r + '/'))) {
     const response = NextResponse.next()
     SECURITY_HEADERS.forEach(([k, v]) => response.headers.set(k, v))
-    // Set CSRF cookie on public pages too
-    csrfMiddleware(request, response)
     return response
   }
 
-  // Para el resto, verificar sesión con @supabase/ssr (usa cookies correctamente)
+  // Protected routes — check auth
   const response = NextResponse.next({ request: { headers: request.headers } })
   SECURITY_HEADERS.forEach(([k, v]) => response.headers.set(k, v))
-
-  // Set CSRF cookie on page routes so the client has a token ready for API calls
-  csrfMiddleware(request, response)
 
   try {
     const supabase = createServerClient(
@@ -182,31 +156,14 @@ export async function middleware(request: NextRequest) {
     )
 
     const { data: { user } } = await supabase.auth.getUser()
-    const isAuthed = !!user
-
-    const isProtected = PROTECTED.some(p => pathname === p || pathname.startsWith(p + '/'))
-    const isAuthOnly  = AUTH_ONLY.some(p => pathname === p || pathname.startsWith(p + '/'))
-
-    // Sin sesión en ruta protegida → login
-    if (isProtected && !isAuthed) {
-      const url = new URL('/login', request.url)
-      return NextResponse.redirect(url)
+    if (!user && PROTECTED.some(p => pathname === p || pathname.startsWith(p + '/'))) {
+      return NextResponse.redirect(new URL('/login', request.url))
     }
-
-    // Autenticado en login/registro → panel (desactivado - React maneja la redirección)
-    // if (isAuthOnly && isAuthed) {
-    //   const url = new URL('/panel', request.url)
-    //   return NextResponse.redirect(url)
-    // }
-  } catch {
-    // Error de auth → dejar pasar (evitar loops)
-  }
+  } catch {}
 
   return response
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }
