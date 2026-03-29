@@ -1138,6 +1138,53 @@ export default function TPVPage() {
               </div>
             )}
 
+            {/* ── Mini floor plan (always visible) ───────────────── */}
+            {dbTables.length > 0 && view === 'products' && (
+              <div style={{
+                padding: '8px 12px', borderBottom: `1px solid ${C.border}`, flexShrink: 0,
+                background: 'rgba(255,255,255,0.01)',
+              }}>
+                <svg
+                  viewBox={`0 0 ${Math.max(200, Math.max(...dbTables.map(t => (t.x_pos || 0) + (t.w || 60))) + 20)} ${Math.max(80, Math.max(...dbTables.map(t => (t.y_pos || 0) + (t.h || 60))) + 20)}`}
+                  style={{ width: '100%', height: 80, borderRadius: 8, cursor: 'pointer' }}
+                  preserveAspectRatio="xMidYMid meet"
+                >
+                  {dbTables.map(t => {
+                    const isSel = selectedTable === t.number
+                    const hasItems = (tableOrders[t.number] || []).length > 0 || (selectedTable === t.number && order.length > 0)
+                    const sc = ({ libre: '#34D399', ocupada: '#F87171', reservada: '#F0A84E', bloqueada: '#49566A' } as Record<string,string>)[t.status || 'libre'] || '#49566A'
+                    const w = t.w || 60, h = t.h || 60
+                    return (
+                      <g key={t.id}
+                        onClick={() => { selectTable(t.number); setView('products') }}
+                        onDoubleClick={() => window.location.href = '/mesas'}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {t.shape_type === 'round' ? (
+                          <ellipse cx={(t.x_pos||0)+w/2} cy={(t.y_pos||0)+h/2} rx={w/2-2} ry={h/2-2}
+                            fill={isSel ? 'rgba(240,168,78,0.35)' : hasItems ? sc+'33' : sc+'18'}
+                            stroke={isSel ? '#F0A84E' : sc} strokeWidth={isSel ? 2.5 : 1} />
+                        ) : (
+                          <rect x={t.x_pos||0} y={t.y_pos||0} width={w} height={h} rx={6}
+                            fill={isSel ? 'rgba(240,168,78,0.35)' : hasItems ? sc+'33' : sc+'18'}
+                            stroke={isSel ? '#F0A84E' : sc} strokeWidth={isSel ? 2.5 : 1} />
+                        )}
+                        <text x={(t.x_pos||0)+w/2} y={(t.y_pos||0)+h/2-(hasItems?5:0)} textAnchor="middle" dominantBaseline="middle"
+                          fill={isSel ? '#F0A84E' : '#E8EEF6'} fontSize={11} fontWeight={700}>
+                          {t.name || ('Mesa '+t.number)}
+                        </text>
+                        {hasItems && (
+                          <text x={(t.x_pos||0)+w/2} y={(t.y_pos||0)+h/2+10} textAnchor="middle" fontSize={9}>
+                            {'\uD83D\uDC64'.repeat(Math.min(3, (tableOrders[t.number]||[]).reduce((s,i)=>s+i.quantity,0) || order.reduce((s,i)=>s+i.quantity,0)))}
+                          </text>
+                        )}
+                      </g>
+                    )
+                  })}
+                </svg>
+              </div>
+            )}
+
             {/* ── Mesa bar (always visible in products view) ───────── */}
             {view === 'products' && (
               <div style={{
