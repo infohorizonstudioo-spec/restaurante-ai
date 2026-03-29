@@ -1019,47 +1019,8 @@ export default function TPVPage() {
             })}
             </div>
 
-            {/* ── Mini floor plan (always visible) ────────────────────── */}
-            {dbTables.length > 0 && (
-              <div style={{ marginTop: 'auto', borderTop: `1px solid ${C.border}`, padding: 8 }}>
-                <p style={{ fontSize: 9, fontWeight: 700, color: C.text3, letterSpacing: '0.06em', marginBottom: 4, textTransform: 'uppercase' }}>Plano del local</p>
-                <svg
-                  viewBox={`0 0 ${Math.max(...dbTables.map(t => (t.x_pos || 0) + (t.w || 60))) + 10} ${Math.max(...dbTables.map(t => (t.y_pos || 0) + (t.h || 60))) + 10}`}
-                  style={{ width: '100%', height: 100, borderRadius: 8, background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.border}`, cursor: 'pointer' }}
-                  preserveAspectRatio="xMidYMid meet"
-                >
-                  {dbTables.map(t => {
-                    const isSel = selectedTable === t.number
-                    const hasItems = (tableOrders[t.number] || []).length > 0 || (selectedTable === t.number && order.length > 0)
-                    const sc = { libre: '#34D399', ocupada: '#F87171', reservada: '#F0A84E', bloqueada: '#49566A' }[t.status || 'libre'] || '#49566A'
-                    const w = t.w || 50, h = t.h || 50
-                    return (
-                      <g key={t.id}
-                        onClick={() => { selectTable(t.number); setView('products') }}
-                        onDoubleClick={() => window.location.href = '/mesas'}
-                      >
-                        {t.shape_type === 'round' ? (
-                          <ellipse cx={(t.x_pos||0)+w/2} cy={(t.y_pos||0)+h/2} rx={w/2-1} ry={h/2-1}
-                            fill={isSel ? 'rgba(240,168,78,0.4)' : hasItems ? sc+'44' : sc+'22'}
-                            stroke={isSel ? '#F0A84E' : sc} strokeWidth={isSel ? 2 : 1} />
-                        ) : (
-                          <rect x={t.x_pos||0} y={t.y_pos||0} width={w} height={h} rx={4}
-                            fill={isSel ? 'rgba(240,168,78,0.4)' : hasItems ? sc+'44' : sc+'22'}
-                            stroke={isSel ? '#F0A84E' : sc} strokeWidth={isSel ? 2 : 1} />
-                        )}
-                        <text x={(t.x_pos||0)+w/2} y={(t.y_pos||0)+h/2} textAnchor="middle" dominantBaseline="middle"
-                          fill={isSel ? '#F0A84E' : '#E8EEF6'} fontSize={10} fontWeight={700}>{t.number}</text>
-                        {hasItems && <circle cx={(t.x_pos||0)+w-4} cy={(t.y_pos||0)+4} r={4} fill="#F87171"/>}
-                      </g>
-                    )
-                  })}
-                </svg>
-                <p style={{ fontSize: 8, color: C.text3, marginTop: 2, textAlign: 'center' }}>Click: seleccionar · Doble click: editar plano</p>
-              </div>
-            )}
-
             {/* ── Utility buttons (bottom) ──────────────────────────── */}
-            <div className="tpv-cat-utils" style={{ borderTop: `1px solid ${C.border}`, paddingTop: 4, paddingBottom: 4 }}>
+            <div className="tpv-cat-utils" style={{ marginTop: 'auto', borderTop: `1px solid ${C.border}`, paddingTop: 4, paddingBottom: 4 }}>
               <button
                 onClick={() => { setShowSearch(!showSearch); setView('products') }}
                 style={{
@@ -1174,6 +1135,74 @@ export default function TPVPage() {
                     {'\u2715'}
                   </button>
                 )}
+              </div>
+            )}
+
+            {/* ── Mesa bar (always visible in products view) ───────── */}
+            {view === 'products' && (
+              <div style={{
+                display: 'flex', gap: 6, padding: '8px 12px', overflowX: 'auto',
+                borderBottom: `1px solid ${C.border}`, alignItems: 'center',
+                WebkitOverflowScrolling: 'touch', flexShrink: 0,
+              }}>
+                {/* Barra button */}
+                <button
+                  onClick={() => selectTable(null)}
+                  style={{
+                    padding: '6px 14px', borderRadius: 8, border: `1px solid ${selectedTable === null ? C.amber : C.border}`,
+                    background: selectedTable === null ? C.amberDim : 'transparent',
+                    color: selectedTable === null ? C.amber : C.text2,
+                    fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                  }}
+                >
+                  🍺 Barra
+                </button>
+                {/* DB tables as pills */}
+                {dbTables.map(t => {
+                  const isSel = selectedTable === t.number
+                  const hasItems = (tableOrders[t.number] || []).length > 0
+                  const sc = { libre: '#34D399', ocupada: '#F87171', reservada: '#F0A84E', bloqueada: '#49566A' }[t.status || 'libre'] || '#49566A'
+                  return (
+                    <button key={t.id}
+                      onClick={() => { selectTable(t.number); setView('products') }}
+                      onDoubleClick={() => window.location.href = '/mesas'}
+                      style={{
+                        position: 'relative', padding: '6px 12px', borderRadius: 8,
+                        border: `1px solid ${isSel ? C.amber : hasItems ? sc : C.border}`,
+                        background: isSel ? C.amberDim : hasItems ? sc + '15' : 'transparent',
+                        color: isSel ? C.amber : hasItems ? sc : C.text2,
+                        fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {t.name?.toLowerCase().includes('barra') ? '🍺' : '🪑'} {t.number}
+                      {hasItems && <span style={{ position: 'absolute', top: -3, right: -3, width: 8, height: 8, borderRadius: '50%', background: '#F87171' }}/>}
+                    </button>
+                  )
+                })}
+                {/* Fallback numbered tables if no DB tables */}
+                {dbTables.length === 0 && Array.from({ length: 10 }, (_, i) => {
+                  const num = String(i + 1)
+                  const isSel = selectedTable === num
+                  const hasItems = (tableOrders[num] || []).length > 0
+                  return (
+                    <button key={num} onClick={() => selectTable(num)}
+                      style={{
+                        padding: '6px 10px', borderRadius: 8, minWidth: 36,
+                        border: `1px solid ${isSel ? C.amber : hasItems ? '#F87171' : C.border}`,
+                        background: isSel ? C.amberDim : 'transparent',
+                        color: isSel ? C.amber : hasItems ? '#F87171' : C.text3,
+                        fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >{num}</button>
+                  )
+                })}
+                {/* Edit link */}
+                <button onClick={() => window.location.href = '/mesas'} style={{
+                  padding: '6px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent',
+                  color: C.text3, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                }}>
+                  ✏️ Editar
+                </button>
               </div>
             )}
 
