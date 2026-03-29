@@ -73,6 +73,7 @@ export default function Sidebar() {
       panel: t.nav.panel, reservas: t.nav.reservations, agenda: t.nav.agenda,
       llamadas: t.nav.calls, clientes: t.nav.clients, mesas: t.nav.spaces,
       turnos: t.nav.shifts, 'horarios-equipo': t.nav.teamSchedule, productos: t.nav.products, pedidos: t.nav.orders,
+      tpv: 'TPV', caja: 'Caja',
       estadisticas: t.nav.stats, facturacion: t.nav.billing,
       agente: t.nav.agent, configuracion: t.nav.settings,
     }
@@ -91,11 +92,21 @@ export default function Sidebar() {
   // Usar template si existe, pero asegurar que /agente siempre aparece
   const baseModules = template?.modules || DEFAULT_MODULES
   const hasAgente = baseModules.some((m: any) => m.id === 'agente')
-  const modules = hasAgente ? baseModules : [
+  const withAgente = hasAgente ? baseModules : [
     ...baseModules.filter((m: any) => m.id !== 'configuracion'),
     { id:'agente', href:'/agente', icon:'cpu', label:'Mi recepcionista' },
     { id:'configuracion', href:'/configuracion', icon:'gear', label:'Configuración' },
   ]
+  // Insertar TPV y Caja después de pedidos (o al final si no hay pedidos)
+  const isHospitality = ['restaurante','bar','cafeteria'].includes(tenant?.type || '')
+  const tpvItems = isHospitality ? [
+    { id:'tpv', href:'/tpv', icon:'layout', label:'TPV', pro: true },
+    { id:'caja', href:'/caja', icon:'card', label:'Caja', pro: true },
+  ] : []
+  const pedidosIdx = withAgente.findIndex((m: any) => m.id === 'pedidos')
+  const modules = pedidosIdx >= 0
+    ? [...withAgente.slice(0, pedidosIdx + 1), ...tpvItems, ...withAgente.slice(pedidosIdx + 1)]
+    : [...withAgente.slice(0, -2), ...tpvItems, ...withAgente.slice(-2)]
   const W = collapsed ? 60 : 224
 
   return (
