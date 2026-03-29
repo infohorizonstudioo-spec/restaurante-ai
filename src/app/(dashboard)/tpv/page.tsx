@@ -46,6 +46,121 @@ interface ParkedOrder {
   order_type: string
 }
 
+interface DBTable {
+  id: string
+  number: string
+  name?: string
+  capacity: number
+  zone_id?: string
+  zone_name?: string
+  x_pos: number
+  y_pos: number
+  w?: number
+  h?: number
+  shape_type?: string
+  status: string
+  rotation?: number
+}
+
+interface TodayReservation {
+  table_id: string
+  time: string
+  customer_name: string
+  party_size: number
+}
+
+/* ── Mini Floor Plan ──────────────────────────────────────────────── */
+function MiniFloorPlan({ tables, selectedTable, tableOrders, currentOrder, reservedTableIds, onSelect }: {
+  tables: DBTable[]
+  selectedTable: string | null
+  tableOrders: Record<string, TPVItem[]>
+  currentOrder: TPVItem[]
+  reservedTableIds: Set<string>
+  onSelect: (tableNumber: string | null) => void
+}) {
+  if (!tables.length) return null
+
+  const maxX = Math.max(...tables.map(t => (t.x_pos || 0) + (t.w || 80)))
+  const maxY = Math.max(...tables.map(t => (t.y_pos || 0) + (t.h || 80)))
+
+  const statusColor: Record<string, string> = {
+    libre: '#34D399', ocupada: '#F87171', reservada: '#F0A84E', bloqueada: '#49566A',
+  }
+
+  return (
+    <svg
+      viewBox={`0 0 ${maxX} ${maxY}`}
+      style={{
+        width: '100%', height: 200,
+        background: 'rgba(255,255,255,0.02)',
+        borderRadius: 12,
+        border: `1px solid ${C.border}`,
+      }}
+    >
+      {tables.map(t => {
+        const isSelected = selectedTable === t.number
+        const orderItems = t.number === selectedTable ? currentOrder : (tableOrders[t.number] || [])
+        const itemCount = orderItems.reduce((s, i) => s + i.quantity, 0)
+        const sc = statusColor[t.status] || '#49566A'
+        const isReserved = reservedTableIds.has(t.id)
+        const w = t.w || 60
+        const h = t.h || 60
+        const cx = (t.x_pos || 0) + w / 2
+        const cy = (t.y_pos || 0) + h / 2
+
+        return (
+          <g key={t.id} onClick={() => onSelect(t.number)} style={{ cursor: 'pointer' }}>
+            {t.shape_type === 'round' ? (
+              <ellipse
+                cx={cx} cy={cy} rx={w / 2 - 2} ry={h / 2 - 2}
+                fill={isSelected ? 'rgba(240,168,78,0.3)' : `${sc}22`}
+                stroke={isSelected ? '#F0A84E' : sc}
+                strokeWidth={isSelected ? 3 : 1.5}
+              />
+            ) : (
+              <rect
+                x={t.x_pos || 0} y={t.y_pos || 0} width={w} height={h} rx={8}
+                fill={isSelected ? 'rgba(240,168,78,0.3)' : `${sc}22`}
+                stroke={isSelected ? '#F0A84E' : sc}
+                strokeWidth={isSelected ? 3 : 1.5}
+              />
+            )}
+            <text
+              x={cx} y={cy}
+              textAnchor="middle" dominantBaseline="middle"
+              fill={isSelected ? '#F0A84E' : '#E8EEF6'}
+              fontSize={14} fontWeight={700}
+            >
+              {t.number}
+            </text>
+            {itemCount > 0 && (
+              <>
+                <circle cx={(t.x_pos || 0) + w - 8} cy={(t.y_pos || 0) + 8} r={10} fill="#F0A84E" />
+                <text
+                  x={(t.x_pos || 0) + w - 8} y={(t.y_pos || 0) + 8}
+                  textAnchor="middle" dominantBaseline="middle"
+                  fill="#0C1018" fontSize={10} fontWeight={700}
+                >
+                  {itemCount}
+                </text>
+              </>
+            )}
+            {isReserved && itemCount === 0 && (
+              <text
+                x={(t.x_pos || 0) + w - 10} y={(t.y_pos || 0) + 10}
+                textAnchor="middle" dominantBaseline="middle"
+                fontSize={12}
+              >
+                {'\uD83D\uDCC5'}
+              </text>
+            )}
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
 /* ── Component ─────────────────────────────────────────────────────── */
 export default function TPVPage() {
   const { tenant, template } = useTenant()
@@ -73,6 +188,8 @@ export default function TPVPage() {
   const [fullscreen, setFullscreen] = useState(false)
   const [selectedTable, setSelectedTable] = useState<string | null>(null)
   const [tableOrders, setTableOrders] = useState<Record<string, TPVItem[]>>({})
+  const [dbTables, setDbTables] = useState<DBTable[]>([])
+  const [todayReservations, setTodayReservations] = useState<TodayReservation[]>([])
   const [rightWidth, setRightWidth] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('tpv_right_width')
@@ -125,6 +242,24 @@ export default function TPVPage() {
       const { data: p } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle()
       if (!p?.tenant_id) return
       setTid(p.tenant_id)
+
+      // Fetch real tables from DB
+      const { data: fetchedTables } = await supabase
+        .from('tables')
+        .select('id, number, name, capacity, zone_id, zone_name, x_pos, y_pos, w, h, shape_type, status, rotation')
+        .eq('tenant_id', p.tenant_id)
+        .order('number')
+      setDbTables((fetchedTables as DBTable[]) || [])
+
+      // Fetch today's reservations
+      const todayStr = new Date().toISOString().slice(0, 10)
+      const { data: todayRes } = await supabase
+        .from('reservations')
+        .select('table_id, time, customer_name, party_size')
+        .eq('tenant_id', p.tenant_id)
+        .eq('date', todayStr)
+        .in('status', ['confirmada', 'pendiente'])
+      setTodayReservations((todayRes as TodayReservation[]) || [])
 
       const { data: items } = await supabase
         .from('menu_items')
@@ -242,6 +377,14 @@ export default function TPVPage() {
       }
       return [...prev, { id: item.id, name: item.name, price: item.price, quantity: 1 }]
     })
+    // Mark table as ocupada if adding first item
+    if (selectedTable && order.length === 0) {
+      const dbTable = dbTables.find(t => t.number === selectedTable)
+      if (dbTable && dbTable.status !== 'ocupada') {
+        supabase.from('tables').update({ status: 'ocupada' }).eq('id', dbTable.id).then(() => {})
+        setDbTables(prev => prev.map(t => t.id === dbTable.id ? { ...t, status: 'ocupada' } : t))
+      }
+    }
     // Check combo suggestions
     if (intel?.combos) {
       const nameLow = item.name.toLowerCase()
@@ -346,13 +489,18 @@ export default function TPVPage() {
         }
       }
 
-      // Clear table order
+      // Clear table order and update table status to libre
       if (selectedTable) {
         setTableOrders(prev => {
           const next = { ...prev }
           delete next[selectedTable]
           return next
         })
+        const dbTable = dbTables.find(t => t.number === selectedTable)
+        if (dbTable) {
+          await supabase.from('tables').update({ status: 'libre' }).eq('id', dbTable.id)
+          setDbTables(prev => prev.map(t => t.id === dbTable.id ? { ...t, status: 'libre' } : t))
+        }
       }
       setOrder([])
       setShowCobrar(false)
@@ -562,7 +710,12 @@ export default function TPVPage() {
     return items ? items.reduce((s, i) => s + i.quantity, 0) : 0
   }, [tableOrders, selectedTable, order])
 
-  const TABLES = ['Barra', ...Array.from({ length: 20 }, (_, i) => `${i + 1}`)]
+  const hasDbTables = dbTables.length > 0
+  const FALLBACK_TABLES = ['Barra', ...Array.from({ length: 20 }, (_, i) => `${i + 1}`)]
+  const reservedTableIds = useMemo(() => new Set(todayReservations.map(r => r.table_id).filter(Boolean)), [todayReservations])
+
+  // Find zone name for selected table
+  const selectedDbTable = useMemo(() => dbTables.find(t => t.number === selectedTable), [dbTables, selectedTable])
 
   if (loading) return <PageSkeleton variant="cards" />
 
@@ -724,57 +877,93 @@ export default function TPVPage() {
 
             {/* Table selector */}
             <div style={{
-              display: 'flex', gap: 6, padding: '8px 16px', overflowX: 'auto',
-              borderBottom: `1px solid ${C.border}`, alignItems: 'center',
-              WebkitOverflowScrolling: 'touch',
+              padding: '8px 16px',
+              borderBottom: `1px solid ${C.border}`,
             }}>
-              <span style={{ fontSize: 11, color: C.text3, fontWeight: 600, whiteSpace: 'nowrap', marginRight: 4 }}>
-                Mesas
-              </span>
-              {TABLES.map(table => {
-                const isBarra = table === 'Barra'
-                const tableKey = isBarra ? null : table
-                const isSelected = selectedTable === tableKey
-                const count = isBarra ? 0 : getTableItemCount(table)
-                const hasItems = count > 0
-                return (
-                  <button
-                    key={table}
-                    onClick={() => selectTable(tableKey)}
-                    style={{
-                      position: 'relative',
-                      width: isBarra ? 'auto' : 48, minWidth: isBarra ? 56 : 48, height: 48,
-                      borderRadius: 10, border: isSelected
-                        ? `2px solid ${C.amber}`
-                        : hasItems
-                          ? `2px solid ${C.amber}`
-                          : `1px solid ${C.border}`,
-                      background: isSelected ? C.amberDim : C.surface2,
-                      color: isSelected ? C.amber : hasItems ? C.amber : C.text3,
-                      fontSize: isBarra ? 12 : 16, fontWeight: 700,
-                      cursor: 'pointer', fontFamily: 'inherit',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0, padding: isBarra ? '0 10px' : 0,
-                    }}
-                  >
-                    {isBarra ? 'Barra' : table}
-                    {hasItems && !isSelected && (
-                      <div style={{
-                        position: 'absolute', top: -4, right: -4,
-                        width: 18, height: 18, borderRadius: 9,
-                        background: C.amber, color: '#0C1018',
-                        fontSize: 10, fontWeight: 800,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        {count}
-                      </div>
-                    )}
-                    {hasItems && isSelected && (
-                      <span style={{ fontSize: 10, marginLeft: 2 }}>({count})</span>
-                    )}
-                  </button>
-                )
-              })}
+              {/* Barra button always on top */}
+              <div style={{ display: 'flex', gap: 6, marginBottom: hasDbTables ? 8 : 0, alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: C.text3, fontWeight: 600, whiteSpace: 'nowrap', marginRight: 4 }}>
+                  Mesas
+                </span>
+                <button
+                  onClick={() => selectTable(null)}
+                  style={{
+                    padding: '8px 16px', borderRadius: 10,
+                    border: selectedTable === null ? `2px solid ${C.amber}` : `1px solid ${C.border}`,
+                    background: selectedTable === null ? C.amberDim : C.surface2,
+                    color: selectedTable === null ? C.amber : C.text3,
+                    fontSize: 12, fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  Barra
+                </button>
+                {selectedTable && selectedDbTable && (
+                  <span style={{ fontSize: 12, color: C.text2, fontWeight: 600 }}>
+                    Mesa {selectedTable}{selectedDbTable.zone_name ? ` \u00B7 ${selectedDbTable.zone_name}` : ''}
+                  </span>
+                )}
+              </div>
+
+              {/* Visual mini floor plan OR fallback buttons */}
+              {hasDbTables ? (
+                <MiniFloorPlan
+                  tables={dbTables}
+                  selectedTable={selectedTable}
+                  tableOrders={tableOrders}
+                  currentOrder={order}
+                  reservedTableIds={reservedTableIds}
+                  onSelect={(num) => selectTable(num)}
+                />
+              ) : (
+                <div style={{
+                  display: 'flex', gap: 6, overflowX: 'auto',
+                  alignItems: 'center', WebkitOverflowScrolling: 'touch',
+                }}>
+                  {FALLBACK_TABLES.filter(t => t !== 'Barra').map(table => {
+                    const isSelected = selectedTable === table
+                    const count = getTableItemCount(table)
+                    const hasItems = count > 0
+                    return (
+                      <button
+                        key={table}
+                        onClick={() => selectTable(table)}
+                        style={{
+                          position: 'relative',
+                          width: 48, minWidth: 48, height: 48,
+                          borderRadius: 10, border: isSelected
+                            ? `2px solid ${C.amber}`
+                            : hasItems
+                              ? `2px solid ${C.amber}`
+                              : `1px solid ${C.border}`,
+                          background: isSelected ? C.amberDim : C.surface2,
+                          color: isSelected ? C.amber : hasItems ? C.amber : C.text3,
+                          fontSize: 16, fontWeight: 700,
+                          cursor: 'pointer', fontFamily: 'inherit',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {table}
+                        {hasItems && !isSelected && (
+                          <div style={{
+                            position: 'absolute', top: -4, right: -4,
+                            width: 18, height: 18, borderRadius: 9,
+                            background: C.amber, color: '#0C1018',
+                            fontSize: 10, fontWeight: 800,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            {count}
+                          </div>
+                        )}
+                        {hasItems && isSelected && (
+                          <span style={{ fontSize: 10, marginLeft: 2 }}>({count})</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Product grid */}
@@ -921,7 +1110,11 @@ export default function TPVPage() {
             {/* Order header */}
             <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
               <h2 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: 0 }}>
-                {selectedTable ? `Mesa ${selectedTable}` : 'Pedido actual'}
+                {selectedTable
+                  ? selectedDbTable?.zone_name
+                    ? `Mesa ${selectedTable} \u00B7 ${selectedDbTable.zone_name}`
+                    : `Mesa ${selectedTable}`
+                  : 'Barra'}
                 {order.length > 0 && (
                   <span style={{ fontSize: 13, fontWeight: 500, color: C.text3, marginLeft: 8 }}>
                     ({order.reduce((s, i) => s + i.quantity, 0)} items)
