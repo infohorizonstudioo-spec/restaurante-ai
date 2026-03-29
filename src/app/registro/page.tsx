@@ -3,9 +3,11 @@ import { useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
+const ACTIVE_TIPOS = ['restaurante', 'bar', 'cafeteria']
 const TIPOS = [
   { key:'restaurante',    label:'🍽️', name:'Restaurante' },
-  { key:'bar',            label:'🍺', name:'Bar / Cafetería' },
+  { key:'bar',            label:'🍺', name:'Bar' },
+  { key:'cafeteria',      label:'☕', name:'Cafetería' },
   { key:'clinica_dental', label:'🦷', name:'Clínica Dental' },
   { key:'clinica_medica', label:'🏥', name:'Clínica Médica' },
   { key:'veterinaria',    label:'🐾', name:'Veterinaria' },
@@ -18,7 +20,7 @@ const TIPOS = [
   { key:'inmobiliaria',   label:'🏠', name:'Inmobiliaria' },
   { key:'gimnasio',       label:'🏋️', name:'Gimnasio' },
   { key:'academia',       label:'📚', name:'Academia' },
-  { key:'spa',            label:'💆', name:'Spa / Centro wellness' },
+  { key:'spa',            label:'💆', name:'Spa' },
   { key:'taller',         label:'🔧', name:'Taller mecánico' },
   { key:'ecommerce',      label:'🛒', name:'Tienda online' },
   { key:'otro',           label:'📋', name:'Otro negocio' },
@@ -172,13 +174,18 @@ export default function RegistroPage() {
                 </div>
                 <div>
                   <label style={{ display:'block', fontSize:11, fontWeight:600, color:'#8895A7', marginBottom:10, letterSpacing:'0.05em', textTransform:'uppercase' }}>Tipo de negocio</label>
+                  <p style={{ fontSize:11, color:'#49566A', marginBottom:8 }}>Optimizado para hostelería · Más sectores próximamente</p>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                    {TIPOS.map(t => (
-                      <button key={t.key} onClick={()=>up('businessType',t.key)} className={`rz-tipo${form.businessType===t.key?' sel':''}`}>
-                        <div style={{ fontSize:20, marginBottom:4 }}>{t.label}</div>
-                        <div style={{ fontSize:12, fontWeight:600, color: form.businessType===t.key ? '#F0A84E' : '#8895A7' }}>{t.name}</div>
-                      </button>
-                    ))}
+                    {TIPOS.map(t => {
+                      const active = ACTIVE_TIPOS.includes(t.key)
+                      return (
+                        <button key={t.key} onClick={()=>{ if (active) up('businessType',t.key) }} className={`rz-tipo${form.businessType===t.key?' sel':''}`} style={!active ? { opacity:0.4, cursor:'default' } : undefined}>
+                          <div style={{ fontSize:20, marginBottom:4 }}>{t.label}</div>
+                          <div style={{ fontSize:12, fontWeight:600, color: form.businessType===t.key ? '#F0A84E' : '#8895A7' }}>{t.name}</div>
+                          {!active && <div style={{ fontSize:9, color:'#49566A', marginTop:2 }}>Próximamente</div>}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               </div>

@@ -168,7 +168,7 @@ function ROICalculator() {
         <p style={{fontSize:12,color:'rgba(255,255,255,0.3)',marginTop:6}}>Basado en un ingreso medio de 45€ por reserva</p>
       </div>
       <Link href="/registro" className="btn-primary" style={{display:'inline-block',padding:'14px 32px',fontSize:15,borderRadius:12,boxShadow:'0 6px 24px rgba(240,168,78,0.35)'}}>
-        Recuperalas con Reservo →
+        Recuperalas con Reservo para tu restaurante →
       </Link>
     </div>
   )
@@ -232,7 +232,7 @@ export default function HomePage() {
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <Link href="#demo" className="btn-ghost" style={{padding:'7px 14px',fontSize:13,borderRadius:8,display:'inline-block'}}>Escuchar demo</Link>
           <Link href="/login" className="btn-ghost" style={{padding:'7px 18px',fontSize:13,borderRadius:8,display:'inline-block'}}>Iniciar sesión</Link>
-          <Link href="/registro" className="btn-primary" style={{padding:'8px 20px',fontSize:13,borderRadius:8,display:'inline-block',boxShadow:'0 4px 16px rgba(240,168,78,0.3)'}}>Empezar gratis →</Link>
+          <Link href="/registro" className="btn-primary" style={{padding:'8px 20px',fontSize:13,borderRadius:8,display:'inline-block',boxShadow:'0 4px 16px rgba(240,168,78,0.3)'}}>Empieza con tu restaurante →</Link>
         </div>
       </nav>
 
@@ -247,21 +247,21 @@ export default function HomePage() {
             <span style={{fontSize:11.5,fontWeight:600,color:C.amber,letterSpacing:'0.06em'}}>RESPONDIENDO CLIENTES AHORA MISMO</span>
           </div>
           <h1 style={{fontSize:'clamp(36px,4.5vw,58px)',fontWeight:800,letterSpacing:'-0.04em',lineHeight:1.08,marginBottom:24,color:C.text}}>
-            Cada cliente que<br/>no atiendes es<br/>
-            <span style={{background:'linear-gradient(135deg,#F0A84E,#E8923A)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>dinero que pierdes</span>
+            Tu restaurante,<br/>gestionado por<br/>
+            <span style={{background:'linear-gradient(135deg,#F0A84E,#E8923A)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>inteligencia artificial</span>
           </h1>
           <p style={{fontSize:17,color:C.muted,lineHeight:1.75,marginBottom:12,maxWidth:520}}>
-            Reservo responde llamadas, WhatsApp, emails. Entiende lo que necesita cada cliente y <strong style={{color:C.text}}>toma decisiones por ti.</strong> Reservas, citas, pedidos, consultas. Todo resuelto.
+            Reservas, pedidos, llamadas y gestion diaria — <strong style={{color:C.text}}>todo automatizado para restaurantes, bares y cafeterias.</strong>
           </p>
           <p style={{fontSize:15.5,color:C.text,fontWeight:600,marginBottom:14,padding:'12px 0',borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
-            No importa cómo te contacten. Siempre respondes.
+            No importa como te contacten. Siempre respondes.
           </p>
-          <p style={{fontSize:14,color:C.muted,marginBottom:36,fontStyle:'italic'}}>
-            No es un bot. Es alguien que trabaja por ti.
+          <p style={{fontSize:13,color:C.teal,marginBottom:36,fontStyle:'italic'}}>
+            Proximamente para clinicas, gimnasios, peluquerias y mas sectores
           </p>
           <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:40}}>
             <Link href="/registro" className="btn-primary" style={{padding:'14px 32px',fontSize:15,borderRadius:12,display:'inline-block',boxShadow:'0 6px 24px rgba(240,168,78,0.35)'}}>
-              Empezar gratis →
+              Empieza con tu restaurante →
             </Link>
             <Link href="#demo" className="btn-ghost" style={{padding:'14px 24px',fontSize:14,borderRadius:12,display:'inline-block'}}>
               Escuchar cómo responde
@@ -346,17 +346,22 @@ export default function HomePage() {
 
       {/* ── SECTORES ── */}
       <div style={{padding:'20px clamp(16px,5vw,64px) 48px',maxWidth:1200,margin:'0 auto'}}>
-        <p style={{textAlign:'center',fontSize:12,color:'rgba(255,255,255,0.25)',letterSpacing:'0.08em',fontWeight:500,marginBottom:20}}>TRABAJA PARA TODO TIPO DE NEGOCIOS</p>
+        <p style={{textAlign:'center',fontSize:12,color:'rgba(255,255,255,0.25)',letterSpacing:'0.08em',fontWeight:500,marginBottom:20}}>SECTORES DISPONIBLES Y PROXIMAMENTE</p>
         <div style={{display:'flex',flexWrap:'wrap',gap:10,justifyContent:'center'}}>
           {[
-            '💇 Peluquerías','🏥 Clínicas','🦷 Dentistas','🔧 Talleres',
-            '⚖️ Asesorías','🍽️ Restaurantes','🏋️ Gimnasios','💆 Spas',
-            '🏠 Inmobiliarias','🐾 Veterinarias','📦 Transportistas','🎓 Academias',
-            '🛒 Ecommerce','🏨 Hoteles','🚗 Concesionarios','🧹 Limpieza',
-            '📸 Fotografía','🎨 Diseño','🏗️ Reformas','💻 Informática',
-          ].map(s=>(
-            <div key={s} style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:20,padding:'7px 16px',fontSize:13,color:'rgba(255,255,255,0.5)',fontWeight:500,whiteSpace:'nowrap'}}>
+            {s:'🍽️ Restaurantes',active:true},{s:'🍺 Bares',active:true},{s:'☕ Cafeterias',active:true},
+            {s:'💇 Peluquerias',active:false},{s:'🏥 Clinicas',active:false},{s:'🦷 Dentistas',active:false},{s:'🔧 Talleres',active:false},
+            {s:'⚖️ Asesorias',active:false},{s:'🏋️ Gimnasios',active:false},{s:'💆 Spas',active:false},
+            {s:'🏠 Inmobiliarias',active:false},{s:'🐾 Veterinarias',active:false},{s:'📦 Transportistas',active:false},{s:'🎓 Academias',active:false},
+            {s:'🛒 Ecommerce',active:false},{s:'🏨 Hoteles',active:false},{s:'🚗 Concesionarios',active:false},{s:'🧹 Limpieza',active:false},
+            {s:'📸 Fotografia',active:false},{s:'🎨 Diseno',active:false},{s:'🏗️ Reformas',active:false},{s:'💻 Informatica',active:false},
+          ].map(({s,active})=>(
+            <div key={s} style={{background:active?'rgba(52,211,153,0.08)':'rgba(255,255,255,0.03)',border:active?'1px solid rgba(52,211,153,0.3)':'1px solid rgba(255,255,255,0.07)',borderRadius:20,padding:'7px 16px',fontSize:13,color:active?'#34D399':'rgba(255,255,255,0.3)',fontWeight:500,whiteSpace:'nowrap',opacity:active?1:0.4,display:'flex',alignItems:'center',gap:6}}>
               {s}
+              {active
+                ? <span style={{fontSize:10,background:'rgba(52,211,153,0.15)',color:'#34D399',padding:'1px 8px',borderRadius:10,fontWeight:600}}>Disponible</span>
+                : <span style={{fontSize:10,color:'rgba(255,255,255,0.3)'}}>Proximamente</span>
+              }
             </div>
           ))}
         </div>
@@ -417,8 +422,8 @@ export default function HomePage() {
                   <path d="M8 2v3M16 2v3M3 8h18M5 4h14a2 2 0 012 2v13a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/>
                 </svg>
               ),
-              title: 'Reservas inteligentes',
-              body: 'Gestiona reservas y citas desde cualquier canal. Ofrece alternativas, detecta conflictos y confirma al instante.',
+              title: 'Reservas de mesas',
+              body: 'Gestiona reservas de mesas y comensales desde cualquier canal. Ofrece alternativas de horario, detecta conflictos y confirma al instante.',
               color: 'rgba(240,168,78,0.1)', bc: 'rgba(240,168,78,0.2)', accent: C.amber,
             },
             {
@@ -427,8 +432,8 @@ export default function HomePage() {
                   <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/>
                 </svg>
               ),
-              title: 'Pedidos en tiempo real',
-              body: 'Recibe y organiza pedidos para recoger o a domicilio. Todo actualizado en tiempo real sin intermediarios.',
+              title: 'Pedidos de carta y domicilio',
+              body: 'Recibe pedidos de tu carta para recoger o a domicilio. Todo actualizado en tiempo real sin intermediarios ni comisiones.',
               color: 'rgba(45,212,191,0.1)', bc: 'rgba(45,212,191,0.2)', accent: C.teal,
             },
             {
@@ -447,8 +452,8 @@ export default function HomePage() {
                   <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
                 </svg>
               ),
-              title: 'Control de equipo',
-              body: 'Horarios, turnos y disponibilidad de tu equipo organizados. Cada persona sabe lo que le toca.',
+              title: 'Control de sala y equipo',
+              body: 'Horarios, turnos de sala y cocina y disponibilidad de tu equipo organizados. Cada persona sabe lo que le toca.',
               color: 'rgba(96,165,250,0.1)', bc: 'rgba(96,165,250,0.2)', accent: '#60A5FA',
             },
             {
@@ -457,8 +462,8 @@ export default function HomePage() {
                   <path d="M18 20V10M12 20V4M6 20v-6"/>
                 </svg>
               ),
-              title: 'Estadisticas claras',
-              body: 'Visualiza el rendimiento de tu negocio de un vistazo. Llamadas, reservas, tendencias y oportunidades.',
+              title: 'Estadisticas de tu local',
+              body: 'Visualiza el rendimiento de tu restaurante de un vistazo. Llamadas, reservas de mesas, tendencias y oportunidades.',
               color: 'rgba(52,211,153,0.1)', bc: 'rgba(52,211,153,0.2)', accent: '#34D399',
             },
             {
@@ -468,8 +473,8 @@ export default function HomePage() {
                   <circle cx="12" cy="7" r="4"/>
                 </svg>
               ),
-              title: 'Memoria de clientes',
-              body: 'Cada cliente queda registrado con su historial, preferencias y notas. Atiendes mejor sin esfuerzo.',
+              title: 'Memoria de comensales',
+              body: 'Cada comensal queda registrado con su historial, alergias, preferencias de mesa y notas. Atiendes mejor sin esfuerzo.',
               color: 'rgba(248,113,113,0.1)', bc: 'rgba(248,113,113,0.2)', accent: '#F87171',
             },
           ].map(({icon,title,body,color,bc,accent})=>(
@@ -620,9 +625,9 @@ export default function HomePage() {
           </div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="prob-grid">
             {[
-              {name:'Carlos M.',role:'Restaurante La Terraza',text:'Desde que pusimos Reservo no hemos perdido ni una reserva. Antes se nos escapaban 5-6 llamadas al día en hora punta.',stars:5},
-              {name:'Laura G.',role:'Clínica Dental Sonríe',text:'Mis pacientes creen que tenemos a alguien nuevo en recepción. No saben que es IA y eso dice mucho de la calidad.',stars:5},
-              {name:'Miguel R.',role:'Taller AutoPro',text:'Lo mejor es que responde fuera de horario. El 40% de mis citas ahora entran por la noche o los fines de semana.',stars:5},
+              {name:'Carlos M.',role:'Restaurante La Terraza',text:'Desde que pusimos Reservo no hemos perdido ni una reserva de mesa. Antes se nos escapaban 5-6 llamadas al dia en hora punta.',stars:5},
+              {name:'Laura G.',role:'Bar de tapas El Rincon',text:'Nuestros clientes creen que tenemos a alguien nuevo en recepcion. No saben que es IA y eso dice mucho de la calidad.',stars:5},
+              {name:'Miguel R.',role:'Cafeteria Central',text:'Lo mejor es que responde fuera de horario. El 40% de mis reservas ahora entran por la noche o los fines de semana cuando estamos cerrados.',stars:5},
             ].map(({name,role,text,stars})=>(
               <div key={name} style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'28px 24px'}}>
                 <div style={{display:'flex',gap:2,marginBottom:14}}>
@@ -720,7 +725,7 @@ export default function HomePage() {
       <section style={{background:'rgba(255,255,255,0.015)',borderTop:'1px solid rgba(255,255,255,0.06)',borderBottom:'1px solid rgba(255,255,255,0.06)',padding:'90px clamp(16px,5vw,64px)'}}>
         <div style={{maxWidth:1000,margin:'0 auto'}}>
           <div style={{textAlign:'center',marginBottom:56}}>
-            <p style={{fontSize:12,fontWeight:600,color:C.green,letterSpacing:'0.08em',marginBottom:12}}>PARA NEGOCIOS DE CUALQUIER TAMAÑO</p>
+            <p style={{fontSize:12,fontWeight:600,color:C.green,letterSpacing:'0.08em',marginBottom:12}}>PARA RESTAURANTES, BARES Y CAFETERÍAS</p>
             <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
               "No recibo tantas llamadas"<br/>
               <span style={{color:C.amber}}>No necesitas muchas para perder dinero.</span>
@@ -800,52 +805,54 @@ export default function HomePage() {
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}} className="adapt-grid">
             {[
               {
-                icon:'🍽️',tipo:'Restaurantes',
+                icon:'🍽️',tipo:'Restaurantes',active:true,
                 body:'Gestiona reservas, turnos, mesas especiales, alergias y grupos grandes sin perder una sola llamada.',
-                ejemplo:'"Mesa en terraza para 2 el sábado" → comprueba disponibilidad y confirma al instante.'
+                ejemplo:'"Mesa en terraza para 2 el sabado" → comprueba disponibilidad y confirma al instante.'
               },
               {
-                icon:'💈',tipo:'Peluquerías y estética',
-                body:'Citas con el profesional correcto, duración de cada servicio y reagendamientos. Todo automático.',
-                ejemplo:'"Quiero corte y color con María" → busca el primer hueco con María.'
+                icon:'🍺',tipo:'Bares y pubs',active:true,
+                body:'Reservas de mesas, eventos, grupos y gestiones diarias. Tu bar siempre atendido aunque estes detras de la barra.',
+                ejemplo:'"Queremos reservar zona para 12 personas el viernes" → confirma y anota detalles.'
               },
               {
-                icon:'🏥',tipo:'Clínicas y consultas',
+                icon:'☕',tipo:'Cafeterias',active:true,
+                body:'Pedidos para recoger, reservas de espacio, encargos de reposteria y gestion de eventos. Todo automatizado.',
+                ejemplo:'"Quiero encargar una tarta para el sabado" → recoge detalles y confirma el pedido.'
+              },
+              {
+                icon:'💈',tipo:'Peluquerias y estetica',active:false,
+                body:'Citas con el profesional correcto, duracion de cada servicio y reagendamientos. Todo automatico.',
+                ejemplo:'"Quiero corte y color con Maria" → busca el primer hueco con Maria.'
+              },
+              {
+                icon:'🏥',tipo:'Clinicas y consultas',active:false,
                 body:'Citas con el especialista adecuado, urgencias filtradas y recordatorios para que nadie falte.',
-                ejemplo:'"Necesito ver al Dr. López esta semana" → revisa agenda y ofrece opciones reales.'
+                ejemplo:'"Necesito ver al Dr. Lopez esta semana" → revisa agenda y ofrece opciones reales.'
               },
               {
-                icon:'🔧',tipo:'Talleres y servicios',
-                body:'Presupuestos, citas para diagnóstico y seguimiento de reparaciones. Sin llamadas de vuelta.',
-                ejemplo:'"Mi coche hace un ruido al frenar" → agenda revisión y anota el síntoma.'
+                icon:'🔧',tipo:'Talleres y servicios',active:false,
+                body:'Presupuestos, citas para diagnostico y seguimiento de reparaciones. Sin llamadas de vuelta.',
+                ejemplo:'"Mi coche hace un ruido al frenar" → agenda revision y anota el sintoma.'
               },
               {
-                icon:'🏋️',tipo:'Gimnasios y centros',
-                body:'Reservas de clases, información de horarios y gestión de pruebas gratuitas para nuevos clientes.',
-                ejemplo:'"¿Hay yoga mañana por la tarde?" → confirma horario y reserva plaza.'
+                icon:'🏋️',tipo:'Gimnasios y centros',active:false,
+                body:'Reservas de clases, informacion de horarios y gestion de pruebas gratuitas para nuevos clientes.',
+                ejemplo:'"Hay yoga manana por la tarde?" → confirma horario y reserva plaza.'
               },
               {
-                icon:'⚖️',tipo:'Asesorías y despachos',
-                body:'Filtra consultas, agenda reuniones con el profesional adecuado y recoge la información antes de la cita.',
-                ejemplo:'"Necesito consulta fiscal para autónomo" → agenda con el asesor fiscal disponible.'
+                icon:'⚖️',tipo:'Asesorias y despachos',active:false,
+                body:'Filtra consultas, agenda reuniones con el profesional adecuado y recoge la informacion antes de la cita.',
+                ejemplo:'"Necesito consulta fiscal para autonomo" → agenda con el asesor fiscal disponible.'
               },
               {
-                icon:'🛒',tipo:'Ecommerce y tiendas online',
-                body:'Resuelve dudas sobre productos, estado de pedidos, devoluciones y disponibilidad. Sin que tu equipo tenga que revisar cada mensaje.',
-                ejemplo:'"¿Cuándo llega mi pedido?" → consulta el estado y responde con fecha exacta.'
-              },
-              {
-                icon:'🏨',tipo:'Hoteles y alojamientos',
+                icon:'🏨',tipo:'Hoteles y alojamientos',active:false,
                 body:'Disponibilidad de habitaciones, check-in, peticiones especiales y reservas directas sin comisiones de plataformas.',
-                ejemplo:'"¿Tienen habitación doble el puente de mayo?" → confirma disponibilidad y reserva.'
+                ejemplo:'"Tienen habitacion doble el puente de mayo?" → confirma disponibilidad y reserva.'
               },
-              {
-                icon:'🏗️',tipo:'Reformas y construcción',
-                body:'Recoge datos del proyecto, agenda visitas para presupuesto y filtra consultas por tipo de obra.',
-                ejemplo:'"Quiero reformar el baño completo" → recoge datos y agenda visita del técnico.'
-              },
-            ].map(({icon,tipo,body,ejemplo})=>(
-              <div key={tipo} className="card-hover" style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'28px 24px'}}>
+            ].map(({icon,tipo,body,ejemplo,active})=>(
+              <div key={tipo} className="card-hover" style={{background:active?'rgba(52,211,153,0.05)':'rgba(255,255,255,0.02)',border:active?'1px solid rgba(52,211,153,0.2)':'1px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'28px 24px',opacity:active?1:0.5,position:'relative'}}>
+                {active && <span style={{position:'absolute',top:14,right:14,fontSize:10,fontWeight:700,color:'#34D399',background:'rgba(52,211,153,0.12)',padding:'3px 10px',borderRadius:20,letterSpacing:'0.04em'}}>Disponible</span>}
+                {!active && <span style={{position:'absolute',top:14,right:14,fontSize:10,fontWeight:600,color:'rgba(255,255,255,0.35)',background:'rgba(255,255,255,0.05)',padding:'3px 10px',borderRadius:20,letterSpacing:'0.04em'}}>Proximamente</span>}
                 <span style={{fontSize:32,display:'block',marginBottom:14}}>{icon}</span>
                 <h3 style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:10,letterSpacing:'-0.02em'}}>{tipo}</h3>
                 <p style={{fontSize:13.5,color:C.muted,lineHeight:1.65,marginBottom:14}}>{body}</p>
@@ -1003,9 +1010,9 @@ export default function HomePage() {
           {/* Pricing cards */}
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20,alignItems:'start'}} className="price-grid">
             {[
-              {plan:'Starter',price:'99',calls:'50 llamadas/mes',rate:'0,90€/llamada extra',features:['Recepcionista IA 24/7 con voz natural','Gestión de reservas automática','Panel con actividad en tiempo real','Base de clientes con historial','Gestión de mesas y espacios','Control de turnos y equipo','Agenda y calendario','SMS de confirmación y recordatorios','Adaptado a tu tipo de negocio','Soporte por email'],cta:'Empezar Starter',highlight:false},
-              {plan:'Pro',price:'299',calls:'200 llamadas/mes',rate:'0,70€/llamada extra',features:['Todo lo de Starter +','Pedidos y encargos por teléfono','Entregas a domicilio con dirección','Estadísticas avanzadas (conversión, hora pico)','Sugerencias diarias de la IA','Aprendizaje automático de patrones','Canal WhatsApp automático','CRM avanzado (scoring, VIP, at-risk)','Exportación de datos','Soporte prioritario'],cta:'Empezar Pro',highlight:true},
-              {plan:'Business',price:'499',calls:'600 llamadas/mes',rate:'0,50€/llamada extra',features:['Todo lo de Pro +','Canal Email automático','Gestión de proveedores e inventario','Auto-pedidos a proveedores (semanal)','Inteligencia de inventario y predicción','Informes PDF (registro jornada laboral)','Multi-usuario','Soporte dedicado con respuesta rápida'],cta:'Empezar Business',highlight:false},
+              {plan:'Starter',price:'99',calls:'50 llamadas/mes',rate:'0,90€/llamada extra',features:['Recepcionista IA 24/7 con voz natural','Gestion de reservas de mesas automatica','Panel con actividad en tiempo real','Base de clientes con historial','Gestion de mesas y espacios','Control de turnos y equipo','Agenda y calendario','SMS de confirmacion y recordatorios','Adaptado a tu restaurante o bar','Soporte por email'],cta:'Configura tu restaurante',highlight:false},
+              {plan:'Pro',price:'299',calls:'200 llamadas/mes',rate:'0,70€/llamada extra',features:['Todo lo de Starter +','Pedidos de carta por telefono','Entregas a domicilio con direccion','Estadisticas avanzadas (conversion, hora pico)','Sugerencias diarias de la IA','Aprendizaje automatico de patrones','Canal WhatsApp automatico','CRM avanzado (scoring, VIP, at-risk)','Exportacion de datos','Soporte prioritario'],cta:'Configura tu restaurante',highlight:true},
+              {plan:'Business',price:'499',calls:'600 llamadas/mes',rate:'0,50€/llamada extra',features:['Todo lo de Pro +','Canal Email automatico','Gestion de proveedores e inventario','Auto-pedidos a proveedores (semanal)','Inteligencia de inventario y prediccion','Informes PDF (registro jornada laboral)','Multi-usuario','Soporte dedicado con respuesta rapida'],cta:'Configura tu restaurante',highlight:false},
             ].map(({plan,price,calls,rate,features,cta,highlight})=>(
               <div key={plan} className="plan-card" style={{
                 background: highlight ? 'linear-gradient(135deg,rgba(240,168,78,0.08),rgba(240,168,78,0.03))' : 'rgba(255,255,255,0.02)',
@@ -1031,7 +1038,7 @@ export default function HomePage() {
                   ))}
                 </div>
                 <Link href="/registro" className={highlight?'btn-primary':'btn-ghost'} style={{display:'block',textAlign:'center',padding:'12px',borderRadius:10,fontSize:14,fontWeight:600}}>
-                  {highlight ? 'Empezar gratis →' : cta}
+                  {highlight ? 'Prueba gratis para hosteleria →' : cta}
                 </Link>
               </div>
             ))}
@@ -1057,7 +1064,8 @@ export default function HomePage() {
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
             {[
-              {q:'¿Suena como un robot?',a:'No. Habla de forma natural y mantiene conversaciones fluidas. Tus clientes no notarán la diferencia.'},
+              {q:'Solo funciona para restaurantes?',a:'Actualmente esta optimizado para restaurantes, bares y cafeterias. Estamos trabajando para anadir mas sectores como clinicas, gimnasios y peluquerias. Si quieres ser de los primeros en probarlo para tu sector, registrate y te avisamos.'},
+              {q:'Suena como un robot?',a:'No. Habla de forma natural y mantiene conversaciones fluidas. Tus clientes no notaran la diferencia.'},
               {q:'¿Qué pasa si no sabe responder algo?',a:'Te avisa al momento con todo el contexto para que puedas intervenir tú. Nunca inventa respuestas.'},
               {q:'¿Cuánto tarda en estar lista?',a:'En 15 minutos nos explicas tu negocio. En 48 horas tu recepcionista está atendiendo clientes por todos los canales.'},
               {q:'¿Necesito cambiar mi número de teléfono?',a:'No. Desviamos las llamadas al sistema cuando tú no puedes contestar. Tu número sigue siendo el mismo.'},
@@ -1066,7 +1074,7 @@ export default function HomePage() {
               {q:'¿Y si tengo pocas llamadas?',a:'Precisamente. Cada llamada cuenta más cuando tienes pocas. Una sola oportunidad perdida puede ser un cliente que no vuelve.'},
               {q:'¿Puedo cancelar cuando quiera?',a:'Sí, sin permanencia ni penalización. Es mes a mes.'},
               {q:'¿Y si la IA se equivoca?',a:'El agente escala a ti automáticamente si no tiene confianza. Tú decides el umbral.'},
-              {q:'¿Se integra con mi sistema actual?',a:'Funciona con cualquier negocio. Solo necesitas un número de teléfono.'},
+              {q:'¿Se integra con mi sistema actual?',a:'Funciona con cualquier restaurante, bar o cafetería. Solo necesitas un número de teléfono. Próximamente más sectores.'},
               {q:'¿Cuánto tardo en tenerlo funcionando?',a:'Menos de 48 horas. La mayoría activan en el mismo día.'},
             ].map(({q,a})=>(
               <div key={q} style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'20px 24px'}}>
@@ -1108,7 +1116,7 @@ export default function HomePage() {
             </div>
             <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
               <Link href="/registro" className="btn-primary" style={{padding:'16px 40px',fontSize:16,borderRadius:14,display:'inline-block',boxShadow:'0 8px 32px rgba(240,168,78,0.4)'}}>
-                Empezar gratis →
+                Empieza con tu restaurante →
               </Link>
             </div>
             <p style={{fontSize:12,color:'rgba(255,255,255,0.2)',marginTop:20}}>
@@ -1131,7 +1139,7 @@ export default function HomePage() {
                 <span style={{fontSize:15,fontWeight:700,color:C.text,letterSpacing:'-0.01em'}}>Reservo<span style={{color:C.amber}}>.AI</span></span>
               </div>
               <p style={{fontSize:13,color:'rgba(255,255,255,0.35)',lineHeight:1.7,maxWidth:280}}>
-                La recepcionista virtual que atiende llamadas, WhatsApp y emails por ti. Para negocios que no quieren perder ni un cliente.
+                La recepcionista virtual que atiende llamadas, WhatsApp y emails por ti. Para restaurantes, bares y cafeterias que no quieren perder ni un cliente.
               </p>
             </div>
             {/* Producto */}
@@ -1165,7 +1173,8 @@ export default function HomePage() {
           {/* Bottom bar */}
           <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:20,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
             <p style={{fontSize:12,color:'rgba(255,255,255,0.2)'}}>© {new Date().getFullYear()} Reservo.AI — Todos los derechos reservados</p>
-            <p style={{fontSize:12,color:'rgba(255,255,255,0.15)'}}>Hecho con criterio en España 🇪🇸</p>
+            <p style={{fontSize:12,color:'rgba(52,211,153,0.5)',fontWeight:500}}>Optimizado para hosteleria · Proximamente mas sectores</p>
+            <p style={{fontSize:12,color:'rgba(255,255,255,0.15)'}}>Hecho con criterio en Espana</p>
           </div>
         </div>
       </footer>

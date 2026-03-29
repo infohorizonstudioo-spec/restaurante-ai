@@ -21,7 +21,7 @@ const PLANS = [
       'Control de turnos y equipo',
       'Agenda y calendario',
       'SMS de confirmación y recordatorios',
-      'Adaptado a tu tipo de negocio',
+      'Optimizado para hostelería',
       '3 temas visuales',
       'Notificaciones in-app',
       'Soporte por email',

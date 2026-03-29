@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { C } from '@/lib/colors'
 import { useTenant } from '@/contexts/TenantContext'
 
+// ── Active types (hospitality focus) ─────────────────────────────────────────
+const ACTIVE_TYPES = ['restaurante', 'bar', 'cafeteria']
+
 // ── Business types from templates.ts ──────────────────────────────────────────
 const BUSINESS_TYPES: { id: string; label: string; icon: string }[] = [
   { id: 'restaurante', label: 'Restaurante', icon: '🍽️' },
@@ -66,8 +69,8 @@ function defaultSchedule(): Schedule {
   const s: Schedule = {}
   for (const d of DAYS) {
     s[d.key] = d.key === 'sun'
-      ? { closed: true, open: '09:00', close: '21:00' }
-      : { closed: false, open: '09:00', close: '21:00' }
+      ? { closed: true, open: '12:00', close: '23:00' }
+      : { closed: false, open: '12:00', close: '23:00' }
   }
   return s
 }
@@ -149,6 +152,7 @@ export default function OnboardingWizard() {
   const [businessType, setBusinessType] = useState(tenant?.type ?? '')
   const [phone, setPhone] = useState(tenant?.agent_phone ?? '')
   const [address, setAddress] = useState(tenant?.address ?? '')
+  const [lockedToast, setLockedToast] = useState<string | null>(null)
 
   // Step 2
   const [agentName, setAgentName] = useState(tenant?.agent_name ?? 'Sofia')
@@ -332,13 +336,33 @@ export default function OnboardingWizard() {
 
   // ── Step 1: Tu negocio ────────────────────────────────────────────────────
   function Step1() {
+    const handleTypeClick = (typeId: string) => {
+      if (ACTIVE_TYPES.includes(typeId)) {
+        setBusinessType(typeId)
+        setLockedToast(null)
+      } else {
+        setLockedToast('Estamos trabajando en esta vertical. Muy pronto estará disponible.')
+        setTimeout(() => setLockedToast(null), 3500)
+      }
+    }
+
+    // Sort: active types first, then locked
+    const sortedTypes = [...BUSINESS_TYPES].sort((a, b) => {
+      const aActive = ACTIVE_TYPES.includes(a.id) ? 0 : 1
+      const bActive = ACTIVE_TYPES.includes(b.id) ? 0 : 1
+      return aActive - bActive
+    })
+
     return (
       <div>
         <h2 style={{ fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 4 }}>
           Tu negocio
         </h2>
-        <p style={{ fontSize: 14, color: C.text2, marginBottom: 28 }}>
-          Cuéntanos sobre tu negocio para personalizar tu experiencia.
+        <p style={{ fontSize: 14, color: C.text2, marginBottom: 4 }}>
+          ¿Qué tipo de negocio tienes? Actualmente optimizado para hostelería
+        </p>
+        <p style={{ fontSize: 13, color: C.text3, marginBottom: 28 }}>
+          Más sectores próximamente
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -353,19 +377,120 @@ export default function OnboardingWizard() {
             />
           </div>
 
-          {/* Business type */}
+          {/* Business type — card grid */}
           <div>
             <label style={labelStyle}>Tipo de negocio *</label>
-            <select
-              style={selectStyle}
-              value={businessType}
-              onChange={e => setBusinessType(e.target.value)}
-            >
-              <option value="">Selecciona un tipo...</option>
-              {BUSINESS_TYPES.map(t => (
-                <option key={t.id} value={t.id}>{t.icon} {t.label}</option>
-              ))}
-            </select>
+
+            {/* Toast for locked types */}
+            {lockedToast && (
+              <div style={{
+                padding: '10px 16px',
+                marginBottom: 12,
+                borderRadius: 10,
+                backgroundColor: 'rgba(240,168,78,0.10)',
+                border: '1px solid rgba(240,168,78,0.25)',
+                color: C.amber,
+                fontSize: 13,
+                fontWeight: 500,
+                animation: 'fade-in 0.2s ease',
+              }}>
+                {lockedToast}
+              </div>
+            )}
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 10,
+            }}>
+              {sortedTypes.map(t => {
+                const isActive = ACTIVE_TYPES.includes(t.id)
+                const isSelected = businessType === t.id
+
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => handleTypeClick(t.id)}
+                    style={{
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '14px 8px 12px',
+                      borderRadius: 12,
+                      border: `1px solid ${isSelected ? C.amber : C.border}`,
+                      backgroundColor: isSelected
+                        ? 'rgba(240,168,78,0.08)'
+                        : C.surface2,
+                      color: C.text,
+                      fontSize: 12,
+                      fontWeight: isSelected ? 600 : 400,
+                      cursor: isActive ? 'pointer' : 'default',
+                      opacity: isActive ? 1 : 0.45,
+                      transition: 'all 0.2s',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <span style={{ fontSize: 24 }}>{t.icon}</span>
+                    <span style={{
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      maxWidth: '100%',
+                    }}>
+                      {t.label}
+                    </span>
+
+                    {/* Badge */}
+                    {isActive && !isSelected && (
+                      <span style={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 4,
+                        fontSize: 9,
+                        fontWeight: 600,
+                        padding: '2px 5px',
+                        borderRadius: 4,
+                        backgroundColor: 'rgba(52,211,153,0.15)',
+                        color: C.green,
+                        lineHeight: 1.2,
+                      }}>
+                        Disponible
+                      </span>
+                    )}
+                    {isSelected && (
+                      <span style={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 4,
+                        fontSize: 12,
+                        color: C.amber,
+                      }}>
+                        {'\u2713'}
+                      </span>
+                    )}
+                    {!isActive && (
+                      <span style={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 4,
+                        fontSize: 9,
+                        fontWeight: 600,
+                        padding: '2px 5px',
+                        borderRadius: 4,
+                        backgroundColor: 'rgba(137,149,167,0.15)',
+                        color: C.text3,
+                        lineHeight: 1.2,
+                      }}>
+                        Próximamente
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Phone */}
@@ -391,6 +516,13 @@ export default function OnboardingWizard() {
             />
           </div>
         </div>
+
+        <style>{`
+          @keyframes fade-in {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
       </div>
     )
   }
@@ -403,7 +535,7 @@ export default function OnboardingWizard() {
           Tu recepcionista
         </h2>
         <p style={{ fontSize: 14, color: C.text2, marginBottom: 28 }}>
-          Configura la personalidad de tu agente de voz.
+          Configura la personalidad de tu recepcionista virtual.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -412,7 +544,7 @@ export default function OnboardingWizard() {
             <label style={labelStyle}>Nombre del agente</label>
             <input
               style={inputStyle}
-              placeholder="Sofia"
+              placeholder="Ej: Sofia, Ana, Carlos..."
               value={agentName}
               onChange={e => setAgentName(e.target.value)}
             />
