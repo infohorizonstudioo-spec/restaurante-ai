@@ -74,6 +74,7 @@ export async function POST(req: Request) {
     const { data: order, error } = await admin.from('order_events').insert({
       tenant_id, customer_name: safeName,
       customer_phone: safePhone,
+      call_sid: 'tpv_' + Date.now().toString(36),
       order_type,
       notes: safeNotes,
       items: items || [],

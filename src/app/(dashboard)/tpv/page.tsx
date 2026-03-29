@@ -571,8 +571,13 @@ export default function TPVPage() {
         }),
       })
 
+      const d = await res.json()
+      if (!res.ok) {
+        alert('Error al guardar pedido: ' + (d.error || 'Error desconocido'))
+        setSaving(false)
+        return
+      }
       if (res.ok) {
-        const d = await res.json()
         if (d.order?.id) {
           await fetch('/api/orders', {
             method: 'PATCH',
