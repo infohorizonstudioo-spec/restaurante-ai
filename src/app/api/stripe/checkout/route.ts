@@ -59,11 +59,14 @@ export async function POST(req: Request) {
       await admin.from('tenants').update({ stripe_customer_id: customerId }).eq('id', auth.tenantId)
     }
 
+    // IVA 21% tax rate (not included in price)
+    const taxRateId = process.env.STRIPE_TAX_RATE_ID || 'txr_1TGHDL1xqUog1tyMuqypu6j2'
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
-      line_items: [{ price: planData.priceId, quantity: 1 }],
+      line_items: [{ price: planData.priceId, quantity: 1, tax_rates: [taxRateId] }],
       success_url: process.env.NEXT_PUBLIC_APP_URL + '/panel?checkout=success&session_id={CHECKOUT_SESSION_ID}',
       cancel_url:  process.env.NEXT_PUBLIC_APP_URL + '/precios',
       metadata: { tenant_id: auth.tenantId, plan, included_calls: String(planData.calls), extra_rate: String(planData.rate) },

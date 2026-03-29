@@ -197,7 +197,7 @@ export default function PreciosPage() {
 
         {/* Footer note */}
         <p style={{ textAlign: 'center', fontSize: 12, color: C.muted, marginTop: 32 }}>
-          IVA no incluido · Facturación mensual · Cancela en cualquier momento
+          Precios sin IVA · Se aplica 21% IVA en el checkout · Facturación mensual · Cancela cuando quieras
         </p>
       </div>
     </div>
