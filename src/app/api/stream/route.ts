@@ -157,6 +157,32 @@ const TOOLS = [
       required: ['new_name'],
     },
   },
+  // BULK + CONFIRMATION tools
+  {
+    name: 'bulk_update_prices',
+    description: 'Sube o baja el precio de todos los productos de una categoría. Ejemplo: "sube todos los cafés un 10%"',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        category: { type: 'string', description: 'La categoría a modificar' },
+        change_type: { type: 'string', description: 'Tipo de cambio', enum: ['percentage', 'absolute'] },
+        amount: { type: 'number', description: 'Porcentaje (ej: 10 para +10%) o cantidad en euros (ej: 0.50 para +0.50€). Negativo para bajar.' },
+      },
+      required: ['category', 'change_type', 'amount'],
+    },
+  },
+  {
+    name: 'request_confirmation',
+    description: 'Pide confirmación al usuario antes de hacer algo peligroso. Usa esto antes de borrar múltiples productos o cambiar precios masivamente.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        action: { type: 'string', description: 'Descripción de lo que vas a hacer' },
+        items_affected: { type: 'number', description: 'Cuántos productos/reservas se ven afectados' },
+      },
+      required: ['action', 'items_affected'],
+    },
+  },
 ]
 
 // ── Tool execution ───────────────────────────────────────────
@@ -415,6 +441,42 @@ async function executeTool(
         return `Nombre del asistente cambiado a "${newName}".`
       }
 
+      case 'bulk_update_prices': {
+        const category = input.category as string
+        const changeType = input.change_type as string
+        const amount = input.amount as number
+
+        const { data: items, error: fetchErr } = await admin.from('menu_items')
+          .select('id, name, price')
+          .eq('tenant_id', tenantId)
+          .eq('active', true)
+          .ilike('category', `%${category}%`)
+        if (fetchErr) return `Error: ${fetchErr.message}`
+        if (!items?.length) return `No encontré productos en la categoría "${category}".`
+
+        const updates: string[] = []
+        for (const item of items) {
+          const oldPrice = item.price as number
+          const newPrice = changeType === 'percentage'
+            ? Math.round((oldPrice * (1 + amount / 100)) * 100) / 100
+            : Math.round((oldPrice + amount) * 100) / 100
+          if (newPrice < 0) continue
+          await admin.from('menu_items')
+            .update({ price: newPrice })
+            .eq('id', item.id)
+            .eq('tenant_id', tenantId)
+          updates.push(`${item.name}: ${oldPrice}€ → ${newPrice}€`)
+        }
+        if (!updates.length) return 'No se actualizó ningún precio (los nuevos precios serían negativos).'
+        return `Actualizados ${updates.length} productos:\n` + updates.join('\n')
+      }
+
+      case 'request_confirmation': {
+        const action = input.action as string
+        const itemsAffected = input.items_affected as number
+        return `⚠️ CONFIRMACIÓN NECESARIA: ${action} (afecta a ${itemsAffected} elementos). ¿Quieres continuar?`
+      }
+
       default:
         return `Herramienta "${toolName}" no reconocida.`
     }
@@ -448,16 +510,54 @@ export async function POST(req: NextRequest) {
 
   const tenantId = profile.tenant_id
 
-  // Load business context
-  const [tenantRes, menuRes, knowledgeRes] = await Promise.all([
+  // Load business context + operational context in parallel
+  const today = new Date().toISOString().split('T')[0]
+  const now = new Date()
+  const currentHour = now.getHours()
+  const currentTime = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+
+  const [tenantRes, menuRes, knowledgeRes, ordersRes, reservationsRes, lowStockRes] = await Promise.all([
     admin.from('tenants').select('name, type, agent_name').eq('id', tenantId).single(),
     admin.from('menu_items').select('name, price, category').eq('tenant_id', tenantId).eq('active', true).order('category'),
     admin.from('business_knowledge').select('category, content').eq('tenant_id', tenantId).eq('active', true),
+    // Operational: today's orders + revenue
+    admin.from('order_events')
+      .select('id, total')
+      .eq('tenant_id', tenantId)
+      .gte('created_at', `${today}T00:00:00`)
+      .lte('created_at', `${today}T23:59:59`),
+    // Operational: today's reservations
+    admin.from('reservations')
+      .select('id, customer_name, time, party_size, status')
+      .eq('tenant_id', tenantId)
+      .eq('date', today)
+      .neq('status', 'cancelled')
+      .order('time'),
+    // Operational: low stock items
+    admin.from('inventory_items')
+      .select('name, current_stock, min_stock, unit')
+      .eq('tenant_id', tenantId)
+      .not('min_stock', 'is', null),
   ])
 
-  const tenant = tenantRes.data
+  const tenantData = tenantRes.data
   const menu = menuRes.data || []
   const knowledge = knowledgeRes.data || []
+  const todayOrders = ordersRes.data || []
+  const todayReservations = reservationsRes.data || []
+  const allInventory = lowStockRes.data || []
+
+  // Compute operational metrics
+  const ordersCount = todayOrders.length
+  const ordersRevenue = todayOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0)
+  const reservationsCount = todayReservations.length
+  const nextReservation = todayReservations.find(r => r.time >= currentTime)
+  const lowStockItems = allInventory.filter(i => (i.current_stock ?? 0) <= (i.min_stock ?? 0))
+
+  const shift = currentHour >= 6 && currentHour < 12 ? 'mañana'
+    : currentHour >= 12 && currentHour < 17 ? 'mediodía'
+    : currentHour >= 17 && currentHour < 22 ? 'tarde'
+    : 'noche'
 
   // Parse request body
   const body = await req.json()
@@ -476,8 +576,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Build system prompt
-  const businessName = tenant?.name || 'tu negocio'
-  const agentName = tenant?.agent_name || 'Sofía'
+  const businessName = tenantData?.name || 'tu negocio'
+  const agentName = tenantData?.agent_name || 'Sofía'
 
   const menuSummary = menu.length
     ? `\nCarta actual (${menu.length} productos):\n` + menu.map(i => `- ${i.name} (${i.price}€) [${i.category}]`).join('\n')
@@ -487,26 +587,49 @@ export async function POST(req: NextRequest) {
     ? '\n\nInformación del negocio:\n' + knowledge.map(k => `${(k.category || 'info').toUpperCase()}: ${k.content}`).join('\n')
     : ''
 
-  const systemPrompt = `Eres el asistente de ${businessName}. Te llamas ${agentName}. Ayudas al dueño a gestionar su negocio.
+  const lowStockSummary = lowStockItems.length
+    ? lowStockItems.map(i => `${i.name}: ${i.current_stock}${i.unit ? ` ${i.unit}` : ''} (mín: ${i.min_stock})`).join(', ')
+    : 'todo OK'
 
-Puedes:
-- Consultar y modificar la carta (añadir, quitar, cambiar precios, mover categorías)
-- Ver reservas, llamadas y estadísticas del día
-- Cambiar horarios del negocio
-- Crear y cancelar reservas
-- Añadir información al negocio (FAQs, políticas, etc.)
+  const nextResText = nextReservation
+    ? `${nextReservation.customer_name} a las ${nextReservation.time} (${nextReservation.party_size} pax)`
+    : 'ninguna pendiente'
 
-Reglas:
-- Habla en español, informal pero profesional
-- Sé directo y útil
-- Si modificas algo, confirma qué has hecho
-- Si algo es peligroso (borrar muchos productos), pide confirmación
-- Respuestas cortas (máximo 3 frases)
-- Si no puedes hacer algo, dilo claro
+  const operationalContext = `
+Contexto operativo ahora mismo:
+- Hora actual: ${currentTime}
+- Turno actual: ${shift}
+- Pedidos hoy: ${ordersCount} (${ordersRevenue.toFixed(2)}€)
+- Reservas hoy: ${reservationsCount} (próxima: ${nextResText})
+- Stock bajo: ${lowStockSummary}`
 
-Contexto:${menuSummary}${knowledgeSummary}
+  const systemPrompt = `Eres el asistente operativo de ${businessName}. Te llamas ${agentName}.
 
-Fecha actual: ${new Date().toISOString().split('T')[0]}`
+CAPACIDADES:
+- Gestionar carta: añadir, quitar, cambiar precios, mover categorías, subir precios por categoría
+- Gestionar reservas: ver, crear, cancelar
+- Ver actividad: llamadas, pedidos, estadísticas
+- Cambiar configuración: horarios, nombre del agente, info del negocio
+
+INTELIGENCIA:
+- Conoces el contexto operativo actual (pedidos, stock, reservas)
+- Si detectas algo relevante en el contexto, menciónalo proactivamente
+- Si el usuario pregunta "cómo va", usa los datos reales
+- Si hay stock bajo, avísale aunque no pregunte
+- Si hay una reserva grande próxima, menciónala
+
+REGLAS:
+- Español informal pero profesional
+- Respuestas cortas (2-3 frases máximo)
+- Si modificas algo, confirma exactamente qué cambiaste
+- Si vas a borrar más de 2 productos o cambiar más de 3 precios, usa request_confirmation PRIMERO
+- Si no puedes hacer algo, sugiérele cómo hacerlo manualmente
+- Nunca inventes datos
+${operationalContext}
+
+Contexto del negocio:${menuSummary}${knowledgeSummary}
+
+Fecha actual: ${today}`
 
   // Build messages — use the history from frontend (which includes the latest user msg)
   // The frontend sends the full conversation in `messages` including the user's latest

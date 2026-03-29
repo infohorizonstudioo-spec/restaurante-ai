@@ -13,6 +13,14 @@ interface ChatMessage {
 const PANEL_W = 400
 const PANEL_H = 500
 
+function getSmartChips(hour: number): string[] {
+  if (hour >= 7 && hour < 12) return ['¿Cómo va la mañana?', 'Reservas de hoy', 'Stock bajo?', 'Subir precio café']
+  if (hour >= 12 && hour < 16) return ['¿Cómo va el mediodía?', 'Pedidos de hoy', 'Reservas pendientes', 'Carta del día']
+  if (hour >= 16 && hour < 20) return ['¿Cómo va la tarde?', 'Preparar para noche', 'Stock para mañana?', 'Llamadas perdidas']
+  if (hour >= 20 || hour < 2) return ['¿Cómo va la noche?', 'Resumen del día', 'Cerrar caja', 'Reservas de mañana']
+  return ['¿Cómo va hoy?', 'Reservas', 'Llamadas', 'Carta']
+}
+
 export default function AssistantChat() {
   const { tenant } = useTenant()
   const [open, setOpen] = useState(false)
@@ -20,8 +28,33 @@ export default function AssistantChat() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [chips, setChips] = useState<string[]>(() => getSmartChips(new Date().getHours()))
+  const [greeted, setGreeted] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  // Update chips based on current hour
+  useEffect(() => {
+    setChips(getSmartChips(new Date().getHours()))
+    const interval = setInterval(() => {
+      setChips(getSmartChips(new Date().getHours()))
+    }, 60_000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Proactive greeting when chat opens for the first time
+  useEffect(() => {
+    if (open && !greeted && messages.length === 0) {
+      setGreeted(true)
+      const agentName = tenant?.agent_name || 'Sofía'
+      setMessages([{
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `¡Hola! Soy ${agentName}. ¿En qué te ayudo? Puedo gestionar tu carta, ver reservas, consultar pedidos o lo que necesites.`,
+        ts: new Date(),
+      }])
+    }
+  }, [open, greeted, messages.length, tenant?.agent_name])
 
   // animate mount
   useEffect(() => {
@@ -288,13 +321,7 @@ export default function AssistantChat() {
                   Puedes consultar sobre reservas, configuracion, metricas o cualquier duda de tu negocio.
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8, justifyContent: 'center' }}>
-                  {[
-                    'Reservas de hoy',
-                    'Como va el negocio?',
-                    'Llamadas de hoy',
-                    'Cambiar horario',
-                    'Añadir a la carta',
-                  ].map(s => (
+                  {chips.map(s => (
                     <button key={s} onClick={() => { setInput(s); setTimeout(() => sendMessage(), 100) }}
                       style={{ fontSize: 11, padding: '5px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface2, color: C.text2, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
                       onMouseEnter={e => { (e.target as HTMLElement).style.borderColor = C.amber + '44'; (e.target as HTMLElement).style.color = C.amber }}
