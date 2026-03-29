@@ -52,6 +52,8 @@ export default function CajaPage() {
   const [closeCash, setCloseCash] = useState('')
   const [closeNotes, setCloseNotes] = useState('')
 
+  const [prediction, setPrediction] = useState<any>(null)
+
   // Staff list for selector
   const [staff, setStaff] = useState<{ id: string; name: string }[]>([])
 
@@ -87,6 +89,13 @@ export default function CajaPage() {
       if (open) setOpenShift(open)
 
       await loadOrders(p.tenant_id)
+
+      // Fetch intelligence prediction
+      const { data: { session: intelSession } } = await supabase.auth.getSession()
+      const headers: Record<string, string> = {}
+      if (intelSession?.access_token) headers.Authorization = 'Bearer ' + intelSession.access_token
+      fetch('/api/tpv/intelligence', { headers }).then(r => r.json()).then(d => setPrediction(d.intelligence?.prediction)).catch(() => {})
+
       setLoading(false)
     })()
   }, [loadOrders])
@@ -296,6 +305,37 @@ export default function CajaPage() {
                   <KPICard label="Tarjeta" value={`${formatCurrency(shiftTotals.total_card)} EUR`} color={C.violet} />
                 </div>
 
+                {/* Prediction card */}
+                {prediction && (
+                  <div style={{
+                    background: 'transparent', border: `1px dashed ${C.violet}`,
+                    borderRadius: 14, padding: '16px 20px', marginBottom: 20,
+                  }}>
+                    <div style={{ fontSize: 12, color: C.text3, fontWeight: 600, marginBottom: 8 }}>
+                      Prediccion del dia
+                    </div>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: C.violet, lineHeight: 1.1, marginBottom: 6 }}>
+                      {formatCurrency(prediction.estimated_total || 0)} EUR
+                    </div>
+                    <div style={{ fontSize: 12, color: C.text2, marginBottom: 2 }}>
+                      Estimacion al cierre
+                    </div>
+                    {prediction.vs_average != null && (
+                      <div style={{
+                        fontSize: 13, fontWeight: 600, marginTop: 8,
+                        color: prediction.vs_average >= 0 ? C.green : C.red,
+                      }}>
+                        {prediction.vs_average >= 0 ? '+' : ''}{prediction.vs_average}% {prediction.vs_average >= 0 ? 'por encima' : 'por debajo'} de lo normal
+                      </div>
+                    )}
+                    {prediction.comparison && (
+                      <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>
+                        Comparado con: {prediction.comparison}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Recent orders */}
                 <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 20px' }}>
                   <h3 style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: '0 0 12px' }}>
@@ -346,7 +386,22 @@ export default function CajaPage() {
           <>
             {/* Day KPIs */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 20 }}>
-              <KPICard label="Ventas del dia" value={`${formatCurrency(daySummary.total_sales)} EUR`} color={C.amber} big />
+              <div style={{
+                background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 20px',
+              }}>
+                <div style={{ fontSize: 12, color: C.text2, marginBottom: 6, fontWeight: 600 }}>Ventas del dia</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: C.amber, lineHeight: 1.1 }}>{formatCurrency(daySummary.total_sales)} EUR</div>
+                  {prediction?.vs_average != null && (
+                    <span style={{
+                      fontSize: 12, fontWeight: 600,
+                      color: prediction.vs_average >= 0 ? C.green : C.red,
+                    }}>
+                      {prediction.vs_average >= 0 ? '+' : ''}{prediction.vs_average}% vs media
+                    </span>
+                  )}
+                </div>
+              </div>
               <KPICard label="Pedidos del dia" value={String(daySummary.total_orders)} color={C.blue} />
               <KPICard
                 label="Turnos completados"

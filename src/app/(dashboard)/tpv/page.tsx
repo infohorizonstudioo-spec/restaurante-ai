@@ -67,8 +67,13 @@ export default function TPVPage() {
   const [showCustom, setShowCustom] = useState(false)
   const [customName, setCustomName] = useState('')
   const [customPrice, setCustomPrice] = useState('')
+  const [intel, setIntel] = useState<any>(null)
+  const [comboSuggestion, setComboSuggestion] = useState<{ name: string; price: number; id: string } | null>(null)
+  const [alertsDismissed, setAlertsDismissed] = useState(false)
   const flashRef = useRef<string | null>(null)
   const stylesInjected = useRef(false)
+  const comboTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const alertTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Inject styles once
   useEffect(() => {
@@ -124,8 +129,37 @@ export default function TPVPage() {
         setActiveCategory(lyt.categories[0]!.name)
       }
 
+      // Fetch intelligence data
+      const headers: Record<string, string> = {}
+      const { data: { session: intelSession } } = await supabase.auth.getSession()
+      if (intelSession?.access_token) headers.Authorization = 'Bearer ' + intelSession.access_token
+      fetch('/api/tpv/intelligence', { headers }).then(r => r.json()).then(d => setIntel(d.intelligence)).catch(() => {})
+
       setLoading(false)
     })()
+  }, [])
+
+  // Auto-dismiss alerts after 30 seconds, then refresh
+  useEffect(() => {
+    if (!intel?.alerts || intel.alerts.length === 0 || alertsDismissed) return
+    alertTimer.current = setTimeout(() => {
+      setAlertsDismissed(true)
+      // Refresh intelligence after dismissal
+      supabase.auth.getSession().then(({ data: { session: s } }) => {
+        const h: Record<string, string> = {}
+        if (s?.access_token) h.Authorization = 'Bearer ' + s.access_token
+        fetch('/api/tpv/intelligence', { headers: h }).then(r => r.json()).then(d => {
+          setIntel(d.intelligence)
+          setAlertsDismissed(false)
+        }).catch(() => {})
+      })
+    }, 30000)
+    return () => { if (alertTimer.current) clearTimeout(alertTimer.current) }
+  }, [intel?.alerts, alertsDismissed])
+
+  // Cleanup combo timer
+  useEffect(() => {
+    return () => { if (comboTimer.current) clearTimeout(comboTimer.current) }
   }, [])
 
   // Load parked orders
@@ -176,6 +210,23 @@ export default function TPVPage() {
       }
       return [...prev, { id: item.id, name: item.name, price: item.price, quantity: 1 }]
     })
+    // Check combo suggestions
+    if (intel?.combos) {
+      const combo = intel.combos.find((c: any) =>
+        c.items?.some((ci: string) => ci.toLowerCase() === item.name.toLowerCase())
+      )
+      if (combo) {
+        const other = combo.items?.find((ci: string) => ci.toLowerCase() !== item.name.toLowerCase())
+        if (other) {
+          const matchItem = menuItems.find(m => m.name.toLowerCase() === other.toLowerCase())
+          if (matchItem) {
+            if (comboTimer.current) clearTimeout(comboTimer.current)
+            setComboSuggestion({ name: matchItem.name, price: matchItem.price, id: matchItem.id })
+            comboTimer.current = setTimeout(() => setComboSuggestion(null), 4000)
+          }
+        }
+      }
+    }
   }
 
   function addCustomItem() {
@@ -337,6 +388,29 @@ export default function TPVPage() {
           <div style={{ flex: '0 0 65%', maxWidth: '65%', display: 'flex', flexDirection: 'column', borderRight: `1px solid ${C.border}` }}
                className="tpv-left">
 
+            {/* Service alerts banner */}
+            {intel?.alerts && intel.alerts.length > 0 && !alertsDismissed && (() => {
+              const alert = intel.alerts[0]
+              const bgMap: Record<string, string> = { critical: C.red, warning: C.amber, info: C.teal }
+              const iconMap: Record<string, string> = { critical: '🚨', warning: '⚠️', info: 'ℹ️' }
+              const level = alert.level || 'info'
+              return (
+                <div style={{
+                  padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8,
+                  background: `color-mix(in srgb, ${bgMap[level] || C.teal} 15%, transparent)`,
+                  borderBottom: `1px solid ${bgMap[level] || C.teal}`,
+                  fontSize: 13, fontWeight: 600, color: bgMap[level] || C.teal,
+                }}>
+                  <span>{iconMap[level] || 'ℹ️'}</span>
+                  <span style={{ flex: 1 }}>{alert.message}</span>
+                  <button onClick={() => setAlertsDismissed(true)} style={{
+                    background: 'none', border: 'none', color: 'inherit', cursor: 'pointer',
+                    fontSize: 14, fontWeight: 700, fontFamily: 'inherit', padding: '0 4px',
+                  }}>✕</button>
+                </div>
+              )
+            })()}
+
             {/* Search bar */}
             <div style={{ padding: '12px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 8 }}>
               <div style={{ flex: 1, position: 'relative' }}>
@@ -367,6 +441,35 @@ export default function TPVPage() {
                 + Precio manual
               </button>
             </div>
+
+            {/* Trending / Populares ahora */}
+            {intel?.trending && intel.trending.length > 0 && !search.trim() && (
+              <div style={{
+                display: 'flex', gap: 6, padding: '8px 16px', overflowX: 'auto',
+                borderBottom: `1px solid ${C.border}`, alignItems: 'center',
+                WebkitOverflowScrolling: 'touch',
+              }}>
+                <span style={{ fontSize: 11, color: C.text3, fontWeight: 600, whiteSpace: 'nowrap', marginRight: 4 }}>
+                  Populares ahora
+                </span>
+                {intel.trending.slice(0, 6).map((t: any, idx: number) => {
+                  const mi = menuItems.find(m => m.name.toLowerCase() === (t.name || t).toString().toLowerCase())
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => mi && addItem(mi)}
+                      style={{
+                        padding: '4px 10px', borderRadius: 20, border: 'none', cursor: mi ? 'pointer' : 'default',
+                        background: C.amberDim, color: C.amber, fontSize: 11, fontWeight: 600,
+                        whiteSpace: 'nowrap', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 3,
+                      }}
+                    >
+                      {t.name || t} <span style={{ fontSize: 10 }}>{'\u2191'}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
             {/* Category tabs */}
             {!search.trim() && layout && (
@@ -399,7 +502,7 @@ export default function TPVPage() {
 
             {/* Product grid */}
             <div style={{
-              flex: 1, overflow: 'auto', padding: 16,
+              flex: 1, overflow: 'auto', padding: 16, position: 'relative',
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
               gap: 10, alignContent: 'start',
@@ -438,6 +541,35 @@ export default function TPVPage() {
                     </span>
                   </button>
                 ))
+              )}
+
+              {/* Combo suggestion toast */}
+              {comboSuggestion && (
+                <div style={{
+                  position: 'absolute', bottom: 16, right: 16, zIndex: 10,
+                  background: C.surface, border: `1px solid ${C.amberBorder}`,
+                  borderRadius: 12, padding: '10px 14px', boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                  display: 'flex', alignItems: 'center', gap: 10, maxWidth: 280,
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, color: C.text3, marginBottom: 2 }}>Suele ir con:</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{comboSuggestion.name}</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      addItem(comboSuggestion)
+                      setComboSuggestion(null)
+                      if (comboTimer.current) clearTimeout(comboTimer.current)
+                    }}
+                    style={{
+                      padding: '6px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                      background: C.amberDim, color: C.amber, fontSize: 12, fontWeight: 700,
+                      fontFamily: 'inherit', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    + Anadir
+                  </button>
+                </div>
               )}
             </div>
           </div>
