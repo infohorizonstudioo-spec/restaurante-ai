@@ -298,6 +298,7 @@ export default function TPVPage() {
   const [layout, setLayout] = useState<TPVLayout | null>(null)
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showSearch, setShowSearch] = useState(false)
   const [view, setView] = useState<'products' | 'tables'>('products')
   const [order, setOrder] = useState<TPVItem[]>([])
@@ -326,6 +327,7 @@ export default function TPVPage() {
   const stylesInjected = useRef(false)
   const comboTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const alertTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Inject styles once
   useEffect(() => {
@@ -355,35 +357,35 @@ export default function TPVPage() {
       if (!p?.tenant_id) return
       setTid(p.tenant_id)
 
-      // Fetch real tables via API (with tenant_id fallback)
-      let fetchedTables: DBTable[] = []
-      try {
-        const { data: { session: tSession } } = await supabase.auth.getSession()
-        const headers: Record<string, string> = {}
-        if (tSession?.access_token) headers.Authorization = 'Bearer ' + tSession.access_token
-        const res = await fetch(`/api/tables?tenant_id=${p.tenant_id}`, { headers })
-        const d = await res.json()
-        fetchedTables = (d.tables || []) as DBTable[]
-      } catch { /* ignore */ }
-      setDbTables(fetchedTables)
+      // Fetch all data in parallel
+      const { data: { session: authSession } } = await supabase.auth.getSession()
+      const authHeaders: Record<string, string> = {}
+      if (authSession?.access_token) authHeaders.Authorization = 'Bearer ' + authSession.access_token
 
-      // Fetch today's reservations
       const todayStr = new Date().toISOString().slice(0, 10)
-      const { data: todayRes } = await supabase
-        .from('reservations')
-        .select('table_id, time, customer_name, party_size')
-        .eq('tenant_id', p.tenant_id)
-        .eq('date', todayStr)
-        .in('status', ['confirmada', 'pendiente'])
-      setTodayReservations((todayRes as TodayReservation[]) || [])
 
-      const { data: items } = await supabase
-        .from('menu_items')
-        .select('*')
-        .eq('tenant_id', p.tenant_id)
-        .eq('active', true)
+      const [tablesResult, reservationsResult, itemsResult, salesHistoryResult] = await Promise.all([
+        // Fetch real tables via API
+        fetch(`/api/tables?tenant_id=${p.tenant_id}`, { headers: authHeaders })
+          .then(r => r.json()).then(d => (d.tables || []) as DBTable[]).catch(() => [] as DBTable[]),
+        // Fetch today's reservations
+        supabase.from('reservations')
+          .select('table_id, time, customer_name, party_size')
+          .eq('tenant_id', p.tenant_id).eq('date', todayStr)
+          .in('status', ['confirmada', 'pendiente']),
+        // Fetch menu items (only needed fields)
+        supabase.from('menu_items')
+          .select('id,name,price,category,image_url')
+          .eq('tenant_id', p.tenant_id).eq('active', true),
+        // Fetch sales history
+        fetch('/api/tpv/sales-history', { headers: authHeaders })
+          .then(r => r.ok ? r.json() : { history: [] }).then(d => (d.history || []) as SaleRecord[]).catch(() => [] as SaleRecord[]),
+      ])
 
-      const mi: MenuItem[] = (items || []).map((i: Record<string, unknown>) => ({
+      setDbTables(tablesResult)
+      setTodayReservations((reservationsResult.data as TodayReservation[]) || [])
+
+      const mi: MenuItem[] = (itemsResult.data || []).map((i: Record<string, unknown>) => ({
         id: i.id as string,
         name: i.name as string,
         price: Number(i.price) || 0,
@@ -393,31 +395,15 @@ export default function TPVPage() {
       }))
       setMenuItems(mi)
 
-      // Fetch sales history for intelligent layout
-      let salesHistory: SaleRecord[] = []
-      try {
-        const { data: { session: authSession } } = await supabase.auth.getSession()
-        const histRes = await fetch('/api/tpv/sales-history', {
-          headers: authSession?.access_token ? { Authorization: 'Bearer ' + authSession.access_token } : {},
-        })
-        if (histRes.ok) {
-          const histData = await histRes.json()
-          salesHistory = histData.history || []
-        }
-      } catch { /* sales history is optional */ }
-
       const hour = new Date().getHours()
-      const lyt = getTPVLayout(mi, hour, salesHistory)
+      const lyt = getTPVLayout(mi, hour, salesHistoryResult)
       setLayout(lyt)
       if (lyt.categories.length > 0) {
         setActiveCategory(lyt.categories[0]!.name)
       }
 
-      // Fetch intelligence data
-      const headers: Record<string, string> = {}
-      const { data: { session: intelSession } } = await supabase.auth.getSession()
-      if (intelSession?.access_token) headers.Authorization = 'Bearer ' + intelSession.access_token
-      fetch('/api/tpv/intelligence', { headers }).then(r => r.json()).then(d => setIntel(d.intelligence)).catch(() => {})
+      // Fetch intelligence data (fire-and-forget, not blocking)
+      fetch('/api/tpv/intelligence', { headers: authHeaders }).then(r => r.json()).then(d => setIntel(d.intelligence)).catch(() => {})
 
       setLoading(false)
     })()
@@ -446,6 +432,12 @@ export default function TPVPage() {
     return () => { if (comboTimer.current) clearTimeout(comboTimer.current) }
   }, [])
 
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(t)
+  }, [search])
+
   // Load parked orders
   const loadParked = useCallback(async (tenantId: string) => {
     const today = new Date()
@@ -469,8 +461,8 @@ export default function TPVPage() {
 
   const filteredItems = useMemo(() => {
     if (!layout) return []
-    if (search.trim()) {
-      const q = search.toLowerCase()
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase()
       const all: { id: string; name: string; price: number; image_url?: string }[] = []
       for (const cat of layout.categories) {
         for (const item of cat.items) {
@@ -481,7 +473,7 @@ export default function TPVPage() {
     }
     const cat = layout.categories.find(c => c.name === activeCategory)
     return cat?.items || []
-  }, [layout, activeCategory, search])
+  }, [layout, activeCategory, debouncedSearch])
 
   // ── Actions ──────────────────────────────────────────────────────────
   function addItem(item: { id: string; name: string; price: number }) {
@@ -866,7 +858,11 @@ export default function TPVPage() {
   }, [tid])
 
   useEffect(() => {
-    if (tid) localStorage.setItem(`tpv_tables_${tid}`, JSON.stringify(tableOrders))
+    if (!tid) return
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      localStorage.setItem(`tpv_tables_${tid}`, JSON.stringify(tableOrders))
+    }, 1000)
   }, [tableOrders, tid])
 
   // Table count helper

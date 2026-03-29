@@ -36,5 +36,5 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     intelligence: { trending, combos, prediction, alerts }
-  })
+  }, { headers: { 'Cache-Control': 'max-age=60' } })
 }
