@@ -41,9 +41,9 @@ export async function POST(req: NextRequest) {
 
     logger.info('agent:create-reservation', { tenant_id: sanitized.tenant_id })
 
-    const result = await createReservationTool(sanitized)
+    const result = await createReservationTool(sanitized as typeof sanitized & { customer_name: string })
     if (result.error && !result.success) {
-      return NextResponse.json({ error: result.error }, { status: 500 })
+      return NextResponse.json({ error: result.error }, { status: 400 })
     }
     return NextResponse.json(result)
   } catch (err) {

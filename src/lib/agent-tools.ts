@@ -10,6 +10,7 @@ import { makeDecision } from './agent-decision'
 import { scheduleReminders, cancelReminders } from './reminder-engine'
 import { classifyInteraction, detectConflicts, generateSummary, learnFromInteraction } from './intelligence-engine'
 import { saveCustomerMemory, getCustomerProfile } from './customer-memory'
+import { sendPush } from './notifications'
 import { logger } from './logger'
 
 const supabase = createClient(
@@ -634,6 +635,15 @@ export async function createReservationTool(params: {
     Promise.all(memoryPromises).catch(() => {})
   }
 
+  // Push notification to owner
+  sendPush({
+    tenant_id,
+    title: `Nueva ${bLabel.singular}: ${customer_name}`,
+    body: `${finalDate} a las ${finalTime}${finalPartySize > 1 ? `, ${finalPartySize} personas` : ''}`,
+    url: reservation?.id ? `/reservas?id=${reservation.id}` : '/reservas',
+    tag: 'new_reservation',
+  }).catch(() => {})
+
   const largeGroupMsg = isLargeGroup
     ? ' El propietario debe confirmar la reserva para grupos grandes.'
     : ''
@@ -726,13 +736,20 @@ export async function cancelReservationTool(params: {
     await supabase.from('waitlist').update({ status: 'notified' }).eq('id', waitlisted.id)
   }
 
-  // Notification
+  // Notification + push
   await supabase.from('notifications').insert({
     tenant_id, type: 'reservation_cancelled',
     title: `Cancelación — ${toCancel.customer_name}`,
     body: `${toCancel.customer_name} canceló su ${bLabel.singular} del ${dateStr} a las ${time} (${toCancel.people}p)`,
     read: false,
   })
+  sendPush({
+    tenant_id,
+    title: `Cancelación: ${toCancel.customer_name}`,
+    body: `${bLabel.singular} del ${dateStr} a las ${time} cancelada`,
+    url: '/reservas',
+    tag: 'cancellation',
+  }).catch(() => {})
 
   // Cancel scheduled reminders
   cancelReminders(toCancel.id).catch(() => {})
@@ -957,6 +974,17 @@ export async function updateOrderTool(params: {
           sendSms(deliveryPhone, driverSms).catch(() => {})
         }
       }
+    }
+
+    // Push to owner on confirm
+    if (action === 'confirm') {
+      sendPush({
+        tenant_id,
+        title: `Pedido confirmado: ${customer_name || 'cliente'}`,
+        body: `${data?.total_estimate || 0}€ — ${order_type || 'recoger'}`,
+        url: '/pedidos',
+        tag: 'order_confirmed',
+      }).catch(() => {})
     }
 
     return {

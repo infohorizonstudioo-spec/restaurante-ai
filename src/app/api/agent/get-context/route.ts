@@ -4,6 +4,7 @@ import { validateAgentKey } from "@/lib/agent-auth"
 import { rateLimitByIp, RATE_LIMITS } from "@/lib/rate-limit"
 import { sanitizeUUID } from "@/lib/sanitize"
 import { logger } from "@/lib/logger"
+import { parseRetellBody } from "@/lib/retell-parse"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -458,7 +459,8 @@ export async function POST(req: NextRequest) {
     if (rl.blocked) return rl.response
 
     if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-    const body = await req.json()
+    const raw = await req.json()
+    const body = await parseRetellBody(raw)
 
     const tenant_id = sanitizeUUID(body.tenant_id)
     if (!tenant_id) return NextResponse.json({ error: "tenant_id required" }, { status: 400 })

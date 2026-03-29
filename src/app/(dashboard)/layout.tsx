@@ -5,6 +5,7 @@ import DashboardShell from '@/components/DashboardShell'
 import HelpButton from '@/components/HelpButton'
 import AssistantChat from '@/components/AssistantChat'
 import ThemeToggle from '@/components/ThemeToggle'
+import PushPermission from '@/components/PushPermission'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div style={{ display:'flex', minHeight:'100vh', background:'var(--rz-bg)', fontFamily:'var(--rz-font)' }}>
           <Sidebar/>
           <DashboardShell>
+            <PushPermission/>
             {children}
           </DashboardShell>
           <AssistantChat/>

@@ -78,6 +78,43 @@ function inferTargetUrl(type: NotifType, params: CreateNotificationParams): stri
   }
 }
 
+/**
+ * Send push notification to all devices of a tenant.
+ * Non-blocking — errors are silently logged.
+ */
+export async function sendPush(params: {
+  tenant_id: string
+  title: string
+  body?: string
+  url?: string
+  priority?: NotifPriority
+  tag?: string
+}): Promise<void> {
+  try {
+    const internalKey = process.env.INTERNAL_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(-40)
+    if (!internalKey) return
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'
+    await fetch(`${baseUrl}/api/push/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-key': internalKey,
+      },
+      body: JSON.stringify({
+        tenant_id: params.tenant_id,
+        title: params.title,
+        body: params.body || '',
+        url: params.url || '/panel',
+        priority: params.priority || 'info',
+        tag: params.tag || 'reservo',
+      }),
+    }).catch(() => {})
+  } catch {
+    // Non-blocking — never fail the parent operation
+  }
+}
+
 export async function createNotification(params: CreateNotificationParams): Promise<void> {
   try {
     const priority       = inferPriority(params.type, params.priority)
@@ -94,6 +131,16 @@ export async function createNotification(params: CreateNotificationParams): Prom
       target_url,
       read:               false,
     })
+
+    // Auto-push to all devices (non-blocking)
+    sendPush({
+      tenant_id: params.tenant_id,
+      title: params.title,
+      body: params.body || '',
+      url: target_url || '/panel',
+      priority,
+      tag: params.type,
+    }).catch(() => {})
   } catch (e: any) {
     logger.error('createNotification error', {}, e)
   }

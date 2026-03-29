@@ -7,7 +7,7 @@ import { C } from '@/lib/colors'
 
 const PLANS = [
   {
-    id: 'starter', label: 'Starter', price: '79', calls: 50, rate: '0.90',
+    id: 'starter', label: 'Starter', price: '99', calls: 50, rate: '0.90',
     accent: C.teal, dim: C.tealDim, popular: false,
     tagline: 'Para empezar a automatizar tu negocio',
     features: [
@@ -26,7 +26,7 @@ const PLANS = [
     ],
   },
   {
-    id: 'pro', label: 'Pro', price: '199', calls: 250, rate: '0.70',
+    id: 'pro', label: 'Pro', price: '299', calls: 200, rate: '0.70',
     accent: C.amber, dim: C.amberDim, popular: true,
     tagline: 'Todo lo que necesitas para crecer',
     features: [
@@ -44,7 +44,7 @@ const PLANS = [
     ],
   },
   {
-    id: 'business', label: 'Business', price: '399', calls: 750, rate: '0.50',
+    id: 'business', label: 'Business', price: '499', calls: 600, rate: '0.50',
     accent: C.violet, dim: C.violetDim, popular: false,
     tagline: 'Para negocios con alta demanda',
     features: [
