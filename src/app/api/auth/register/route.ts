@@ -55,7 +55,12 @@ export async function POST(req: NextRequest) {
     })
     if (userError) {
       await admin.from('tenants').delete().eq('id', tenant.id)
-      return NextResponse.json({ error: 'Internal server error' }, { status: 400 })
+      const msg = userError.message?.toLowerCase() || ''
+      if (msg.includes('already') || msg.includes('duplicate') || msg.includes('exists') || msg.includes('unique')) {
+        return NextResponse.json({ error: 'Este email ya tiene una cuenta. Inicia sesión o restablece tu contraseña.' }, { status: 409 })
+      }
+      logger.error('Register: createUser failed', { error: userError.message })
+      return NextResponse.json({ error: 'Error al crear la cuenta. Inténtalo de nuevo.' }, { status: 400 })
     }
 
     await admin.from('profiles').update({

@@ -59,7 +59,7 @@ export default function RegistroPage() {
 
   const handleRegister = useCallback(async () => {
     if (!form.email||!form.password||!form.name||!form.businessName){setError('Rellena todos los campos');return}
-    if (form.password.length<6){setError('La contraseña debe tener al menos 6 caracteres');return}
+    if (form.password.length<8){setError('La contraseña debe tener al menos 8 caracteres');return}
     setLoading(true);setError('')
     try {
       // 1. Crear tenant + usuario via API (usa service role, evita RLS)
@@ -76,8 +76,7 @@ export default function RegistroPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        if (data.error?.includes('already')) setError('Este email ya tiene cuenta. Inicia sesión.')
-        else setError(data.error || 'Error al registrarse. Inténtalo de nuevo.')
+        setError(data.error || 'Error al registrarse. Inténtalo de nuevo.')
         return
       }
 
@@ -162,7 +161,7 @@ export default function RegistroPage() {
                 </div>
                 <div>
                   <label style={{ display:'block', fontSize:11, fontWeight:600, color:'#8895A7', marginBottom:6, letterSpacing:'0.05em', textTransform:'uppercase' }}>Contraseña</label>
-                  <input className="rzinp" ref={passwordRef} type="password" value={form.password} onChange={e=>up('password',e.target.value)} placeholder="Mínimo 6 caracteres" autoComplete="new-password"/>
+                  <input className="rzinp" ref={passwordRef} type="password" value={form.password} onChange={e=>up('password',e.target.value)} placeholder="Mínimo 8 caracteres" autoComplete="new-password"/>
                 </div>
               </div>
               {error && <div style={{ background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.2)', borderRadius:9, padding:'10px 14px', marginBottom:14, fontSize:13, color:'#F87171' }}>{error}</div>}
@@ -171,7 +170,7 @@ export default function RegistroPage() {
                 const emailVal = emailRef.current?.value || form.email
                 const pwVal    = passwordRef.current?.value || form.password
                 if(!nameVal||!emailVal||!pwVal){setError('Rellena todos los campos');return}
-                if(pwVal.length<6){setError('Contraseña mínimo 6 caracteres');return}
+                if(pwVal.length<8){setError('Contraseña mínimo 8 caracteres');return}
                 setError('')
                 setForm(f=>({...f, name:nameVal, email:emailVal, password:pwVal}))
                 setStep(2)
