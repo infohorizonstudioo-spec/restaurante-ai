@@ -24,12 +24,18 @@ const PLAN_LIMITS: Record<string, { calls: number; rate: number }> = {
   enterprise:{ calls: 600, rate: 0.50 },
 }
 
-// Mapa priceId -> plan
-const PRICE_TO_PLAN: Record<string, string> = {
-  'price_1TBtxK0yU3RZWdR1MP4Z1lwj': 'starter',
-  'price_1TBtxM0yU3RZWdR1DGs87LNC': 'pro',
-  'price_1TBtxN0yU3RZWdR1dAiCDE3n': 'business',
+// Mapa priceId -> plan (usa env vars con fallback a IDs hardcoded)
+function buildPriceToPlan(): Record<string, string> {
+  const map: Record<string, string> = {}
+  const starter  = process.env.STRIPE_PRICE_STARTER  || 'price_1TBtxK0yU3RZWdR1MP4Z1lwj'
+  const pro      = process.env.STRIPE_PRICE_PRO      || 'price_1TBtxM0yU3RZWdR1DGs87LNC'
+  const business = process.env.STRIPE_PRICE_BUSINESS || 'price_1TBtxN0yU3RZWdR1dAiCDE3n'
+  map[starter]  = 'starter'
+  map[pro]      = 'pro'
+  map[business] = 'business'
+  return map
 }
+const PRICE_TO_PLAN = buildPriceToPlan()
 
 function getPlanFromEvent(obj: any): string | null {
   // Intentar desde metadata (fuente mas fiable)

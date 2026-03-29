@@ -17,9 +17,9 @@ function getAdmin() {
 }
 
 const PLANS: Record<string, { priceId: string; name: string; calls: number; rate: number; amount: number }> = {
-  starter:  { priceId: 'price_1TBtxK0yU3RZWdR1MP4Z1lwj', name: 'Starter',  calls: 50,  rate: 0.90, amount: 9900 },
-  pro:      { priceId: 'price_1TBtxM0yU3RZWdR1DGs87LNC', name: 'Pro',      calls: 200, rate: 0.70, amount: 29900 },
-  business: { priceId: 'price_1TBtxN0yU3RZWdR1dAiCDE3n', name: 'Business', calls: 600, rate: 0.50, amount: 49900 },
+  starter:  { priceId: process.env.STRIPE_PRICE_STARTER  || 'price_1TBtxK0yU3RZWdR1MP4Z1lwj', name: 'Starter',  calls: 50,  rate: 0.90, amount: 9900 },
+  pro:      { priceId: process.env.STRIPE_PRICE_PRO      || 'price_1TBtxM0yU3RZWdR1DGs87LNC', name: 'Pro',      calls: 200, rate: 0.70, amount: 29900 },
+  business: { priceId: process.env.STRIPE_PRICE_BUSINESS || 'price_1TBtxN0yU3RZWdR1dAiCDE3n', name: 'Business', calls: 600, rate: 0.50, amount: 49900 },
 }
 
 export async function POST(req: Request) {
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: planData.priceId, quantity: 1 }],
-      success_url: process.env.NEXT_PUBLIC_APP_URL + '/precios/success?session_id={CHECKOUT_SESSION_ID}',
+      success_url: process.env.NEXT_PUBLIC_APP_URL + '/panel?checkout=success&session_id={CHECKOUT_SESSION_ID}',
       cancel_url:  process.env.NEXT_PUBLIC_APP_URL + '/precios',
       metadata: { tenant_id: auth.tenantId, plan, included_calls: String(planData.calls), extra_rate: String(planData.rate) },
       subscription_data: { metadata: { tenant_id: auth.tenantId, plan, included_calls: String(planData.calls), extra_rate: String(planData.rate) } },
