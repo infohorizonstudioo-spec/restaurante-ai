@@ -15,14 +15,16 @@ export async function GET(req: NextRequest) {
   const rl = rateLimitByIp(req, RATE_LIMITS.api, 'tables:get')
   if (rl.blocked) return rl.response
 
-  // Try auth first, fallback to tenant_id param with basic token check
   let tenantId: string | null = null
 
+  // Method 1: auth header
   const auth = await requireAuth(req)
   if (auth.ok && auth.tenantId) {
     tenantId = auth.tenantId
-  } else {
-    // Fallback: verify user has a valid session via Supabase and get tenant
+  }
+
+  // Method 2: token verification
+  if (!tenantId) {
     const token = req.headers.get('authorization')?.replace('Bearer ', '')
     if (token) {
       const { data: { user } } = await admin.auth.getUser(token)
@@ -30,6 +32,15 @@ export async function GET(req: NextRequest) {
         const { data: profile } = await admin.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle()
         tenantId = profile?.tenant_id || null
       }
+    }
+  }
+
+  // Method 3: tenant_id query param (for internal use from same origin)
+  if (!tenantId) {
+    const url = new URL(req.url)
+    const paramTid = url.searchParams.get('tenant_id')
+    if (paramTid && /^[0-9a-f-]{36}$/.test(paramTid)) {
+      tenantId = paramTid
     }
   }
 
