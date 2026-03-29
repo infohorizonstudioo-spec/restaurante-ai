@@ -153,7 +153,7 @@ function KpiCard({ value, label, sub, color=C.amber, href, icon, accent=false }:
   const inner = (
     <div className="rz-card-interactive" style={{
       background: accent ? `linear-gradient(135deg,${color}14,transparent 70%)` : C.surface,
-      border:`1px solid ${accent?color+'22':C.border}`, borderRadius:14, padding:'18px 20px',
+      border:`1px solid ${accent?color+'22':C.borderMd}`, borderRadius:14, padding:'18px 20px',
       position:'relative', overflow:'hidden', cursor:href?'pointer':'default',
     }}>
       {accent && <div style={{ position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${color},transparent)`,borderRadius:'14px 14px 0 0' }}/>}
