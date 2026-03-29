@@ -224,6 +224,10 @@ export default function OnboardingWizard() {
     tenant?.schedule ? (typeof tenant.schedule === 'string' ? JSON.parse(tenant.schedule) : tenant.schedule) : defaultSchedule()
   )
 
+  // Step 1 — Reservation config
+  const [maxCapacity, setMaxCapacity] = useState(40)
+  const [slotDuration, setSlotDuration] = useState(60)
+
   // Step 4 — Menu
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [newItemName, setNewItemName] = useState('')
@@ -264,6 +268,12 @@ export default function OnboardingWizard() {
         payload.type = businessType
         payload.agent_phone = phone
         payload.address = address
+        payload.reservation_config = JSON.stringify({
+          max_capacity: maxCapacity,
+          slot_duration_minutes: slotDuration,
+          auto_confirm: true,
+          large_group_threshold: 8,
+        })
       } else if (step === 1) {
         payload.agent_name = agentName
         payload.greeting_style = greetingStyle
@@ -300,7 +310,7 @@ export default function OnboardingWizard() {
     } finally {
       setSaving(false)
     }
-  }, [step, tenantId, businessName, businessType, phone, address, agentName, greetingStyle, language, schedule, menuItems, reload])
+  }, [step, tenantId, businessName, businessType, phone, address, maxCapacity, slotDuration, agentName, greetingStyle, language, schedule, menuItems, reload])
 
   // ── Validation ────────────────────────────────────────────────────────────
   const canAdvance = step === 0
@@ -512,6 +522,35 @@ export default function OnboardingWizard() {
               onChange={e => setAddress(e.target.value)}
             />
           </div>
+
+          {/* Reservation config — only for hospitality */}
+          {ACTIVE_TYPES.includes(businessType) && (
+            <div style={{ display: 'flex', gap: 16 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Capacidad máxima</label>
+                <input
+                  style={inputStyle}
+                  type="number"
+                  min={1}
+                  value={maxCapacity}
+                  onChange={e => setMaxCapacity(parseInt(e.target.value) || 1)}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Duración de reserva</label>
+                <select
+                  style={selectStyle}
+                  value={slotDuration}
+                  onChange={e => setSlotDuration(parseInt(e.target.value))}
+                >
+                  <option value={30}>30 min</option>
+                  <option value={60}>1 hora</option>
+                  <option value={90}>1h 30min</option>
+                  <option value={120}>2 horas</option>
+                </select>
+              </div>
+            </div>
+          )}
         </div>
 
         <style>{`
@@ -1082,6 +1121,46 @@ export default function OnboardingWizard() {
     )
   }
 
+  // ── Generate initial setup (menu + schedule + rules for voice agent) ─────
+  async function generateInitialSetup() {
+    if (!tenantId) return
+    try {
+      // Save menu as business_knowledge
+      if (menuItems.length > 0) {
+        const menuText = menuItems.map(i => `${i.name} ${i.price}€`).join(', ')
+        await supabase.from('business_knowledge').upsert({
+          tenant_id: tenantId,
+          category: 'menu',
+          content: menuText,
+          active: true,
+        }, { onConflict: 'tenant_id,category' })
+      }
+
+      // Save schedule as business_knowledge
+      const scheduleText = Object.entries(schedule)
+        .filter(([, v]) => !(v as DaySchedule).closed)
+        .map(([k, v]) => `${DAYS.find(d => d.key === k)?.label}: ${(v as DaySchedule).open} - ${(v as DaySchedule).close}`)
+        .join(', ')
+      if (scheduleText) {
+        await supabase.from('business_knowledge').upsert({
+          tenant_id: tenantId,
+          category: 'horarios',
+          content: scheduleText,
+          active: true,
+        }, { onConflict: 'tenant_id,category' })
+      }
+
+      // Save reservation rules
+      await supabase.from('business_rules').upsert([
+        { tenant_id: tenantId, rule_key: 'max_capacity', rule_value: String(maxCapacity) },
+        { tenant_id: tenantId, rule_key: 'slot_duration', rule_value: String(slotDuration) },
+        { tenant_id: tenantId, rule_key: 'large_group_min', rule_value: '8' },
+      ], { onConflict: 'tenant_id,rule_key' })
+    } catch {
+      // Silently ignore — setup data is best-effort
+    }
+  }
+
   // ── Step 5: Listo ─────────────────────────────────────────────────────────
   function Step5() {
     const typeName = BUSINESS_TYPES.find(b => b.id === businessType)?.label || businessType
@@ -1181,13 +1260,40 @@ export default function OnboardingWizard() {
                 </div>
               </div>
             </div>
+
+            <div style={{ height: 1, backgroundColor: C.border }} />
+
+            {/* Reservation config */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                backgroundColor: 'rgba(167,139,250,0.10)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 20,
+              }}>
+                🪑
+              </div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: C.text }}>
+                  {maxCapacity} personas · {slotDuration === 30 ? '30 min' : slotDuration === 60 ? '1 hora' : slotDuration === 90 ? '1h 30min' : '2 horas'}
+                </div>
+                <div style={{ fontSize: 12, color: C.text2 }}>Capacidad y duración de reserva</div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* CTA */}
         <button
           type="button"
-          onClick={() => router.push('/panel')}
+          onClick={async () => {
+            await generateInitialSetup()
+            router.push('/panel')
+          }}
           style={{
             width: '100%',
             padding: '16px 24px',
