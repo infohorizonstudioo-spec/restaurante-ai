@@ -1019,8 +1019,47 @@ export default function TPVPage() {
             })}
             </div>
 
+            {/* ── Mini floor plan (always visible) ────────────────────── */}
+            {dbTables.length > 0 && (
+              <div style={{ marginTop: 'auto', borderTop: `1px solid ${C.border}`, padding: 8 }}>
+                <p style={{ fontSize: 9, fontWeight: 700, color: C.text3, letterSpacing: '0.06em', marginBottom: 4, textTransform: 'uppercase' }}>Plano del local</p>
+                <svg
+                  viewBox={`0 0 ${Math.max(...dbTables.map(t => (t.x_pos || 0) + (t.w || 60))) + 10} ${Math.max(...dbTables.map(t => (t.y_pos || 0) + (t.h || 60))) + 10}`}
+                  style={{ width: '100%', height: 100, borderRadius: 8, background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.border}`, cursor: 'pointer' }}
+                  preserveAspectRatio="xMidYMid meet"
+                >
+                  {dbTables.map(t => {
+                    const isSel = selectedTable === t.number
+                    const hasItems = (tableOrders[t.number] || []).length > 0 || (selectedTable === t.number && order.length > 0)
+                    const sc = { libre: '#34D399', ocupada: '#F87171', reservada: '#F0A84E', bloqueada: '#49566A' }[t.status || 'libre'] || '#49566A'
+                    const w = t.w || 50, h = t.h || 50
+                    return (
+                      <g key={t.id}
+                        onClick={() => { selectTable(t.number); setView('products') }}
+                        onDoubleClick={() => window.location.href = '/mesas'}
+                      >
+                        {t.shape_type === 'round' ? (
+                          <ellipse cx={(t.x_pos||0)+w/2} cy={(t.y_pos||0)+h/2} rx={w/2-1} ry={h/2-1}
+                            fill={isSel ? 'rgba(240,168,78,0.4)' : hasItems ? sc+'44' : sc+'22'}
+                            stroke={isSel ? '#F0A84E' : sc} strokeWidth={isSel ? 2 : 1} />
+                        ) : (
+                          <rect x={t.x_pos||0} y={t.y_pos||0} width={w} height={h} rx={4}
+                            fill={isSel ? 'rgba(240,168,78,0.4)' : hasItems ? sc+'44' : sc+'22'}
+                            stroke={isSel ? '#F0A84E' : sc} strokeWidth={isSel ? 2 : 1} />
+                        )}
+                        <text x={(t.x_pos||0)+w/2} y={(t.y_pos||0)+h/2} textAnchor="middle" dominantBaseline="middle"
+                          fill={isSel ? '#F0A84E' : '#E8EEF6'} fontSize={10} fontWeight={700}>{t.number}</text>
+                        {hasItems && <circle cx={(t.x_pos||0)+w-4} cy={(t.y_pos||0)+4} r={4} fill="#F87171"/>}
+                      </g>
+                    )
+                  })}
+                </svg>
+                <p style={{ fontSize: 8, color: C.text3, marginTop: 2, textAlign: 'center' }}>Click: seleccionar · Doble click: editar plano</p>
+              </div>
+            )}
+
             {/* ── Utility buttons (bottom) ──────────────────────────── */}
-            <div className="tpv-cat-utils" style={{ marginTop: 'auto', borderTop: `1px solid ${C.border}`, paddingTop: 4, paddingBottom: 4 }}>
+            <div className="tpv-cat-utils" style={{ borderTop: `1px solid ${C.border}`, paddingTop: 4, paddingBottom: 4 }}>
               <button
                 onClick={() => { setShowSearch(!showSearch); setView('products') }}
                 style={{
