@@ -11,16 +11,18 @@ import type { MenuItem, TPVLayout, SaleRecord } from '@/lib/tpv-engine'
 /* ── CSS injected once ──────────────────────────────────────────────── */
 const TPV_STYLES = `
 .tpv-product {
-  transition: all 0.12s;
+  transition: all 0.15s ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 .tpv-product:active {
-  transform: scale(0.95);
-  opacity: 0.8;
+  transform: scale(0.95) !important;
+  opacity: 0.85;
 }
 .tpv-product:hover {
+  transform: translateY(-2px);
   border-color: rgba(255,255,255,0.15) !important;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3) !important;
 }
 .tpv-flash {
   animation: tpv-pulse 0.3s ease-out;
@@ -932,6 +934,7 @@ export default function TPVPage() {
             }}
           >
             {/* Category buttons */}
+            <div style={{ paddingTop: 8, paddingBottom: 8 }}>
             {layout?.categories.map(cat => {
               const isActive = activeCategory === cat.name && view === 'products' && !search.trim()
               return (
@@ -945,80 +948,85 @@ export default function TPVPage() {
                   }}
                   style={{
                     width: '100%', padding: '12px 14px',
-                    background: isActive ? C.amberDim : 'transparent',
+                    background: isActive ? 'rgba(240,168,78,0.15)' : 'transparent',
                     border: 'none',
                     borderLeft: isActive ? '3px solid' : '3px solid transparent',
                     borderLeftColor: isActive ? C.amber : 'transparent',
                     borderBottom: `1px solid ${C.border}`,
                     color: isActive ? C.amber : C.text2,
-                    fontSize: 13, fontWeight: 600,
+                    fontSize: 14, fontWeight: 600,
                     cursor: 'pointer', fontFamily: 'inherit',
                     textAlign: 'left',
                     display: 'flex', alignItems: 'center', gap: 8,
                     transition: 'background 0.15s, color 0.15s',
+                    boxShadow: isActive ? 'inset 0 0 12px rgba(240,168,78,0.08)' : 'none',
                   }}
                   onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = C.surface2; e.currentTarget.style.color = C.text } }}
                   onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = C.text2 } }}
                 >
-                  <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>{getCategoryIcon(cat.name)}</span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</span>
+                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{getCategoryIcon(cat.name)}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{cat.name}</span>
+                  <span style={{ fontSize: 11, fontWeight: 500, color: isActive ? C.amber : C.text3, opacity: 0.7, flexShrink: 0 }}>
+                    {cat.items.length}
+                  </span>
                 </button>
               )
             })}
+            </div>
 
             {/* ── Utility buttons (bottom) ──────────────────────────── */}
-            <div className="tpv-cat-utils" style={{ marginTop: 'auto', borderTop: `1px solid ${C.border}` }}>
+            <div className="tpv-cat-utils" style={{ marginTop: 'auto', borderTop: `1px solid ${C.border}`, paddingTop: 4, paddingBottom: 4 }}>
               <button
                 onClick={() => { setShowSearch(!showSearch); setView('products') }}
                 style={{
-                  width: '100%', padding: '12px 14px',
+                  width: '100%', padding: '13px 14px',
                   background: showSearch ? C.surface2 : 'transparent',
                   border: 'none', borderBottom: `1px solid ${C.border}`,
                   color: showSearch ? C.amber : C.text3,
                   fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                  textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
+                  textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
                 }}
               >
-                <span style={{ fontSize: 15 }}>{'\uD83D\uDD0D'}</span> Buscar
+                <span style={{ fontSize: 17 }}>{'\uD83D\uDD0D'}</span> Buscar
               </button>
               <button
                 onClick={() => setView(view === 'tables' ? 'products' : 'tables')}
                 style={{
-                  width: '100%', padding: '12px 14px',
+                  width: '100%', padding: '13px 14px',
                   background: view === 'tables' ? C.surface2 : 'transparent',
                   border: 'none', borderBottom: `1px solid ${C.border}`,
                   color: view === 'tables' ? C.amber : C.text3,
                   fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                  textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
+                  textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
                 }}
               >
-                <span style={{ fontSize: 15 }}>{'\uD83E\uDE91'}</span> Mesas
+                <span style={{ fontSize: 17 }}>{'\uD83E\uDE91'}</span> Mesas
               </button>
               <button
                 onClick={() => setShowCustom(true)}
                 style={{
-                  width: '100%', padding: '12px 14px',
+                  width: '100%', padding: '13px 14px',
                   background: 'transparent',
                   border: 'none', borderBottom: `1px solid ${C.border}`,
                   color: C.text3,
                   fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                  textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
+                  textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
                 }}
               >
-                <span style={{ fontSize: 15 }}>{'\u2795'}</span> Manual
+                <span style={{ fontSize: 17 }}>{'\u2795'}</span> Manual
               </button>
               <button
                 onClick={toggleFullscreen}
                 style={{
-                  width: '100%', padding: '12px 14px',
+                  width: '100%', padding: '13px 14px',
                   background: fullscreen ? C.surface2 : 'transparent',
                   border: 'none',
                   color: fullscreen ? C.amber : C.text3,
                   fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                  textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
+                  textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
                 }}
               >
-                <span style={{ fontSize: 15 }}>{'\u26F6'}</span> {fullscreen ? 'Salir' : 'Completa'}
+                <span style={{ fontSize: 17 }}>{'\u26F6'}</span> {fullscreen ? 'Salir' : 'Completa'}
               </button>
             </div>
           </div>
@@ -1054,7 +1062,7 @@ export default function TPVPage() {
 
             {/* Search bar */}
             {showSearch && view === 'products' && (
-              <div style={{ padding: '10px 12px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 8, flexShrink: 0 }}>
+              <div style={{ padding: '12px 16px', borderBottom: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.15)', display: 'flex', gap: 8, flexShrink: 0 }}>
                 <div style={{ flex: 1, position: 'relative' }}>
                   <input
                     value={search}
@@ -1062,13 +1070,15 @@ export default function TPVPage() {
                     placeholder="Buscar producto..."
                     autoFocus
                     style={{
-                      width: '100%', padding: '10px 14px 10px 36px',
+                      width: '100%', padding: '12px 16px 12px 40px',
                       background: C.surface2, border: `1px solid ${C.border}`,
-                      borderRadius: 10, color: C.text, fontSize: 14,
+                      borderRadius: 12, color: C.text, fontSize: 15,
                       outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
                     }}
+                    onFocus={e => { e.currentTarget.style.borderColor = 'rgba(240,168,78,0.5)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(240,168,78,0.15)' }}
+                    onBlur={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = 'none' }}
                   />
-                  <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: C.text3 }}>
+                  <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 15, color: C.text3 }}>
                     {'\uD83D\uDD0D'}
                   </span>
                 </div>
@@ -1115,17 +1125,20 @@ export default function TPVPage() {
 
             {view === 'products' ? (
               /* ── Product Grid ────────────────────────────────────── */
-              <div style={{ flex: 1, overflow: 'auto', padding: 12, position: 'relative' }}>
+              <div style={{ flex: 1, overflow: 'auto', padding: 16, position: 'relative' }}>
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                  gap: 8, alignContent: 'start',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                  gap: 10, alignContent: 'start',
                 }}>
                   {filteredItems.length === 0 ? (
-                    <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 40, color: C.text3 }}>
-                      <div style={{ fontSize: 32, marginBottom: 8 }}>{'\uD83D\uDCE6'}</div>
-                      <p style={{ fontSize: 14 }}>
+                    <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 40px', color: C.text3 }}>
+                      <div style={{ fontSize: 48, marginBottom: 12, filter: 'drop-shadow(0 0 8px rgba(240,168,78,0.2))' }}>{search.trim() ? '\uD83D\uDD0D' : '\uD83D\uDCE6'}</div>
+                      <p style={{ fontSize: 15, fontWeight: 600, color: C.text2, marginBottom: 4 }}>
                         {search.trim() ? 'Sin resultados' : 'Sin productos en esta categoria'}
+                      </p>
+                      <p style={{ fontSize: 12, color: C.text3 }}>
+                        {search.trim() ? 'Prueba con otro termino de busqueda' : 'Selecciona otra categoria del menu lateral'}
                       </p>
                     </div>
                   ) : (
@@ -1138,22 +1151,23 @@ export default function TPVPage() {
                           onClick={() => addItem(item)}
                           style={{
                             position: 'relative',
-                            background: C.surface2,
-                            border: `1px solid ${C.border}`,
+                            background: `linear-gradient(145deg, ${C.surface2}, ${C.surface})`,
+                            border: '1px solid rgba(255,255,255,0.08)',
                             borderRadius: 12,
                             padding: '10px 8px',
                             cursor: 'pointer',
                             display: 'flex', flexDirection: 'column',
                             alignItems: 'center', justifyContent: 'center',
-                            gap: 4, minHeight: 85,
+                            gap: 4, minHeight: 100,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                           }}
                         >
                           {/* Price badge top-right */}
                           <span style={{
                             position: 'absolute', top: 6, right: 6,
                             background: C.amber, color: '#0C1018',
-                            fontSize: 11, fontWeight: 800,
-                            padding: '2px 7px', borderRadius: 6,
+                            fontSize: 12, fontWeight: 800,
+                            padding: '3px 9px', borderRadius: 6,
                           }}>
                             {item.price.toFixed(2)}{'\u20AC'}
                           </span>
@@ -1168,7 +1182,7 @@ export default function TPVPage() {
                           )}
                           {/* Name centered */}
                           <span style={{
-                            fontSize: 13, fontWeight: 600, color: C.text,
+                            fontSize: 14, fontWeight: 700, color: C.text,
                             textAlign: 'center', lineHeight: 1.3,
                             overflow: 'hidden',
                             display: '-webkit-box',
@@ -1238,7 +1252,7 @@ export default function TPVPage() {
             className="tpv-ticket-panel"
             style={{
               width: 280, minWidth: 280, maxWidth: 280,
-              background: C.surface,
+              background: `linear-gradient(180deg, ${C.surface}, rgba(12,16,24,0.95))`,
               borderLeft: `1px solid ${C.border}`,
               display: 'flex', flexDirection: 'column',
               flexShrink: 0,
@@ -1290,8 +1304,8 @@ export default function TPVPage() {
             )}
 
             {/* Order header */}
-            <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
-              <h2 style={{ fontSize: 15, fontWeight: 700, color: C.text, margin: 0 }}>
+            <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: C.text, margin: 0 }}>
                 {selectedTable
                   ? selectedDbTable?.zone_name
                     ? `Mesa ${selectedTable} \u00B7 ${selectedDbTable.zone_name}`
@@ -1314,9 +1328,9 @@ export default function TPVPage() {
             {/* Order items */}
             <div style={{ flex: 1, overflow: 'auto', padding: '4px 0' }}>
               {order.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px 14px', color: C.text3 }}>
-                  <div style={{ fontSize: 24, marginBottom: 6 }}>{'\uD83D\uDED2'}</div>
-                  <p style={{ fontSize: 12 }}>Toca un producto para agregarlo</p>
+                <div style={{ textAlign: 'center', padding: '40px 14px', color: C.text3 }}>
+                  <div style={{ fontSize: 48, marginBottom: 10, filter: 'drop-shadow(0 0 8px rgba(240,168,78,0.15))' }}>{'\uD83D\uDED2'}</div>
+                  <p style={{ fontSize: 13, fontWeight: 500 }}>Toca un producto para agregarlo</p>
                 </div>
               ) : (
                 order.map(item => (
@@ -1392,12 +1406,16 @@ export default function TPVPage() {
             {/* Total */}
             <div style={{
               borderTop: `2px solid ${C.border}`,
-              padding: '12px 14px 8px',
+              padding: '14px 16px 10px',
               display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
               flexShrink: 0,
+              background: total > 0 ? 'rgba(240,168,78,0.03)' : 'transparent',
             }}>
               <span style={{ fontSize: 14, fontWeight: 600, color: C.text2 }}>TOTAL</span>
-              <span style={{ fontSize: 32, fontWeight: 800, color: C.text, letterSpacing: '-0.02em' }}>
+              <span style={{
+                fontSize: 32, fontWeight: 800, color: C.text, letterSpacing: '-0.02em',
+                textShadow: total > 0 ? '0 0 20px rgba(240,168,78,0.15)' : 'none',
+              }}>
                 {total.toFixed(2)}{'\u20AC'}
               </span>
             </div>
@@ -1419,14 +1437,15 @@ export default function TPVPage() {
                 }}
                 disabled={order.length === 0}
                 style={{
-                  width: '100%', height: 48,
+                  width: '100%', height: 52,
                   background: order.length > 0 ? 'linear-gradient(135deg, #F0A84E, #E8923A)' : C.surface2,
-                  border: 'none', borderRadius: 12,
+                  border: 'none', borderRadius: 14,
                   color: order.length > 0 ? '#0C1018' : C.text3,
-                  fontSize: 16, fontWeight: 800,
+                  fontSize: 17, fontWeight: 800,
                   cursor: order.length > 0 ? 'pointer' : 'default',
-                  boxShadow: order.length > 0 ? '0 4px 20px rgba(240,168,78,0.3)' : 'none',
+                  boxShadow: order.length > 0 ? '0 4px 20px rgba(240,168,78,0.35)' : 'none',
                   fontFamily: 'inherit',
+                  letterSpacing: '0.5px',
                 }}
               >
                 COBRAR
