@@ -724,49 +724,88 @@ export default function TPVPage() {
     const time = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
     const subtotal = ticketTotal / 1.21
     const iva = ticketTotal - subtotal
+    const logoUrl = tenant?.logo_url
+    const addr = tenant?.address || ''
+    const phone = tenant?.phone || ''
+    const ticketNum = Date.now().toString(36).toUpperCase().slice(-6)
 
     return `<!DOCTYPE html><html><head><style>
-      body { font-family: 'Courier New', monospace; width: 280px; margin: 0 auto; padding: 10px; font-size: 12px; }
-      h2 { text-align: center; margin: 5px 0; font-size: 16px; }
-      .line { border-top: 1px dashed #000; margin: 8px 0; }
-      .item { display: flex; justify-content: space-between; margin: 3px 0; }
-      .total { font-size: 16px; font-weight: bold; }
-      .center { text-align: center; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; width: 300px; margin: 0 auto; padding: 16px; font-size: 12px; color: #222; }
+      .header { text-align: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 2px solid #222; }
+      .logo { max-width: 120px; max-height: 60px; margin: 0 auto 8px; display: block; }
+      .biz-name { font-size: 20px; font-weight: 800; letter-spacing: 1px; margin-bottom: 2px; }
+      .biz-info { font-size: 10px; color: #666; line-height: 1.5; }
+      .meta { display: flex; justify-content: space-between; font-size: 11px; color: #555; padding: 8px 0; border-bottom: 1px dashed #ccc; margin-bottom: 8px; }
+      .items { margin-bottom: 8px; }
+      .item { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; border-bottom: 1px dotted #e0e0e0; }
+      .item-name { flex: 1; }
+      .item-qty { width: 30px; text-align: center; color: #888; }
+      .item-price { width: 60px; text-align: right; font-weight: 600; }
+      .totals { border-top: 2px solid #222; padding-top: 8px; margin-top: 4px; }
+      .total-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 12px; }
+      .total-final { font-size: 18px; font-weight: 800; padding: 6px 0; border-top: 1px solid #222; margin-top: 4px; }
+      .footer { text-align: center; margin-top: 16px; padding-top: 12px; border-top: 1px dashed #ccc; }
+      .footer-msg { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+      .footer-sub { font-size: 9px; color: #999; }
       @media print { body { width: 80mm; } }
     </style></head><body>
-      <h2>${businessName}</h2>
-      <p class="center">${date} ${time}</p>
-      ${table ? `<p class="center">Mesa: ${table}</p>` : '<p class="center">Barra</p>'}
-      <div class="line"></div>
-      ${ticketItems.map(i => `<div class="item"><span>${i.quantity}x ${i.name}</span><span>${(i.price * i.quantity).toFixed(2)}\u20AC</span></div>`).join('')}
-      <div class="line"></div>
-      <div class="item"><span>Subtotal</span><span>${subtotal.toFixed(2)}\u20AC</span></div>
-      <div class="item"><span>IVA 21%</span><span>${iva.toFixed(2)}\u20AC</span></div>
-      <div class="line"></div>
-      <div class="item total"><span>TOTAL</span><span>${ticketTotal.toFixed(2)}\u20AC</span></div>
-      <div class="line"></div>
-      <p class="center" style="margin-top:12px">Gracias por su visita</p>
+      <div class="header">
+        ${logoUrl ? `<img src="${logoUrl}" class="logo" alt="logo"/>` : ''}
+        <div class="biz-name">${businessName}</div>
+        ${addr ? `<div class="biz-info">${addr}</div>` : ''}
+        ${phone ? `<div class="biz-info">Tel: ${phone}</div>` : ''}
+      </div>
+      <div class="meta">
+        <span>${date} ${time}</span>
+        <span>${table ? 'Mesa ' + table : 'Barra'}</span>
+        <span>#${ticketNum}</span>
+      </div>
+      <div class="items">
+        ${ticketItems.map(i => `<div class="item"><span class="item-qty">${i.quantity}x</span><span class="item-name">${i.name}</span><span class="item-price">${(i.price * i.quantity).toFixed(2)}\u20AC</span></div>`).join('')}
+      </div>
+      <div class="totals">
+        <div class="total-row"><span>Subtotal</span><span>${subtotal.toFixed(2)}\u20AC</span></div>
+        <div class="total-row"><span>IVA 21%</span><span>${iva.toFixed(2)}\u20AC</span></div>
+        <div class="total-row total-final"><span>TOTAL</span><span>${ticketTotal.toFixed(2)}\u20AC</span></div>
+      </div>
+      <div class="footer">
+        <div class="footer-msg">\u00A1Gracias por su visita!</div>
+        <div class="footer-sub">Powered by Reservo.AI</div>
+      </div>
     </body></html>`
   }
 
   function generateKitchenTicket(foodItems: TPVItem[], table: string | null, notes: string): string {
-    const time = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    const now = new Date()
+    const time = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    const date = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })
 
     return `<!DOCTYPE html><html><head><style>
-      body { font-family: 'Courier New', monospace; width: 280px; margin: 0 auto; padding: 10px; font-size: 14px; }
-      h1 { text-align: center; font-size: 24px; margin: 5px 0; letter-spacing: 3px; }
-      .line { border-top: 2px dashed #000; margin: 8px 0; }
-      .item { font-size: 16px; margin: 6px 0; font-weight: bold; }
-      .center { text-align: center; }
-      .notes { font-style: italic; margin-top: 8px; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; width: 300px; margin: 0 auto; padding: 16px; font-size: 14px; }
+      .header { text-align: center; padding: 12px; margin-bottom: 12px; background: #111; color: #fff; border-radius: 8px; }
+      .header h1 { font-size: 22px; letter-spacing: 4px; font-weight: 900; }
+      .header .loc { font-size: 16px; font-weight: 700; margin-top: 6px; }
+      .header .time { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+      .items { margin: 12px 0; }
+      .item { font-size: 16px; font-weight: 700; padding: 8px 0; border-bottom: 1px dashed #ccc; display: flex; gap: 8px; }
+      .item-qty { background: #222; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 14px; }
+      .notes { background: #fff3cd; padding: 10px; border-radius: 6px; margin-top: 8px; font-size: 13px; border-left: 4px solid #ffc107; }
+      .notes-label { font-weight: 700; font-size: 11px; text-transform: uppercase; color: #856404; margin-bottom: 4px; }
+      .footer { text-align: center; margin-top: 12px; font-size: 10px; color: #999; }
       @media print { body { width: 80mm; } }
     </style></head><body>
-      <h1>COCINA</h1>
-      <p class="center" style="font-size:18px;font-weight:bold">${table ? 'MESA ' + table : 'BARRA'} \u2014 ${time}</p>
-      <div class="line"></div>
-      ${foodItems.map(i => `<div class="item">${i.quantity}x ${i.name}</div>`).join('')}
-      ${notes ? `<div class="line"></div><div class="notes">Notas: ${notes}</div>` : ''}
-      <div class="line"></div>
+      <div class="header">
+        <h1>\uD83C\uDF73 COCINA</h1>
+        <div class="loc">${table ? 'MESA ' + table : 'BARRA'}</div>
+        <div class="time">${date} \u2014 ${time}</div>
+      </div>
+      <div class="items">
+        ${foodItems.map(i => `<div class="item"><span class="item-qty">${i.quantity}x</span><span>${i.name}</span></div>`).join('')}
+      </div>
+      ${notes ? `<div class="notes"><div class="notes-label">\u26A0 Notas</div>${notes}</div>` : ''}
+      <div class="footer">${now.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' })} ${time}</div>
     </body></html>`
   }
 
