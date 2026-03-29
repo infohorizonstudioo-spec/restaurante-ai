@@ -212,11 +212,12 @@ export default function TPVPage() {
     })
     // Check combo suggestions
     if (intel?.combos) {
+      const nameLow = item.name.toLowerCase()
       const combo = intel.combos.find((c: any) =>
-        c.items?.some((ci: string) => ci.toLowerCase() === item.name.toLowerCase())
+        c.itemA?.toLowerCase() === nameLow || c.itemB?.toLowerCase() === nameLow
       )
       if (combo) {
-        const other = combo.items?.find((ci: string) => ci.toLowerCase() !== item.name.toLowerCase())
+        const other = combo.itemA?.toLowerCase() === nameLow ? combo.itemB : combo.itemA
         if (other) {
           const matchItem = menuItems.find(m => m.name.toLowerCase() === other.toLowerCase())
           if (matchItem) {
@@ -393,7 +394,7 @@ export default function TPVPage() {
               const alert = intel.alerts[0]
               const bgMap: Record<string, string> = { critical: C.red, warning: C.amber, info: C.teal }
               const iconMap: Record<string, string> = { critical: '🚨', warning: '⚠️', info: 'ℹ️' }
-              const level = alert.level || 'info'
+              const level = alert.priority || 'info'
               return (
                 <div style={{
                   padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8,

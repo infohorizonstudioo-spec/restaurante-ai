@@ -315,22 +315,22 @@ export default function CajaPage() {
                       Prediccion del dia
                     </div>
                     <div style={{ fontSize: 28, fontWeight: 800, color: C.violet, lineHeight: 1.1, marginBottom: 6 }}>
-                      {formatCurrency(prediction.estimated_total || 0)} EUR
+                      {formatCurrency(prediction.estimatedRevenue || 0)} EUR
                     </div>
                     <div style={{ fontSize: 12, color: C.text2, marginBottom: 2 }}>
                       Estimacion al cierre
                     </div>
-                    {prediction.vs_average != null && (
+                    {prediction.pacePercent != null && (
                       <div style={{
                         fontSize: 13, fontWeight: 600, marginTop: 8,
-                        color: prediction.vs_average >= 0 ? C.green : C.red,
+                        color: prediction.pacePercent >= 0 ? C.green : C.red,
                       }}>
-                        {prediction.vs_average >= 0 ? '+' : ''}{prediction.vs_average}% {prediction.vs_average >= 0 ? 'por encima' : 'por debajo'} de lo normal
+                        {prediction.pacePercent >= 0 ? '+' : ''}{Math.round(prediction.pacePercent)}% {prediction.pacePercent >= 0 ? 'por encima' : 'por debajo'} de lo normal
                       </div>
                     )}
-                    {prediction.comparison && (
+                    {prediction.comparedTo && (
                       <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>
-                        Comparado con: {prediction.comparison}
+                        Comparado con: {prediction.comparedTo}
                       </div>
                     )}
                   </div>
@@ -392,12 +392,12 @@ export default function CajaPage() {
                 <div style={{ fontSize: 12, color: C.text2, marginBottom: 6, fontWeight: 600 }}>Ventas del dia</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                   <div style={{ fontSize: 28, fontWeight: 800, color: C.amber, lineHeight: 1.1 }}>{formatCurrency(daySummary.total_sales)} EUR</div>
-                  {prediction?.vs_average != null && (
+                  {prediction?.pacePercent != null && (
                     <span style={{
                       fontSize: 12, fontWeight: 600,
-                      color: prediction.vs_average >= 0 ? C.green : C.red,
+                      color: prediction.pacePercent >= 0 ? C.green : C.red,
                     }}>
-                      {prediction.vs_average >= 0 ? '+' : ''}{prediction.vs_average}% vs media
+                      {prediction.pacePercent >= 0 ? '+' : ''}{Math.round(prediction.pacePercent)}% vs media
                     </span>
                   )}
                 </div>
