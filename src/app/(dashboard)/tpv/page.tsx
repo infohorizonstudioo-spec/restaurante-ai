@@ -1027,7 +1027,7 @@ export default function TPVPage() {
                 <span style={{ fontSize: 17 }}>{'\uD83D\uDD0D'}</span> Buscar
               </button>
               <button
-                onClick={() => setView(view === 'tables' ? 'products' : 'tables')}
+                onClick={() => window.location.href = '/mesas'}
                 style={{
                   width: '100%', padding: '13px 14px',
                   background: view === 'tables' ? C.surface2 : 'transparent',
@@ -1078,7 +1078,7 @@ export default function TPVPage() {
               style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: showSearch ? C.surface2 : 'transparent', color: showSearch ? C.amber : C.text3, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
               {'\uD83D\uDD0D'} Buscar
             </button>
-            <button onClick={() => setView(view === 'tables' ? 'products' : 'tables')}
+            <button onClick={() => window.location.href = '/mesas'}
               style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: view === 'tables' ? C.surface2 : 'transparent', color: view === 'tables' ? C.amber : C.text3, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
               {'\uD83E\uDE91'} Mesas
             </button>
