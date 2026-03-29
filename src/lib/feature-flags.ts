@@ -45,7 +45,6 @@ export type Feature =
   | 'inventario_ia'         // Inteligencia de inventario (predicción)
   | 'informes_pdf'          // Informes PDF (registro jornada laboral)
   | 'multi_user'            // Multi-usuario
-  | 'api_access'            // Acceso API
 
 export type PlanType = 'trial' | 'free' | 'starter' | 'pro' | 'business' | 'enterprise'
 
@@ -68,7 +67,7 @@ const PRO_FEATURES: Feature[] = [
 const BUSINESS_FEATURES: Feature[] = [
   ...PRO_FEATURES,
   'multichannel_email', 'proveedores', 'auto_pedidos_prov', 'inventario_ia',
-  'informes_pdf', 'multi_user', 'api_access',
+  'informes_pdf', 'multi_user',
 ]
 
 const PLAN_FEATURES: Record<PlanType, Feature[]> = {
@@ -133,7 +132,6 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   inventario_ia: 'Inteligencia de inventario',
   informes_pdf: 'Informes PDF',
   multi_user: 'Multi-usuario',
-  api_access: 'Acceso API',
 }
 
 /** Minimum plan required for a feature */

@@ -64,7 +64,6 @@ const PLANS = [
       'Inteligencia de inventario y predicción',
       'Informes PDF (registro jornada laboral)',
       'Multi-usuario',
-      'Acceso API',
       'Soporte dedicado con respuesta rápida',
     ],
   },
