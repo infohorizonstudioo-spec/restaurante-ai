@@ -73,7 +73,7 @@ export default function FacturacionPage() {
   return (
     <div style={{background:C.bg, minHeight:'100vh', fontFamily:'var(--rz-font)'}}>
       {/* Header */}
-      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom:`1px solid ${C.border}`, padding:'14px 28px', position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+      <div style={{background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)', borderBottom:`1px solid ${C.border}`, padding:'14px 28px', position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', justifyContent:'space-between'}}>
         <div>
           <h1 style={{fontSize:16, fontWeight:700, color:C.text, letterSpacing:'-0.02em'}}>{t.nav.billing}</h1>
           <p style={{fontSize:11, color:C.text3, marginTop:2}}>{tx('Control en tiempo real de tu plan y consumo')}</p>
@@ -99,7 +99,7 @@ export default function FacturacionPage() {
               <p style={{fontSize:12, color:C.text3}}>{pi.calls} {tx('llamadas incluidas')}{!isTrial?` · ${pi.rate}€ ${tx('por llamada extra')}`:''}</p>
               {renewDate&&!isTrial&&<p style={{fontSize:12, color:C.text3, marginTop:4}}>{tx('Siguiente factura:')} {renewDate}</p>}
             </div>
-            {isTrial&&<Link href='/precios' style={{padding:'10px 20px', fontSize:13, fontWeight:700, color:'#0C1018', background:C.amber, borderRadius:10, textDecoration:'none', whiteSpace:'nowrap', flexShrink:0}}>{tx('Activar plan →')}</Link>}
+            {isTrial&&<Link href='/precios' style={{padding:'10px 20px', fontSize:13, fontWeight:700, color:C.bg, background:C.amber, borderRadius:10, textDecoration:'none', whiteSpace:'nowrap', flexShrink:0}}>{tx('Activar plan →')}</Link>}
           </div>
         </div>
 
@@ -117,7 +117,7 @@ export default function FacturacionPage() {
           </div>
 
           {/* Barra */}
-          <div style={{height:6, background:'rgba(255,255,255,0.05)', borderRadius:3, overflow:'hidden', marginBottom:8}}>
+          <div style={{height:6, background:C.border, borderRadius:3, overflow:'hidden', marginBottom:8}}>
             <div style={{height:'100%', width:usedPct+'%', background:usedPct>=100?C.red:usedPct>=80?C.yellow:pi.color, borderRadius:3, transition:'width 0.6s ease', transformOrigin:'left'}}/>
           </div>
           <div style={{display:'flex', justifyContent:'space-between'}}>
@@ -179,7 +179,7 @@ export default function FacturacionPage() {
                     <p style={{fontSize:12, fontWeight:700, color:pp.color, marginBottom:6, textTransform:'uppercase', letterSpacing:'0.06em'}}>{pp.label}</p>
                     <p style={{fontFamily:'var(--rz-mono)', fontSize:24, fontWeight:700, color:C.text, marginBottom:2}}>{pp.price}€<span style={{fontSize:12, color:C.text3}}>/mes</span></p>
                     <p style={{fontSize:11, color:C.text3, marginBottom:14}}>{pp.calls} {tx('llamadas incluidas')}</p>
-                    <button onClick={()=>handleUpgrade(p)} disabled={upgrading} style={{width:'100%', padding:'9px', fontSize:12, fontWeight:700, color:'#0C1018', background:pp.color, border:'none', borderRadius:9, cursor:'pointer', opacity:upgrading?0.6:1, transition:'all 0.15s'}}>
+                    <button onClick={()=>handleUpgrade(p)} disabled={upgrading} style={{width:'100%', padding:'9px', fontSize:12, fontWeight:700, color:C.bg, background:pp.color, border:'none', borderRadius:9, cursor:'pointer', opacity:upgrading?0.6:1, transition:'all 0.15s'}}>
                       {upgrading?tx('Redirigiendo…'):tx('Activar')+' '+pp.label}
                     </button>
                   </div>

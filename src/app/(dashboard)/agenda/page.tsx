@@ -65,7 +65,7 @@ function ResTooltip({r, tx}: {r:any, anchorRef?: React.RefObject<HTMLDivElement>
   return (
     <div style={{
       position:'fixed', zIndex:9999,
-      background:'#161D2A', border:'1px solid rgba(255,255,255,0.12)',
+      background:C.surface, border:'1px solid rgba(255,255,255,0.12)',
       borderRadius:14, padding:'16px 18px', width:230,
       boxShadow:'0 8px 32px rgba(0,0,0,0.5)',
       pointerEvents:'none',
@@ -93,7 +93,7 @@ function Row({icon,text,muted}:{icon:string,text:string,muted?:boolean}) {
   return (
     <div style={{display:'flex',gap:7,alignItems:'flex-start'}}>
       <span style={{fontSize:11,flexShrink:0,marginTop:1}}>{icon}</span>
-      <span style={{fontSize:12,color:muted?C.muted:'#94a3b8',lineHeight:1.4,wordBreak:'break-word'}}>{text}</span>
+      <span style={{fontSize:12,color:muted?C.muted:C.text2,lineHeight:1.4,wordBreak:'break-word'}}>{text}</span>
     </div>
   )
 }

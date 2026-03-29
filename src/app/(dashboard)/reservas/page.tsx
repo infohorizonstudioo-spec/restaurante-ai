@@ -94,8 +94,8 @@ export default function ReservasPage() {
 
   if (error) return (
     <div style={{padding:40, textAlign:'center'}}>
-      <p style={{fontSize:16, color:'#F87171'}}>{error}</p>
-      <button onClick={() => window.location.reload()} style={{marginTop:16, padding:'8px 16px', background:'#F0A84E', border:'none', borderRadius:8, cursor:'pointer', color:'#0C1018', fontWeight:600}}>Reintentar</button>
+      <p style={{fontSize:16, color:C.red}}>{error}</p>
+      <button onClick={() => window.location.reload()} style={{marginTop:16, padding:'8px 16px', background:C.amber, border:'none', borderRadius:8, cursor:'pointer', color:C.bg, fontWeight:600}}>Reintentar</button>
     </div>
   )
   if (loading) return <PageSkeleton variant="list"/>
@@ -176,7 +176,7 @@ export default function ReservasPage() {
 
   return (
     <div style={{background:C.bg,minHeight:'100vh'}}>
-      <div style={{background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,position:'sticky',top:0,zIndex:20}}>
+      <div style={{background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,position:'sticky',top:0,zIndex:20}}>
         <div>
           <h1 style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em'}}>{L?.pageTitle || 'Reservas'}</h1>
           <p style={{fontSize:11,color:C.text3,marginTop:2}}>{dayRes.length} {tx('para el')} {new Date(selected+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})}</p>
@@ -188,7 +188,7 @@ export default function ReservasPage() {
           {search&&<span style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',fontSize:10,color:C.text3,fontWeight:600}}>{filtered.length}</span>}
         </div>
           <button onClick={async()=>{const s=await supabase.auth.getSession();if(s.data.session)window.open('/api/export?type=reservations','_blank')}} style={{padding:'6px 12px',fontSize:11,fontWeight:600,borderRadius:7,border:`1px solid ${C.border}`,background:'transparent',color:C.text3,cursor:'pointer',fontFamily:'inherit'}}>📥 {t.common.export}</button>
-          <a href="/reservas/nueva" style={{padding:'7px 14px',fontSize:12,fontWeight:700,background:C.amber,color:'#0C1018',borderRadius:8,textDecoration:'none'}}>+ {t.reservations.newReservation}</a>
+          <a href="/reservas/nueva" style={{padding:'7px 14px',fontSize:12,fontWeight:700,background:C.amber,color:C.bg,borderRadius:8,textDecoration:'none'}}>+ {t.reservations.newReservation}</a>
           <NotifBell/>
         </div>
       </div>
@@ -204,7 +204,7 @@ export default function ReservasPage() {
             <button key={iso} onClick={()=>setSelected(iso)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',padding:'10px 4px',background:'none',border:'none',cursor:'pointer',borderBottom:isSel?`2px solid ${C.amber}`:`2px solid transparent`,transition:'all 0.12s'}}>
               <span style={{fontSize:10,color:isToday?C.amber:C.text3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>{isToday?'HOY':DAYS[d.getDay()]}</span>
               <span style={{fontSize:16,fontWeight:isSel?700:isToday?700:500,color:isSel?C.amber:isToday?C.amber:C.text,marginTop:1}}>{d.getDate()}</span>
-              {count>0&&<span style={{width:18,height:18,borderRadius:'50%',background:isSel?C.amber:`rgba(255,255,255,0.08)`,color:isSel?'#0C1018':C.text2,fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',marginTop:2}}>{count}</span>}
+              {count>0&&<span style={{width:18,height:18,borderRadius:'50%',background:isSel?C.amber:`rgba(255,255,255,0.08)`,color:isSel?C.bg:C.text2,fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',marginTop:2}}>{count}</span>}
             </button>
           )
         })}
@@ -220,7 +220,7 @@ export default function ReservasPage() {
             </div>
             <p style={{fontSize:15,fontWeight:700,color:C.text,marginBottom:8}}>{L?.emptyReservas||'Sin reservas este día'}</p>
             <p style={{fontSize:13,color:C.text2,lineHeight:1.6,maxWidth:320,margin:'0 auto 20px'}}>{tx('No hay')} {L?.reservas?.toLowerCase()||tx('reservas')} {tx('para el día seleccionado. Las nuevas entrarán automáticamente.')}</p>
-            <Link href="/reservas/nueva" style={{padding:'9px 20px',fontSize:13,fontWeight:600,color:'#0C1018',background:'linear-gradient(135deg,#F0A84E,#E8923A)',borderRadius:9,textDecoration:'none',display:'inline-block'}}>+ Crear {L?.reserva?.toLowerCase()||'reserva'}</Link>
+            <Link href="/reservas/nueva" style={{padding:'9px 20px',fontSize:13,fontWeight:600,color:C.bg,background:'linear-gradient(135deg,#F0A84E,#E8923A)',borderRadius:9,textDecoration:'none',display:'inline-block'}}>+ Crear {L?.reserva?.toLowerCase()||'reserva'}</Link>
           </div>
         ) : filtered.map((r,i)=>{
           const ss = RESERVATION_STATUS[r.status]||RESERVATION_STATUS.pendiente
