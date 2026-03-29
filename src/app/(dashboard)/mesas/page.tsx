@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
@@ -436,7 +436,11 @@ function ZoneRow({zone,color,tableCount,onRename,onDelete,unitP,tx}:{
 // ═════════════════════════════════════════════════════════════════════════════
 // MAIN PAGE — SPACE DESIGNER
 // ═════════════════════════════════════════════════════════════════════════════
-export default function MesasPage() {
+export default function MesasPageWrapper() {
+  return <Suspense fallback={<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',color:'#8895A7'}}>Cargando...</div>}><MesasPage/></Suspense>
+}
+
+function MesasPage() {
   const searchParams = useSearchParams()
   const isTPVMode = searchParams.get('mode') === 'tpv'
   const { tenant, template, tx } = useTenant()
