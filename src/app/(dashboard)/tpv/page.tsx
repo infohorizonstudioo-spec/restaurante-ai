@@ -836,8 +836,9 @@ export default function TPVPage() {
   // Trending item IDs for badge
   const trendingNames = useMemo(() => {
     if (!intel?.trending) return new Set<string>()
-    const arr = intel.trending as { name?: string }[]
-    return new Set(arr.map((t) => (t.name || String(t)).toLowerCase()))
+    const td = intel.trending as { trendingUp?: { name?: string }[] }
+    const arr = Array.isArray(td.trendingUp) ? td.trendingUp : (Array.isArray(td) ? td : [])
+    return new Set(arr.map((t: any) => (t.name || String(t)).toLowerCase()))
   }, [intel?.trending])
 
   // Suppress unused var warning
@@ -860,7 +861,8 @@ export default function TPVPage() {
   }
 
   const intelAlerts = (intel?.alerts || []) as { priority?: string; message?: string }[]
-  const intelTrending = (intel?.trending || []) as { name?: string }[]
+  const rawTrending = intel?.trending as { trendingUp?: { name?: string }[] } | undefined
+  const intelTrending = (Array.isArray(rawTrending?.trendingUp) ? rawTrending.trendingUp : (Array.isArray(rawTrending) ? rawTrending : [])) as { name?: string }[]
 
   return (
     <UpgradeGate feature="pedidos">
