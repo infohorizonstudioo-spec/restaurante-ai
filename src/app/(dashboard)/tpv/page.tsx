@@ -337,6 +337,15 @@ export default function TPVPage() {
     return () => { document.head.removeChild(style) }
   }, [])
 
+  // Read table selected from /mesas TPV mode
+  useEffect(() => {
+    const saved = sessionStorage.getItem('tpv_selected_table')
+    if (saved) {
+      setSelectedTable(saved)
+      sessionStorage.removeItem('tpv_selected_table')
+    }
+  }, [])
+
   // Load tenant + menu items
   useEffect(() => {
     (async () => {
@@ -1027,7 +1036,7 @@ export default function TPVPage() {
                 <span style={{ fontSize: 17 }}>{'\uD83D\uDD0D'}</span> Buscar
               </button>
               <button
-                onClick={() => window.location.href = '/mesas'}
+                onClick={() => window.location.href = '/mesas?mode=tpv'}
                 style={{
                   width: '100%', padding: '13px 14px',
                   background: view === 'tables' ? C.surface2 : 'transparent',
@@ -1078,7 +1087,7 @@ export default function TPVPage() {
               style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: showSearch ? C.surface2 : 'transparent', color: showSearch ? C.amber : C.text3, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
               {'\uD83D\uDD0D'} Buscar
             </button>
-            <button onClick={() => window.location.href = '/mesas'}
+            <button onClick={() => window.location.href = '/mesas?mode=tpv'}
               style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: view === 'tables' ? C.surface2 : 'transparent', color: view === 'tables' ? C.amber : C.text3, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
               {'\uD83E\uDE91'} Mesas
             </button>
@@ -1189,7 +1198,7 @@ export default function TPVPage() {
                   )
                 })}
                 {/* Edit link */}
-                <button onClick={() => window.location.href = '/mesas'} style={{
+                <button onClick={() => window.location.href = '/mesas?mode=tpv'} style={{
                   padding: '6px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent',
                   color: C.text3, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                 }}>
