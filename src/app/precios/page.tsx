@@ -3,37 +3,30 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-const C = {
-  bg: '#0C1018', card: '#131920', card2: '#161D2A',
-  border: 'rgba(255,255,255,0.08)', borderMd: 'rgba(255,255,255,0.13)',
-  text: '#E8EEF6', sub: '#8895A7', muted: '#49566A',
-  amber: '#F0A84E', green: '#34D399', teal: '#2DD4BF', violet: '#A78BFA',
-  amberDim: 'rgba(240,168,78,0.12)', greenDim: 'rgba(52,211,153,0.10)',
-  violetDim: 'rgba(167,139,250,0.12)',
-}
+import { C } from '@/lib/colors'
 
 const PLANS = [
   {
-    id: 'starter', label: 'Starter', price: '99', calls: 50, rate: '0.90',
-    accent: C.teal, dim: 'rgba(45,212,191,0.10)', popular: false,
+    id: 'starter', label: 'Starter', price: '79', calls: 50, rate: '0.90',
+    accent: C.teal, dim: C.tealDim, popular: false,
     tagline: 'Para empezar a automatizar tu negocio',
     features: [
       '50 llamadas/mes incluidas',
       'Recepcionista IA 24/7 con voz natural',
-      'Gestión automática de reservas y citas',
-      'Verificación de disponibilidad en tiempo real',
-      'Panel de control con actividad en vivo',
-      'Base de clientes con historial completo',
-      'Gestión de espacios y capacidad',
-      'Control de turnos y franjas horarias',
-      'Reconocimiento automático de clientes habituales',
+      'Reservas + pedidos automaticos',
+      'Panel con actividad en tiempo real',
+      'Base de clientes con memoria',
+      'Control de turnos y equipo',
+      'SMS de confirmacion y recordatorios',
       'Adaptado a tu tipo de negocio',
+      '3 temas visuales',
+      'Asistente IA en el panel',
       'Notificaciones instantáneas',
       'Soporte por email',
     ],
   },
   {
-    id: 'pro', label: 'Pro', price: '299', calls: 200, rate: '0.70',
+    id: 'pro', label: 'Pro', price: '199', calls: 250, rate: '0.70',
     accent: C.amber, dim: C.amberDim, popular: true,
     tagline: 'Todo lo que necesitas para crecer',
     features: [
@@ -51,7 +44,7 @@ const PLANS = [
     ],
   },
   {
-    id: 'business', label: 'Business', price: '499', calls: 600, rate: '0.50',
+    id: 'business', label: 'Business', price: '399', calls: 750, rate: '0.50',
     accent: C.violet, dim: C.violetDim, popular: false,
     tagline: 'Para negocios con alta demanda',
     features: [
