@@ -111,30 +111,35 @@ function CallSim() {
   )
 }
 
-/* ─── DEMO WIDGET — ElevenLabs embed ─── */
+/* ─── DEMO WIDGET — Llamada real con Retell ─── */
 function DemoWidget() {
-  const widgetRef = useRef<HTMLDivElement>(null)
-  const [loaded, setLoaded] = useState(false)
-  useEffect(() => {
-    if (loaded) return
-    const script = document.createElement('script')
-    script.src = 'https://elevenlabs.io/convai-widget/index.js'
-    script.async = true
-    script.onload = () => setLoaded(true)
-    document.body.appendChild(script)
-    return () => { try { document.body.removeChild(script) } catch {} }
-  }, [loaded])
+  const phone = '+12603083534'
   return (
-    <div style={{maxWidth:480,margin:'0 auto 48px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(240,168,78,0.25)',borderRadius:20,padding:24,textAlign:'center'}}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:16}}>
-        <div style={{width:10,height:10,borderRadius:'50%',background:'#34D399',animation:'pulse 2s ease-in-out infinite'}}/>
-        <span style={{fontSize:14,fontWeight:600,color:'#E8EEF6'}}>Habla con tu futura recepcionista</span>
+    <div style={{maxWidth:520,margin:'0 auto 48px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(240,168,78,0.25)',borderRadius:20,padding:'36px 32px',textAlign:'center'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:20}}>
+        <div style={{position:'relative'}}>
+          <div style={{width:14,height:14,borderRadius:'50%',background:'#34D399',animation:'pulse 2s ease-in-out infinite'}}/>
+          <div style={{position:'absolute',inset:-4,borderRadius:'50%',border:'1px solid rgba(52,211,153,0.4)',animation:'ring 2s ease-out infinite'}}/>
+        </div>
+        <span style={{fontSize:15,fontWeight:700,color:'#E8EEF6'}}>Recepcionista en línea ahora</span>
       </div>
-      <p style={{fontSize:13,color:'rgba(255,255,255,0.45)',marginBottom:20}}>Pulsa el botón y habla como si llamaras a un restaurante. Pide una reserva, pregunta por la carta, haz un pedido.</p>
-      <div ref={widgetRef}>
-        {loaded && <div dangerouslySetInnerHTML={{__html:`<elevenlabs-convai agent-id="${process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID || ''}"></elevenlabs-convai>`}}/>}
-      </div>
-      <p style={{fontSize:11,color:'rgba(255,255,255,0.2)',marginTop:12}}>Conversación real con IA · Sin registro · Gratis</p>
+      <p style={{fontSize:14,color:'rgba(255,255,255,0.55)',marginBottom:28,lineHeight:1.7}}>
+        Llama al número y habla como si llamaras a un restaurante.<br/>
+        Pide una reserva, pregunta por la carta o haz un pedido. Es real.
+      </p>
+      <a href={`tel:${phone}`} style={{
+        display:'inline-flex',alignItems:'center',gap:12,
+        padding:'18px 40px',fontSize:18,fontWeight:800,
+        background:'linear-gradient(135deg,#F0A84E,#E8943A)',color:'#0A0D14',
+        borderRadius:14,textDecoration:'none',
+        boxShadow:'0 8px 32px rgba(240,168,78,0.4)',
+        transition:'all 0.2s',cursor:'pointer',letterSpacing:'-0.01em',
+      }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#0A0D14"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+        Llamar ahora a la demo
+      </a>
+      <p style={{fontSize:13,color:'rgba(255,255,255,0.35)',marginTop:16,fontFamily:'monospace',letterSpacing:'0.05em'}}>{phone.replace('+1','+1 ').replace(/(\d{3})(\d{3})(\d{4})/,'$1 $2 $3')}</p>
+      <p style={{fontSize:11,color:'rgba(255,255,255,0.18)',marginTop:8}}>Llamada real con IA · Sin registro · Gratis · Responde 24/7</p>
     </div>
   )
 }
@@ -513,6 +518,50 @@ export default function HomePage() {
                 <p style={{fontSize:13.5,color:C.muted,lineHeight:1.65}}>{detail}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════
+          5.5. TPV INTELIGENTE — El dolor real
+         ══════════════════════════════════════════ */}
+      <section style={{padding:'90px clamp(16px,5vw,64px)'}}>
+        <div style={{maxWidth:1000,margin:'0 auto'}}>
+          <div style={{textAlign:'center',marginBottom:48}}>
+            <p style={{fontSize:12,fontWeight:600,color:C.red,letterSpacing:'0.08em',marginBottom:12}}>OLVÍDATE DE LA TPV</p>
+            <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
+              La TPV es un problema,<br/><span style={{color:C.amber}}>no una solución.</span>
+            </h2>
+            <p style={{fontSize:16,color:C.muted,maxWidth:560,margin:'0 auto'}}>
+              Configurarla es un dolor de cabeza. Usarla es peor. Pierdes productos, no encuentras nada, tardas en cobrar. Y encima pagas por ella.
+            </p>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24}} className="prob-grid">
+            <div style={{background:'rgba(248,113,113,0.04)',border:'1px solid rgba(248,113,113,0.12)',borderRadius:16,padding:'28px 24px'}}>
+              <p style={{fontSize:14,fontWeight:700,color:C.red,marginBottom:16}}>Con una TPV tradicional:</p>
+              <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                {['Tardas días en configurarla','No sabes dónde están los productos','Cobrar es lento y confuso','La carta cambia y hay que rehacer todo','No aprende nada — siempre igual','Pagas licencia + hardware + mantenimiento'].map(t=>(
+                  <div key={t} style={{display:'flex',alignItems:'center',gap:10}}>
+                    <span style={{color:C.red,fontSize:14,flexShrink:0}}>✗</span>
+                    <span style={{fontSize:13.5,color:'rgba(255,255,255,0.5)'}}>{t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{background:'rgba(52,211,153,0.04)',border:'1px solid rgba(52,211,153,0.12)',borderRadius:16,padding:'28px 24px'}}>
+              <p style={{fontSize:14,fontWeight:700,color:C.green,marginBottom:16}}>Con Reservo:</p>
+              <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                {['Tu carta se crea en minutos','Los productos se organizan solos','Los pedidos entran en tiempo real','Cambias la carta al instante','Aprende lo que vendes y te sugiere mejoras','Todo incluido en tu plan — sin hardware'].map(t=>(
+                  <div key={t} style={{display:'flex',alignItems:'center',gap:10}}>
+                    <span style={{color:C.green,fontSize:14,flexShrink:0}}>✓</span>
+                    <span style={{fontSize:13.5,color:'rgba(255,255,255,0.7)'}}>{t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div style={{textAlign:'center',marginTop:36}}>
+            <p style={{fontSize:18,fontWeight:700,color:C.text}}>No necesitas configurar nada. <span style={{color:C.amber}}>Empieza a usarla.</span></p>
           </div>
         </div>
       </section>
@@ -907,7 +956,7 @@ export default function HomePage() {
             <div>
               <p style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',letterSpacing:'0.08em',marginBottom:14}}>PRODUCTO</p>
               <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                {[{l:'Funcionalidades',h:'#demo'},{l:'Precios',h:'/precios'},{l:'Demo en vivo',h:'#demo'},{l:'Casos de uso',h:'#'}].map(({l,h})=>(
+                {[{l:'Cómo funciona',h:'#solucion'},{l:'Precios',h:'/precios'},{l:'Demo en vivo',h:'#demo'},{l:'Registrarse',h:'/registro'}].map(({l,h})=>(
                   <Link key={l} href={h} style={{fontSize:13,color:'rgba(255,255,255,0.4)',transition:'color 0.15s'}} onMouseEnter={e=>(e.currentTarget.style.color=C.text)} onMouseLeave={e=>(e.currentTarget.style.color='rgba(255,255,255,0.4)')}>{l}</Link>
                 ))}
               </div>
@@ -916,7 +965,7 @@ export default function HomePage() {
             <div>
               <p style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',letterSpacing:'0.08em',marginBottom:14}}>EMPRESA</p>
               <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                {[{l:'Sobre nosotros',h:'#'},{l:'Blog',h:'#'},{l:'Contacto',h:'mailto:hola@reservo.ai'}].map(({l,h})=>(
+                {[{l:'Contacto',h:'mailto:info.horizonstudioo@gmail.com'},{l:'Iniciar sesión',h:'/login'}].map(({l,h})=>(
                   <Link key={l} href={h} style={{fontSize:13,color:'rgba(255,255,255,0.4)',transition:'color 0.15s'}} onMouseEnter={e=>(e.currentTarget.style.color=C.text)} onMouseLeave={e=>(e.currentTarget.style.color='rgba(255,255,255,0.4)')}>{l}</Link>
                 ))}
               </div>
@@ -935,7 +984,7 @@ export default function HomePage() {
           <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:20,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
             <p style={{fontSize:12,color:'rgba(255,255,255,0.2)'}}>© {new Date().getFullYear()} Reservo.AI — Todos los derechos reservados</p>
             <p style={{fontSize:12,color:'rgba(52,211,153,0.5)',fontWeight:500}}>Optimizado para hostelería · Próximamente más sectores</p>
-            <p style={{fontSize:12,color:'rgba(255,255,255,0.15)'}}>Hecho con criterio en España</p>
+            <a href="https://horizonstudioo.com" target="_blank" rel="noopener" style={{fontSize:12,color:'rgba(255,255,255,0.25)',textDecoration:'none',transition:'color 0.15s'}} onMouseEnter={e=>(e.currentTarget.style.color='#F0A84E')} onMouseLeave={e=>(e.currentTarget.style.color='rgba(255,255,255,0.25)')}>Hecho por Horizon Studio</a>
           </div>
         </div>
       </footer>
