@@ -101,7 +101,7 @@ function LiveFeed({ events, demoMode, onToggleDemo, lang='es' }: { events:LiveEv
         </div>
         <button onClick={onToggleDemo} style={{
           fontSize:11, padding:'4px 12px', borderRadius:8, border:`1px solid ${demoMode?C.yellow+'40':C.border}`,
-          background:demoMode?'rgba(251,181,63,0.08)':'rgba(255,255,255,0.03)',
+          background:demoMode?'rgba(251,181,63,0.08)':'var(--rz-surface-2)',
           color:demoMode?C.yellow:C.text3, cursor:'pointer', fontFamily:'inherit', fontWeight:600, transition:'all 0.15s'
         }}>
           {demoMode ? '⏹ '+_tx('Salir demo') : '▶ '+_tx('Modo demo')}
@@ -248,7 +248,7 @@ function AgentBar({ agentOn, agentName, lang='es' }:{ agentOn:boolean; agentName
         <div style={{ width:6,height:6,borderRadius:'50%',background:agentOn?C.teal:C.red,animation:agentOn?'rz-pulse 2s ease-in-out infinite':'none' }}/>
         <span style={{ fontSize:12,fontWeight:600,color:agentOn?C.teal:C.red }}>{agentOn?(agentName||'Sofía')+' '+_tx('activa'):_tx('Sin número asignado')}</span>
       </div>
-      {!agentOn && <Link href="/configuracion" style={{ padding:'6px 14px',fontSize:12,fontWeight:600,color:'#0C1018',background:C.amber,borderRadius:8,textDecoration:'none' }}>{_tx('Configurar')} →</Link>}
+      {!agentOn && <Link href="/configuracion" style={{ padding:'6px 14px',fontSize:12,fontWeight:600,color:C.bg,background:C.amber,borderRadius:8,textDecoration:'none' }}>{_tx('Configurar')} →</Link>}
     </div>
   )
 }
@@ -671,11 +671,11 @@ export default function PanelPage() {
         }}>
           <span style={{ fontSize:22 }}>🛍️</span>
           <div>
-            <p style={{ fontSize:15, fontWeight:700, color:'white' }}>{_tx('Nuevo pedido de')} {orderAlert.name}</p>
-            <p style={{ fontSize:12, color:'rgba(255,255,255,0.8)' }}>{_tx('Para')} {orderAlert.type} · {_tx('Toca para ver en pedidos')}</p>
+            <p style={{ fontSize:15, fontWeight:700, color:C.text }}>{_tx('Nuevo pedido de')} {orderAlert.name}</p>
+            <p style={{ fontSize:12, color:C.text }}>{_tx('Para')} {orderAlert.type} · {_tx('Toca para ver en pedidos')}</p>
           </div>
-          <span style={{ fontSize:13, color:'rgba(255,255,255,0.6)', marginLeft:'auto' }}>→ {_tx('Ver pedidos')}</span>
-          <button onClick={e => { e.stopPropagation(); setOrderAlert(null) }} style={{ background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8, padding:'4px 10px', color:'white', cursor:'pointer', fontSize:14, marginLeft:8 }} aria-label="Cerrar">✕</button>
+          <span style={{ fontSize:13, color:C.text2, marginLeft:'auto' }}>→ {_tx('Ver pedidos')}</span>
+          <button onClick={e => { e.stopPropagation(); setOrderAlert(null) }} style={{ background:C.surface2, border:'none', borderRadius:8, padding:'4px 10px', color:C.text, cursor:'pointer', fontSize:14, marginLeft:8 }} aria-label="Cerrar">✕</button>
         </div>
       )}
 
@@ -766,7 +766,7 @@ export default function PanelPage() {
                 <p style={{ fontSize:12,color:`${C.amber}90`,marginTop:1 }}>{_tx('Activa un plan para seguir recibiendo llamadas sin límites')}</p>
               </div>
             </div>
-            <Link href="/precios" style={{ padding:'8px 18px',fontSize:13,fontWeight:700,color:'#0C1018',background:C.amber,borderRadius:9,textDecoration:'none',whiteSpace:'nowrap',flexShrink:0 }}>{_tx('Ver planes')}</Link>
+            <Link href="/precios" style={{ padding:'8px 18px',fontSize:13,fontWeight:700,color:C.bg,background:C.amber,borderRadius:9,textDecoration:'none',whiteSpace:'nowrap',flexShrink:0 }}>{_tx('Ver planes')}</Link>
           </div>
         )}
 
@@ -939,7 +939,7 @@ export default function PanelPage() {
                 <p style={{ fontSize:13,color:C.text3,lineHeight:1.7,maxWidth:280,margin:'0 auto' }}>
                   {agentOn ? _tx('Esperando llamadas. Cuando entren, aparecerán aquí en tiempo real con su resumen.') : _tx('Configura tu número de teléfono para empezar a recibir llamadas.')}
                 </p>
-                {!agentOn && <Link href="/configuracion" style={{ display:'inline-block',marginTop:16,padding:'9px 20px',fontSize:13,fontWeight:600,color:'#0C1018',background:C.amber,borderRadius:9,textDecoration:'none' }}>{_tx('Configurar número')} →</Link>}
+                {!agentOn && <Link href="/configuracion" style={{ display:'inline-block',marginTop:16,padding:'9px 20px',fontSize:13,fontWeight:600,color:C.bg,background:C.amber,borderRadius:9,textDecoration:'none' }}>{_tx('Configurar número')} →</Link>}
                 {agentOn && (
                   <div style={{ marginTop:20,display:'flex',alignItems:'center',justifyContent:'center',gap:16 }}>
                     {['📞 '+_tx('Responde 24/7'),'📅 '+_tx('Detecta reservas'),'🛍️ '+_tx('Toma pedidos')].map(s=>(
@@ -1008,7 +1008,7 @@ export default function PanelPage() {
               <span style={{ fontSize:13,fontWeight:600,color:C.text }}>{_tx('Uso del trial gratuito')}</span>
               <span style={{ fontFamily:'var(--rz-mono)',fontSize:13,fontWeight:600,color:callsLeft<=3?C.red:C.text }}>{callsUsed}<span style={{ color:C.text3 }}> / {callsLimit}</span></span>
             </div>
-            <div style={{ height:5,background:'rgba(255,255,255,0.05)',borderRadius:3,overflow:'hidden',marginBottom:8 }}>
+            <div style={{ height:5,background:'var(--rz-border)',borderRadius:3,overflow:'hidden',marginBottom:8 }}>
               <div style={{ height:'100%',width:`${Math.min(100,Math.round(callsUsed/callsLimit*100))}%`,background:callsLeft<=3?C.red:callsUsed/callsLimit>0.7?C.yellow:C.amber,borderRadius:3,transition:'width 0.6s ease' }}/>
             </div>
             <p style={{ fontSize:11,color:C.text3 }}>{_tx('Cada llamada recibida cuenta como una del plan.')}</p>
