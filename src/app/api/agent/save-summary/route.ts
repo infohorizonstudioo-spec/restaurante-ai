@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
         body: summary,
         call_sid: call?.id || undefined,
       })
-    } catch {}
+    } catch (e) { logger.error('save-summary: notification failed', { tenant_id }, e) }
 
     // ── 5. Aprendizaje del negocio ──────────────────────────────────────
     try {
@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
         content: `${callIntent} | confirmed | ${summary.slice(0, 200)}`,
         confidence: intentConfidence[callIntent] || 0.70,
       })
-    } catch {}
+    } catch (e) { logger.error('save-summary: learning failed', { tenant_id }, e) }
 
     return NextResponse.json({
       success: true,

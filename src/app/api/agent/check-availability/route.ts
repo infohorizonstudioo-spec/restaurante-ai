@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { validateAgentKey } from "@/lib/agent-auth"
 import { checkAvailabilityTool } from "@/lib/agent-tools"
+import { rateLimitByIp, RATE_LIMITS } from "@/lib/rate-limit"
 import { sanitizeUUID, sanitizeDate, sanitizeTime, sanitizePositiveInt, sanitizeString } from "@/lib/sanitize"
 import { logger } from "@/lib/logger"
 import { parseRetellBody } from "@/lib/retell-parse"
@@ -9,6 +10,9 @@ export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimitByIp(req, RATE_LIMITS.agent, 'agent:check-availability')
+    if (rl.blocked) return rl.response
+
     if (!validateAgentKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
     const rawBody = await req.json()
     const body = await parseRetellBody(rawBody)
