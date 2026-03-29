@@ -1,30 +1,51 @@
 'use client'
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-const ACTIVE_TIPOS = ['restaurante', 'bar', 'cafeteria']
-const TIPOS = [
-  { key:'restaurante',    label:'🍽️', name:'Restaurante' },
-  { key:'bar',            label:'🍺', name:'Bar' },
-  { key:'cafeteria',      label:'☕', name:'Cafetería' },
-  { key:'clinica_dental', label:'🦷', name:'Clínica Dental' },
-  { key:'clinica_medica', label:'🏥', name:'Clínica Médica' },
-  { key:'veterinaria',    label:'🐾', name:'Veterinaria' },
-  { key:'peluqueria',     label:'✂️', name:'Peluquería' },
-  { key:'barberia',       label:'🪒', name:'Barbería' },
-  { key:'fisioterapia',   label:'💆', name:'Fisioterapia' },
-  { key:'psicologia',     label:'🧠', name:'Psicología' },
-  { key:'asesoria',       label:'💼', name:'Asesoría' },
-  { key:'seguros',        label:'🛡️', name:'Seguros' },
-  { key:'inmobiliaria',   label:'🏠', name:'Inmobiliaria' },
-  { key:'gimnasio',       label:'🏋️', name:'Gimnasio' },
-  { key:'academia',       label:'📚', name:'Academia' },
-  { key:'spa',            label:'💆', name:'Spa' },
-  { key:'taller',         label:'🔧', name:'Taller mecánico' },
-  { key:'ecommerce',      label:'🛒', name:'Tienda online' },
-  { key:'otro',           label:'📋', name:'Otro negocio' },
+const ACTIVE_TIPOS = [
+  { key:'restaurante', label:'🍽️', name:'Restaurante' },
+  { key:'bar',         label:'🍺', name:'Bar' },
+  { key:'cafeteria',   label:'☕', name:'Cafetería' },
 ]
+const COMING_SOON = [
+  { label:'🦷', name:'Clínicas Dentales' },
+  { label:'🏥', name:'Clínicas Médicas' },
+  { label:'🐾', name:'Veterinarias' },
+  { label:'✂️', name:'Peluquerías' },
+  { label:'🪒', name:'Barberías' },
+  { label:'💆', name:'Fisioterapia' },
+  { label:'🧠', name:'Psicología' },
+  { label:'💼', name:'Asesorías' },
+  { label:'🛡️', name:'Seguros' },
+  { label:'🏠', name:'Inmobiliarias' },
+  { label:'🏋️', name:'Gimnasios' },
+  { label:'📚', name:'Academias' },
+  { label:'💆', name:'Spas' },
+  { label:'🔧', name:'Talleres' },
+  { label:'🛒', name:'E-commerce' },
+]
+
+function ComingSoonRotator() {
+  const [idx, setIdx] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setIdx(i => (i + 1) % COMING_SOON.length), 2200)
+    return () => clearInterval(t)
+  }, [])
+  const item = COMING_SOON[idx]
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:10, marginTop:16 }}>
+      <div style={{ width:6, height:6, borderRadius:'50%', background:'#F0A84E', animation:'rz-pulse 2s infinite', flexShrink:0 }}/>
+      <div style={{ flex:1, overflow:'hidden' }}>
+        <div key={idx} style={{ display:'flex', alignItems:'center', gap:8, animation:'rz-fade-up 0.4s ease' }}>
+          <span style={{ fontSize:16 }}>{item.label}</span>
+          <span style={{ fontSize:12, color:'rgba(255,255,255,0.4)', fontWeight:500 }}>{item.name}</span>
+        </div>
+      </div>
+      <span style={{ fontSize:10, color:'#F0A84E', fontWeight:600, letterSpacing:'0.04em', flexShrink:0 }}>PRÓXIMAMENTE</span>
+    </div>
+  )
+}
 
 export default function RegistroPage() {
   const [step,setStep]       = useState(1)
@@ -174,19 +195,15 @@ export default function RegistroPage() {
                 </div>
                 <div>
                   <label style={{ display:'block', fontSize:11, fontWeight:600, color:'#8895A7', marginBottom:10, letterSpacing:'0.05em', textTransform:'uppercase' }}>Tipo de negocio</label>
-                  <p style={{ fontSize:11, color:'#49566A', marginBottom:8 }}>Optimizado para hostelería · Más sectores próximamente</p>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                    {TIPOS.map(t => {
-                      const active = ACTIVE_TIPOS.includes(t.key)
-                      return (
-                        <button key={t.key} onClick={()=>{ if (active) up('businessType',t.key) }} className={`rz-tipo${form.businessType===t.key?' sel':''}`} style={!active ? { opacity:0.4, cursor:'default' } : undefined}>
-                          <div style={{ fontSize:20, marginBottom:4 }}>{t.label}</div>
-                          <div style={{ fontSize:12, fontWeight:600, color: form.businessType===t.key ? '#F0A84E' : '#8895A7' }}>{t.name}</div>
-                          {!active && <div style={{ fontSize:9, color:'#49566A', marginTop:2 }}>Próximamente</div>}
-                        </button>
-                      )
-                    })}
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+                    {ACTIVE_TIPOS.map(t => (
+                      <button key={t.key} onClick={()=>up('businessType',t.key)} className={`rz-tipo${form.businessType===t.key?' sel':''}`} style={{ padding:'18px 12px' }}>
+                        <div style={{ fontSize:28, marginBottom:6 }}>{t.label}</div>
+                        <div style={{ fontSize:13, fontWeight:700, color: form.businessType===t.key ? '#F0A84E' : '#E8EEF6' }}>{t.name}</div>
+                      </button>
+                    ))}
                   </div>
+                  <ComingSoonRotator/>
                 </div>
               </div>
               {error && <div style={{ background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.2)', borderRadius:9, padding:'10px 14px', marginBottom:14, fontSize:13, color:'#F87171' }}>{error}</div>}

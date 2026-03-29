@@ -32,6 +32,29 @@ const BUSINESS_TYPES: { id: string; label: string; icon: string }[] = [
   { id: 'otro', label: 'Otro tipo', icon: '🏢' },
 ]
 
+function ComingSoonRotator() {
+  const coming = BUSINESS_TYPES.filter(t => !ACTIVE_TYPES.includes(t.id))
+  const [idx, setIdx] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setIdx(i => (i + 1) % coming.length), 2200)
+    return () => clearInterval(t)
+  }, [coming.length])
+  const item = coming[idx]
+  if (!item) return null
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', background:'rgba(255,255,255,0.02)', border:`1px solid ${C.border}`, borderRadius:10, marginTop:14 }}>
+      <div style={{ width:6, height:6, borderRadius:'50%', background: C.amber, flexShrink:0 }}/>
+      <div style={{ flex:1, overflow:'hidden' }}>
+        <div key={idx} style={{ display:'flex', alignItems:'center', gap:8, animation:'fade-in 0.4s ease' }}>
+          <span style={{ fontSize:16 }}>{item.icon}</span>
+          <span style={{ fontSize:12, color: C.text3, fontWeight:500 }}>{item.label}</span>
+        </div>
+      </div>
+      <span style={{ fontSize:10, color: C.amber, fontWeight:600, letterSpacing:'0.04em', flexShrink:0 }}>PRÓXIMAMENTE</span>
+    </div>
+  )
+}
+
 const DAYS = [
   { key: 'mon', label: 'Lunes' },
   { key: 'tue', label: 'Martes' },
@@ -398,99 +421,28 @@ export default function OnboardingWizard() {
               </div>
             )}
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: 10,
-            }}>
-              {sortedTypes.map(t => {
-                const isActive = ACTIVE_TYPES.includes(t.id)
+            {/* Active types — big cards */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:12 }}>
+              {BUSINESS_TYPES.filter(t => ACTIVE_TYPES.includes(t.id)).map(t => {
                 const isSelected = businessType === t.id
-
                 return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => handleTypeClick(t.id)}
-                    style={{
-                      position: 'relative',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '14px 8px 12px',
-                      borderRadius: 12,
-                      border: `1px solid ${isSelected ? C.amber : C.border}`,
-                      backgroundColor: isSelected
-                        ? 'rgba(240,168,78,0.08)'
-                        : C.surface2,
-                      color: C.text,
-                      fontSize: 12,
-                      fontWeight: isSelected ? 600 : 400,
-                      cursor: isActive ? 'pointer' : 'default',
-                      opacity: isActive ? 1 : 0.45,
-                      transition: 'all 0.2s',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <span style={{ fontSize: 24 }}>{t.icon}</span>
-                    <span style={{
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      maxWidth: '100%',
-                    }}>
-                      {t.label}
-                    </span>
-
-                    {/* Badge */}
-                    {isActive && !isSelected && (
-                      <span style={{
-                        position: 'absolute',
-                        top: 4,
-                        right: 4,
-                        fontSize: 9,
-                        fontWeight: 600,
-                        padding: '2px 5px',
-                        borderRadius: 4,
-                        backgroundColor: 'rgba(52,211,153,0.15)',
-                        color: C.green,
-                        lineHeight: 1.2,
-                      }}>
-                        Disponible
-                      </span>
-                    )}
-                    {isSelected && (
-                      <span style={{
-                        position: 'absolute',
-                        top: 4,
-                        right: 4,
-                        fontSize: 12,
-                        color: C.amber,
-                      }}>
-                        {'\u2713'}
-                      </span>
-                    )}
-                    {!isActive && (
-                      <span style={{
-                        position: 'absolute',
-                        top: 4,
-                        right: 4,
-                        fontSize: 9,
-                        fontWeight: 600,
-                        padding: '2px 5px',
-                        borderRadius: 4,
-                        backgroundColor: 'rgba(137,149,167,0.15)',
-                        color: C.text3,
-                        lineHeight: 1.2,
-                      }}>
-                        Próximamente
-                      </span>
-                    )}
+                  <button key={t.id} type="button" onClick={() => handleTypeClick(t.id)} style={{
+                    display:'flex', flexDirection:'column', alignItems:'center', gap:8,
+                    padding:'22px 12px', borderRadius:14,
+                    border: `2px solid ${isSelected ? C.amber : C.border}`,
+                    backgroundColor: isSelected ? 'rgba(240,168,78,0.08)' : C.surface2,
+                    color: C.text, cursor:'pointer', transition:'all 0.2s',
+                  }}>
+                    <span style={{ fontSize:32 }}>{t.icon}</span>
+                    <span style={{ fontSize:14, fontWeight:700, color: isSelected ? C.amber : C.text }}>{t.label}</span>
+                    {isSelected && <span style={{ fontSize:10, color: C.amber, fontWeight:600 }}>Seleccionado</span>}
                   </button>
                 )
               })}
             </div>
+
+            {/* Coming soon — animated rotator */}
+            <ComingSoonRotator />
           </div>
 
           {/* Phone */}
