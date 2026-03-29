@@ -48,7 +48,7 @@ interface ParkedOrder {
 
 /* ── Component ─────────────────────────────────────────────────────── */
 export default function TPVPage() {
-  const { template } = useTenant()
+  const { tenant, template } = useTenant()
   const [loading, setLoading] = useState(true)
   const [tid, setTid] = useState<string | null>(null)
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
@@ -301,6 +301,20 @@ export default function TPVPage() {
             body: JSON.stringify({ order_id: d.order.id }),
           }).catch(() => {})
         }
+
+        // Print customer receipt
+        const tableForTicket = cobroType === 'mesa' && cobroTable ? cobroTable : selectedTable
+        const customerHtml = generateCustomerTicket(order, total, tableForTicket, tenant?.name || 'Reservo.AI')
+        printTicket(customerHtml)
+
+        // Print kitchen ticket if there are food items
+        const foodItems = order.filter(item => isFood(item))
+        if (foodItems.length > 0) {
+          setTimeout(() => {
+            const kitchenHtml = generateKitchenTicket(foodItems, tableForTicket, cobroNotes)
+            printTicket(kitchenHtml)
+          }, 1000)
+        }
       }
 
       // Clear table order
@@ -371,6 +385,96 @@ export default function TPVPage() {
   function cancelar() {
     setOrder([])
   }
+
+  // ── Ticket helpers ──────────────────────────────────────────────────
+  const DRINK_CATEGORIES = ['Cafés', 'Bebidas', 'Cervezas', 'Vinos', 'Cócteles', 'Refrescos', 'Zumos']
+
+  function isFood(item: TPVItem): boolean {
+    const menuItem = menuItems.find(m => m.name === item.name)
+    if (!menuItem) return true
+    return !DRINK_CATEGORIES.some(cat =>
+      menuItem.category?.toLowerCase().includes(cat.toLowerCase())
+    )
+  }
+
+  function printTicket(html: string) {
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.left = '-9999px'
+    iframe.style.top = '-9999px'
+    document.body.appendChild(iframe)
+    const doc = iframe.contentDocument || iframe.contentWindow?.document
+    if (doc) {
+      doc.open()
+      doc.write(html)
+      doc.close()
+      iframe.contentWindow?.focus()
+      iframe.contentWindow?.print()
+    }
+    setTimeout(() => document.body.removeChild(iframe), 5000)
+  }
+
+  function generateCustomerTicket(ticketItems: TPVItem[], ticketTotal: number, table: string | null, businessName: string): string {
+    const now = new Date()
+    const date = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const time = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    const subtotal = ticketTotal / 1.21
+    const iva = ticketTotal - subtotal
+
+    return `<!DOCTYPE html><html><head><style>
+      body { font-family: 'Courier New', monospace; width: 280px; margin: 0 auto; padding: 10px; font-size: 12px; }
+      h2 { text-align: center; margin: 5px 0; font-size: 16px; }
+      .line { border-top: 1px dashed #000; margin: 8px 0; }
+      .item { display: flex; justify-content: space-between; margin: 3px 0; }
+      .total { font-size: 16px; font-weight: bold; }
+      .center { text-align: center; }
+      @media print { body { width: 80mm; } }
+    </style></head><body>
+      <h2>${businessName}</h2>
+      <p class="center">${date} ${time}</p>
+      ${table ? `<p class="center">Mesa: ${table}</p>` : '<p class="center">Barra</p>'}
+      <div class="line"></div>
+      ${ticketItems.map(i => `<div class="item"><span>${i.quantity}x ${i.name}</span><span>${(i.price * i.quantity).toFixed(2)}\u20AC</span></div>`).join('')}
+      <div class="line"></div>
+      <div class="item"><span>Subtotal</span><span>${subtotal.toFixed(2)}\u20AC</span></div>
+      <div class="item"><span>IVA 21%</span><span>${iva.toFixed(2)}\u20AC</span></div>
+      <div class="line"></div>
+      <div class="item total"><span>TOTAL</span><span>${ticketTotal.toFixed(2)}\u20AC</span></div>
+      <div class="line"></div>
+      <p class="center" style="margin-top:12px">Gracias por su visita</p>
+    </body></html>`
+  }
+
+  function generateKitchenTicket(foodItems: TPVItem[], table: string | null, notes: string): string {
+    const time = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+
+    return `<!DOCTYPE html><html><head><style>
+      body { font-family: 'Courier New', monospace; width: 280px; margin: 0 auto; padding: 10px; font-size: 14px; }
+      h1 { text-align: center; font-size: 24px; margin: 5px 0; letter-spacing: 3px; }
+      .line { border-top: 2px dashed #000; margin: 8px 0; }
+      .item { font-size: 16px; margin: 6px 0; font-weight: bold; }
+      .center { text-align: center; }
+      .notes { font-style: italic; margin-top: 8px; }
+      @media print { body { width: 80mm; } }
+    </style></head><body>
+      <h1>COCINA</h1>
+      <p class="center" style="font-size:18px;font-weight:bold">${table ? 'MESA ' + table : 'BARRA'} \u2014 ${time}</p>
+      <div class="line"></div>
+      ${foodItems.map(i => `<div class="item">${i.quantity}x ${i.name}</div>`).join('')}
+      ${notes ? `<div class="line"></div><div class="notes">Notas: ${notes}</div>` : ''}
+      <div class="line"></div>
+    </body></html>`
+  }
+
+  function sendToKitchen() {
+    const foodItems = order.filter(item => isFood(item))
+    if (foodItems.length === 0) return
+    const table = selectedTable || null
+    const kitchenHtml = generateKitchenTicket(foodItems, table, '')
+    printTicket(kitchenHtml)
+  }
+
+  const hasFoodItems = useMemo(() => order.some(item => isFood(item)), [order, menuItems]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Fullscreen ──────────────────────────────────────────────────────
   function toggleFullscreen() {
@@ -918,6 +1022,25 @@ export default function TPVPage() {
                 >
                   Aparcar
                 </button>
+                {hasFoodItems && (
+                  <button
+                    onClick={sendToKitchen}
+                    style={{
+                      padding: '12px 14px',
+                      background: 'rgba(45,212,191,0.12)',
+                      border: `1px solid ${C.teal}`,
+                      borderRadius: 12,
+                      color: C.teal,
+                      fontSize: 13, fontWeight: 600,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      whiteSpace: 'nowrap',
+                      display: 'flex', alignItems: 'center', gap: 4,
+                    }}
+                  >
+                    Cocina
+                  </button>
+                )}
                 <button
                   onClick={cancelar}
                   disabled={order.length === 0}

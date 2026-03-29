@@ -59,7 +59,10 @@ export default function CajaPage() {
 
   /* ── Load data ─────────────────────────────────────────────────── */
   const loadOrders = useCallback(async (tenantId: string) => {
-    const r = await fetch('/api/orders?tenant_id=' + tenantId + '&limit=100')
+    const { data: { session } } = await supabase.auth.getSession()
+    const headers: Record<string, string> = {}
+    if (session?.access_token) headers.Authorization = 'Bearer ' + session.access_token
+    const r = await fetch('/api/orders?limit=100', { headers })
     const d = await r.json()
     setOrders(d.orders || [])
   }, [])
