@@ -243,13 +243,12 @@ export default function TPVPage() {
       if (!p?.tenant_id) return
       setTid(p.tenant_id)
 
-      // Fetch real tables from DB
-      const { data: fetchedTables } = await supabase
-        .from('tables')
-        .select('id, number, name, capacity, zone_id, zone_name, x_pos, y_pos, w, h, shape_type, status, rotation')
-        .eq('tenant_id', p.tenant_id)
-        .order('number')
-      setDbTables((fetchedTables as DBTable[]) || [])
+      // Fetch real tables via API (bypasses RLS)
+      const { data: { session: tSession } } = await supabase.auth.getSession()
+      const tHeaders: Record<string, string> = {}
+      if (tSession?.access_token) tHeaders.Authorization = 'Bearer ' + tSession.access_token
+      const tablesRes = await fetch('/api/tables', { headers: tHeaders }).then(r => r.json()).catch(() => ({ tables: [] }))
+      setDbTables((tablesRes.tables || []) as DBTable[])
 
       // Fetch today's reservations
       const todayStr = new Date().toISOString().slice(0, 10)
@@ -381,7 +380,11 @@ export default function TPVPage() {
     if (selectedTable && order.length === 0) {
       const dbTable = dbTables.find(t => t.number === selectedTable)
       if (dbTable && dbTable.status !== 'ocupada') {
-        supabase.from('tables').update({ status: 'ocupada' }).eq('id', dbTable.id).then(() => {})
+        supabase.auth.getSession().then(({ data: { session: s } }) => {
+          const h: Record<string, string> = { 'Content-Type': 'application/json' }
+          if (s?.access_token) h.Authorization = 'Bearer ' + s.access_token
+          fetch('/api/tables', { method: 'PATCH', headers: h, body: JSON.stringify({ id: dbTable.id, status: 'ocupada' }) }).catch(() => {})
+        })
         setDbTables(prev => prev.map(t => t.id === dbTable.id ? { ...t, status: 'ocupada' } : t))
       }
     }
@@ -498,7 +501,10 @@ export default function TPVPage() {
         })
         const dbTable = dbTables.find(t => t.number === selectedTable)
         if (dbTable) {
-          await supabase.from('tables').update({ status: 'libre' }).eq('id', dbTable.id)
+          const { data: { session: tblSession } } = await supabase.auth.getSession()
+          const tblH: Record<string, string> = { 'Content-Type': 'application/json' }
+          if (tblSession?.access_token) tblH.Authorization = 'Bearer ' + tblSession.access_token
+          await fetch('/api/tables', { method: 'PATCH', headers: tblH, body: JSON.stringify({ id: dbTable.id, status: 'libre' }) }).catch(() => {})
           setDbTables(prev => prev.map(t => t.id === dbTable.id ? { ...t, status: 'libre' } : t))
         }
       }
