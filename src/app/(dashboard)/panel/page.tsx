@@ -93,7 +93,7 @@ function LiveFeed({ events, demoMode, onToggleDemo, lang='es' }: { events:LiveEv
   return (
     <div className="rz-card-premium" style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, overflow:'hidden' }}>
       {/* Header */}
-      <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(255,255,255,0.015)' }}>
+      <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', background:C.surface }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <div className="rz-status-online"/>
           <span style={{ fontSize:14, fontWeight:700, color:C.text, letterSpacing:'-0.01em' }}>{_tx(ACTIVE_CALL_LABEL)}</span>
@@ -262,7 +262,7 @@ function InsightsPanel({ insights, headerLabel, lang='es', agentName='Sofía' }:
 
   return (
     <div className="rz-card-premium" style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
-      <div style={{ padding: '14px 18px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10, background:'rgba(255,255,255,0.015)' }}>
+      <div style={{ padding: '14px 18px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10, background:C.surface }}>
         <div className="rz-status-busy"/>
         <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{headerLabel || (agentName + ' ' + _tx('ha detectado'))}</span>
       </div>
@@ -638,7 +638,7 @@ export default function PanelPage() {
       `}</style>
 
       {/* ── Header ── */}
-      <div style={{ background:'rgba(19,25,32,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20 }}>
+      <div style={{ background:C.surface,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${C.border}`,padding:'14px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20 }}>
         <div>
           <div style={{ display:'flex',alignItems:'center',gap:10 }}>
             <h1 style={{ fontSize:16,fontWeight:700,color:C.text,letterSpacing:'-0.02em' }}>
@@ -878,7 +878,7 @@ export default function PanelPage() {
         {/* ── Sugerencias inteligentes ── */}
         {suggestions.length > 0 && (
           <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, overflow:'hidden' }}>
-            <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', gap:10, background:'rgba(255,255,255,0.015)' }}>
+            <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', gap:10, background:C.surface }}>
               <span style={{ fontSize:15 }}>💡</span>
               <span style={{ fontSize:14, fontWeight:700, color:C.text }}>{_tx('Sugerencias')}</span>
               <span style={{ fontSize:11, color:C.text3, marginLeft:'auto' }}>{suggestions.length} {_tx('activas')}</span>
