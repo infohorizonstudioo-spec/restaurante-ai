@@ -55,5 +55,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ history })
+  return NextResponse.json({ history }, { headers: { 'Cache-Control': 'max-age=300' } })
 }
