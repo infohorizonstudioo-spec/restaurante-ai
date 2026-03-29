@@ -1,6 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import NotifBell from '@/components/NotifBell'
@@ -436,13 +435,11 @@ function ZoneRow({zone,color,tableCount,onRename,onDelete,unitP,tx}:{
 // ═════════════════════════════════════════════════════════════════════════════
 // MAIN PAGE — SPACE DESIGNER
 // ═════════════════════════════════════════════════════════════════════════════
-export default function MesasPageWrapper() {
-  return <Suspense fallback={<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',color:'#8895A7'}}>Cargando...</div>}><MesasPage/></Suspense>
-}
-
-function MesasPage() {
-  const searchParams = useSearchParams()
-  const isTPVMode = searchParams.get('mode') === 'tpv'
+export default function MesasPage() {
+  const [isTPVMode, setIsTPVMode] = useState(false)
+  useEffect(() => {
+    setIsTPVMode(window.location.search.includes('mode=tpv'))
+  }, [])
   const { tenant, template, tx } = useTenant()
   const unitS      = template?.labels?.unit?.singular  || 'Mesa'
   const unitP      = template?.labels?.unit?.plural    || 'Mesas'
