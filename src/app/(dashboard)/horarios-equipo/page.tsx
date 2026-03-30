@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { PageLoader } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import { C } from '@/lib/colors'
+import { useToast } from '@/components/NotificationToast'
 
 // ── Types ──
 interface Employee {
@@ -70,6 +71,7 @@ function formatWeekRange(weekStart: Date): string {
 
 export default function HorariosEquipoPage() {
   const { tenant, tx } = useTenant()
+  const toast = useToast()
   const _tx = (s: string) => tx?.(s) || s
 
   const [loading, setLoading] = useState(true)
@@ -189,6 +191,32 @@ export default function HorariosEquipoPage() {
     }
     setSchedule(newSched)
     await saveToDb(employees, newSched)
+
+    // Show toast + create in-app notification for shift changes
+    if (next && tenant?.id) {
+      const emp = employees.find(e => e.id === empId)
+      const shiftLabel = next === 'morning' ? _tx('mañana') : next === 'afternoon' ? _tx('tarde') : _tx('noche')
+      const dayLabel = DAYS_FULL[day]
+
+      toast.push({
+        title: _tx('Horario actualizado'),
+        body: `${emp?.name || _tx('Empleado')} → ${shiftLabel} (${dayLabel})`,
+        type: 'agent',
+        priority: 'info',
+        icon: '📅',
+      })
+
+      // Create in-app notification for the tenant owner
+      supabase.from('notifications').insert({
+        tenant_id: tenant.id,
+        type: 'important_alert',
+        title: `Horario actualizado: ${emp?.name || _tx('Empleado')}`,
+        body: `Asignado a turno ${shiftLabel} el ${dayLabel}`,
+        priority: 'info',
+        read: false,
+        target_url: '/horarios-equipo',
+      }).then(() => {})
+    }
   }
 
   if (loading) return <PageLoader />
