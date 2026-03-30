@@ -31,12 +31,16 @@ export async function GET(req: NextRequest) {
 
   if (!tenantId) return NextResponse.json({ tables: [] })
 
-  const { data } = await admin.from('tables')
+  const { data, error } = await admin.from('tables')
     .select('id, number, name, capacity, zone_id, x_pos, y_pos, w, h, shape_type, status, rotation')
     .eq('tenant_id', tenantId)
     .order('number')
 
-  return NextResponse.json({ tables: data || [] })
+  if (error) {
+    return NextResponse.json({ tables: [], error: error.message, tenantId })
+  }
+
+  return NextResponse.json({ tables: data || [], tenantId })
 }
 
 export async function PATCH(req: NextRequest) {
