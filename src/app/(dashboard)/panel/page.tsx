@@ -392,10 +392,10 @@ export default function PanelPage() {
     // Load insights + forecast + yesterday's summary after main data
     const token = (await supabase.auth.getSession()).data.session?.access_token
     const headers = { 'Authorization': 'Bearer ' + token }
-    fetch('/api/insights', { headers }).then(r => r.json()).then(d => setInsights(d.insights || [])).catch(() => {})
-    fetch('/api/peak-prediction', { headers }).then(r => r.json()).then(d => setForecast(d.forecast || [])).catch(() => {})
-    fetch('/api/suggestions', { headers }).then(r => r.json()).then(d => setSuggestions(d.suggestions || [])).catch(() => {})
-    fetch('/api/operational-context', { headers }).then(r => r.json()).then(d => setOpContext(d.context || null)).catch(() => {})
+    fetch('/api/insights', { headers }).then(r => r.json()).then(d => setInsights(d.insights || [])).catch(e => { console.error('panel: insights failed', e); setInsights([]) })
+    fetch('/api/peak-prediction', { headers }).then(r => r.json()).then(d => setForecast(d.forecast || [])).catch(e => { console.error('panel: peak-prediction failed', e); setForecast([]) })
+    fetch('/api/suggestions', { headers }).then(r => r.json()).then(d => setSuggestions(d.suggestions || [])).catch(e => { console.error('panel: suggestions failed', e); setSuggestions([]) })
+    fetch('/api/operational-context', { headers }).then(r => r.json()).then(d => setOpContext(d.context || null)).catch(e => { console.error('panel: operational-context failed', e); setOpContext({ activeShift: null, todayOrders: 0, todayRevenue: 0, topSellingNow: [], lowStockItems: [], upcomingReservations: [], activeAlerts: [], suggestion: '' }) })
 
     // Load yesterday's summary
     const yd = new Date(); yd.setDate(yd.getDate() - 1)
@@ -430,7 +430,7 @@ export default function PanelPage() {
           thisOrders: (thisOrders.data || []).length, lastOrders: (lastOrders.data || []).length,
           thisReservations: (thisRes.data || []).length, lastReservations: (lastRes.data || []).length,
         })
-      } catch {}
+      } catch (e) { console.error('panel: weekly comparison failed', e) }
     })()
   }, [router])
 
@@ -960,9 +960,18 @@ export default function PanelPage() {
             </div>
           )
         })()}
+        {!weeklyComp && (
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 15 }}>📊</span>
+            <div>
+              <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{_tx('Esta semana vs anterior')}</span>
+              <p style={{ fontSize: 12, color: C.text3, marginTop: 2 }}>{_tx('Comparativa semanal disponible a partir de la segunda semana')}</p>
+            </div>
+          </div>
+        )}
 
         {/* ── Contexto operativo ── */}
-        {opContext && (
+        {opContext ? (
           <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
             {/* Smart suggestion — prominent amber card */}
             {opContext.suggestion && (
@@ -1031,16 +1040,21 @@ export default function PanelPage() {
               )}
             </div>
           </div>
+        ) : (
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24, textAlign: 'center' }}>
+            <p style={{ fontSize: 14, color: C.text3 }}>{_tx('Sin datos operativos todavia')}</p>
+            <p style={{ fontSize: 12, marginTop: 4, color: C.text3 }}>{_tx('Los datos apareceran cuando haya actividad')}</p>
+          </div>
         )}
 
         {/* ── Sugerencias inteligentes ── */}
-        {suggestions.length > 0 && (
-          <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, overflow:'hidden' }}>
-            <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', gap:10, background:C.surface }}>
-              <span style={{ fontSize:15 }}>💡</span>
-              <span style={{ fontSize:14, fontWeight:700, color:C.text }}>{_tx('Sugerencias')}</span>
-              <span style={{ fontSize:11, color:C.text3, marginLeft:'auto' }}>{suggestions.length} {_tx('activas')}</span>
-            </div>
+        <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, overflow:'hidden' }}>
+          <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', gap:10, background:C.surface }}>
+            <span style={{ fontSize:15 }}>💡</span>
+            <span style={{ fontSize:14, fontWeight:700, color:C.text }}>{_tx('Sugerencias')}</span>
+            {suggestions.length > 0 && <span style={{ fontSize:11, color:C.text3, marginLeft:'auto' }}>{suggestions.length} {_tx('activas')}</span>}
+          </div>
+          {suggestions.length > 0 ? (
             <div style={{ display:'flex', flexDirection:'column' }}>
               {suggestions.slice(0, 5).map((s: any, i: number) => {
                 const priorityBorder = s.priority === 'high' ? C.red : s.priority === 'medium' ? C.amber : C.teal
@@ -1075,8 +1089,12 @@ export default function PanelPage() {
                 )
               })}
             </div>
-          </div>
-        )}
+          ) : (
+            <div style={{ padding:'14px 18px', color:C.text3, fontSize:13 }}>
+              Sin sugerencias por ahora — llegaran con mas actividad
+            </div>
+          )}
+        </div>
 
         {/* ── Previsión de hoy ── */}
         {forecast.length > 0 && <ForecastChart data={forecast} forecastLabel={cs.forecast} lang={lang}/>}
