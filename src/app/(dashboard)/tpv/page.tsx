@@ -315,6 +315,7 @@ export default function TPVPage() {
   const [cobroName, setCobroName] = useState('')
   const [cobroTable, setCobroTable] = useState('')
   const [cobroNotes, setCobroNotes] = useState('')
+  const [cobroPayment, setCobroPayment] = useState<'cash' | 'card' | 'other'>('cash')
   const [saving, setSaving] = useState(false)
   const [showCustom, setShowCustom] = useState(false)
   const [customName, setCustomName] = useState('')
@@ -569,6 +570,7 @@ export default function TPVPage() {
           notes: [cobroTable ? `Mesa: ${cobroTable}` : '', cobroNotes].filter(Boolean).join(' | ') || 'TPV',
           items: order.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
           total_estimate: total,
+          payment_method: cobroPayment,
         }),
       })
 
@@ -637,6 +639,7 @@ export default function TPVPage() {
       setCobroTable('')
       setCobroNotes('')
       setCobroType('barra')
+      setCobroPayment('cash')
     } finally {
       setSaving(false)
     }
@@ -662,6 +665,7 @@ export default function TPVPage() {
           notes: selectedTable ? `Mesa: ${selectedTable} (cuenta parcial)` : 'Cuenta parcial',
           items: splitItems.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
           total_estimate: splitTotal,
+          payment_method: cobroPayment,
         }),
       })
       const d = await res.json()
@@ -1901,12 +1905,34 @@ export default function TPVPage() {
                 onChange={e => setCobroNotes(e.target.value)}
                 placeholder="Notas (opcional)"
                 style={{
-                  width: '100%', padding: '12px 14px', marginBottom: 20,
+                  width: '100%', padding: '12px 14px', marginBottom: 14,
                   background: C.surface2, border: `1px solid ${C.border}`,
                   borderRadius: 10, color: C.text, fontSize: 14,
                   outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
                 }}
               />
+
+              {/* Payment method */}
+              <p style={{ fontSize: 13, color: C.text2, marginBottom: 8, fontWeight: 600 }}>Método de pago</p>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                {(['cash', 'card', 'other'] as const).map(m => (
+                  <button
+                    key={m}
+                    onClick={() => setCobroPayment(m)}
+                    style={{
+                      flex: 1, padding: '10px', borderRadius: 10,
+                      border: cobroPayment === m ? `2px solid ${C.amber}` : `1px solid ${C.border}`,
+                      background: cobroPayment === m ? C.amberDim : 'transparent',
+                      color: cobroPayment === m ? C.amber : C.text2,
+                      fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <div style={{ fontSize: 20, marginBottom: 4 }}>{m === 'cash' ? '\uD83D\uDCB5' : m === 'card' ? '\uD83D\uDCB3' : '\uD83D\uDCF1'}</div>
+                    {m === 'cash' ? 'Efectivo' : m === 'card' ? 'Tarjeta' : 'Otro'}
+                  </button>
+                ))}
+              </div>
 
               <button
                 onClick={cobrar}
