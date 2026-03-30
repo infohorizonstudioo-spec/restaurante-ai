@@ -880,8 +880,14 @@ export default function PanelPage() {
         <div className="rz-grid-4col" style={{ gap:12 }}>
           <KpiCard value={todayCalls.length} label={_tx('Llamadas hoy')} icon="📞" color={C.amber} accent href="/llamadas"/>
           <KpiCard value={reservas.length} label={`${L.reservas} ${_tx('hoy')}`} sub={`${reservas.filter(r=>r.status==='confirmada').length} ${_tx('confirmadas')}`} icon="📅" color={C.teal} accent href="/reservas"/>
-          <KpiCard value={clientes.length} label={L.clientes} icon="👥" color={C.violet} href="/clientes"/>
-          <KpiCard value={isTrial?callsLeft:`${callsUsed}/${callsLimit}`} label={isTrial?_tx('Llamadas restantes'):_tx('Uso del plan')} sub={planLabel} icon={isTrial?'⚡':'📊'} color={callsLeft<=3?C.red:planColor} accent={isTrial} href="/facturacion"/>
+          {opContext?.todayOrders != null && opContext.todayOrders > 0
+            ? <KpiCard value={opContext.todayOrders} label={_tx('Pedidos hoy')} sub={opContext.todayRevenue > 0 ? `${opContext.todayRevenue.toFixed(0)}€` : undefined} icon="🛍️" color={C.violet} accent href="/tpv"/>
+            : <KpiCard value={clientes.length} label={L.clientes} icon="👥" color={C.violet} href="/clientes"/>
+          }
+          {opContext?.todayCovers != null && opContext.todayCovers > 0
+            ? <KpiCard value={opContext.todayCovers} label={_tx('Covers hoy')} icon="🍽️" color={C.green} accent/>
+            : <KpiCard value={isTrial?callsLeft:`${callsUsed}/${callsLimit}`} label={isTrial?_tx('Llamadas restantes'):_tx('Uso del plan')} sub={planLabel} icon={isTrial?'⚡':'📊'} color={callsLeft<=3?C.red:planColor} accent={isTrial} href="/facturacion"/>
+          }
         </div>
 
         {/* ── Contexto operativo ── */}

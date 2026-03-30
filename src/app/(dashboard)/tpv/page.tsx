@@ -42,6 +42,10 @@ const TPV_STYLES = `
   0% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
   100% { opacity: 0; transform: translate(-50%,-50%) scale(1.2); }
 }
+@media (max-width: 480px) {
+  .tpv-cobrar-types { flex-wrap: wrap !important; }
+  .tpv-cobrar-types > button { flex: 1 1 45% !important; min-width: 120px !important; }
+}
 @media (max-width: 768px) {
   .tpv-cat-sidebar {
     flex-direction: row !important;
@@ -415,7 +419,7 @@ export default function TPVPage() {
 
       // Delay intelligence fetch to not compete with critical data loading
       setTimeout(() => {
-        fetch('/api/tpv/intelligence', { headers: authHeaders }).then(r => r.json()).then(d => setIntel(d.intelligence)).catch(() => {})
+        fetch('/api/tpv/intelligence', { headers: authHeaders }).then(r => r.json()).then(d => setIntel(d.intelligence)).catch(e => console.error('intelligence fetch error:', e))
       }, 2000)
 
       setLoading(false)
@@ -434,7 +438,7 @@ export default function TPVPage() {
         fetch('/api/tpv/intelligence', { headers: h }).then(r => r.json()).then(d => {
           setIntel(d.intelligence)
           setAlertsDismissed(false)
-        }).catch(() => {})
+        }).catch(e => console.error('intelligence refresh error:', e))
       })
     }, 60000)
     return () => { if (alertTimer.current) clearTimeout(alertTimer.current) }
@@ -702,7 +706,7 @@ export default function TPVPage() {
           method: 'POST',
           headers,
           body: JSON.stringify({ order_id: d.order.id }),
-        }).catch(() => {})
+        }).catch(e => console.error('harmonize error:', e))
       }
 
       // Print receipt for split items
@@ -1065,7 +1069,7 @@ export default function TPVPage() {
             }}>
               <span>{iconMap[level] || '\u2139\uFE0F'}</span>
               <span style={{ flex: 1 }}>{alert.message}</span>
-              <button onClick={() => setAlertsDismissed(true)} style={{
+              <button onClick={() => setAlertsDismissed(true)} aria-label="Cerrar" style={{
                 background: 'none', border: 'none', color: 'inherit', cursor: 'pointer',
                 fontSize: 14, fontWeight: 700, fontFamily: 'inherit', padding: '0 4px',
               }}>{'\u2715'}</button>
@@ -1259,7 +1263,7 @@ export default function TPVPage() {
                   </span>
                 </div>
                 {search && (
-                  <button onClick={() => setSearch('')} style={{
+                  <button onClick={() => setSearch('')} aria-label="Limpiar búsqueda" style={{
                     padding: '10px 14px', background: C.surface2, border: `1px solid ${C.border}`,
                     borderRadius: 10, color: C.text3, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
                   }}>
@@ -1292,6 +1296,7 @@ export default function TPVPage() {
                 {dbTables.map(t => {
                   const isSel = selectedTable === t.number
                   const hasItems = (tableOrders[t.number] || []).length > 0
+                  const isReserved = t.status === 'reservada' || reservedTableIds.has(t.id)
                   const sc = { libre: '#34D399', ocupada: '#F87171', reservada: '#F0A84E', bloqueada: '#49566A' }[t.status || 'libre'] || '#49566A'
                   return (
                     <button key={t.id}
@@ -1299,13 +1304,13 @@ export default function TPVPage() {
                       onDoubleClick={() => window.location.href = '/mesas'}
                       style={{
                         position: 'relative', padding: '6px 12px', borderRadius: 8,
-                        border: `1px solid ${isSel ? C.amber : hasItems ? sc : C.border}`,
-                        background: isSel ? C.amberDim : hasItems ? sc + '15' : 'transparent',
-                        color: isSel ? C.amber : hasItems ? sc : C.text2,
+                        border: `1px solid ${isSel ? C.amber : hasItems ? sc : isReserved ? '#F0A84E' : C.border}`,
+                        background: isSel ? C.amberDim : hasItems ? sc + '15' : isReserved ? 'rgba(240,168,78,0.08)' : 'transparent',
+                        color: isSel ? C.amber : hasItems ? sc : isReserved ? '#F0A84E' : C.text2,
                         fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                       }}
                     >
-                      {t.name?.toLowerCase().includes('barra') ? '🍺' : '🪑'} {t.number}
+                      {isReserved ? '📅' : t.name?.toLowerCase().includes('barra') ? '🍺' : '🪑'} {t.number}
                       {hasItems && <span style={{ position: 'absolute', top: -3, right: -3, width: 8, height: 8, borderRadius: '50%', background: '#F87171' }}/>}
                     </button>
                   )
@@ -1698,6 +1703,7 @@ export default function TPVPage() {
                     {/* Delete */}
                     <button
                       onClick={() => removeItem(item.id)}
+                      aria-label="Eliminar producto"
                       style={{
                         width: 24, height: 24, borderRadius: 6,
                         background: C.redDim, border: 'none',
@@ -1864,7 +1870,7 @@ export default function TPVPage() {
               <label style={{ fontSize: 13, fontWeight: 600, color: C.text2, marginBottom: 8, display: 'block' }}>
                 Tipo de pedido
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
+              <div className="tpv-cobrar-types" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
                 {(['barra', 'mesa', 'recoger', 'domicilio'] as const).map(tp => {
                   const icons: Record<string, string> = { barra: '\uD83C\uDF7A', mesa: '\uD83C\uDF7D\uFE0F', recoger: '\uD83E\uDD61', domicilio: '\uD83D\uDEF5' }
                   const labels: Record<string, string> = { barra: 'Barra', mesa: 'Mesa', recoger: 'Recoger', domicilio: 'Domicilio' }
@@ -1932,7 +1938,7 @@ export default function TPVPage() {
 
               {/* Payment method */}
               <p style={{ fontSize: 13, color: C.text2, marginBottom: 8, fontWeight: 600 }}>Método de pago</p>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+              <div className="tpv-cobrar-types" style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
                 {(['cash', 'card', 'other'] as const).map(m => (
                   <button
                     key={m}

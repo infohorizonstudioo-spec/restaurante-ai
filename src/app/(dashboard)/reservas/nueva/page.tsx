@@ -41,6 +41,8 @@ export default function NuevaReservaPage() {
 
   async function handleSubmit() {
     if(!form.customer_name.trim()) { setError(tx('El nombre es obligatorio')); return }
+    const phoneRegex = /^\+?[\d\s\-()]{9,}$/
+    if (form.customer_phone && !phoneRegex.test(form.customer_phone)) { setError(tx('Teléfono no válido')); return }
     if(!tid) { setError(tx('Sesión no válida')); return }
     setSaving(true); setError('')
     try {
