@@ -699,7 +699,8 @@ export default function TPVPage() {
         const foodItems = order.filter(item => isFood(item))
         if (foodItems.length > 0) {
           setTimeout(() => {
-            const kitchenHtml = generateKitchenTicket(foodItems, tableForTicket, cobroNotes)
+            const selectedZone = dbTables.find(t => t.number === tableForTicket)?.zone_name || null
+            const kitchenHtml = generateKitchenTicket(foodItems, tableForTicket, cobroNotes, selectedZone)
             printTicket(kitchenHtml)
           }, 1000)
         }
@@ -950,7 +951,7 @@ export default function TPVPage() {
     </body></html>`
   }
 
-  function generateKitchenTicket(foodItems: TPVItem[], table: string | null, notes: string): string {
+  function generateKitchenTicket(foodItems: TPVItem[], table: string | null, notes: string, zone?: string | null): string {
     const now = new Date()
     const time = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
     const date = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })
@@ -979,7 +980,7 @@ export default function TPVPage() {
       <div class="header">
         <h1>\uD83C\uDF73 COCINA</h1>
         <div class="order-num">COMANDA #${orderNumStr}</div>
-        <div class="loc">${table ? 'MESA ' + table : 'BARRA'} \u2014 ${time}</div>
+        <div class="loc">${table ? 'MESA ' + table : 'BARRA'}${zone ? ' \u00B7 ' + zone : ''} \u2014 ${time}</div>
         <div class="time">${date}</div>
       </div>
       <div class="items">
@@ -994,7 +995,8 @@ export default function TPVPage() {
     const foodItems = order.filter(item => isFood(item))
     if (foodItems.length === 0) return
     const table = selectedTable || null
-    const kitchenHtml = generateKitchenTicket(foodItems, table, '')
+    const selZone = dbTables.find(t => t.number === table)?.zone_name || null
+    const kitchenHtml = generateKitchenTicket(foodItems, table, '', selZone)
     printTicket(kitchenHtml)
     // Start kitchen timer for this table
     const tableKey = selectedTable || 'barra'

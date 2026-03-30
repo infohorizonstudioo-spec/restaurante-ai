@@ -84,16 +84,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Error al crear pedido' }, { status: 500 })
     }
 
-    // If table number provided, update table status to ocupada
+    // If table number provided, update table status + get zone
+    let zoneName: string | null = null
     if (mesa) {
       const { data: dbTable } = await admin
         .from('tables')
-        .select('id')
+        .select('id, zone_name')
         .eq('tenant_id', tenant.id)
         .eq('number', String(mesa))
         .maybeSingle()
       if (dbTable) {
         await admin.from('tables').update({ status: 'ocupada' }).eq('id', dbTable.id)
+        zoneName = dbTable.zone_name || null
       }
     }
 
@@ -113,7 +115,7 @@ export async function POST(req: NextRequest) {
       await admin.from('notifications').insert({
         tenant_id: tenant.id,
         type: 'new_order',
-        title: `🍳 Comanda QR${mesa ? ' — Mesa ' + mesa : ''}`,
+        title: `🍳 Comanda QR${mesa ? ' — Mesa ' + mesa : ''}${zoneName ? ' · ' + zoneName : ''}`,
         body: items.map((i: { name: string; quantity?: number }) => `${i.quantity || 1}x ${i.name}`).join(', ') + (notes ? ` | Notas: ${sanitizeString(notes, 500)}` : ''),
         priority: 'warning',
         read: false,
