@@ -677,6 +677,38 @@ export default function ConfiguracionPage() {
         {/* ── Alertas configurables ─────────────────────────────── */}
         <AlertRulesSection tenantId={tenant?.id} tx={tx} />
 
+        {/* ── Link de reservas publico ─────────────────────────── */}
+        {tenant?.slug && (
+          <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:'20px'}}>
+            <p style={{fontSize:13,fontWeight:700,color:C.teal,letterSpacing:'0.04em',marginBottom:10}}>{'\uD83C\uDF10'} {tx('LINK DE RESERVAS')}</p>
+            <p style={{fontSize:12,color:C.muted,marginBottom:10,lineHeight:1.5}}>
+              {tx('Comparte este enlace en Google Maps, Instagram, tu web o donde quieras. Los clientes podran reservar directamente.')}
+            </p>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <input
+                readOnly
+                value={`https://restaurante-ai.vercel.app/reservar/${tenant.slug}`}
+                style={{flex:1,padding:'10px 14px',background:C.surface2,border:`1px solid ${C.border}`,borderRadius:10,color:C.text,fontSize:13,fontFamily:'monospace',outline:'none'}}
+                onClick={e=>(e.target as HTMLInputElement).select()}
+              />
+              <button
+                onClick={()=>{
+                  navigator.clipboard.writeText(`https://restaurante-ai.vercel.app/reservar/${tenant.slug}`)
+                  const btn = document.getElementById('copy-link-btn')
+                  if(btn){btn.textContent='\u2705';setTimeout(()=>{btn.textContent='\uD83D\uDCCB Copiar'},1500)}
+                }}
+                id="copy-link-btn"
+                style={{padding:'10px 16px',borderRadius:10,border:`1px solid ${C.teal}40`,background:C.tealDim,color:C.teal,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}}
+              >
+                {'\uD83D\uDCCB'} Copiar
+              </button>
+            </div>
+            <p style={{fontSize:11,color:C.muted,marginTop:8}}>
+              {tx('Las reservas llegan con estado "pendiente" para que las confirmes manualmente.')}
+            </p>
+          </div>
+        )}
+
         {/* ── Recordatorios configurables ─────────────────────── */}
         <RemindersSection tenantId={tenant?.id} tx={tx} />
 
