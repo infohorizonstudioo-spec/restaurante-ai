@@ -152,7 +152,7 @@ export default function NuevaReservaPage() {
           <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:14}}>
             <div>
               <label style={label}>{tx('FECHA')} *</label>
-              <input type="date" className="rz-inp" style={{...inp, colorScheme:'dark'}} value={form.date} onChange={e=>up('date',e.target.value)}/>
+              <input type="date" className="rz-inp" style={{...inp, colorScheme:'dark'}} value={form.date} min={new Date().toISOString().slice(0,10)} onChange={e=>up('date',e.target.value)}/>
             </div>
             <div>
               <label style={label}>{tx('HORA')} *</label>
