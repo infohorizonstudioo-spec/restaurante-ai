@@ -113,7 +113,20 @@ export async function decrementStock(
 
       // Fuzzy match: find inventory item whose normalized name matches
       const match = inventory.find(inv => normalize(inv.name) === normalizedName)
-      if (!match) continue
+      if (!match) {
+        // Auto-create a basic inventory entry for new items
+        try {
+          await admin.from('inventory_items').insert({
+            tenant_id: tenantId,
+            name: item.name,
+            current_stock: 100,
+            min_stock: 10,
+            max_stock: 200,
+            active: true,
+          })
+        } catch { /* ignore if table doesn't exist */ }
+        continue
+      }
 
       const newStock = (match.current_stock ?? 0) - item.quantity
 
