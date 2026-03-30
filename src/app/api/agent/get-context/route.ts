@@ -470,10 +470,30 @@ export async function POST(req: NextRequest) {
     const result = await buildBusinessContext(tenant_id)
     if (!result) return NextResponse.json({ error: "tenant not found" }, { status: 404 })
 
+    // Load customer context if caller phone available
+    let customer_context: string | null = null
+    const callerPhone = body.customer_phone || body._call?.from_number || ''
+    if (callerPhone && tenant_id) {
+      const { data: customer } = await supabase.from('customers')
+        .select('name, phone, total_reservations, last_visit, vip, notes')
+        .eq('tenant_id', tenant_id)
+        .eq('phone', callerPhone)
+        .maybeSingle()
+      if (customer) {
+        const parts = [`Cliente conocido: ${customer.name}`]
+        if (customer.vip) parts.push('Es VIP')
+        if (customer.total_reservations) parts.push(`${customer.total_reservations} reservas anteriores`)
+        if (customer.last_visit) parts.push(`Última visita: ${customer.last_visit}`)
+        if (customer.notes) parts.push(`Notas: ${customer.notes}`)
+        customer_context = parts.join('. ')
+      }
+    }
+
     return NextResponse.json({
       success: true,
       ...result,
-      summary: "Negocio: " + result.business_context.business_name + " | Tipo: " + result.business_context.business_type + " | Logica: " + JSON.stringify(result.business_type_logic) + " | Contexto: " + JSON.stringify(result.business_context)
+      customer_context,
+      summary: "Negocio: " + result.business_context.business_name + " | Tipo: " + result.business_context.business_type + (customer_context ? " | Cliente: " + customer_context : "") + " | Logica: " + JSON.stringify(result.business_type_logic) + " | Contexto: " + JSON.stringify(result.business_context)
     })
   } catch (err) {
     logger.error('agent:get-context', {}, err)
