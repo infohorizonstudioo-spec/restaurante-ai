@@ -110,6 +110,12 @@ function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDrag
       transform={`translate(${x},${y})${rot?` rotate(${rot},${w/2},${h/2})`:''}` }
       onMouseDown={onMD} onDoubleClick={onDoubleClick}
       style={{ cursor:'grab' }}>
+      {/* Invisible hit area — ensures drag works even with decorative elements */}
+      {isRound ? (
+        <ellipse cx={w/2} cy={h/2} rx={w/2+10} ry={h/2+10} fill="transparent" />
+      ) : (
+        <rect x={-10} y={-10} width={w+20} height={h+20} fill="transparent" />
+      )}
 
       {isBarra ? (
         /* ── BARRA (bar counter) ── */
@@ -118,17 +124,17 @@ function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDrag
             fill={tableFill} stroke={borderColor} strokeWidth={strokeW}
             style={{ filter:glow, transition:'filter 0.15s' }} />
           {/* Status bar */}
-          <rect x={4} y={4} width={w-8} height={4} rx={2} fill={cfg.color} opacity={0.6} />
+          <rect x={4} y={4} width={w-8} height={4} rx={2} fill={cfg.color} opacity={0.6} style={{pointerEvents:'none'}} />
           {/* Cross-hatch for blocked */}
           {isBlocked && (
             <rect x={2} y={2} width={w-4} height={h-4} rx={h/2-2}
-              fill="url(#hatch-blocked)" opacity={0.15} />
+              fill="url(#hatch-blocked)" opacity={0.15} style={{pointerEvents:'none'}} />
           )}
           {/* Bar stools along front */}
           {Array.from({length: Math.min(capacity, 12)}).map((_, i) => {
             const spacing = (w - 20) / Math.max(capacity - 1, 1)
             return <circle key={i} cx={10 + spacing * i} cy={h + 8} r={5}
-              fill={chairFill} stroke={borderColor} strokeWidth={0.5} />
+              fill={chairFill} stroke={borderColor} strokeWidth={0.5} style={{pointerEvents:'none'}} />
           })}
           {/* Label — left-aligned for barra */}
           <text x={14} y={h/2 + 1} textAnchor="start" dominantBaseline="middle"
@@ -151,7 +157,7 @@ function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDrag
             const cx = w/2 + (w/2 + 6) * Math.cos(angle)
             const cy = h/2 + (h/2 + 6) * Math.sin(angle)
             return <circle key={i} cx={cx} cy={cy} r={4}
-              fill={chairFill} stroke={borderColor} strokeWidth={0.5} />
+              fill={chairFill} stroke={borderColor} strokeWidth={0.5} style={{pointerEvents:'none'}} />
           })}
           {/* Table surface */}
           <ellipse id={`shape-${table.id}`} cx={w/2} cy={h/2} rx={w/2-2} ry={h/2-2}
@@ -159,11 +165,11 @@ function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDrag
             style={{ filter:glow, transition:'filter 0.15s' }} />
           {/* Status ring */}
           <ellipse cx={w/2} cy={h/2} rx={w/2-6} ry={h/2-6}
-            fill="none" stroke={cfg.color} strokeWidth={2} opacity={0.3} />
+            fill="none" stroke={cfg.color} strokeWidth={2} opacity={0.3} style={{pointerEvents:'none'}} />
           {/* Cross-hatch for blocked */}
           {isBlocked && (
             <ellipse cx={w/2} cy={h/2} rx={w/2-4} ry={h/2-4}
-              fill="url(#hatch-blocked)" opacity={0.15} />
+              fill="url(#hatch-blocked)" opacity={0.15} style={{pointerEvents:'none'}} />
           )}
           {/* Table number */}
           <text x={w/2} y={h/2 - 4} textAnchor="middle" dominantBaseline="middle"
@@ -186,14 +192,14 @@ function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDrag
             const count = Math.min(Math.ceil(capacity/2), 4)
             const spacing = w / (count + 1)
             return <circle key={'t'+i} cx={spacing * (i+1)} cy={-6} r={4}
-              fill={chairFill} stroke={borderColor} strokeWidth={0.5} />
+              fill={chairFill} stroke={borderColor} strokeWidth={0.5} style={{pointerEvents:'none'}} />
           })}
           {/* Chair dots — bottom */}
           {Array.from({length: Math.min(Math.floor(capacity/2), 4)}).map((_, i) => {
             const count = Math.min(Math.floor(capacity/2), 4)
             const spacing = w / (count + 1)
             return <circle key={'b'+i} cx={spacing * (i+1)} cy={h+6} r={4}
-              fill={chairFill} stroke={borderColor} strokeWidth={0.5} />
+              fill={chairFill} stroke={borderColor} strokeWidth={0.5} style={{pointerEvents:'none'}} />
           })}
           {/* Table surface */}
           <rect id={`shape-${table.id}`} x={2} y={2} width={w-4} height={h-4} rx={6}
@@ -201,11 +207,11 @@ function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDrag
             style={{ filter:glow, transition:'filter 0.15s' }} />
           {/* Status indicator bar at top */}
           <rect x={4} y={4} width={w-8} height={4} rx={2}
-            fill={cfg.color} opacity={0.9} />
+            fill={cfg.color} opacity={0.9} style={{pointerEvents:'none'}} />
           {/* Cross-hatch for blocked */}
           {isBlocked && (
             <rect x={2} y={2} width={w-4} height={h-4} rx={6}
-              fill="url(#hatch-blocked)" opacity={0.15} />
+              fill="url(#hatch-blocked)" opacity={0.15} style={{pointerEvents:'none'}} />
           )}
           {/* Table number */}
           <text x={w/2} y={h/2 - 4} textAnchor="middle" dominantBaseline="middle"
