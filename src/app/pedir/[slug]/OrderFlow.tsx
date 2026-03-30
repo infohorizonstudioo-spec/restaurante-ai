@@ -33,6 +33,7 @@ interface Props {
   tenant: TenantInfo
   items: MenuItem[]
   mesa: string | null
+  zone: string | null
   slug: string
 }
 
@@ -74,7 +75,7 @@ const CATEGORY_BOOST: Record<string, string[]> = {
 
 /* ── Component ───────────────────────────────────────────────── */
 
-export default function OrderFlow({ tenant, items, mesa, slug }: Props) {
+export default function OrderFlow({ tenant, items, mesa, zone, slug }: Props) {
   const [cart, setCart] = useState<CartItem[]>([])
   const [step, setStep] = useState<'context' | 'menu' | 'review' | 'done'>('context')
   const [context, setContext] = useState('')
@@ -216,7 +217,7 @@ export default function OrderFlow({ tenant, items, mesa, slug }: Props) {
             background: T.amberDim, display: 'inline-block',
             padding: '4px 14px', borderRadius: 20,
           }}>
-            Mesa {mesa}
+            Mesa {mesa}{zone ? ` · ${zone}` : ''}
           </p>
         )}
       </div>
@@ -636,7 +637,7 @@ export default function OrderFlow({ tenant, items, mesa, slug }: Props) {
               background: T.amberDim, display: 'inline-block',
               padding: '6px 18px', borderRadius: 20, marginBottom: 24,
             }}>
-              Mesa {mesa}
+              Mesa {mesa}{zone ? ` · ${zone}` : ''}
             </p>
           )}
 

@@ -58,5 +58,13 @@ export default async function PedirPage({
     .order('category')
     .order('sort_order')
 
-  return <OrderFlow tenant={tenant} items={(items || []) as MenuItem[]} mesa={mesa} slug={slug} />
+  // Look up zone for this table
+  let zone: string | null = null
+  if (mesa) {
+    const { data: tableData } = await supabase.from('tables')
+      .select('zone_name').eq('tenant_id', tenant.id).eq('number', String(mesa)).maybeSingle()
+    zone = tableData?.zone_name || null
+  }
+
+  return <OrderFlow tenant={tenant} items={(items || []) as MenuItem[]} mesa={mesa} zone={zone} slug={slug} />
 }

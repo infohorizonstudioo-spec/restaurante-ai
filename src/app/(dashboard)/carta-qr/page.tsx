@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 
 export default function CartaQRPage() {
   const { tenant } = useTenant()
-  const [tables, setTables] = useState<{ id: string; number: string; name?: string }[]>([])
+  const [tables, setTables] = useState<{ id: string; number: string; name?: string; zone_name?: string }[]>([])
   const [selectedMesa, setSelectedMesa] = useState<string>('')
   const [mode, setMode] = useState<'carta' | 'pedidos'>('pedidos')
   const [loadingTables, setLoadingTables] = useState(true)
@@ -16,7 +16,7 @@ export default function CartaQRPage() {
     ;(async () => {
       const { data } = await supabase
         .from('tables')
-        .select('id, number, name')
+        .select('id, number, name, zone_name')
         .eq('tenant_id', tenant.id)
         .order('number')
       setTables(data || [])
@@ -165,7 +165,7 @@ export default function CartaQRPage() {
                       fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                     }}
                   >
-                    {t.name || `Mesa ${t.number}`}
+                    {t.name || `Mesa ${t.number}`}{t.zone_name ? ` — ${t.zone_name}` : ''}
                   </button>
                 )
               })}
