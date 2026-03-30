@@ -30,6 +30,8 @@ const IC: Record<string,string> = {
   chevron: 'M9 18l6-6-6-6',
   cpu:     'M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18',
   qr:      'M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM17 13h1v1h-1zM13 17h1v1h-1zM17 17h4v4h-4zM13 13h1v1h-1z',
+  help:    'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01',
+  fire:    'M12 2c.5 2.5-1 4.5-1 6.5 0 1.5 1 3 2.5 3s2.5-1.5 2.5-3c0-3-3-5-3-7 2 1 6 4.5 6 9a8 8 0 01-16 0c0-3.5 2-6 4-8 0 1.5.5 3 1.5 4s2 1.5 3 1c-1.5-1-2-3.5-.5-5.5z',
 }
 
 function Icon({ id, size=16 }: { id: string; size?: number }) {
@@ -74,9 +76,9 @@ export default function Sidebar() {
       panel: t.nav.panel, reservas: t.nav.reservations, agenda: t.nav.agenda,
       llamadas: t.nav.calls, clientes: t.nav.clients, mesas: t.nav.spaces,
       turnos: t.nav.shifts, 'horarios-equipo': t.nav.teamSchedule, productos: t.nav.products, pedidos: t.nav.orders,
-      tpv: 'TPV', caja: 'Caja', 'carta-qr': 'QR Carta',
+      tpv: 'TPV', caja: 'Caja', cocina: 'Cocina', 'carta-qr': 'QR Carta',
       estadisticas: t.nav.stats, facturacion: t.nav.billing,
-      agente: t.nav.agent, configuracion: t.nav.settings,
+      agente: t.nav.agent, configuracion: t.nav.settings, ayuda: 'Ayuda',
     }
     return map[mod.id] || mod.label
   }
@@ -93,16 +95,23 @@ export default function Sidebar() {
   // Usar template si existe, pero asegurar que /agente siempre aparece
   const baseModules = template?.modules || DEFAULT_MODULES
   const hasAgente = baseModules.some((m: any) => m.id === 'agente')
-  const withAgente = hasAgente ? baseModules : [
+  const withAgenteBase = hasAgente ? baseModules : [
     ...baseModules.filter((m: any) => m.id !== 'configuracion'),
     { id:'agente', href:'/agente', icon:'cpu', label:'Mi recepcionista' },
     { id:'configuracion', href:'/configuracion', icon:'gear', label:'Configuración' },
+  ]
+  // Always append Ayuda at the end
+  const hasAyuda = withAgenteBase.some((m: any) => m.id === 'ayuda')
+  const withAgente = hasAyuda ? withAgenteBase : [
+    ...withAgenteBase,
+    { id:'ayuda', href:'/ayuda', icon:'help', label:'Ayuda' },
   ]
   // Insertar TPV y Caja después de pedidos (o al final si no hay pedidos)
   const isHospitality = ['restaurante','bar','cafeteria'].includes(tenant?.type || '')
   const tpvItems = isHospitality ? [
     { id:'tpv', href:'/tpv', icon:'layout', label:'TPV', pro: true },
     { id:'caja', href:'/caja', icon:'card', label:'Caja', pro: true },
+    { id:'cocina', href:'/cocina', icon:'fire', label:'Cocina', pro: true },
     { id:'carta-qr', href:'/carta-qr', icon:'qr', label:'QR Carta' },
   ] : []
   const pedidosIdx = withAgente.findIndex((m: any) => m.id === 'pedidos')
