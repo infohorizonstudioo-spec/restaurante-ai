@@ -153,15 +153,19 @@ function KpiCard({ value, label, sub, color=C.amber, href, icon, accent=false }:
   const inner = (
     <div className="rz-card-interactive" style={{
       background: C.surface,
-      border:`1px solid ${C.borderMd}`, borderRadius:14, padding:'18px 20px',
+      border:`1px solid ${accent && color === C.amber ? 'rgba(240,168,78,0.18)' : C.borderMd}`, borderRadius:14, padding:'18px 20px',
       position:'relative', overflow:'hidden', cursor:href?'pointer':'default',
-    }}>
+      transition:'transform 0.2s cubic-bezier(0.4,0,0.2,1), box-shadow 0.2s cubic-bezier(0.4,0,0.2,1), border-color 0.2s ease',
+    }}
+    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 24px rgba(0,0,0,0.3)${accent && color === C.amber ? ', 0 0 16px rgba(240,168,78,0.08)' : ''}` }}
+    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
+    >
       {accent && <div style={{ position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${color},transparent)`,borderRadius:'14px 14px 0 0' }}/>}
       {/* Ambient glow */}
       <div style={{ position:'absolute',top:'-30%',right:'-10%',width:120,height:120,background:`radial-gradient(circle,${color}08,transparent 70%)`,pointerEvents:'none' }}/>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', position:'relative' }}>
         <div>
-          <p style={{ fontFamily:'var(--rz-mono)',fontSize:30,fontWeight:800,color,letterSpacing:'-0.03em',lineHeight:1,marginBottom:6 }}>{value}</p>
+          <p style={{ fontFamily:'var(--rz-mono)',fontSize:32,fontWeight:800,color,letterSpacing:'-0.03em',lineHeight:1,marginBottom:6 }}>{value}</p>
           <p style={{ fontSize:12,color:C.text2,fontWeight:500 }}>{label}</p>
           {sub && <p style={{ fontSize:11,color:C.text3,marginTop:3 }}>{sub}</p>}
         </div>

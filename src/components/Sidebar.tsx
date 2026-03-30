@@ -122,12 +122,12 @@ export default function Sidebar() {
       overflow: 'hidden', zIndex: 40,
     }}>
       <style>{`
-        .rz-nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; margin:1px 8px; border-radius:var(--rz-r-md); text-decoration:none; color:var(--rz-text-2); transition:all 0.15s ease; position:relative; }
+        .rz-nav-item { display:flex; align-items:center; gap:10px; padding:10px 14px; margin:1px 8px; border-radius:var(--rz-r-md); text-decoration:none; color:var(--rz-text-2); transition:all 0.18s cubic-bezier(0.4,0,0.2,1); position:relative; }
         .rz-nav-item:hover { background:rgba(255,255,255,0.04); color:var(--rz-text); }
-        .rz-nav-item.active { background:var(--rz-amber-dim); color:var(--rz-amber); }
+        .rz-nav-item.active { background:var(--rz-amber-dim); color:var(--rz-amber); box-shadow:inset 3px 0 8px rgba(240,168,78,0.15); }
         .rz-nav-item.active .rz-nav-indicator { opacity:1; }
         .rz-nav-indicator { position:absolute; left:-8px; top:50%; transform:translateY(-50%); width:3px; height:18px; background:var(--rz-amber); border-radius:0 3px 3px 0; opacity:0; transition:opacity 0.15s; }
-        .rz-nav-label { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
+        .rz-nav-label { font-size:13.5px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
         .rz-nav-item.active .rz-nav-label { font-weight:600; }
         .rz-collapse-btn { background:none; border:1px solid var(--rz-border); color:var(--rz-text-3); cursor:pointer; border-radius:var(--rz-r-sm); padding:5px; display:flex; align-items:center; justify-content:center; }
         .rz-collapse-btn:hover { border-color:var(--rz-border-md); color:var(--rz-text-2); background:rgba(255,255,255,0.04); }
@@ -141,7 +141,7 @@ export default function Sidebar() {
             <div style={{ width:28, height:28, borderRadius:8, background:'linear-gradient(135deg, var(--rz-amber) 0%, var(--rz-amber-2) 100%)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 2px 8px var(--rz-amber-glow)' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="#0C1018"><path d="M22 17a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A2 2 0 014 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 17z"/></svg>
             </div>
-            <span style={{ fontFamily:'var(--rz-font)', fontWeight:700, fontSize:15, color:'var(--rz-text)', letterSpacing:'-0.02em' }}>Reservo<span style={{ color:'var(--rz-amber)' }}>.AI</span></span>
+            <span style={{ fontFamily:'var(--rz-font)', fontWeight:700, fontSize:15, color:'var(--rz-text)', letterSpacing:'-0.02em', textShadow:'0 1px 4px rgba(0,0,0,0.3)' }}>Reservo<span style={{ color:'var(--rz-amber)' }}>.AI</span></span>
           </div>
         )}
         {collapsed && (
@@ -159,9 +159,9 @@ export default function Sidebar() {
       {/* ── Agent status pill ── */}
       {!collapsed && (
         <div style={{ padding:'8px 16px', borderBottom:'1px solid var(--rz-border)', flexShrink:0 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:7, padding:'7px 10px', background: agentOn ? 'var(--rz-teal-dim)' : 'var(--rz-red-dim)', borderRadius:'var(--rz-r-sm)', border:`1px solid ${agentOn ? 'rgba(45,212,191,0.15)' : 'rgba(248,113,113,0.15)'}` }}>
-            <div style={{ width:7, height:7, borderRadius:'50%', background: agentOn ? 'var(--rz-teal)' : 'var(--rz-red)', flexShrink:0, animation: agentOn ? 'rz-pulse 2s ease-in-out infinite' : 'none' }}/>
-            <span style={{ fontSize:11, fontWeight:600, color: agentOn ? 'var(--rz-teal)' : 'var(--rz-red)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 9px', background: agentOn ? 'var(--rz-teal-dim)' : 'var(--rz-red-dim)', borderRadius:'var(--rz-r-sm)', border:`1px solid ${agentOn ? 'rgba(45,212,191,0.15)' : 'rgba(248,113,113,0.15)'}` }}>
+            <div style={{ width:6, height:6, borderRadius:'50%', background: agentOn ? 'var(--rz-teal)' : 'var(--rz-red)', flexShrink:0, animation: agentOn ? 'rz-pulse 2s ease-in-out infinite' : 'none' }}/>
+            <span style={{ fontSize:10.5, fontWeight:600, color: agentOn ? 'var(--rz-teal)' : 'var(--rz-red)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
               {agentOn ? agentName + ' — ' + t.agent.agentActive : t.agent.agentInactive}
             </span>
           </div>

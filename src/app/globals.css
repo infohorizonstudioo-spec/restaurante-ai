@@ -104,14 +104,17 @@ button:focus-visible {
   outline: 2px solid var(--rz-amber);
   outline-offset: 2px;
 }
-input, textarea, select { font-family: var(--rz-font); }
+input, textarea, select { font-family: var(--rz-font); transition: all 0.15s ease; }
 
-/* ── Scrollbar (refined, thinner) ── */
-::-webkit-scrollbar { width: 4px; height: 4px; }
+/* Smooth transitions for all interactive elements */
+button, a, input, select, textarea { transition: all 0.15s ease; }
+
+/* ── Scrollbar (refined) ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 10px; transition: background 0.2s; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.12); }
-* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.06) transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; transition: background 0.2s; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent; }
 ::selection { background: var(--rz-amber-glow); color: var(--rz-amber); }
 
 /* ═══════════════════════════════════════════════════════════
