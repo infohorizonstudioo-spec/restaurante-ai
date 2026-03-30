@@ -1,5 +1,36 @@
-// Service Worker — Reservo.AI Push Notifications
-// Maneja push events cuando la app está en segundo plano
+// Service Worker — Reservo.AI Push Notifications + Offline TPV
+// Maneja push events y caching offline para el TPV
+
+const CACHE_NAME = 'reservo-tpv-v1'
+const TPV_URLS = ['/tpv', '/panel']
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(TPV_URLS))
+  )
+  self.skipWaiting()
+})
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    ).then(() => clients.claim())
+  )
+})
+
+self.addEventListener('fetch', event => {
+  // Network-first for API calls, cache-first for pages
+  if (event.request.url.includes('/api/')) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    )
+  } else {
+    event.respondWith(
+      caches.match(event.request).then(cached => cached || fetch(event.request))
+    )
+  }
+})
 
 self.addEventListener('push', event => {
   if (!event.data) return
@@ -35,5 +66,4 @@ self.addEventListener('notificationclick', event => {
   )
 })
 
-self.addEventListener('install',  () => self.skipWaiting())
-self.addEventListener('activate', e => e.waitUntil(clients.claim()))
+// install and activate handled above with caching logic

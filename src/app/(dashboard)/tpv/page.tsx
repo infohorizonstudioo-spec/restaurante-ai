@@ -301,6 +301,12 @@ function FullFloorPlan({ tables, selectedTable, tableOrders, currentOrder, reser
   )
 }
 
+/* ── i18n labels ──────────────────────────────────────────────────── */
+const TPV_I18N: Record<string, Record<string, string>> = {
+  es: { search: 'Buscar producto...', total: 'TOTAL', cobrar: 'COBRAR', cocina: 'Cocina', aparcar: 'Aparcar', cancelar: 'Cancelar', split: 'Dividir cuenta', manual: 'Precio manual', fullscreen: 'Completa', exit: 'Salir', mesas: 'Mesas', barra: 'Barra', empty: 'Toca un producto para agregarlo', discount: 'Descuento', tip: 'Propina', noTip: 'Sin propina', other: 'Otro', cash: 'Efectivo', card: 'Tarjeta', confirm: 'Confirmar cobro', processing: 'Procesando...', history: 'Historial', kitchenSent: 'Cocina' },
+  en: { search: 'Search product...', total: 'TOTAL', cobrar: 'CHARGE', cocina: 'Kitchen', aparcar: 'Park', cancelar: 'Cancel', split: 'Split bill', manual: 'Custom price', fullscreen: 'Fullscreen', exit: 'Exit', mesas: 'Tables', barra: 'Bar', empty: 'Tap a product to add it', discount: 'Discount', tip: 'Tip', noTip: 'No tip', other: 'Other', cash: 'Cash', card: 'Card', confirm: 'Confirm charge', processing: 'Processing...', history: 'History', kitchenSent: 'Kitchen' },
+}
+
 /* ── Component ─────────────────────────────────────────────────────── */
 export default function TPVPage() {
   const { tenant, template } = useTenant()
@@ -341,6 +347,10 @@ export default function TPVPage() {
   const [dbTables, setDbTables] = useState<DBTable[]>([])
   const [todayReservations, setTodayReservations] = useState<TodayReservation[]>([])
   const [mobileTicketOpen, setMobileTicketOpen] = useState(false)
+  const [kitchenTimers, setKitchenTimers] = useState<Record<string, number>>({})
+  const [orderHistory, setOrderHistory] = useState<Record<string, {action: string, time: string}[]>>({})
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [, setTimerTick] = useState(0)
 
   const flashRef = useRef<string | null>(null)
   const stylesInjected = useRef(false)
@@ -357,6 +367,30 @@ export default function TPVPage() {
     document.head.appendChild(style)
     return () => { document.head.removeChild(style) }
   }, [])
+
+  // i18n helper
+  const lang = (tenant as Record<string, unknown>)?.language as string || 'es'
+  const t = (key: string) => TPV_I18N[lang]?.[key] || TPV_I18N.es[key] || key
+
+  // Timer tick for kitchen timers (1s interval)
+  useEffect(() => {
+    if (Object.keys(kitchenTimers).length === 0) return
+    const iv = setInterval(() => setTimerTick(n => n + 1), 1000)
+    return () => clearInterval(iv)
+  }, [kitchenTimers])
+
+  // Load order history from localStorage
+  useEffect(() => {
+    if (!tid) return
+    const saved = localStorage.getItem(`tpv_history_${tid}`)
+    if (saved) { try { setOrderHistory(JSON.parse(saved)) } catch { /* ignore */ } }
+  }, [tid])
+
+  // Persist order history
+  useEffect(() => {
+    if (!tid) return
+    localStorage.setItem(`tpv_history_${tid}`, JSON.stringify(orderHistory))
+  }, [orderHistory, tid])
 
   // Read table selected from /mesas TPV mode
   useEffect(() => {
@@ -500,6 +534,12 @@ export default function TPVPage() {
   function addItem(item: { id: string; name: string; price: number }) {
     flashRef.current = item.id
     setTimeout(() => { flashRef.current = null }, 300)
+    // Log to order history
+    const hKey = selectedTable || 'barra'
+    setOrderHistory(prev => ({
+      ...prev,
+      [hKey]: [...(prev[hKey] || []), { action: `+${item.name}`, time: new Date().toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'}) }]
+    }))
     setOrder(prev => {
       const existing = prev.find(i => i.id === item.id)
       if (existing) {
@@ -551,6 +591,15 @@ export default function TPVPage() {
   }
 
   function updateQty(id: string, delta: number) {
+    const item = order.find(i => i.id === id)
+    if (item) {
+      const hKey = selectedTable || 'barra'
+      const act = delta > 0 ? `+${item.name}` : `-${item.name}`
+      setOrderHistory(prev => ({
+        ...prev,
+        [hKey]: [...(prev[hKey] || []), { action: act, time: new Date().toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'}) }]
+      }))
+    }
     setOrder(prev => {
       return prev.map(i => {
         if (i.id !== id) return i
@@ -561,6 +610,14 @@ export default function TPVPage() {
   }
 
   function removeItem(id: string) {
+    const item = order.find(i => i.id === id)
+    if (item) {
+      const hKey = selectedTable || 'barra'
+      setOrderHistory(prev => ({
+        ...prev,
+        [hKey]: [...(prev[hKey] || []), { action: `-${item.name} (x${item.quantity})`, time: new Date().toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'}) }]
+      }))
+    }
     setOrder(prev => prev.filter(i => i.id !== id))
   }
 
@@ -939,6 +996,9 @@ export default function TPVPage() {
     const table = selectedTable || null
     const kitchenHtml = generateKitchenTicket(foodItems, table, '')
     printTicket(kitchenHtml)
+    // Start kitchen timer for this table
+    const tableKey = selectedTable || 'barra'
+    setKitchenTimers(prev => ({ ...prev, [tableKey]: Date.now() }))
   }
 
   const hasFoodItems = useMemo(() => order.some(item => isFood(item)), [order, menuItems]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -1277,7 +1337,7 @@ export default function TPVPage() {
                   <input
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    placeholder="Buscar producto..."
+                    placeholder={t('search')}
                     autoFocus
                     style={{
                       width: '100%', padding: '12px 16px 12px 40px',
@@ -1650,13 +1710,29 @@ export default function TPVPage() {
 
             {/* Order header */}
             <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: C.text, margin: 0 }}>
-                {selectedTable
-                  ? selectedDbTable?.zone_name
-                    ? `Mesa ${selectedTable} \u00B7 ${selectedDbTable.zone_name}`
-                    : `Mesa ${selectedTable}`
-                  : 'Barra'}
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h2 style={{ fontSize: 18, fontWeight: 800, color: C.text, margin: 0 }}>
+                  {selectedTable
+                    ? selectedDbTable?.zone_name
+                      ? `Mesa ${selectedTable} \u00B7 ${selectedDbTable.zone_name}`
+                      : `Mesa ${selectedTable}`
+                    : t('barra')}
+                </h2>
+                {/* Kitchen timer */}
+                {(() => {
+                  const tKey = selectedTable || 'barra'
+                  const started = kitchenTimers[tKey]
+                  if (!started) return null
+                  const elapsed = Math.floor((Date.now() - started) / 1000)
+                  const mm = Math.floor(elapsed / 60)
+                  const ss = elapsed % 60
+                  return (
+                    <span style={{ fontSize: 12, fontWeight: 700, color: elapsed > 600 ? '#F87171' : '#2DD4BF', background: elapsed > 600 ? 'rgba(248,113,113,0.12)' : 'rgba(45,212,191,0.12)', padding: '3px 8px', borderRadius: 8 }}>
+                      {'\uD83C\uDF73'} {t('kitchenSent')}: {mm}:{String(ss).padStart(2, '0')}
+                    </span>
+                  )
+                })()}
+              </div>
               {selectedTable && selectedDbTable && selectedDbTable.capacity > 0 && (
                 <div style={{ fontSize: 12, color: C.text3, marginTop: 2 }}>
                   {Array.from({ length: Math.min(selectedDbTable.capacity, 6) }).map(() => '\uD83D\uDC64').join('')}
@@ -1670,12 +1746,41 @@ export default function TPVPage() {
               )}
             </div>
 
+            {/* Order history (collapsible) */}
+            {(() => {
+              const hKey = selectedTable || 'barra'
+              const entries = orderHistory[hKey]
+              if (!entries || entries.length === 0) return null
+              return (
+                <div style={{ borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+                  <button onClick={() => setHistoryOpen(!historyOpen)} style={{
+                    width: '100%', padding: '8px 14px', background: 'none', border: 'none',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'inherit',
+                  }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: C.text3 }}>
+                      {'\uD83D\uDCCB'} {t('history')} ({entries.length})
+                    </span>
+                    <span style={{ fontSize: 10, color: C.text3 }}>{historyOpen ? '\u25B2' : '\u25BC'}</span>
+                  </button>
+                  {historyOpen && (
+                    <div style={{ padding: '0 14px 8px', maxHeight: 120, overflowY: 'auto' }}>
+                      {entries.slice().reverse().map((e, i) => (
+                        <div key={i} style={{ fontSize: 11, color: e.action.startsWith('+') ? '#34D399' : '#F87171', padding: '1px 0', fontFamily: 'monospace' }}>
+                          {e.time} {e.action}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
             {/* Order items */}
             <div style={{ flex: 1, overflow: 'auto', padding: '4px 0' }}>
               {order.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px 14px', color: C.text3 }}>
                   <div style={{ fontSize: 48, marginBottom: 10, filter: 'drop-shadow(0 0 8px rgba(240,168,78,0.15))' }}>{'\uD83D\uDED2'}</div>
-                  <p style={{ fontSize: 13, fontWeight: 500 }}>Toca un producto para agregarlo</p>
+                  <p style={{ fontSize: 13, fontWeight: 500 }}>{t('empty')}</p>
                 </div>
               ) : (
                 order.map(item => (
@@ -1757,7 +1862,7 @@ export default function TPVPage() {
               flexShrink: 0,
               background: total > 0 ? 'rgba(240,168,78,0.03)' : 'transparent',
             }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: C.text2 }}>TOTAL</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: C.text2 }}>{t('total')}</span>
               <span style={{
                 fontSize: 32, fontWeight: 800, color: C.text, letterSpacing: '-0.02em',
                 textShadow: total > 0 ? '0 0 20px rgba(240,168,78,0.15)' : 'none',
@@ -1794,7 +1899,7 @@ export default function TPVPage() {
                   letterSpacing: '0.5px',
                 }}
               >
-                COBRAR
+                {t('cobrar')}
               </button>
 
               {/* Dividir cuenta */}
@@ -1813,7 +1918,7 @@ export default function TPVPage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   }}
                 >
-                  Dividir cuenta
+                  {t('split')}
                 </button>
               )}
 
@@ -1833,7 +1938,7 @@ export default function TPVPage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 }}
               >
-                {'\uD83C\uDF73'} Cocina
+                {'\uD83C\uDF73'} {t('cocina')}
               </button>
 
               {/* Aparcar + Cancelar row */}
@@ -1852,7 +1957,7 @@ export default function TPVPage() {
                     fontFamily: 'inherit',
                   }}
                 >
-                  Aparcar
+                  {t('aparcar')}
                 </button>
                 <button
                   onClick={cancelar}
@@ -1866,7 +1971,7 @@ export default function TPVPage() {
                     fontFamily: 'inherit',
                   }}
                 >
-                  {'\u2715'} Cancelar
+                  {'\u2715'} {t('cancelar')}
                 </button>
               </div>
             </div>
