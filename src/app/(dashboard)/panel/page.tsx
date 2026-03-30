@@ -349,6 +349,7 @@ export default function PanelPage() {
   const [suggestions, setSuggestions] = useState<any[]>([])
   const [opContext, setOpContext] = useState<any>(null)
   const [summaryOpen, setSummaryOpen] = useState(false)
+  const [weeklyComp, setWeeklyComp] = useState<{ thisRevenue: number; lastRevenue: number; thisOrders: number; lastOrders: number; thisReservations: number; lastReservations: number } | null>(null)
   const demoTimer              = useRef<ReturnType<typeof setInterval>|null>(null)
   const demoIdx                = useRef(0)
   const rtChannelRef           = useRef<any>(null)
@@ -402,6 +403,35 @@ export default function PanelPage() {
     supabase.from('daily_summaries')
       .select('*').eq('tenant_id', tid).eq('date', ydStr).maybeSingle()
       .then(({ data }) => { if (data) setDaySummary(data) })
+
+    // Weekly comparison: this week vs last week
+    ;(async () => {
+      try {
+        const now = new Date()
+        const dayOfWeek = now.getDay() // 0=Sun
+        const thisMonday = new Date(now)
+        thisMonday.setDate(now.getDate() - ((dayOfWeek + 6) % 7))
+        thisMonday.setHours(0, 0, 0, 0)
+        const lastMonday = new Date(thisMonday)
+        lastMonday.setDate(thisMonday.getDate() - 7)
+        const thisWeekStr = thisMonday.toISOString()
+        const lastWeekStr = lastMonday.toISOString()
+
+        const [thisOrders, lastOrders, thisRes, lastRes] = await Promise.all([
+          supabase.from('order_events').select('total_estimate').eq('tenant_id', tid).gte('created_at', thisWeekStr),
+          supabase.from('order_events').select('total_estimate').eq('tenant_id', tid).gte('created_at', lastWeekStr).lt('created_at', thisWeekStr),
+          supabase.from('reservations').select('id').eq('tenant_id', tid).gte('created_at', thisWeekStr),
+          supabase.from('reservations').select('id').eq('tenant_id', tid).gte('created_at', lastWeekStr).lt('created_at', thisWeekStr),
+        ])
+        const thisRev = (thisOrders.data || []).reduce((s: number, o: any) => s + (o.total_estimate || 0), 0)
+        const lastRev = (lastOrders.data || []).reduce((s: number, o: any) => s + (o.total_estimate || 0), 0)
+        setWeeklyComp({
+          thisRevenue: thisRev, lastRevenue: lastRev,
+          thisOrders: (thisOrders.data || []).length, lastOrders: (lastOrders.data || []).length,
+          thisReservations: (thisRes.data || []).length, lastReservations: (lastRes.data || []).length,
+        })
+      } catch {}
+    })()
   }, [router])
 
   useEffect(() => { load() }, [load])
@@ -889,6 +919,47 @@ export default function PanelPage() {
             : <KpiCard value={isTrial?callsLeft:`${callsUsed}/${callsLimit}`} label={isTrial?_tx('Llamadas restantes'):_tx('Uso del plan')} sub={planLabel} icon={isTrial?'⚡':'📊'} color={callsLeft<=3?C.red:planColor} accent={isTrial} href="/facturacion"/>
           }
         </div>
+
+        {/* ── Comparativa semanal ── */}
+        {weeklyComp && (weeklyComp.thisOrders > 0 || weeklyComp.lastOrders > 0 || weeklyComp.thisReservations > 0 || weeklyComp.lastReservations > 0) && (() => {
+          const pctChange = (curr: number, prev: number) => {
+            if (prev === 0) return curr > 0 ? 100 : 0
+            return Math.round(((curr - prev) / prev) * 100)
+          }
+          const revPct = pctChange(weeklyComp.thisRevenue, weeklyComp.lastRevenue)
+          const ordPct = pctChange(weeklyComp.thisOrders, weeklyComp.lastOrders)
+          const resPct = pctChange(weeklyComp.thisReservations, weeklyComp.lastReservations)
+          const arrow = (pct: number) => pct > 0 ? '\u25B2' : pct < 0 ? '\u25BC' : '\u2022'
+          const color = (pct: number) => pct > 0 ? C.green : pct < 0 ? C.red : C.text3
+          const items = [
+            { label: _tx('Ingresos'), value: `${weeklyComp.thisRevenue.toFixed(0)}\u20AC`, pct: revPct, show: weeklyComp.thisRevenue > 0 || weeklyComp.lastRevenue > 0 },
+            { label: _tx('Pedidos'), value: String(weeklyComp.thisOrders), pct: ordPct, show: weeklyComp.thisOrders > 0 || weeklyComp.lastOrders > 0 },
+            { label: L.reservas, value: String(weeklyComp.thisReservations), pct: resPct, show: weeklyComp.thisReservations > 0 || weeklyComp.lastReservations > 0 },
+          ].filter(i => i.show)
+
+          return (
+            <div style={{
+              background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14,
+              padding: '16px 20px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <span style={{ fontSize: 15 }}>📊</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{_tx('Esta semana vs anterior')}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                {items.map(item => (
+                  <div key={item.label} style={{ flex: '1 1 120px', minWidth: 100 }}>
+                    <p style={{ fontSize: 20, fontWeight: 800, color: C.text, margin: 0, lineHeight: 1 }}>{item.value}</p>
+                    <p style={{ fontSize: 12, color: C.text2, marginTop: 4 }}>{item.label}</p>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: color(item.pct), marginTop: 2 }}>
+                      {arrow(item.pct)} {item.pct > 0 ? '+' : ''}{item.pct}%
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* ── Contexto operativo ── */}
         {opContext && (
