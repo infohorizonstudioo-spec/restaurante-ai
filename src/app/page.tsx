@@ -572,7 +572,7 @@ export default function HomePage() {
       <section style={{padding:'90px clamp(16px,5vw,64px)'}}>
         <div style={{maxWidth:800,margin:'0 auto'}}>
           <div style={{textAlign:'center',marginBottom:48}}>
-            <p style={{fontSize:12,fontWeight:600,color:C.blue,letterSpacing:'0.08em',marginBottom:12}}>TODO EN UNO</p>
+            <p style={{fontSize:12,fontWeight:600,color:C.blue,letterSpacing:'0.08em',marginBottom:12}}>PLATAFORMA INTEGRAL</p>
             <h2 style={{fontSize:'clamp(28px,3.5vw,46px)',fontWeight:800,letterSpacing:'-0.03em',lineHeight:1.15,marginBottom:16}}>
               No necesitas 5 herramientas
             </h2>

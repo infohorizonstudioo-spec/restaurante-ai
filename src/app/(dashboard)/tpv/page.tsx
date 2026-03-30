@@ -38,6 +38,10 @@ const TPV_STYLES = `
   0%, 100% { opacity: 0.3; }
   50% { opacity: 0.6; }
 }
+@keyframes fadeOut {
+  0% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(1.2); }
+}
 @media (max-width: 768px) {
   .tpv-cat-sidebar {
     flex-direction: row !important;
@@ -576,7 +580,11 @@ export default function TPVPage() {
 
       const d = await res.json()
       if (!res.ok) {
-        alert('Error al guardar pedido: ' + (d.error || 'Error desconocido'))
+        const errFlash = document.createElement('div')
+        errFlash.textContent = '\u274c ' + (d.error || 'Error al guardar pedido')
+        errFlash.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#F87171;color:#0C1018;padding:16px 32px;border-radius:12px;font-size:16px;font-weight:800;z-index:99999;pointer-events:none;animation:fadeOut 2.5s forwards'
+        document.body.appendChild(errFlash)
+        setTimeout(() => errFlash.remove(), 2500)
         setSaving(false)
         return
       }
@@ -633,6 +641,12 @@ export default function TPVPage() {
           setDbTables(prev => prev.map(t => t.id === dbTable.id ? { ...t, status: 'libre' } : t))
         }
       }
+      // Quick success flash
+      const flash = document.createElement('div')
+      flash.textContent = '\u2705 Cobrado'
+      flash.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#34D399;color:#0C1018;padding:16px 32px;border-radius:12px;font-size:18px;font-weight:800;z-index:99999;pointer-events:none;animation:fadeOut 1.5s forwards'
+      document.body.appendChild(flash)
+      setTimeout(() => flash.remove(), 1500)
       setOrder([])
       setShowCobrar(false)
       setCobroName('')
@@ -670,7 +684,11 @@ export default function TPVPage() {
       })
       const d = await res.json()
       if (!res.ok) {
-        alert('Error: ' + (d.error || 'Error desconocido'))
+        const errFlash2 = document.createElement('div')
+        errFlash2.textContent = '\u274c ' + (d.error || 'Error desconocido')
+        errFlash2.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#F87171;color:#0C1018;padding:16px 32px;border-radius:12px;font-size:16px;font-weight:800;z-index:99999;pointer-events:none;animation:fadeOut 2.5s forwards'
+        document.body.appendChild(errFlash2)
+        setTimeout(() => errFlash2.remove(), 2500)
         setSaving(false)
         return
       }
@@ -823,7 +841,7 @@ export default function TPVPage() {
       @media print { body { width: 80mm; } }
     </style></head><body>
       <div class="header">
-        ${logoUrl ? `<img src="${logoUrl}" class="logo" alt="logo"/>` : ''}
+        ${logoUrl ? `<img src="${logoUrl}" class="logo" alt="${businessName}"/>` : ''}
         <div class="biz-name">${businessName}</div>
         ${addr ? `<div class="biz-info">${addr}</div>` : ''}
         ${phone ? `<div class="biz-info">Tel: ${phone}</div>` : ''}
@@ -1013,7 +1031,7 @@ export default function TPVPage() {
       <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ textAlign: 'center', maxWidth: 400 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>{'\uD83D\uDEAB'}</div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 8 }}>Modulo no disponible</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 8 }}>Módulo no disponible</h2>
           <p style={{ fontSize: 14, color: C.text2, lineHeight: 1.6 }}>El TPV esta disponible para negocios de hosteleria.</p>
         </div>
       </div>
