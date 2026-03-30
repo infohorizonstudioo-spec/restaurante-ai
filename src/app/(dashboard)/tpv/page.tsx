@@ -309,6 +309,8 @@ export default function TPVPage() {
   const [parked, setParked] = useState<ParkedOrder[]>([])
   const [parkedOpen, setParkedOpen] = useState(false)
   const [showCobrar, setShowCobrar] = useState(false)
+  const [showSplit, setShowSplit] = useState(false)
+  const [splitSelected, setSplitSelected] = useState<Set<number>>(new Set())
   const [cobroType, setCobroType] = useState<'barra' | 'mesa' | 'recoger' | 'domicilio'>('barra')
   const [cobroName, setCobroName] = useState('')
   const [cobroTable, setCobroTable] = useState('')
@@ -640,6 +642,73 @@ export default function TPVPage() {
     }
   }
 
+  async function cobrarSplit() {
+    if (!tid || splitSelected.size === 0) return
+    setSaving(true)
+    try {
+      const splitItems = order.filter((_, i) => splitSelected.has(i))
+      const splitTotal = splitItems.reduce((s, i) => s + i.price * i.quantity, 0)
+      const { data: { session } } = await supabase.auth.getSession()
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (session?.access_token) headers.Authorization = 'Bearer ' + session.access_token
+
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          tenant_id: tid,
+          customer_name: 'TPV (cuenta parcial)',
+          order_type: selectedTable ? 'mesa' : 'barra',
+          notes: selectedTable ? `Mesa: ${selectedTable} (cuenta parcial)` : 'Cuenta parcial',
+          items: splitItems.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
+          total_estimate: splitTotal,
+        }),
+      })
+      const d = await res.json()
+      if (!res.ok) {
+        alert('Error: ' + (d.error || 'Error desconocido'))
+        setSaving(false)
+        return
+      }
+      if (d.order?.id) {
+        await fetch('/api/orders', {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ id: d.order.id, tenant_id: tid, status: 'confirmed' }),
+        })
+        fetch('/api/harmonize/order-created', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ order_id: d.order.id }),
+        }).catch(() => {})
+      }
+
+      // Print receipt for split items
+      const tableForTicket = selectedTable ?? null
+      const customerHtml = generateCustomerTicket(splitItems, splitTotal, tableForTicket, tenant?.name || 'Reservo.AI')
+      printTicket(customerHtml)
+
+      // Keep remaining items in the order
+      const remaining = order.filter((_, i) => !splitSelected.has(i))
+      setOrder(remaining)
+      if (selectedTable) {
+        if (remaining.length > 0) {
+          setTableOrders(prev => ({ ...prev, [selectedTable]: remaining }))
+        } else {
+          setTableOrders(prev => {
+            const next = { ...prev }
+            delete next[selectedTable]
+            return next
+          })
+        }
+      }
+      setShowSplit(false)
+      setSplitSelected(new Set())
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function aparcar() {
     if (!tid || order.length === 0) return
     setSaving(true)
@@ -837,10 +906,10 @@ export default function TPVPage() {
 
   // ── Table management ────────────────────────────────────────────────
   function selectTable(table: string | null) {
-    // Save current order to current table
-    if (selectedTable && order.length > 0) {
+    // ALWAYS save current order to current table first
+    if (selectedTable !== null && order.length > 0) {
       setTableOrders(prev => ({ ...prev, [selectedTable]: order }))
-    } else if (selectedTable && order.length === 0) {
+    } else if (selectedTable !== null && order.length === 0) {
       setTableOrders(prev => {
         const next = { ...prev }
         delete next[selectedTable]
@@ -860,6 +929,17 @@ export default function TPVPage() {
     if (saved) {
       try { setTableOrders(JSON.parse(saved)) } catch { /* ignore */ }
     }
+    // Restore active order on mount
+    const savedActive = localStorage.getItem(`tpv_active_${tid}`)
+    if (savedActive) {
+      try {
+        const { table, order: savedOrder } = JSON.parse(savedActive)
+        if (table && savedOrder && savedOrder.length > 0) {
+          setSelectedTable(table)
+          setOrder(savedOrder)
+        }
+      } catch { /* ignore */ }
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tid])
 
@@ -870,6 +950,16 @@ export default function TPVPage() {
       localStorage.setItem(`tpv_tables_${tid}`, JSON.stringify(tableOrders))
     }, 1000)
   }, [tableOrders, tid])
+
+  // Persist active order + selected table on every change
+  useEffect(() => {
+    if (!tid) return
+    if (selectedTable && order.length > 0) {
+      localStorage.setItem(`tpv_active_${tid}`, JSON.stringify({ table: selectedTable, order }))
+    } else if (tid) {
+      localStorage.removeItem(`tpv_active_${tid}`)
+    }
+  }, [tid, selectedTable, order])
 
   // Table count helper
   const getTableItemCount = useCallback((table: string) => {
@@ -1649,6 +1739,26 @@ export default function TPVPage() {
                 COBRAR
               </button>
 
+              {/* Dividir cuenta */}
+              {order.length >= 2 && (
+                <button
+                  onClick={() => { setSplitSelected(new Set()); setShowSplit(true) }}
+                  style={{
+                    width: '100%', height: 40,
+                    background: 'rgba(167,139,250,0.12)',
+                    border: `1px solid ${C.violet}`,
+                    borderRadius: 10,
+                    color: C.violet,
+                    fontSize: 13, fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}
+                >
+                  Dividir cuenta
+                </button>
+              )}
+
               {/* Cocina */}
               <button
                 onClick={sendToKitchen}
@@ -1813,6 +1923,106 @@ export default function TPVPage() {
                 }}
               >
                 {saving ? 'Procesando...' : 'Confirmar cobro'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Split bill modal ──────────────────────────────────────── */}
+        {showSplit && (
+          <div
+            onClick={() => setShowSplit(false)}
+            style={{
+              position: 'fixed', inset: 0,
+              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 100, padding: 20,
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: C.surface, border: `1px solid ${C.border}`,
+                borderRadius: 20, padding: 28, width: '100%', maxWidth: 420,
+                maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+              }}
+            >
+              <h3 style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 4 }}>Dividir cuenta</h3>
+              <p style={{ fontSize: 13, color: C.text2, marginBottom: 16 }}>
+                Selecciona los productos para la cuenta 1
+              </p>
+
+              <div style={{ flex: 1, overflowY: 'auto', marginBottom: 16 }}>
+                {order.map((item, idx) => {
+                  const checked = splitSelected.has(idx)
+                  return (
+                    <label
+                      key={idx}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '10px 12px', marginBottom: 4,
+                        borderRadius: 10, cursor: 'pointer',
+                        background: checked ? 'rgba(167,139,250,0.1)' : 'transparent',
+                        border: checked ? `1px solid ${C.violet}` : `1px solid ${C.border}`,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setSplitSelected(prev => {
+                            const next = new Set(prev)
+                            if (next.has(idx)) next.delete(idx)
+                            else next.add(idx)
+                            return next
+                          })
+                        }}
+                        style={{ width: 18, height: 18, accentColor: C.violet }}
+                      />
+                      <span style={{ flex: 1, color: C.text, fontSize: 14 }}>
+                        {item.quantity > 1 ? `${item.quantity}x ` : ''}{item.name}
+                      </span>
+                      <span style={{ color: C.amber, fontWeight: 700, fontSize: 14 }}>
+                        {(item.price * item.quantity).toFixed(2)}{'\u20AC'}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+
+              {(() => {
+                const splitTotal = order.filter((_, i) => splitSelected.has(i)).reduce((s, it) => s + it.price * it.quantity, 0)
+                const restTotal = order.filter((_, i) => !splitSelected.has(i)).reduce((s, it) => s + it.price * it.quantity, 0)
+                return (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, color: C.text2 }}>Cuenta 1 ({splitSelected.size} items)</span>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: C.violet }}>{splitTotal.toFixed(2)}{'\u20AC'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 13, color: C.text2 }}>Restante ({order.length - splitSelected.size} items)</span>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: C.text2 }}>{restTotal.toFixed(2)}{'\u20AC'}</span>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              <button
+                onClick={cobrarSplit}
+                disabled={saving || splitSelected.size === 0}
+                style={{
+                  width: '100%', padding: '16px',
+                  background: splitSelected.size > 0 ? 'linear-gradient(135deg, #A78BFA, #8B5CF6)' : C.surface2,
+                  border: 'none', borderRadius: 14,
+                  color: splitSelected.size > 0 ? '#fff' : C.text3,
+                  fontSize: 16, fontWeight: 800,
+                  cursor: splitSelected.size > 0 ? (saving ? 'wait' : 'pointer') : 'default',
+                  boxShadow: splitSelected.size > 0 ? '0 4px 20px rgba(167,139,250,0.3)' : 'none',
+                  fontFamily: 'inherit',
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >
+                {saving ? 'Procesando...' : `Cobrar cuenta 1 (${order.filter((_, i) => splitSelected.has(i)).reduce((s, it) => s + it.price * it.quantity, 0).toFixed(2)}\u20AC)`}
               </button>
             </div>
           </div>
