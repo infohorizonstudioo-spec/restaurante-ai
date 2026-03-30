@@ -14,12 +14,16 @@ export default function CartaQRPage() {
   useEffect(() => {
     if (!tenant) return
     ;(async () => {
-      const { data } = await supabase
-        .from('tables')
-        .select('id, number, name, zone_name')
-        .eq('tenant_id', tenant.id)
-        .order('number')
-      setTables(data || [])
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const headers: Record<string, string> = {}
+        if (session?.access_token) headers.Authorization = 'Bearer ' + session.access_token
+        const res = await fetch(`/api/tables?tenant_id=${tenant.id}`, { headers })
+        const d = await res.json()
+        setTables(d.tables || [])
+      } catch {
+        setTables([])
+      }
       setLoadingTables(false)
     })()
   }, [tenant])
