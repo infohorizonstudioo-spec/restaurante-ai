@@ -108,6 +108,19 @@ export async function POST(req: NextRequest) {
       })
     } catch { /* non-critical */ }
 
+    // Create kitchen-focused in-app notification with full order details
+    try {
+      await admin.from('notifications').insert({
+        tenant_id: tenant.id,
+        type: 'new_order',
+        title: `🍳 Comanda QR${mesa ? ' — Mesa ' + mesa : ''}`,
+        body: items.map((i: { name: string; quantity?: number }) => `${i.quantity || 1}x ${i.name}`).join(', ') + (notes ? ` | Notas: ${sanitizeString(notes, 500)}` : ''),
+        priority: 'warning',
+        read: false,
+        target_url: '/pedidos',
+      })
+    } catch { /* non-critical */ }
+
     return NextResponse.json({ success: true, order_id: order?.id })
   } catch (e: unknown) {
     logger.error('public order error', {}, e)
