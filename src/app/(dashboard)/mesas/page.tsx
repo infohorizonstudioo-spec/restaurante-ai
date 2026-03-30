@@ -93,24 +93,135 @@ function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDrag
   }
 
   const isCombo = !!table.combo_group
+  const isOccupied = table.status === 'ocupada'
+  const isReserved = table.status === 'reservada'
+  const isBlocked = table.status === 'bloqueada'
+  const capacity = comboCapacity || table.capacity
+  const isBarra = (table.name || '').toLowerCase().includes('barra') || w > h * 3
+
   const borderColor = selected ? C.amber : multiSelected ? C.violet : isCombo ? C.teal : (zoneColor ? zoneColor+'55' : cfg.color+'44')
   const strokeW = selected ? 2.5 : multiSelected ? 2 : 1.5
   const glow = selected ? `drop-shadow(0 0 8px ${C.amber}55)` : multiSelected ? `drop-shadow(0 0 6px ${C.violet}44)` : isCombo ? `drop-shadow(0 0 6px ${C.teal}33)` : `drop-shadow(0 2px 6px rgba(0,0,0,0.4))`
+  const tableFill = isBlocked ? '#13161E' : isOccupied ? '#1E1E2E' : '#1A1F2E'
+  const chairFill = isOccupied ? cfg.color : '#2A3040'
 
   return (
     <g id={`el-${table.id}`}
       transform={`translate(${x},${y})${rot?` rotate(${rot},${w/2},${h/2})`:''}` }
       onMouseDown={onMD} onDoubleClick={onDoubleClick}
       style={{ cursor:'grab' }}>
-      {isRound ? (
-        <ellipse id={`shape-${table.id}`} cx={w/2} cy={h/2} rx={w/2} ry={h/2}
-          fill={cfg.bg} stroke={borderColor} strokeWidth={strokeW}
-          style={{ filter:glow, transition:'filter 0.15s' }} />
+
+      {isBarra ? (
+        /* ── BARRA (bar counter) ── */
+        <>
+          <rect id={`shape-${table.id}`} x={0} y={0} width={w} height={h} rx={h/2}
+            fill={tableFill} stroke={borderColor} strokeWidth={strokeW}
+            style={{ filter:glow, transition:'filter 0.15s' }} />
+          {/* Status bar */}
+          <rect x={4} y={4} width={w-8} height={4} rx={2} fill={cfg.color} opacity={0.6} />
+          {/* Cross-hatch for blocked */}
+          {isBlocked && (
+            <rect x={2} y={2} width={w-4} height={h-4} rx={h/2-2}
+              fill="url(#hatch-blocked)" opacity={0.15} />
+          )}
+          {/* Bar stools along front */}
+          {Array.from({length: Math.min(capacity, 12)}).map((_, i) => {
+            const spacing = (w - 20) / Math.max(capacity - 1, 1)
+            return <circle key={i} cx={10 + spacing * i} cy={h + 8} r={5}
+              fill={chairFill} stroke={borderColor} strokeWidth={0.5} />
+          })}
+          {/* Label — left-aligned for barra */}
+          <text x={14} y={h/2 + 1} textAnchor="start" dominantBaseline="middle"
+            fill="#E8EEF6" fontSize={w > 100 ? 14 : 12} fontWeight={800}
+            style={{pointerEvents:'none', userSelect:'none', letterSpacing:'-0.02em'}}>
+            {table.name || `${unitIcon}${table.number}`}
+          </text>
+          <text x={w - 14} y={h/2 + 1} textAnchor="end" dominantBaseline="middle"
+            fill="rgba(255,255,255,0.3)" fontSize={9} fontWeight={600}
+            style={{pointerEvents:'none', userSelect:'none'}}>
+            {capacity}p
+          </text>
+        </>
+      ) : isRound ? (
+        /* ── ROUND TABLE ── */
+        <>
+          {/* Chair dots around circle perimeter */}
+          {Array.from({length: Math.min(capacity, 8)}).map((_, i) => {
+            const angle = (2 * Math.PI * i) / Math.min(capacity, 8) - Math.PI/2
+            const cx = w/2 + (w/2 + 6) * Math.cos(angle)
+            const cy = h/2 + (h/2 + 6) * Math.sin(angle)
+            return <circle key={i} cx={cx} cy={cy} r={4}
+              fill={chairFill} stroke={borderColor} strokeWidth={0.5} />
+          })}
+          {/* Table surface */}
+          <ellipse id={`shape-${table.id}`} cx={w/2} cy={h/2} rx={w/2-2} ry={h/2-2}
+            fill={tableFill} stroke={borderColor} strokeWidth={strokeW}
+            style={{ filter:glow, transition:'filter 0.15s' }} />
+          {/* Status ring */}
+          <ellipse cx={w/2} cy={h/2} rx={w/2-6} ry={h/2-6}
+            fill="none" stroke={cfg.color} strokeWidth={2} opacity={0.3} />
+          {/* Cross-hatch for blocked */}
+          {isBlocked && (
+            <ellipse cx={w/2} cy={h/2} rx={w/2-4} ry={h/2-4}
+              fill="url(#hatch-blocked)" opacity={0.15} />
+          )}
+          {/* Table number */}
+          <text x={w/2} y={h/2 - 4} textAnchor="middle" dominantBaseline="middle"
+            fill="#E8EEF6" fontSize={w > 70 ? 16 : 13} fontWeight={800}
+            style={{pointerEvents:'none', userSelect:'none', letterSpacing:'-0.02em'}}>
+            {table.name || `${unitIcon}${table.number}`}
+          </text>
+          {/* Capacity */}
+          <text x={w/2} y={h/2 + 12} textAnchor="middle"
+            fill="rgba(255,255,255,0.3)" fontSize={9} fontWeight={600}
+            style={{pointerEvents:'none', userSelect:'none'}}>
+            {capacity}p
+          </text>
+        </>
       ) : (
-        <rect id={`shape-${table.id}`} x={0} y={0} width={w} height={h} rx={10}
-          fill={cfg.bg} stroke={borderColor} strokeWidth={strokeW}
-          style={{ filter:glow, transition:'filter 0.15s' }} />
+        /* ── SQUARE/RECTANGLE TABLE ── */
+        <>
+          {/* Chair dots — top */}
+          {Array.from({length: Math.min(Math.ceil(capacity/2), 4)}).map((_, i) => {
+            const count = Math.min(Math.ceil(capacity/2), 4)
+            const spacing = w / (count + 1)
+            return <circle key={'t'+i} cx={spacing * (i+1)} cy={-6} r={4}
+              fill={chairFill} stroke={borderColor} strokeWidth={0.5} />
+          })}
+          {/* Chair dots — bottom */}
+          {Array.from({length: Math.min(Math.floor(capacity/2), 4)}).map((_, i) => {
+            const count = Math.min(Math.floor(capacity/2), 4)
+            const spacing = w / (count + 1)
+            return <circle key={'b'+i} cx={spacing * (i+1)} cy={h+6} r={4}
+              fill={chairFill} stroke={borderColor} strokeWidth={0.5} />
+          })}
+          {/* Table surface */}
+          <rect id={`shape-${table.id}`} x={2} y={2} width={w-4} height={h-4} rx={6}
+            fill={tableFill} stroke={borderColor} strokeWidth={strokeW}
+            style={{ filter:glow, transition:'filter 0.15s' }} />
+          {/* Status indicator bar at top */}
+          <rect x={4} y={4} width={w-8} height={4} rx={2}
+            fill={cfg.color} opacity={0.9} />
+          {/* Cross-hatch for blocked */}
+          {isBlocked && (
+            <rect x={2} y={2} width={w-4} height={h-4} rx={6}
+              fill="url(#hatch-blocked)" opacity={0.15} />
+          )}
+          {/* Table number */}
+          <text x={w/2} y={h/2 - 4} textAnchor="middle" dominantBaseline="middle"
+            fill="#E8EEF6" fontSize={w > 70 ? 16 : 13} fontWeight={800}
+            style={{pointerEvents:'none', userSelect:'none', letterSpacing:'-0.02em'}}>
+            {table.name || `${unitIcon}${table.number}`}
+          </text>
+          {/* Capacity */}
+          <text x={w/2} y={h/2 + 12} textAnchor="middle"
+            fill="rgba(255,255,255,0.3)" fontSize={9} fontWeight={600}
+            style={{pointerEvents:'none', userSelect:'none'}}>
+            {capacity}p
+          </text>
+        </>
       )}
+
       {/* Combo badge */}
       {isCombo && (
         <g>
@@ -121,18 +232,8 @@ function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDrag
           </text>
         </g>
       )}
-      {/* Label */}
-      <text x={w/2} y={h/2-8} textAnchor="middle" fill={cfg.color}
-        fontSize={13} fontWeight={800} style={{pointerEvents:'none',userSelect:'none'}}>
-        {table.name || `${unitIcon}${table.number}`}
-      </text>
-      {/* Capacity — show combined if in group */}
-      <text x={w/2} y={h/2+8} textAnchor="middle" fill={C.muted}
-        fontSize={10} fontWeight={600} style={{pointerEvents:'none',userSelect:'none'}}>
-        {comboCapacity ? `${comboCapacity}p (combo)` : `${table.capacity}p`} · {tx(STATUS_CFG[table.status]?.label || 'Libre')}
-      </text>
-      {/* Reservation indicator */}
-      {table.status === 'reservada' && (
+      {/* Reservation badge */}
+      {isReserved && (
         <text x={w - 8} y={12} fontSize={10} style={{pointerEvents:'none',userSelect:'none'}}>📅</text>
       )}
       {/* Resize handle */}
@@ -1063,6 +1164,9 @@ export default function MesasPage() {
                     </pattern>
                     <pattern id="grid-major" width={GRID*5} height={GRID*5} patternUnits="userSpaceOnUse">
                       <circle cx={GRID*5/2} cy={GRID*5/2} r={1.2} fill="rgba(255,255,255,0.06)" />
+                    </pattern>
+                    <pattern id="hatch-blocked" width={8} height={8} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                      <line x1={0} y1={0} x2={0} y2={8} stroke="rgba(255,255,255,0.25)" strokeWidth={1.5} />
                     </pattern>
                   </defs>
                   <rect id="canvas-bg" x={-1000} y={-1000} width={maxX+2000} height={maxY+2000} fill={C.bg}
