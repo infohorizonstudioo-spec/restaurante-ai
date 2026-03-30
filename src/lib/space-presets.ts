@@ -43,7 +43,7 @@ const HOSTELERIA_PRESETS: BusinessPresets = {
     { id: 'mesa-6', label: 'Mesa para 6', icon: '🍽️', shape: 'rectangle', w: 140, h: 80, capacity: 6, category: 'Mesas' },
     { id: 'mesa-8', label: 'Mesa para 8', icon: '🍽️', shape: 'rectangle', w: 180, h: 90, capacity: 8, category: 'Mesas' },
     { id: 'mesa-redonda', label: 'Mesa redonda', icon: '⭕', shape: 'round', w: 90, h: 90, capacity: 4, category: 'Mesas' },
-    { id: 'barra', label: 'Barra', icon: '🍸', shape: 'rectangle', w: 200, h: 50, capacity: 6, category: 'Zonas especiales' },
+    { id: 'barra', label: 'Barra', icon: '🍸', shape: 'rectangle', w: 300, h: 40, capacity: 8, category: 'Zonas especiales' },
     { id: 'reservado', label: 'Reservado VIP', icon: '⭐', shape: 'rectangle', w: 160, h: 100, capacity: 6, category: 'Zonas especiales' },
   ],
   starterLayouts: [

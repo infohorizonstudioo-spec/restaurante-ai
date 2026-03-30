@@ -131,6 +131,10 @@ function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDrag
         fontSize={10} fontWeight={600} style={{pointerEvents:'none',userSelect:'none'}}>
         {comboCapacity ? `${comboCapacity}p (combo)` : `${table.capacity}p`} · {tx(STATUS_CFG[table.status]?.label || 'Libre')}
       </text>
+      {/* Reservation indicator */}
+      {table.status === 'reservada' && (
+        <text x={w - 8} y={12} fontSize={10} style={{pointerEvents:'none',userSelect:'none'}}>📅</text>
+      )}
       {/* Resize handle */}
       {selected && (
         <>
@@ -894,6 +898,16 @@ export default function MesasPage() {
             }}>{k==='floor'?tx('Plano'):zonesLabel}</button>
           ))}
           <div style={{width:1,height:20,background:C.border,margin:'0 2px'}}/>
+          <button onClick={() => {
+            if (!isTPVMode) window.location.href = '/mesas?mode=tpv'
+            else window.location.href = '/mesas'
+          }} style={{
+            padding:'5px 12px',fontSize:11,fontWeight:600,borderRadius:8,
+            border:`1px solid ${isTPVMode?C.violet+'44':C.border}`,
+            background:isTPVMode?C.violet+'14':'transparent',
+            color:isTPVMode?C.violet:C.sub,cursor:'pointer',fontFamily:'inherit',
+          }}>{isTPVMode ? 'TPV' : 'Editor'}</button>
+          <div style={{width:1,height:20,background:C.border,margin:'0 2px'}}/>
           <button onClick={addQuick} style={{
             padding:'6px 14px',fontSize:11,fontWeight:700,
             background:`linear-gradient(135deg,${C.amber},#E8923A)`,
@@ -1045,10 +1059,10 @@ export default function MesasPage() {
                 >
                   <defs>
                     <pattern id="grid-dots" width={GRID} height={GRID} patternUnits="userSpaceOnUse">
-                      <circle cx={GRID/2} cy={GRID/2} r={0.7} fill="rgba(255,255,255,0.05)" />
+                      <circle cx={GRID/2} cy={GRID/2} r={0.7} fill="rgba(255,255,255,0.03)" />
                     </pattern>
                     <pattern id="grid-major" width={GRID*5} height={GRID*5} patternUnits="userSpaceOnUse">
-                      <circle cx={GRID*5/2} cy={GRID*5/2} r={1.2} fill="rgba(255,255,255,0.08)" />
+                      <circle cx={GRID*5/2} cy={GRID*5/2} r={1.2} fill="rgba(255,255,255,0.06)" />
                     </pattern>
                   </defs>
                   <rect id="canvas-bg" x={-1000} y={-1000} width={maxX+2000} height={maxY+2000} fill={C.bg}
@@ -1066,7 +1080,7 @@ export default function MesasPage() {
                       <g key={z.id}>
                         <rect x={b.minX-pad} y={b.minY-pad}
                           width={b.maxX-b.minX+pad*2} height={b.maxY-b.minY+pad*2}
-                          rx={14} fill={col+'06'} stroke={col+'20'} strokeWidth={1.5} strokeDasharray="8 4" />
+                          rx={14} fill={col+'06'} stroke={col+'15'} strokeWidth={1} strokeDasharray="6 3" />
                         <text x={b.minX-pad+10} y={b.minY-pad+16}
                           fontSize={11} fontWeight={700} fill={col+'55'} style={{textTransform:'uppercase',letterSpacing:'0.05em'}}>
                           {z.name}
