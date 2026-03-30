@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
   if (!tenantId) return NextResponse.json({ tables: [] })
 
   const { data } = await admin.from('tables')
-    .select('id, number, name, capacity, zone_id, zone_name, x_pos, y_pos, w, h, shape_type, status, rotation')
+    .select('id, number, name, capacity, zone_id, x_pos, y_pos, w, h, shape_type, status, rotation')
     .eq('tenant_id', tenantId)
     .order('number')
 
