@@ -368,6 +368,7 @@ export default function PedidosPage() {
                     <p style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{o.customer_name}</p>
                     <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, background: sm.color + '18', color: sm.color, fontWeight: 700 }}>{SL[o.status] || o.status}</span>
                     <span style={{ fontSize: 10, color: C.muted }}>{typeLabel}</span>
+                    {o.call_sid?.startsWith('qr_') && <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, background: 'rgba(167,139,250,0.12)', color: '#A78BFA', fontWeight: 700 }}>QR</span>}
                     {o.table_id && <span style={{ fontSize: 10, color: C.blue, fontWeight: 600 }}>{L.table} {o.table_id}</span>}
                   </div>
                   {/* Items preview */}
@@ -440,6 +441,7 @@ export default function PedidosPage() {
                 {(TYPE_ICONS[modal.order_type] || '📦') + ' ' + (TL[modal.order_type] || modal.order_type)}
               </span>
               {modal.table_id && <span style={{ fontSize: 11, color: C.blue, fontWeight: 600 }}>{L.table} {modal.table_id}</span>}
+              {modal.call_sid?.startsWith('qr_') && <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: 'rgba(167,139,250,0.12)', color: '#A78BFA', fontWeight: 700 }}>QR</span>}
             </div>
 
             {/* Customer info */}
