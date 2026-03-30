@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     const tenant_id = auth.tenantId
 
     const body = await req.json()
-    const { customer_name, customer_phone, order_type = 'mesa', notes, items = [], total_estimate = 0 } = body
+    const { customer_name, customer_phone, order_type = 'mesa', notes, items = [], total_estimate = 0, payment_method } = body
 
     if (!customer_name) return NextResponse.json({ error: 'customer_name required' }, { status: 400 })
 
@@ -83,6 +83,7 @@ export async function POST(req: Request) {
       items: items || [],
       total_estimate: parseFloat(String(total_estimate)) || 0,
       status: 'collecting',
+      payment_method: payment_method || 'cash',
     }).select().single()
 
     if (error) throw error
@@ -102,7 +103,7 @@ export async function PATCH(req: Request) {
     if (!auth.ok || !auth.tenantId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     const tenant_id = auth.tenantId
 
-    const { id, status, notes } = await req.json()
+    const { id, status, notes, payment_method } = await req.json()
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
 
     const validStatuses = ['collecting', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled']
@@ -113,6 +114,7 @@ export async function PATCH(req: Request) {
     const updates: any = { updated_at: new Date().toISOString() }
     if (status) updates.status = status
     if (notes !== undefined) updates.notes = notes
+    if (payment_method) updates.payment_method = payment_method
 
     const { data, error } = await admin.from('order_events')
       .update(updates)
