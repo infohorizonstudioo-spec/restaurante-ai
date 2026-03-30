@@ -324,6 +324,10 @@ export default function TPVPage() {
   const [cobroTable, setCobroTable] = useState('')
   const [cobroNotes, setCobroNotes] = useState('')
   const [cobroPayment, setCobroPayment] = useState<'cash' | 'card' | 'other'>('cash')
+  const [cobroDiscount, setCobroDiscount] = useState<number>(0)
+  const [cobroDiscountType, setCobroDiscountType] = useState<'percent' | 'fixed'>('percent')
+  const [cobroTip, setCobroTip] = useState<number>(0)
+  const [cobroTipMode, setCobroTipMode] = useState<'none' | '5' | '10' | 'custom'>('none')
   const [saving, setSaving] = useState(false)
   const [showCustom, setShowCustom] = useState(false)
   const [customName, setCustomName] = useState('')
@@ -560,6 +564,16 @@ export default function TPVPage() {
     setOrder(prev => prev.filter(i => i.id !== id))
   }
 
+  // Computed discount/tip values for cobrar
+  const discountAmount = cobroDiscountType === 'percent'
+    ? total * (Math.min(100, Math.max(0, cobroDiscount)) / 100)
+    : Math.min(total, Math.max(0, cobroDiscount))
+  const tipAmount = cobroTipMode === 'none' ? 0
+    : cobroTipMode === '5' ? total * 0.05
+    : cobroTipMode === '10' ? total * 0.10
+    : Math.max(0, cobroTip)
+  const finalTotal = Math.max(0, total - discountAmount + tipAmount)
+
   async function cobrar() {
     if (!tid || order.length === 0) return
     setSaving(true)
@@ -575,9 +589,14 @@ export default function TPVPage() {
           tenant_id: tid,
           customer_name: cobroName.trim() || 'TPV',
           order_type: cobroType,
-          notes: [cobroTable ? `Mesa: ${cobroTable}` : '', cobroNotes].filter(Boolean).join(' | ') || 'TPV',
+          notes: [
+            cobroTable ? `Mesa: ${cobroTable}` : '',
+            cobroNotes,
+            discountAmount > 0 ? `Descuento: -${discountAmount.toFixed(2)}\u20AC` : '',
+            tipAmount > 0 ? `Propina: +${tipAmount.toFixed(2)}\u20AC` : '',
+          ].filter(Boolean).join(' | ') || 'TPV',
           items: order.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
-          total_estimate: total,
+          total_estimate: finalTotal,
           payment_method: cobroPayment,
         }),
       })
@@ -658,6 +677,10 @@ export default function TPVPage() {
       setCobroNotes('')
       setCobroType('barra')
       setCobroPayment('cash')
+      setCobroDiscount(0)
+      setCobroDiscountType('percent')
+      setCobroTip(0)
+      setCobroTipMode('none')
     } finally {
       setSaving(false)
     }
@@ -875,11 +898,17 @@ export default function TPVPage() {
     const time = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
     const date = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })
 
+    // Order number from localStorage
+    const orderNum = parseInt(localStorage.getItem('tpv_order_num') || '0') + 1
+    localStorage.setItem('tpv_order_num', String(orderNum))
+    const orderNumStr = String(orderNum).padStart(3, '0')
+
     return `<!DOCTYPE html><html><head><style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font-family: 'Segoe UI', Arial, sans-serif; width: 300px; margin: 0 auto; padding: 16px; font-size: 14px; }
       .header { text-align: center; padding: 12px; margin-bottom: 12px; background: #111; color: #fff; border-radius: 8px; }
       .header h1 { font-size: 22px; letter-spacing: 4px; font-weight: 900; }
+      .header .order-num { font-size: 28px; font-weight: 900; margin-top: 8px; letter-spacing: 2px; }
       .header .loc { font-size: 16px; font-weight: 700; margin-top: 6px; }
       .header .time { font-size: 12px; opacity: 0.7; margin-top: 2px; }
       .items { margin: 12px 0; }
@@ -892,8 +921,9 @@ export default function TPVPage() {
     </style></head><body>
       <div class="header">
         <h1>\uD83C\uDF73 COCINA</h1>
-        <div class="loc">${table ? 'MESA ' + table : 'BARRA'}</div>
-        <div class="time">${date} \u2014 ${time}</div>
+        <div class="order-num">COMANDA #${orderNumStr}</div>
+        <div class="loc">${table ? 'MESA ' + table : 'BARRA'} \u2014 ${time}</div>
+        <div class="time">${date}</div>
       </div>
       <div class="items">
         ${foodItems.map(i => `<div class="item"><span class="item-qty">${i.quantity}x</span><span>${i.name}</span></div>`).join('')}
@@ -1863,7 +1893,7 @@ export default function TPVPage() {
             >
               <h3 style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 4 }}>Cobrar pedido</h3>
               <p style={{ fontSize: 32, fontWeight: 800, color: C.amber, marginBottom: 20 }}>
-                {total.toFixed(2)}{'\u20AC'}
+                {finalTotal.toFixed(2)}{'\u20AC'}
               </p>
 
               {/* Order type */}
@@ -1935,6 +1965,92 @@ export default function TPVPage() {
                   outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
                 }}
               />
+
+              {/* Descuento */}
+              <p style={{ fontSize: 13, color: C.text2, marginBottom: 8, fontWeight: 600 }}>Descuento</p>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center' }}>
+                <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.border}`, flexShrink: 0 }}>
+                  {(['percent', 'fixed'] as const).map(dt => (
+                    <button key={dt} onClick={() => setCobroDiscountType(dt)} style={{
+                      padding: '8px 12px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                      background: cobroDiscountType === dt ? C.amberDim : 'transparent',
+                      color: cobroDiscountType === dt ? C.amber : C.text3,
+                      fontSize: 13, fontWeight: 700,
+                    }}>{dt === 'percent' ? '%' : '\u20AC'}</button>
+                  ))}
+                </div>
+                <input
+                  type="number" min={0} max={cobroDiscountType === 'percent' ? 100 : total}
+                  value={cobroDiscount || ''}
+                  onChange={e => setCobroDiscount(parseFloat(e.target.value) || 0)}
+                  placeholder="0"
+                  style={{
+                    flex: 1, padding: '10px 14px',
+                    background: C.surface2, border: `1px solid ${C.border}`,
+                    borderRadius: 10, color: C.text, fontSize: 14,
+                    outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+                  }}
+                />
+                {discountAmount > 0 && (
+                  <span style={{ fontSize: 13, color: C.red, fontWeight: 700, flexShrink: 0 }}>
+                    -{discountAmount.toFixed(2)}{'\u20AC'}
+                  </span>
+                )}
+              </div>
+
+              {/* Propina */}
+              <p style={{ fontSize: 13, color: C.text2, marginBottom: 8, fontWeight: 600 }}>Propina</p>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                {([['none', 'Sin propina'], ['5', '5%'], ['10', '10%'], ['custom', 'Otro']] as const).map(([mode, label]) => (
+                  <button key={mode} onClick={() => { setCobroTipMode(mode as typeof cobroTipMode); if (mode !== 'custom') setCobroTip(0) }} style={{
+                    flex: 1, padding: '10px 6px', borderRadius: 10, fontSize: 12, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
+                    border: cobroTipMode === mode ? `2px solid ${C.teal}` : `1px solid ${C.border}`,
+                    background: cobroTipMode === mode ? 'rgba(45,212,191,0.1)' : 'transparent',
+                    color: cobroTipMode === mode ? C.teal : C.text2,
+                  }}>{label}</button>
+                ))}
+              </div>
+              {cobroTipMode === 'custom' && (
+                <input
+                  type="number" min={0} step={0.5}
+                  value={cobroTip || ''}
+                  onChange={e => setCobroTip(parseFloat(e.target.value) || 0)}
+                  placeholder="Importe propina"
+                  style={{
+                    width: '100%', padding: '10px 14px', marginBottom: 14,
+                    background: C.surface2, border: `1px solid ${C.border}`,
+                    borderRadius: 10, color: C.text, fontSize: 14,
+                    outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+                  }}
+                />
+              )}
+
+              {/* Desglose total */}
+              {(discountAmount > 0 || tipAmount > 0) && (
+                <div style={{ marginBottom: 14, padding: '12px 14px', background: C.surface2, borderRadius: 10, border: `1px solid ${C.border}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, color: C.text2 }}>Subtotal</span>
+                    <span style={{ fontSize: 12, color: C.text }}>{total.toFixed(2)}{'\u20AC'}</span>
+                  </div>
+                  {discountAmount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: C.red }}>Descuento</span>
+                      <span style={{ fontSize: 12, color: C.red }}>-{discountAmount.toFixed(2)}{'\u20AC'}</span>
+                    </div>
+                  )}
+                  {tipAmount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: C.teal }}>Propina</span>
+                      <span style={{ fontSize: 12, color: C.teal }}>+{tipAmount.toFixed(2)}{'\u20AC'}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${C.border}`, paddingTop: 6, marginTop: 4 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>TOTAL</span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: C.amber }}>{finalTotal.toFixed(2)}{'\u20AC'}</span>
+                  </div>
+                </div>
+              )}
 
               {/* Payment method */}
               <p style={{ fontSize: 13, color: C.text2, marginBottom: 8, fontWeight: 600 }}>Método de pago</p>

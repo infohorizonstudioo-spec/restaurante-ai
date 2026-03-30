@@ -29,6 +29,7 @@ const IC: Record<string,string> = {
   exit:    'M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9',
   chevron: 'M9 18l6-6-6-6',
   cpu:     'M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18',
+  qr:      'M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM17 13h1v1h-1zM13 17h1v1h-1zM17 17h4v4h-4zM13 13h1v1h-1z',
 }
 
 function Icon({ id, size=16 }: { id: string; size?: number }) {
@@ -73,7 +74,7 @@ export default function Sidebar() {
       panel: t.nav.panel, reservas: t.nav.reservations, agenda: t.nav.agenda,
       llamadas: t.nav.calls, clientes: t.nav.clients, mesas: t.nav.spaces,
       turnos: t.nav.shifts, 'horarios-equipo': t.nav.teamSchedule, productos: t.nav.products, pedidos: t.nav.orders,
-      tpv: 'TPV', caja: 'Caja',
+      tpv: 'TPV', caja: 'Caja', 'carta-qr': 'QR Carta',
       estadisticas: t.nav.stats, facturacion: t.nav.billing,
       agente: t.nav.agent, configuracion: t.nav.settings,
     }
@@ -102,6 +103,7 @@ export default function Sidebar() {
   const tpvItems = isHospitality ? [
     { id:'tpv', href:'/tpv', icon:'layout', label:'TPV', pro: true },
     { id:'caja', href:'/caja', icon:'card', label:'Caja', pro: true },
+    { id:'carta-qr', href:'/carta-qr', icon:'qr', label:'QR Carta' },
   ] : []
   const pedidosIdx = withAgente.findIndex((m: any) => m.id === 'pedidos')
   const modules = pedidosIdx >= 0
