@@ -399,7 +399,7 @@ export default function PanelPage() {
     fetch('/api/insights', { headers }).then(r => r.json()).then(d => setInsights(d.insights || [])).catch(e => { console.error('panel: insights failed', e); setInsights([]) })
     fetch('/api/peak-prediction', { headers }).then(r => r.json()).then(d => setForecast(d.forecast || [])).catch(e => { console.error('panel: peak-prediction failed', e); setForecast([]) })
     fetch('/api/suggestions', { headers }).then(r => r.json()).then(d => setSuggestions(d.suggestions || [])).catch(e => { console.error('panel: suggestions failed', e); setSuggestions([]) })
-    fetch('/api/operational-context', { headers }).then(r => r.json()).then(d => setOpContext(d.context || null)).catch(e => { console.error('panel: operational-context failed', e); setOpContext({ activeShift: null, todayOrders: 0, todayRevenue: 0, topSellingNow: [], lowStockItems: [], upcomingReservations: [], activeAlerts: [], suggestion: '' }) })
+    fetch('/api/operational-context', { headers }).then(r => r.json()).then(d => setOpContext(d.context || { activeShift: null, todayOrders: 0, todayRevenue: 0, topSellingNow: [], lowStockItems: [], upcomingReservations: [], activeAlerts: [], suggestion: '' })).catch(e => { console.error('panel: operational-context failed', e); setOpContext({ activeShift: null, todayOrders: 0, todayRevenue: 0, topSellingNow: [], lowStockItems: [], upcomingReservations: [], activeAlerts: [], suggestion: '' }) })
 
     // Load yesterday's summary
     const yd = new Date(); yd.setDate(yd.getDate() - 1)

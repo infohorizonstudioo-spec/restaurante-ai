@@ -94,7 +94,7 @@ export async function GET(req: Request) {
     // Business recommendations from intelligence engine
     try {
       const recommendations = await getBusinessRecommendations(t.id)
-      const topRec = recommendations.filter(r => r.priority >= 4).slice(0, 1)
+      const topRec = (recommendations || []).filter(r => r.priority >= 4).slice(0, 1)
       for (const rec of topRec) {
         msg += `💡 ${rec.title}\n`
       }

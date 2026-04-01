@@ -77,7 +77,7 @@ export async function summarizeConversation(conversationId: string): Promise<Con
       messages: [{ role: 'user', content: transcript }],
     })
 
-    const text = response.content[0]?.type === 'text' ? response.content[0].text : '{}'
+    const text = (response.content[0]?.type === 'text' ? response.content[0]?.text : null) || '{}'
     const summary = JSON.parse(text) as ConversationSummary
 
     // Store summary in conversation
