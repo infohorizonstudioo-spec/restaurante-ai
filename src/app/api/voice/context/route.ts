@@ -77,7 +77,9 @@ export async function POST(req: NextRequest) {
     // ── Customer recognition ──────────────────────────────────────────────
     let customerContext = ''
     if (callerPhone && tenant) {
-      const cleanPhone = callerPhone.replace(/[^0-9+]/g, '')
+      let cleanPhone = callerPhone.replace(/[^0-9+]/g, '')
+      // Normalize 00 prefix to + (common in Spanish landlines: 0034... → +34...)
+      if (cleanPhone.startsWith('00')) cleanPhone = '+' + cleanPhone.slice(2)
       if (cleanPhone.length >= 7 && isSafePhone(cleanPhone)) {
         const phoneWithPlus = cleanPhone.startsWith('+') ? cleanPhone : '+' + cleanPhone
         const phoneWithoutPlus = cleanPhone.replace(/^\+/, '')

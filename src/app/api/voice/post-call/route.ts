@@ -82,7 +82,7 @@ function analyzeLocally(transcript: string, callerPhone: string): CallAnalysis {
   // 2. "me llamo X" / "soy X" en líneas del cliente (solo nombres propios)
   if (!customer_name) {
     const nameMatch2 = clientText.match(/\b(?:me\s+llamo)\s+([A-Za-záéíóúñÁÉÍÓÚÑ]{3,})/i)
-      || clientText.match(/\bsoy\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})/i) // solo si empieza mayúscula
+      || clientText.match(/\bsoy\s+([A-Za-z\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1\u00c1\u00c9\u00cd\u00d3\u00da\u00d1]{3,})/i) // case-insensitive — transcripciones pueden venir en min\u00fascula
     if (nameMatch2?.[1] && !STOP.has(nameMatch2[1].toLowerCase().trim())) {
       customer_name = nameMatch2[1].trim().split(/\s*\n\s*/)[0].trim()
     }
