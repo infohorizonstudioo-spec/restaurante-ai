@@ -51,17 +51,21 @@ export async function POST(req: Request) {
 </Response>`, { headers: { 'Content-Type': 'text/xml' } })
     }
 
-    // Register call in DB
-    if (tenant?.id) {
-      void supabase.from('calls').insert({
-        tenant_id: tenant.id,
-        call_sid: callSid,
-        caller_phone: callerPhone,
-        status: 'activa',
-        intent: 'pendiente',
-        started_at: new Date().toISOString(),
-        source: retellAgentId ? 'retell' : 'elevenlabs',
-      })
+    // Register call in DB (idempotent — skip if call_sid already exists from Twilio retry)
+    if (tenant?.id && callSid) {
+      const { data: existing } = await supabase.from('calls')
+        .select('id').eq('call_sid', callSid).maybeSingle()
+      if (!existing) {
+        await supabase.from('calls').insert({
+          tenant_id: tenant.id,
+          call_sid: callSid,
+          caller_phone: callerPhone,
+          status: 'activa',
+          intent: 'pendiente',
+          started_at: new Date().toISOString(),
+          source: retellAgentId ? 'retell' : 'elevenlabs',
+        })
+      }
     }
 
     let twiml: string

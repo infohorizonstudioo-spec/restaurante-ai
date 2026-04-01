@@ -150,7 +150,7 @@ async function handleCallEnded(body: any): Promise<NextResponse> {
         channel: 'voice',
         summary: `Llamada ${durationSeconds > 0 ? `de ${durationSeconds}s` : ''}. ${disconnectionReason === 'user_hangup' ? 'Cliente colgó.' : 'Agente finalizó.'}`,
         event_data: { call_id: callId, duration: durationSeconds, disconnection: disconnectionReason },
-        sentiment: durationSeconds < 15 ? 'negative' : 'neutral',
+        sentiment: 'neutral', // Sentiment real se asigna en call_analyzed, no por duración
         agent_name: tenant.agent_name,
         duration_seconds: durationSeconds,
       })

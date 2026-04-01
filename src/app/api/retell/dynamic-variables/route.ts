@@ -84,10 +84,16 @@ export async function POST(req: NextRequest) {
             customerContext = `Este cliente nos llamo antes pero no pudimos atenderle. Le enviamos un SMS y ahora nos devuelve la llamada. Saluda con naturalidad tipo: "Hola! Si, perdona que antes no te pudimos coger. Dime, en que te puedo ayudar?" NO digas "buenos dias" ni "digame" — ya sabe quien eres porque le mandaste el SMS.`
           }
 
-          // Marcar como procesado
-          await supabase.from('scheduled_callbacks').update({ status: 'completed' }).eq('phone', callerPhone).eq('tenant_id', tenant.id).eq('status', 'pending')
+          // Marcar como procesado (con error handling)
+          try {
+            await supabase.from('scheduled_callbacks').update({ status: 'completed' }).eq('phone', callerPhone).eq('tenant_id', tenant.id).eq('status', 'pending')
+          } catch (cbErr) {
+            logger.error('Failed to update callback status', { phone: callerPhone, tenantId: tenant.id }, cbErr)
+          }
         }
-      } catch {}
+      } catch (err) {
+        logger.error('Error processing scheduled callback', { phone: callerPhone }, err)
+      }
 
       // Si no es proveedor, buscar perfil de cliente normal
       if (customerContext === 'Sin información previa del cliente.') {
