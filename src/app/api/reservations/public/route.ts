@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { rateLimitByIp } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -87,7 +88,7 @@ export async function POST(req: Request) {
       .maybeSingle()
 
     if (error) {
-      console.error('Public reservation error:', error)
+      logger.error('Public reservation error', {}, error as any)
       return NextResponse.json({ error: 'Error al crear la reserva' }, { status: 500 })
     }
 
@@ -105,7 +106,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, reservation_id: reservation?.id })
   } catch (e: unknown) {
-    console.error('Public reservation error:', e)
+    logger.error('Public reservation error', {}, e as any)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
