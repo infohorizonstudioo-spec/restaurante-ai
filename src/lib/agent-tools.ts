@@ -553,11 +553,22 @@ export async function createReservationTool(params: {
     }
   }
 
-  // Large groups override decision status to pending
-  const finalStatus = isLargeGroup ? 'pendiente' : (decision.status === 'confirmed' ? 'confirmada' : 'pendiente')
+  // Check customer no-show history — 3+ no-shows force pending review
+  let isNoShowRisk = false
+  if (customerId) {
+    const { data: custData } = await supabase.from('customers')
+      .select('no_show_count').eq('id', customerId).maybeSingle()
+    if (custData && (custData.no_show_count || 0) >= 3) {
+      isNoShowRisk = true
+    }
+  }
+
+  // Large groups or no-show risk override decision status to pending
+  const finalStatus = (isLargeGroup || isNoShowRisk) ? 'pendiente' : (decision.status === 'confirmed' ? 'confirmada' : 'pendiente')
   const largeGroupNote = isLargeGroup ? `[GRUPO GRANDE: ${finalPartySize}p — requiere confirmación del propietario]` : ''
+  const noShowNote = isNoShowRisk ? `[CLIENTE CON HISTORIAL NO-SHOW — requiere confirmación]` : ''
   const comboNote = isCombinedTables ? `[MESAS COMBINADAS: ${assignedTableName}]` : ''
-  const fullNotes = [notesStr, largeGroupNote, comboNote].filter(Boolean).join(' | ')
+  const fullNotes = [notesStr, largeGroupNote, noShowNote, comboNote].filter(Boolean).join(' | ')
 
   // 6. Insert reservation with decision-based status
   const { data: reservation, error } = await supabase.from('reservations').insert({

@@ -48,6 +48,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 })
     }
 
+    // Check daily limits — reject items that exceed their daily_limit
+    const today = new Date().toISOString().slice(0, 10)
+    const itemIds = items.map((i: any) => i.id).filter(Boolean)
+    if (itemIds.length > 0) {
+      const [menuRes, countsRes] = await Promise.all([
+        admin.from('menu_items').select('id,daily_limit,availability_type').eq('tenant_id', tenant.id).in('id', itemIds),
+        admin.from('menu_daily_counts').select('item_id,count').eq('tenant_id', tenant.id).eq('date', today),
+      ])
+      const countMap: Record<string, number> = {}
+      for (const c of (countsRes.data || [])) countMap[c.item_id] = c.count
+      for (const mi of (menuRes.data || [])) {
+        if (mi.availability_type === 'unavailable') {
+          return NextResponse.json({ error: `${items.find((i: any) => i.id === mi.id)?.name || 'Producto'} no esta disponible` }, { status: 400 })
+        }
+        if (mi.availability_type === 'limited_daily' && mi.daily_limit) {
+          const used = countMap[mi.id] || 0
+          const ordered = items.find((i: any) => i.id === mi.id)?.quantity || 1
+          if (used + ordered > mi.daily_limit) {
+            return NextResponse.json({ error: `${items.find((i: any) => i.id === mi.id)?.name || 'Producto'} agotado por hoy` }, { status: 400 })
+          }
+        }
+      }
+    }
+
     // Calculate total
     const total = items.reduce(
       (s: number, i: { price?: number; quantity?: number }) =>
