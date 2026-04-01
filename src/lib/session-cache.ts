@@ -13,7 +13,7 @@ export async function getSessionTenant() {
     .from('tenants')
     .select('*')
     .eq('id', profile.tenant_id)
-    .single()
+    .maybeSingle()
   if (!tenant) return null
   return { ...tenant, tenantId: tenant.id }
 }

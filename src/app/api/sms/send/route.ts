@@ -58,7 +58,8 @@ export async function POST(req: NextRequest) {
       clearTimeout(fetchTimeout)
     }
 
-    const data = await res.json()
+    let data: any = {}
+    try { data = await res.json() } catch { data = { message: `HTTP ${res.status}` } }
     if (res.ok) {
       return NextResponse.json({ ok: true, sent: true, sid: data.sid })
     } else {
