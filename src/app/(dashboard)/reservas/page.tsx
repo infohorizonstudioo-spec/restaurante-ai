@@ -57,6 +57,7 @@ export default function ReservasPage() {
   const [tid,setTid]           = useState<string|null>(null)
   const [modal,setModal]       = useState<any|null>(null)
   const [search,setSearch]     = useState('')
+  const [customerMap,setCustomerMap] = useState<Record<string,any>>({})
   const L = template?.labels   // etiquetas dinámicas
 
   const load = useCallback(async (tenantId:string) => {
@@ -65,12 +66,23 @@ export default function ReservasPage() {
       const from = week[0].toISOString().slice(0,10)
       const to   = week[6].toISOString().slice(0,10)
       const {data, error: qErr} = await supabase.from('reservations')
-        .select('id,tenant_id,customer_id,customer_name,customer_phone,date,time,reservation_time,people,party_size,status,source,notes,table_id').eq('tenant_id',tenantId)
+        .select('id,tenant_id,customer_id,customer_name,customer_phone,date,time,reservation_time,people,party_size,status,source,notes,table_id,table_name').eq('tenant_id',tenantId)
         .gte('date',from).lte('date',to)
         .order('date').order('time')
       if (qErr) { setError('No se pudieron cargar los datos'); setLoading(false); return }
       setReservas(data||[])
       setLoading(false)
+      // Batch-load customer context for badges
+      const cids = [...new Set((data||[]).map((r:any) => r.customer_id).filter(Boolean))]
+      if (cids.length > 0) {
+        const { data: custs } = await supabase.from('customers')
+          .select('id,vip,no_show_count,loyalty_tier,risk_level,cancel_count,late_count')
+          .eq('tenant_id', tenantId)
+          .in('id', cids)
+        const map: Record<string,any> = {}
+        for (const c of (custs||[])) map[c.id] = c
+        setCustomerMap(map)
+      }
     } catch { setError('Error de conexion'); setLoading(false) }
   },[base])
 
@@ -109,68 +121,21 @@ export default function ReservasPage() {
   const today = new Date().toISOString().slice(0,10)
 
   async function updateStatus(id:string, status:string) {
-    const { error } = await supabase.from('reservations').update({status}).eq('id',id).eq('tenant_id',tid)
-    if (!error && tid) {
-      const r = reservas.find(x => x.id === id)
-      if (r) {
-        // Notificación en el panel
-        await supabase.from('notifications').insert({
-          tenant_id: tid,
-          type: status === 'confirmada' ? 'reservation_confirmed' : status === 'cancelada' ? 'reservation_cancelled' : 'reservation_updated',
-          title: `Reserva ${status} — ${r.customer_name || 'Sin nombre'}`,
-          body: `${r.customer_name || 'Sin nombre'} · ${r.date || r.reservation_date || ''} a las ${(r.time || r.reservation_time || '').slice(0,5)} · ${r.people || r.party_size || 1}p`,
-          read: false,
-        })
-        // SMS al cliente si tiene teléfono
-        const phone = r.customer_phone
-        if (phone && (status === 'confirmada' || status === 'cancelada')) {
-          const sess = await supabase.auth.getSession()
-          if (sess.data.session) {
-            fetch('/api/sms/send', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
-              body: JSON.stringify({
-                to: phone,
-                type: status === 'confirmada' ? 'reservation_confirmed' : 'reservation_cancelled',
-                message: status === 'confirmada'
-                  ? `${r.customer_name}, confirmada tu ${(L?.reserva || 'reserva').toLowerCase()} para el ${r.date || r.reservation_date} a las ${(r.time || r.reservation_time || '').slice(0,5)}${(r.people || r.party_size || 1) > 1 ? `, ${r.people || r.party_size} personas` : ''}. ¡Te esperamos!`
-                  : `${r.customer_name}, tu ${(L?.reserva || 'reserva').toLowerCase()} del ${r.date || r.reservation_date} a las ${(r.time || r.reservation_time || '').slice(0,5)} queda cancelada. Cualquier cosa, llámanos.`
-              })
-            }).catch(() => {
-              toast.push({ title: 'No se pudo enviar el SMS de confirmación', type: 'sms_error', priority: 'warning', icon: '⚠️' })
-            })
-          }
-        }
-        // Si cancelan, avisar al primer cliente en lista de espera
-        if (status === 'cancelada' && r) {
-          const resDate = r.date || r.reservation_date
-          if (resDate) {
-            const { data: waitlisted } = await supabase.from('waitlist')
-              .select('id,customer_name,customer_phone')
-              .eq('tenant_id', tid).eq('date', resDate).eq('status', 'waiting')
-              .order('created_at').limit(1).maybeSingle()
-            if (waitlisted?.customer_phone) {
-              const sess2 = await supabase.auth.getSession()
-              if (sess2.data.session) {
-                fetch('/api/sms/send', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess2.data.session.access_token },
-                  body: JSON.stringify({
-                    to: waitlisted.customer_phone,
-                    message: `Ha quedado hueco el ${resDate}. Llámanos para confirmar tu ${(L?.reserva || 'reserva').toLowerCase()}.`
-                  })
-                }).catch(() => {
-                  toast.push({ title: 'No se pudo notificar al cliente en lista de espera', type: 'sms_error', priority: 'warning', icon: '⚠️' })
-                })
-                // Marcar como notificado
-                await supabase.from('waitlist').update({ status: 'notified' }).eq('id', waitlisted.id)
-              }
-            }
-          }
-        }
+    try {
+      const sess = await supabase.auth.getSession()
+      if (!sess.data.session) return
+      const res = await fetch('/api/reservation-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
+        body: JSON.stringify({ reservation_id: id, status }),
+      })
+      if (!res.ok) {
+        toast.push({ title: 'Error al actualizar estado', type: 'error', priority: 'warning', icon: '\u26A0\uFE0F' })
       }
-      load(tid)
+    } catch {
+      toast.push({ title: 'Error de conexi\u00f3n', type: 'error', priority: 'warning', icon: '\u26A0\uFE0F' })
     }
+    if (tid) load(tid)
     setModal(null)
   }
 
@@ -227,19 +192,25 @@ export default function ReservasPage() {
           const time = r.time||r.reservation_time||''
           const name = r.customer_name||tx('Sin nombre')
           const people = r.people||r.party_size||1
+          const cust = customerMap[r.customer_id]
           return (
             <div key={r.id} onClick={()=>setModal(r)} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:'14px 16px',marginBottom:10,cursor:'pointer',display:'flex',alignItems:'center',gap:12,transition:'all 0.12s'}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.surface2;(e.currentTarget as HTMLElement).style.borderColor=C.borderMd}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=C.surface;(e.currentTarget as HTMLElement).style.borderColor=C.border}}>
-              <div style={{width:42,height:42,borderRadius:'50%',background:C.amberDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,color:C.amber,flexShrink:0}}>
+              <div style={{width:42,height:42,borderRadius:'50%',background:cust?.vip?C.yellowDim:C.amberDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,color:cust?.vip?C.yellow:C.amber,flexShrink:0}}>
                 {name[0]?.toUpperCase()||'?'}
               </div>
               <div style={{flex:1,minWidth:0}}>
-                <p style={{fontSize:14,fontWeight:600,color:C.text}}>{name}</p>
+                <div style={{display:'flex',alignItems:'center',gap:5,flexWrap:'wrap'}}>
+                  <p style={{fontSize:14,fontWeight:600,color:C.text}}>{name}</p>
+                  {cust?.vip&&<span style={{fontSize:9,fontWeight:700,color:C.yellow,background:C.yellowDim,padding:'1px 5px',borderRadius:4}}>VIP</span>}
+                  {(cust?.no_show_count||0)>=2&&<span style={{fontSize:9,fontWeight:700,color:'#F87171',background:'rgba(248,113,113,0.12)',padding:'1px 5px',borderRadius:4}}>\u26A0 {cust.no_show_count} NS</span>}
+                  {cust?.risk_level==='high'&&<span style={{fontSize:9,fontWeight:700,color:'#F87171',background:'rgba(248,113,113,0.12)',padding:'1px 5px',borderRadius:4}}>RIESGO</span>}
+                </div>
                 <p style={{fontSize:12,color:C.text2,marginTop:1}}>
-                  {time.slice(0,5)} · {people} {tx(people!==1?'personas':'persona')}
-                  {r.table_name?' · '+r.table_name:''}
-                  {r.notes?' · '+r.notes.slice(0,40)+(r.notes.length>40?'...':''):''}
+                  {time.slice(0,5)} \u00b7 {people} {tx(people!==1?'personas':'persona')}
+                  {r.table_name?' \u00b7 '+r.table_name:''}
+                  {r.notes?' \u00b7 '+r.notes.slice(0,40)+(r.notes.length>40?'...':''):''}
                 </p>
               </div>
               <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
@@ -251,22 +222,29 @@ export default function ReservasPage() {
         })}
       </div>
 
-      {modal&&(
+      {modal&&(()=>{
+        const mc = customerMap[modal.customer_id]
+        return (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16}} onClick={()=>setModal(null)} onKeyDown={e=>{if(e.key==='Escape')setModal(null)}} tabIndex={-1} ref={el=>{if(el)el.focus()}}>
           <div style={{background:C.surface,border:`1px solid ${C.borderMd}`,borderRadius:16,padding:24,width:'100%',maxWidth:440,boxShadow:'0 20px 60px rgba(0,0,0,0.6)'}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
               <div>
-                <p style={{fontSize:18,fontWeight:700,color:C.text}}>{modal.customer_name||tx('Sin nombre')}</p>
+                <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                  <p style={{fontSize:18,fontWeight:700,color:C.text}}>{modal.customer_name||tx('Sin nombre')}</p>
+                  {mc?.vip&&<span style={{fontSize:10,fontWeight:700,color:C.yellow,background:C.yellowDim,padding:'2px 7px',borderRadius:5}}>VIP</span>}
+                  {(mc?.no_show_count||0)>=2&&<span style={{fontSize:10,fontWeight:700,color:'#F87171',background:'rgba(248,113,113,0.12)',padding:'2px 7px',borderRadius:5}}>\u26A0 {mc.no_show_count} no-shows</span>}
+                  {mc?.risk_level==='high'&&<span style={{fontSize:10,fontWeight:700,color:'#F87171',background:'rgba(248,113,113,0.12)',padding:'2px 7px',borderRadius:5}}>Riesgo alto</span>}
+                </div>
                 <p style={{fontSize:13,color:C.text2,marginTop:2}}>
-                  {(modal.date||modal.reservation_date)?.slice(0,10)} · {(modal.time||modal.reservation_time||'').slice(0,5)} · {modal.people||modal.party_size} {tx((modal.people||modal.party_size)!==1?'personas':'persona')}
+                  {(modal.date||modal.reservation_date)?.slice(0,10)} \u00b7 {(modal.time||modal.reservation_time||'').slice(0,5)} \u00b7 {modal.people||modal.party_size} {tx((modal.people||modal.party_size)!==1?'personas':'persona')}
                 </p>
               </div>
-              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:C.text3}} aria-label="Cerrar">×</button>
+              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:C.text3}} aria-label="Cerrar">\u00d7</button>
             </div>
-            {modal.customer_phone&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>📞 {modal.customer_phone}</p>}
-            {modal.table_name&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>🪑 {modal.table_name}</p>}
-            {modal.notes&&<p style={{fontSize:13,color:C.text2,marginBottom:16}}>📝 {modal.notes}</p>}
-            {modal.source==='voice_agent'&&<p style={{fontSize:12,color:C.violet,marginBottom:16,background:C.violetDim,padding:'6px 10px',borderRadius:8}}>📞 {tx('Reserva creada por el agente de voz')}</p>}
+            {modal.customer_phone&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>\uD83D\uDCDE {modal.customer_phone}</p>}
+            {modal.table_name&&<p style={{fontSize:13,color:C.text2,marginBottom:8}}>\uD83E\uDE91 {modal.table_name}</p>}
+            {modal.notes&&<p style={{fontSize:13,color:C.text2,marginBottom:16}}>\uD83D\uDCDD {modal.notes}</p>}
+            {modal.source==='voice_agent'&&<p style={{fontSize:12,color:C.violet,marginBottom:16,background:C.violetDim,padding:'6px 10px',borderRadius:8}}>\uD83D\uDCDE {tx('Reserva creada por el agente de voz')}</p>}
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>
               {['confirmada','pendiente','cancelada','completada','no_show'].map(s=>(
                 <button key={s} onClick={()=>updateStatus(modal.id,s)}
@@ -279,7 +257,7 @@ export default function ReservasPage() {
             </div>
           </div>
         </div>
-      )}
+        )})()}
     </div>
   )
 }

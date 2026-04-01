@@ -11,27 +11,14 @@ import {
   type CajaDaySummary,
   calculateShiftTotals,
   generateDaySummary,
-  generateShiftId,
   getShiftLabel,
   getShiftName,
   getShiftIcon,
   formatCurrency,
   formatTime,
 } from '@/lib/caja-engine'
-
-/* ── Local storage key ───────────────────────────────────────────── */
-const LS_KEY = (tid: string) => `reservo_caja_shifts_${tid}`
-
-function loadShifts(tenantId: string): CajaShift[] {
-  try {
-    const raw = localStorage.getItem(LS_KEY(tenantId))
-    return raw ? JSON.parse(raw) : []
-  } catch { return [] }
-}
-
-function saveShifts(tenantId: string, shifts: CajaShift[]) {
-  localStorage.setItem(LS_KEY(tenantId), JSON.stringify(shifts))
-}
+import { generateShiftReport, generateDayReport } from '@/lib/shift-report'
+import { printTicket } from '@/lib/kitchen-ticket'
 
 /* ── Main component ──────────────────────────────────────────────── */
 export default function CajaPage() {
@@ -83,13 +70,16 @@ export default function CajaPage() {
       const employees: { id: string; name: string; role: string }[] = staffData.employees || []
       setStaff(employees.map(e => ({ id: e.id, name: e.name })))
 
-      // Load shifts from localStorage
-      const savedShifts = loadShifts(p.tenant_id)
-      setShifts(savedShifts)
-
-      // Find currently open shift
-      const open = savedShifts.find(s => s.status === 'open')
-      if (open) setOpenShift(open)
+      // Load shifts from DB
+      const sess = await supabase.auth.getSession()
+      if (sess.data.session) {
+        const r = await fetch('/api/caja-shifts', { headers: { Authorization: 'Bearer ' + sess.data.session.access_token } })
+        const d = await r.json()
+        const dbShifts = (d.shifts || []) as CajaShift[]
+        setShifts(dbShifts)
+        const open = dbShifts.find((s: CajaShift) => s.status === 'open')
+        if (open) setOpenShift(open)
+      }
 
       await loadOrders(p.tenant_id)
 
@@ -138,56 +128,70 @@ export default function CajaPage() {
   )
 
   /* ── Open shift ────────────────────────────────────────────────── */
-  function handleOpenShift() {
+  async function handleOpenShift() {
     if (!tid) return
-    const now = new Date().toISOString()
-    const shift: CajaShift = {
-      id: generateShiftId(),
-      tenant_id: tid,
-      opened_by: openName || 'Sistema',
-      opened_at: now,
-      closed_at: null,
-      initial_cash: parseFloat(openCash) || 0,
-      total_sales: 0,
-      total_cash: 0,
-      total_card: 0,
-      total_other: 0,
-      orders_count: 0,
-      counted_cash: null,
-      difference: null,
-      notes: null,
-      status: 'open',
+    const sess = await supabase.auth.getSession()
+    if (!sess.data.session) return
+    const res = await fetch('/api/caja-shifts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + sess.data.session.access_token },
+      body: JSON.stringify({ opened_by: openName || 'Sistema', initial_cash: parseFloat(openCash) || 0 }),
+    })
+    const d = await res.json()
+    if (d.shift) {
+      setShifts(prev => [...prev, d.shift])
+      setOpenShift(d.shift)
     }
-    const updated = [...shifts, shift]
-    setShifts(updated)
-    setOpenShift(shift)
-    saveShifts(tid, updated)
     setShowOpenModal(false)
     setOpenCash('')
     setOpenName('')
   }
 
   /* ── Close shift ───────────────────────────────────────────────── */
-  function handleCloseShift() {
+  async function handleCloseShift() {
     if (!tid || !openShift) return
+    const sess = await supabase.auth.getSession()
+    if (!sess.data.session) return
     const counted = parseFloat(closeCash) || 0
-    const expectedCash = openShift.initial_cash + shiftTotals.total_cash
-    const closed: CajaShift = {
-      ...openShift,
-      ...shiftTotals,
-      closed_at: new Date().toISOString(),
-      counted_cash: counted,
-      difference: Math.round((counted - expectedCash) * 100) / 100,
-      notes: closeNotes || null,
-      status: 'closed',
+    const res = await fetch('/api/caja-shifts', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + sess.data.session.access_token },
+      body: JSON.stringify({
+        id: openShift.id,
+        counted_cash: counted,
+        initial_cash: openShift.initial_cash,
+        notes: closeNotes || null,
+        ...shiftTotals,
+      }),
+    })
+    const d = await res.json()
+    if (d.shift) {
+      setShifts(prev => prev.map(s => s.id === d.shift.id ? d.shift : s))
+      setOpenShift(null)
     }
-    const updated = shifts.map(s => s.id === closed.id ? closed : s)
-    setShifts(updated)
-    setOpenShift(null)
-    saveShifts(tid, updated)
     setShowCloseModal(false)
     setCloseCash('')
     setCloseNotes('')
+  }
+
+  /* ── Print reports ──────────────────────────────────────────────── */
+  function handlePrintShift() {
+    if (!openShift) return
+    const html = generateShiftReport(
+      { ...openShift, ...shiftTotals },
+      shiftOrders,
+      staff.map(s => s.name),
+      { businessName: tenant?.name || 'Negocio', logoUrl: tenant?.logo_url }
+    )
+    printTicket(html)
+  }
+
+  function handlePrintDay() {
+    const html = generateDayReport(daySummary, {
+      businessName: tenant?.name || 'Negocio',
+      logoUrl: tenant?.logo_url,
+    })
+    printTicket(html)
   }
 
   /* ── Render ────────────────────────────────────────────────────── */
@@ -308,6 +312,15 @@ export default function CajaPage() {
                   <KPICard label="Tarjeta" value={`${formatCurrency(shiftTotals.total_card)} EUR`} color={C.violet} />
                 </div>
 
+                {/* Print shift report */}
+                <button onClick={handlePrintShift} style={{
+                  padding: '8px 16px', borderRadius: 8, border: `1px solid ${C.border}`,
+                  background: C.surface, color: C.text2, fontSize: 12, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                  {'\uD83D\uDDA8\uFE0F'} Imprimir resumen del turno
+                </button>
+
                 {/* Prediction card */}
                 {prediction && (
                   <div style={{
@@ -412,6 +425,15 @@ export default function CajaPage() {
                 color={C.teal}
               />
             </div>
+
+            {/* Print day report */}
+            <button onClick={handlePrintDay} style={{
+              padding: '8px 16px', borderRadius: 8, border: `1px solid ${C.border}`,
+              background: C.surface, color: C.text2, fontSize: 12, fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'inherit', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              {'\uD83D\uDDA8\uFE0F'} Imprimir resumen del d\u00eda
+            </button>
 
             {/* Shifts list */}
             <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 20px', marginBottom: 16 }}>

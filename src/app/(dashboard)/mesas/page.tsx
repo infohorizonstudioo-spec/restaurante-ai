@@ -46,38 +46,57 @@ function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDrag
   const startRef = useRef({w:0,h:0,mx:0,my:0})
   const sv = (v:number) => snapOn ? snap(v) : v
 
+  // Convert screen coordinates to SVG coordinates safely
+  function screenToSVG(svg: SVGSVGElement, clientX: number, clientY: number): { x: number; y: number } | null {
+    const ctm = svg.getScreenCTM()
+    if (!ctm) return null
+    const pt = svg.createSVGPoint()
+    pt.x = clientX; pt.y = clientY
+    const s = pt.matrixTransform(ctm.inverse())
+    return { x: s.x, y: s.y }
+  }
+
   function onMD(e:React.MouseEvent) {
     e.stopPropagation(); onSelect(e.shiftKey)
+    if (resizeRef.current) return // Guard: don't drag while resizing
     const svg = (e.target as SVGElement).ownerSVGElement
     if (!svg) return
-    const pt = svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY
-    const sp = pt.matrixTransform(svg.getScreenCTM()!.inverse())
+    const sp = screenToSVG(svg, e.clientX, e.clientY)
+    if (!sp) return
     dragRef.current = true; offRef.current = {x:sp.x-x, y:sp.y-y}
     const move = (ev:MouseEvent) => {
       if (!dragRef.current) return
-      const mp = svg.createSVGPoint(); mp.x=ev.clientX; mp.y=ev.clientY
-      const s = mp.matrixTransform(svg.getScreenCTM()!.inverse())
+      const s = screenToSVG(svg, ev.clientX, ev.clientY)
+      if (!s) return
       const nx = sv(Math.max(0, s.x-offRef.current.x)), ny = sv(Math.max(0, s.y-offRef.current.y))
       const g = document.getElementById(`el-${table.id}`)
       if (g) g.setAttribute('transform', `translate(${nx},${ny})${rot?` rotate(${rot},${w/2},${h/2})`:''}`)
     }
     const up = (ev:MouseEvent) => {
       dragRef.current = false
-      const mp = svg.createSVGPoint(); mp.x=ev.clientX; mp.y=ev.clientY
-      const s = mp.matrixTransform(svg.getScreenCTM()!.inverse())
-      onDragEnd(sv(Math.max(0, s.x-offRef.current.x)), sv(Math.max(0, s.y-offRef.current.y)))
       window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up)
+      const s = screenToSVG(svg, ev.clientX, ev.clientY)
+      if (!s) return
+      onDragEnd(sv(Math.max(0, s.x-offRef.current.x)), sv(Math.max(0, s.y-offRef.current.y)))
     }
     window.addEventListener('mousemove', move); window.addEventListener('mouseup', up)
   }
 
   function onRD(e:React.MouseEvent) {
-    e.stopPropagation(); resizeRef.current = true
-    startRef.current = {w, h, mx:e.clientX, my:e.clientY}
+    e.stopPropagation()
+    if (dragRef.current) return // Guard: don't resize while dragging
+    resizeRef.current = true
+    const svg = (e.target as SVGElement).ownerSVGElement
+    if (!svg) return
+    const startSVG = screenToSVG(svg, e.clientX, e.clientY)
+    if (!startSVG) return
+    startRef.current = {w, h, mx:startSVG.x, my:startSVG.y}
     const move = (ev:MouseEvent) => {
       if (!resizeRef.current) return
-      const nw = sv(Math.max(MIN_SZ, startRef.current.w + ev.clientX - startRef.current.mx))
-      const nh = sv(Math.max(MIN_SZ, startRef.current.h + ev.clientY - startRef.current.my))
+      const s = screenToSVG(svg, ev.clientX, ev.clientY)
+      if (!s) return
+      const nw = sv(Math.max(MIN_SZ, startRef.current.w + s.x - startRef.current.mx))
+      const nh = sv(Math.max(MIN_SZ, startRef.current.h + s.y - startRef.current.my))
       const shape = document.getElementById(`shape-${table.id}`)
       if (shape) {
         if (isRound) { shape.setAttribute('rx',String(nw/2)); shape.setAttribute('ry',String(nh/2)); shape.setAttribute('cx',String(nw/2)); shape.setAttribute('cy',String(nh/2)) }
@@ -86,8 +105,10 @@ function FloorElement({ table, selected, multiSelected, snapOn, onSelect, onDrag
     }
     const up = (ev:MouseEvent) => {
       resizeRef.current = false
-      onResize(sv(Math.max(MIN_SZ, startRef.current.w + ev.clientX - startRef.current.mx)), sv(Math.max(MIN_SZ, startRef.current.h + ev.clientY - startRef.current.my)))
       window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up)
+      const s = screenToSVG(svg, ev.clientX, ev.clientY)
+      if (!s) return
+      onResize(sv(Math.max(MIN_SZ, startRef.current.w + s.x - startRef.current.mx)), sv(Math.max(MIN_SZ, startRef.current.h + s.y - startRef.current.my)))
     }
     window.addEventListener('mousemove', move); window.addEventListener('mouseup', up)
   }
@@ -908,10 +929,20 @@ export default function MesasPage() {
     const presetId = e.dataTransfer.getData('preset-id')
     const preset = presets.elements.find(p=>p.id===presetId)
     if (!preset || !svgRef.current) return
-    const rect = svgRef.current.getBoundingClientRect()
-    const x = (e.clientX - rect.left) / zoom - panOffset.x / zoom
-    const y = (e.clientY - rect.top) / zoom - panOffset.y / zoom
-    addFromPreset(preset, Math.max(0,x), Math.max(0,y))
+    // Use SVG CTM for accurate coordinate conversion (accounts for zoom + pan)
+    const ctm = svgRef.current.getScreenCTM()
+    if (ctm) {
+      const pt = svgRef.current.createSVGPoint()
+      pt.x = e.clientX; pt.y = e.clientY
+      const s = pt.matrixTransform(ctm.inverse())
+      addFromPreset(preset, Math.max(0, s.x), Math.max(0, s.y))
+    } else {
+      // Fallback if CTM unavailable
+      const rect = svgRef.current.getBoundingClientRect()
+      const x = (e.clientX - rect.left) / zoom
+      const y = (e.clientY - rect.top) / zoom
+      addFromPreset(preset, Math.max(0, x), Math.max(0, y))
+    }
   }
 
   if (loading) return <PageLoader />

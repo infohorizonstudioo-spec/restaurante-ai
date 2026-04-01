@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     const tenant_id = auth.tenantId
 
     const body = await req.json()
-    const { customer_name, customer_phone, order_type = 'mesa', notes, items = [], total_estimate = 0, payment_method } = body
+    const { customer_name, customer_phone, order_type = 'mesa', notes, items = [], total_estimate = 0, payment_method, table_id } = body
 
     if (!customer_name) return NextResponse.json({ error: 'customer_name required' }, { status: 400 })
 
@@ -84,6 +84,7 @@ export async function POST(req: Request) {
       total_estimate: parseFloat(String(total_estimate)) || 0,
       status: 'collecting',
       payment_method: payment_method || 'cash',
+      table_id: table_id || null,
     }).select().single()
 
     if (error) throw error
@@ -132,6 +133,22 @@ export async function PATCH(req: Request) {
         order_type: data.order_type || 'mesa',
         source: 'panel',
       }).catch(() => {})
+    }
+
+    // Notify waiter when order is ready
+    if (status === 'ready' && data) {
+      const orderNum = (data.id || '').slice(-4).toUpperCase()
+      const mesaInfo = data.notes?.match(/Mesa:\s*(\S+)/)?.[1]
+      const tableLabel = mesaInfo ? `Mesa ${mesaInfo}` : data.order_type === 'recoger' ? 'Recoger' : 'Barra'
+      await admin.from('notifications').insert({
+        tenant_id,
+        type: 'order_ready',
+        title: `Pedido listo \u2014 ${tableLabel}`,
+        body: `Comanda #${orderNum} lista para servir. ${data.customer_name || ''}`.trim(),
+        priority: 'warning',
+        read: false,
+        target_url: '/pedidos',
+      })
     }
 
     return NextResponse.json({ success: true, order: data })

@@ -283,7 +283,32 @@ export default function ProveedoresPage() {
     const payload: any = { status }
     if (status === 'delivered') payload.delivered_at = new Date().toISOString()
     await supabase.from('supply_orders').update(payload).eq('id', orderId).eq('tenant_id', tid)
-    toast.push({ title: 'Estado actualizado', type: 'success', priority: 'info', icon: '✅' })
+
+    // Auto-increment inventory stock when supply order is delivered
+    if (status === 'delivered') {
+      const { data: order } = await supabase.from('supply_orders')
+        .select('items').eq('id', orderId).eq('tenant_id', tid).maybeSingle()
+      if (order?.items && Array.isArray(order.items)) {
+        for (const item of order.items) {
+          const name = (item.name || item.nombre || '').trim().toLowerCase()
+          const qty = item.quantity || item.cantidad || item.qty || 0
+          if (!name || qty <= 0) continue
+          // Find matching inventory item by name
+          const { data: inv } = await supabase.from('inventory_items')
+            .select('id, current_stock')
+            .eq('tenant_id', tid)
+            .ilike('name', `%${name}%`)
+            .maybeSingle()
+          if (inv) {
+            await supabase.from('inventory_items')
+              .update({ current_stock: (inv.current_stock || 0) + qty })
+              .eq('id', inv.id)
+          }
+        }
+      }
+    }
+
+    toast.push({ title: 'Estado actualizado', type: 'success', priority: 'info', icon: '\u2705' })
     setOrderModal(null)
     loadAll(tid)
   }

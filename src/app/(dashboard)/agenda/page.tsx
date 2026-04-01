@@ -59,26 +59,29 @@ function fmtTime(t:string){ return (t||'').slice(0,5) }
 
 
 // ── Tooltip flotante ──────────────────────────────────────────────────────
-function ResTooltip({r, tx}: {r:any, anchorRef?: React.RefObject<HTMLDivElement>, tx:(s:string)=>string}) {
+function ResTooltip({r, cust, tx}: {r:any, cust?:any, anchorRef?: React.RefObject<HTMLDivElement>, tx:(s:string)=>string}) {
   const cfg = RESERVATION_STATUS[r.status] || RESERVATION_STATUS.confirmada
   const ppl = r.people || r.party_size || 1
   return (
     <div style={{
       position:'fixed', zIndex:9999,
       background:C.surface, border:'1px solid rgba(255,255,255,0.12)',
-      borderRadius:14, padding:'16px 18px', width:230,
+      borderRadius:14, padding:'16px 18px', width:240,
       boxShadow:'0 8px 32px rgba(0,0,0,0.5)',
       pointerEvents:'none',
     }}>
       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
         <div style={{width:10,height:10,borderRadius:'50%',background:cfg.color,flexShrink:0}}/>
         <span style={{fontSize:13,fontWeight:700,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.customer_name||tx('Sin nombre')}</span>
+        {cust?.vip&&<span style={{fontSize:9,fontWeight:700,color:'#F0A84E',background:'rgba(240,168,78,0.15)',padding:'1px 5px',borderRadius:4}}>VIP</span>}
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:5}}>
-        <Row icon="🕐" text={`${fmtTime(r.time||r.reservation_time||'')} · ${ppl} ${ppl!==1?tx('personas'):tx('persona')}`}/>
-        {(r.customer_phone||r.phone) && <Row icon="📞" text={r.customer_phone||r.phone}/>}
-        {r.table_name && <Row icon="🪑" text={r.table_name}/>}
-        {r.notes && <Row icon="📝" text={r.notes} muted/>}
+        <Row icon="\uD83D\uDD50" text={`${fmtTime(r.time||r.reservation_time||'')} \u00b7 ${ppl} ${ppl!==1?tx('personas'):tx('persona')}`}/>
+        {(r.customer_phone||r.phone) && <Row icon="\uD83D\uDCDE" text={r.customer_phone||r.phone}/>}
+        {r.table_name && <Row icon="\uD83E\uDE91" text={r.table_name}/>}
+        {r.notes && <Row icon="\uD83D\uDCDD" text={r.notes} muted/>}
+        {(cust?.no_show_count||0)>=2&&<Row icon="\u26A0\uFE0F" text={`${cust.no_show_count} no-shows anteriores`}/>}
+        {cust?.risk_level==='high'&&<Row icon="\uD83D\uDED1" text="Cliente de riesgo alto"/>}
       </div>
       <span style={{
         display:'inline-block',marginTop:10,
@@ -100,7 +103,7 @@ function Row({icon,text,muted}:{icon:string,text:string,muted?:boolean}) {
 
 
 // ── Bloque de reserva en la celda ─────────────────────────────────────────
-function ResBlock({r, onHover, onLeave, tx}: {r:any, onHover:(e:React.MouseEvent,r:any)=>void, onLeave:()=>void, tx:(s:string)=>string}) {
+function ResBlock({r, cust, onHover, onLeave, tx}: {r:any, cust?:any, onHover:(e:React.MouseEvent,r:any)=>void, onLeave:()=>void, tx:(s:string)=>string}) {
   const cfg = RESERVATION_STATUS[r.status] || RESERVATION_STATUS.confirmada
   const ppl = r.people || r.party_size || 1
   const time = fmtTime(r.time || r.reservation_time || '')
@@ -116,8 +119,12 @@ function ResBlock({r, onHover, onLeave, tx}: {r:any, onHover:(e:React.MouseEvent
         borderLeftWidth:3, borderLeftColor:cfg.color,
       }}
     >
-      <p style={{fontSize:11.5,fontWeight:700,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.3}}>{r.customer_name||tx('Sin nombre')}</p>
-      <p style={{fontSize:10,color:C.text2,marginTop:1}}>{time} · {ppl}p</p>
+      <div style={{display:'flex',alignItems:'center',gap:4}}>
+        <p style={{fontSize:11.5,fontWeight:700,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.3,flex:1}}>{r.customer_name||tx('Sin nombre')}</p>
+        {cust?.vip&&<span style={{fontSize:8,fontWeight:700,color:'#F0A84E',lineHeight:1}}>VIP</span>}
+        {(cust?.no_show_count||0)>=2&&<span style={{fontSize:8,color:'#F87171',lineHeight:1}}>\u26A0</span>}
+      </div>
+      <p style={{fontSize:10,color:C.text2,marginTop:1}}>{time} \u00b7 {ppl}p</p>
     </div>
   )
 }
@@ -135,6 +142,7 @@ export default function AgendaPage() {
   const [isMobile,setIsMobile] = useState(false)
   const [mobileDay,setMobileDay] = useState(() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1 })
   const [schedCfg,setSchedCfg] = useState<ReservationConfig|null>(null)
+  const [custMap,setCustMap] = useState<Record<string,any>>({})
 
   // Detect mobile viewport
   useEffect(() => {
@@ -157,9 +165,21 @@ export default function AgendaPage() {
       supabase.from('tenants').select('reservation_config,type')
         .eq('id',tenantId).maybeSingle()
     ])
-    setRes(resResult.data||[])
+    const resData = resResult.data || []
+    setRes(resData)
     if (tenantResult.data?.reservation_config) {
       setSchedCfg(parseReservationConfig(tenantResult.data.reservation_config))
+    }
+    // Batch-load customer context for badges
+    const cids = [...new Set(resData.map((r:any) => r.customer_id).filter(Boolean))]
+    if (cids.length > 0) {
+      const { data: custs } = await supabase.from('customers')
+        .select('id,vip,no_show_count,loyalty_tier,risk_level')
+        .eq('tenant_id', tenantId)
+        .in('id', cids)
+      const map: Record<string,any> = {}
+      for (const c of (custs||[])) map[c.id] = c
+      setCustMap(map)
     }
     setLoad(false)
   },[base])
@@ -308,7 +328,7 @@ export default function AgendaPage() {
                   return (
                     <div key={di} className="res-cell" style={{borderRight:`1px solid ${C.border}`,padding:'4px 5px',background:isToday?today_bg:'transparent',transition:'background 0.1s',minHeight:isMobile?50:60}}>
                       {cellRes.map(r=>(
-                        <ResBlock key={r.id} r={r} onHover={handleHover} onLeave={()=>setTooltip(null)} tx={tx}/>
+                        <ResBlock key={r.id} r={r} cust={custMap[r.customer_id]} onHover={handleHover} onLeave={()=>setTooltip(null)} tx={tx}/>
                       ))}
                     </div>
                   )
@@ -331,7 +351,7 @@ export default function AgendaPage() {
 
       {/* ── Tooltip flotante ─────────────────────────────────────────────── */}
       {tooltip&&<div style={{position:'fixed',left:Math.min(tooltip.x,window.innerWidth-250),top:Math.max(8,Math.min(tooltip.y,window.innerHeight-200)),zIndex:9999,pointerEvents:'none'}}>
-        <ResTooltip r={tooltip.r} tx={tx}/>
+        <ResTooltip r={tooltip.r} cust={custMap[tooltip.r.customer_id]} tx={tx}/>
       </div>}
     </div>
   )

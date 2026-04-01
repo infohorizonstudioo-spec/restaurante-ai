@@ -709,7 +709,7 @@ export async function analyzeInteraction(params: {
 // 8. ACTUALIZAR SCORING DEL CLIENTE
 // ─────────────────────────────────────────────────────────────
 
-async function updateCustomerScoring(tenantId: string, customerId: string): Promise<void> {
+export async function updateCustomerScoring(tenantId: string, customerId: string): Promise<void> {
   const { data: customer } = await supabase
     .from('customers')
     .select('visit_count,no_show_count,cancel_count,late_count,vip,last_visit,lifetime_interactions')

@@ -525,7 +525,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           5.5. TPV INTELIGENTE — El dolor real
          ══════════════════════════════════════════ */}
-      <section style={{padding:'90px clamp(16px,5vw,64px)'}}>
+      <section id="solucion" style={{padding:'90px clamp(16px,5vw,64px)'}}>
         <div style={{maxWidth:1000,margin:'0 auto'}}>
           <div style={{textAlign:'center',marginBottom:48}}>
             <p style={{fontSize:12,fontWeight:600,color:C.red,letterSpacing:'0.08em',marginBottom:12}}>OLVÍDATE DE LA TPV</p>
