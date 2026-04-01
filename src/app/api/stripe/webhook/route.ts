@@ -105,6 +105,11 @@ export async function POST(req: Request) {
               read: false,
               target_url: '/pedidos',
             })
+            // Reset table to 'libre' after payment
+            const tableId = session.metadata?.table_id
+            if (tableId) {
+              await admin.from('tables').update({ status: 'libre' }).eq('id', tableId).eq('tenant_id', tenantId)
+            }
             logger.info('Stripe: table payment completed', { tenantId, mesa, amount: session.amount_total })
           }
           break
