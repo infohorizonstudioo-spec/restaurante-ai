@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import OrderFlow from './OrderFlow'
 
@@ -18,6 +19,17 @@ interface MenuItem {
   daily_limit?: number
   featured?: boolean
   featured_label?: string
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const { data: tenant } = await supabase.from('tenants').select('name').ilike('slug', slug).maybeSingle()
+  const name = tenant?.name || slug
+  return {
+    title: `${name} — Pedir`,
+    description: `Haz tu pedido en ${name} directamente desde el movil.`,
+    openGraph: { title: `${name} — Pedir`, description: `Pedido digital en ${name}` },
+  }
 }
 
 export default async function PedirPage({

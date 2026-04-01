@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -16,6 +17,17 @@ interface MenuItem {
   featured?: boolean
   featured_label?: string
   availability_type?: string
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const { data: tenant } = await supabase.from('tenants').select('name').eq('slug', slug).maybeSingle()
+  const name = tenant?.name || slug
+  return {
+    title: `${name} — Carta`,
+    description: `Consulta la carta de ${name}. Precios, platos y especialidades.`,
+    openGraph: { title: `${name} — Carta`, description: `Carta digital de ${name}` },
+  }
 }
 
 export default async function CartaPublicPage({ params }: { params: Promise<{ slug: string }> }) {
