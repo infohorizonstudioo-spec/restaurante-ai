@@ -56,7 +56,8 @@ export async function POST(req: NextRequest) {
     const rl = rateLimitByIp(req, RATE_LIMITS.messaging, 'push:send')
     if (rl.blocked) return rl.response
 
-    const raw = await req.json()
+    let raw: any
+    try { raw = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
     const tenant_id = sanitizeUUID(raw.tenant_id)
     const title = sanitizeString(raw.title, 200)
     const body = sanitizeString(raw.body, 500)

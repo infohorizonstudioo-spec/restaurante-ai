@@ -13,7 +13,7 @@ const PROTECTED = [
   '/dashboard', '/agente', '/turnos', '/productos', '/proveedores', '/mensajes',
   '/horarios-equipo',
 ]
-const PUBLIC_ALWAYS = ['/', '/precios', '/reset', '/onboarding', '/cookies', '/privacidad', '/terminos', '/reports']
+const PUBLIC_ALWAYS = ['/', '/login', '/registro', '/precios', '/reset', '/onboarding', '/cookies', '/privacidad', '/terminos', '/reports']
 
 const SECURITY_HEADERS: [string, string][] = [
   ['X-Frame-Options', 'DENY'],
