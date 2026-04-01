@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
         const controller = new AbortController()
         const fetchTimeout = setTimeout(() => controller.abort(), 30000)
         try {
-          await fetch('https://api.resend.com/emails', {
+          const emailRes = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${resendKey}`,
@@ -122,6 +122,10 @@ export async function POST(req: NextRequest) {
               headers: metadata.messageId ? { 'In-Reply-To': metadata.messageId } : undefined,
             }),
           })
+          if (!emailRes.ok) {
+            const errBody = await emailRes.text().catch(() => '')
+            logger.error('[email-send] Resend API error', { status: emailRes.status, body: errBody })
+          }
         } catch (err) {
           logger.error('[email-send] Error', {}, err)
         } finally {
