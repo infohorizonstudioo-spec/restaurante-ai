@@ -358,6 +358,22 @@ export default function PanelPage() {
   const demoIdx                = useRef(0)
   const rtChannelRef           = useRef<any>(null)
   const loadedRef              = useRef(false)
+  const [smartDataError, setSmartDataError] = useState(false)
+
+  function loadSmartData(headers: Record<string, string>) {
+    setSmartDataError(false)
+    let failed = 0
+    const onFail = () => { failed++; if (failed >= 3) setSmartDataError(true) }
+    fetch('/api/insights', { headers }).then(r => r.json()).then(d => setInsights(d.insights || [])).catch(() => { setInsights([]); onFail() })
+    fetch('/api/peak-prediction', { headers }).then(r => r.json()).then(d => setForecast(d.forecast || [])).catch(() => { setForecast([]); onFail() })
+    fetch('/api/suggestions', { headers }).then(r => r.json()).then(d => setSuggestions(d.suggestions || [])).catch(() => { setSuggestions([]); onFail() })
+    fetch('/api/operational-context', { headers }).then(r => r.json()).then(d => setOpContext(d.context || { activeShift: null, todayOrders: 0, todayRevenue: 0, topSellingNow: [], lowStockItems: [], upcomingReservations: [], activeAlerts: [], suggestion: '' })).catch(() => { setOpContext({ activeShift: null, todayOrders: 0, todayRevenue: 0, topSellingNow: [], lowStockItems: [], upcomingReservations: [], activeAlerts: [], suggestion: '' }); onFail() })
+  }
+
+  async function retrySmartData() {
+    const token = (await supabase.auth.getSession()).data.session?.access_token
+    if (token) loadSmartData({ 'Authorization': 'Bearer ' + token })
+  }
 
   const pushEvent = useCallback((evt: Omit<LiveEvent,'id'|'ts'>) => {
     const id = Math.random().toString(36).slice(2)
@@ -393,13 +409,10 @@ export default function PanelPage() {
     setActiveOrders(ao||[]); setActiveConsultations(ac2||[])
     setLoading(false)
 
-    // Load insights + forecast + yesterday's summary after main data
+    // Load insights + forecast + suggestions + operational context
     const token = (await supabase.auth.getSession()).data.session?.access_token
     const headers = { 'Authorization': 'Bearer ' + token }
-    fetch('/api/insights', { headers }).then(r => r.json()).then(d => setInsights(d.insights || [])).catch(e => { console.error('panel: insights failed', e); setInsights([]) })
-    fetch('/api/peak-prediction', { headers }).then(r => r.json()).then(d => setForecast(d.forecast || [])).catch(e => { console.error('panel: peak-prediction failed', e); setForecast([]) })
-    fetch('/api/suggestions', { headers }).then(r => r.json()).then(d => setSuggestions(d.suggestions || [])).catch(e => { console.error('panel: suggestions failed', e); setSuggestions([]) })
-    fetch('/api/operational-context', { headers }).then(r => r.json()).then(d => setOpContext(d.context || { activeShift: null, todayOrders: 0, todayRevenue: 0, topSellingNow: [], lowStockItems: [], upcomingReservations: [], activeAlerts: [], suggestion: '' })).catch(e => { console.error('panel: operational-context failed', e); setOpContext({ activeShift: null, todayOrders: 0, todayRevenue: 0, topSellingNow: [], lowStockItems: [], upcomingReservations: [], activeAlerts: [], suggestion: '' }) })
+    loadSmartData(headers)
 
     // Load yesterday's summary
     const yd = new Date(); yd.setDate(yd.getDate() - 1)
@@ -1094,8 +1107,9 @@ export default function PanelPage() {
               })}
             </div>
           ) : (
-            <div style={{ padding:'14px 18px', color:C.text3, fontSize:13 }}>
-              Sin sugerencias por ahora — llegaran con mas actividad
+            <div style={{ padding:'14px 18px', color:C.text3, fontSize:13, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <span>{smartDataError ? _tx('No se pudieron cargar las sugerencias') : _tx('Sin sugerencias por ahora')}</span>
+              {smartDataError && <button onClick={retrySmartData} style={{ fontSize:12, color:C.amber, background:'none', border:`1px solid ${C.amber}40`, borderRadius:6, padding:'4px 10px', cursor:'pointer', fontFamily:'inherit' }}>{_tx('Reintentar')}</button>}
             </div>
           )}
         </div>

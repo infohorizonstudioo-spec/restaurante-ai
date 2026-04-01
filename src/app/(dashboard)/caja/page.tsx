@@ -138,13 +138,15 @@ export default function CajaPage() {
       body: JSON.stringify({ opened_by: openName || 'Sistema', initial_cash: parseFloat(openCash) || 0 }),
     })
     const d = await res.json()
-    if (d.shift) {
+    if (res.ok && d.shift) {
       setShifts(prev => [...prev, d.shift])
       setOpenShift(d.shift)
+      setShowOpenModal(false)
+      setOpenCash('')
+      setOpenName('')
+    } else {
+      alert(d.error || 'Error al abrir turno. Int\u00e9ntalo de nuevo.')
     }
-    setShowOpenModal(false)
-    setOpenCash('')
-    setOpenName('')
   }
 
   /* ── Close shift ───────────────────────────────────────────────── */
@@ -165,13 +167,15 @@ export default function CajaPage() {
       }),
     })
     const d = await res.json()
-    if (d.shift) {
+    if (res.ok && d.shift) {
       setShifts(prev => prev.map(s => s.id === d.shift.id ? d.shift : s))
       setOpenShift(null)
+      setShowCloseModal(false)
+      setCloseCash('')
+      setCloseNotes('')
+    } else {
+      alert(d.error || 'Error al cerrar turno. Int\u00e9ntalo de nuevo.')
     }
-    setShowCloseModal(false)
-    setCloseCash('')
-    setCloseNotes('')
   }
 
   /* ── Print reports ──────────────────────────────────────────────── */
