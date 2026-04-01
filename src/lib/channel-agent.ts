@@ -127,6 +127,21 @@ const TOOLS: Anthropic.Tool[] = [
       required: ['reason'],
     },
   },
+  {
+    name: 'add_to_waitlist',
+    description: 'Añade un cliente a la lista de espera cuando no hay disponibilidad. Se le avisará si se libera un hueco.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        date: { type: 'string', description: 'Fecha deseada en formato YYYY-MM-DD' },
+        time: { type: 'string', description: 'Hora preferida en formato HH:MM (opcional)' },
+        party_size: { type: 'number', description: 'Número de personas' },
+        customer_name: { type: 'string', description: 'Nombre del cliente' },
+        customer_phone: { type: 'string', description: 'Teléfono del cliente' },
+      },
+      required: ['date', 'customer_name', 'customer_phone'],
+    },
+  },
 ]
 
 // ── Sanitize tool inputs from Claude (defense in depth) ─────

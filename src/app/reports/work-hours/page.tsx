@@ -183,9 +183,11 @@ function WorkHoursReportContent() {
     )
   }
 
-  const [yearStr, monthStr] = (monthParam || '').split('-')
+  const today = new Date()
+  const [yearStr, monthStr] = (monthParam || `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`).split('-')
   const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-  const monthLabel = `${monthNames[parseInt(monthStr) - 1]} ${yearStr}`
+  const monthIdx = Math.max(0, Math.min(11, (parseInt(monthStr) || 1) - 1))
+  const monthLabel = `${monthNames[monthIdx]} ${yearStr || today.getFullYear()}`
 
   const totalHours = records.reduce((sum, r) => sum + r.horasTrabajadas, 0)
   const totalDaysWorked = records.filter(r => r.status === 'worked').length
