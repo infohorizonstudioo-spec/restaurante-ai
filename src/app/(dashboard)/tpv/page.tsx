@@ -646,6 +646,7 @@ export default function TPVPage() {
           tenant_id: tid,
           customer_name: cobroName.trim() || 'TPV',
           order_type: cobroType,
+          table_id: cobroTable ? (dbTables.find(t => t.number === cobroTable)?.id || null) : null,
           notes: [
             cobroTable ? `Mesa: ${cobroTable}` : '',
             cobroNotes,

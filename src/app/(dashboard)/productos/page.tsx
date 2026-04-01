@@ -252,6 +252,7 @@ export default function ProductosPage() {
                         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
                           <p style={{ fontSize:14, fontWeight:700, color: isSoldOut ? C.muted : C.text }}>{item.name}</p>
                           <span style={{ fontSize:10, padding:'2px 8px', borderRadius:8, background:cfg.bg, color:cfg.color, fontWeight:700 }}>{tx(cfg.label)}</span>
+                          {item.featured && <span style={{ fontSize:10, padding:'2px 8px', borderRadius:8, background:C.amberDim, color:C.amber, fontWeight:700 }}>{item.featured_label || tx('Destacado')}</span>}
                           {item.requires_confirmation && <span style={{ fontSize:10, padding:'2px 8px', borderRadius:8, background:C.yellowDim, color:C.yellow, fontWeight:600 }}>{tx('Revisión manual')}</span>}
                           {item.price && <span style={{ fontSize:12, color:C.sub }}>{item.price}€</span>}
                         </div>
@@ -312,6 +313,8 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s, ten
     availability_type:    (item?.availability_type || 'always_available') as AvailType,
     daily_limit:          item?.daily_limit || '',
     requires_confirmation:item?.requires_confirmation || false,
+    featured:             item?.featured || false,
+    featured_label:       item?.featured_label || '',
     alternatives:         (item?.alternatives || []).join(', '),
     price:                item?.price || '',
     sort_order:           item?.sort_order || 0,
@@ -361,6 +364,8 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s, ten
       price: form.price ? parseFloat(String(form.price)) : null,
       alternatives: form.alternatives ? form.alternatives.split(',').map((s:string) => s.trim()).filter(Boolean) : [],
       image_url: form.image_url || null,
+      featured: form.featured || false,
+      featured_label: form.featured ? (form.featured_label || null) : null,
     })
   }
 
@@ -445,6 +450,27 @@ function ProductModal({ item, onSave, onClose, categories, tx=(s:string)=>s, ten
               <input className="rz-inp" type="number" min={1} value={form.daily_limit} onChange={e => { up('daily_limit', e.target.value); formErrors.daily_limit && setFormErrors(f => ({...f, daily_limit: ''})) }} placeholder="Ej: 5" />
               {formErrors.daily_limit && <p style={{ fontSize:11, color:C.red, marginTop:3 }}>{formErrors.daily_limit}</p>}
               <p style={{ fontSize:11, color:C.muted, marginTop:4 }}>{tx('Se dejará de ofrecer cuando se alcance este límite')}</p>
+            </div>
+          )}
+
+          {/* Destacar / Especial */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div>
+              <p style={{ fontSize:13, fontWeight:600, color:C.text }}>{tx('Destacar en carta digital')}</p>
+              <p style={{ fontSize:11, color:C.muted }}>{tx('Aparece como especial en la carta QR')}</p>
+            </div>
+            <button onClick={() => up('featured', !form.featured)} style={{
+              width:44, height:24, borderRadius:12, border:'none', cursor:'pointer',
+              background: form.featured ? C.amber : C.borderMd, position:'relative', transition:'background 0.2s'
+            }}>
+              <div style={{ position:'absolute', top:2, left: form.featured ? 20 : 2, width:20, height:20, borderRadius:'50%', background:'white', transition:'left 0.2s', boxShadow:'0 1px 4px rgba(0,0,0,0.3)' }}/>
+            </button>
+          </div>
+
+          {form.featured && (
+            <div>
+              <label style={lbl}>{tx('Etiqueta del especial').toUpperCase()} ({tx('opcional')})</label>
+              <input className="rz-inp" value={form.featured_label} onChange={e => up('featured_label', e.target.value)} placeholder="Ej: Plato del d\u00eda, Sugerencia del chef..." />
             </div>
           )}
 

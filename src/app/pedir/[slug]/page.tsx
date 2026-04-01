@@ -15,6 +15,9 @@ interface MenuItem {
   description?: string
   image_url?: string
   availability_type?: string
+  daily_limit?: number
+  featured?: boolean
+  featured_label?: string
 }
 
 export default async function PedirPage({
@@ -22,16 +25,17 @@ export default async function PedirPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ mesa?: string }>
+  searchParams: Promise<{ mesa?: string; paid?: string }>
 }) {
   const { slug } = await params
   const sp = await searchParams
   const mesa = sp.mesa || null
+  const justPaid = sp.paid === 'true'
 
   // Load tenant
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, type, logo_url, slug')
+    .select('id, name, type, logo_url, slug, whatsapp_phone')
     .ilike('slug', slug)
     .maybeSingle()
 
@@ -49,14 +53,27 @@ export default async function PedirPage({
     )
   }
 
-  // Load menu
+  // Load menu with featured and availability fields
   const { data: items } = await supabase
     .from('menu_items')
-    .select('id, name, price, category, description, image_url, availability_type')
+    .select('id, name, price, category, description, image_url, availability_type, daily_limit, featured, featured_label')
     .eq('tenant_id', tenant.id)
     .eq('active', true)
     .order('category')
     .order('sort_order')
+
+  // Load daily counts to know what's sold out
+  const today = new Date().toISOString().slice(0, 10)
+  const { data: dailyCounts } = await supabase
+    .from('menu_daily_counts')
+    .select('item_id, count')
+    .eq('tenant_id', tenant.id)
+    .eq('date', today)
+
+  const countMap: Record<string, number> = {}
+  for (const c of (dailyCounts || [])) {
+    countMap[c.item_id] = c.count
+  }
 
   // Look up zone for this table
   let zone: string | null = null
@@ -66,5 +83,5 @@ export default async function PedirPage({
     zone = tableData?.zone_name || null
   }
 
-  return <OrderFlow tenant={tenant} items={(items || []) as MenuItem[]} mesa={mesa} zone={zone} slug={slug} />
+  return <OrderFlow tenant={tenant} items={(items || []) as MenuItem[]} mesa={mesa} zone={zone} slug={slug} dailyCounts={countMap} justPaid={justPaid} />
 }

@@ -79,11 +79,39 @@ export async function POST(req: Request) {
   try {
     switch (event.type) {
 
-      // ── PAGO INICIAL ────────────────────────────
+      // ── PAGO INICIAL (suscripcion O pago de mesa) ────────────────────────────
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
         const tenantId = session.metadata?.tenant_id
-        const plan     = session.metadata?.plan
+
+        // ── Pago de mesa (QR table payment) ──
+        if (session.metadata?.source === 'qr_table_payment') {
+          const orderIdsStr = session.metadata?.order_ids || ''
+          const orderIds = orderIdsStr.split(',').filter(Boolean)
+          const mesa = session.metadata?.mesa
+          if (tenantId && orderIds.length > 0) {
+            // Mark all orders as paid
+            await admin.from('order_events')
+              .update({ payment_method: 'card' })
+              .eq('tenant_id', tenantId)
+              .in('id', orderIds)
+            // Notify business
+            await admin.from('notifications').insert({
+              tenant_id: tenantId,
+              type: 'table_payment',
+              title: `Pago recibido \u2014 Mesa ${mesa || '?'}`,
+              body: `${session.metadata?.customer_name || 'Cliente'} ha pagado ${((session.amount_total || 0) / 100).toFixed(2)}\u20AC con tarjeta desde la carta digital.`,
+              priority: 'info',
+              read: false,
+              target_url: '/pedidos',
+            })
+            logger.info('Stripe: table payment completed', { tenantId, mesa, amount: session.amount_total })
+          }
+          break
+        }
+
+        // ── Pago de suscripcion ──
+        const plan = session.metadata?.plan
         if (!tenantId || !plan || !PLAN_LIMITS[plan]) break
 
         const limits = PLAN_LIMITS[plan]

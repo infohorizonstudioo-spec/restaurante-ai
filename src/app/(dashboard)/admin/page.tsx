@@ -189,7 +189,7 @@ export default function AdminPage() {
                 <div key={t.id} style={{borderTop:i>0?`1px solid ${C.border}`:'none',padding:'14px 20px',display:'grid',gridTemplateColumns:'1fr auto',gap:16,alignItems:'center'}}>
                   <div style={{display:'flex',gap:12,alignItems:'flex-start',minWidth:0}}>
                     <div style={{width:38,height:38,borderRadius:10,background:pl.bg,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:14,color:pl.color,flexShrink:0}}>
-                      {t.name.charAt(0).toUpperCase()}
+                      {(t.name||'?').charAt(0).toUpperCase()}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:3,flexWrap:'wrap'}}>
@@ -258,7 +258,7 @@ export default function AdminPage() {
               const pl=PLANS[t.plan]||PLANS.trial
               return (
                 <div key={t.id} style={{borderTop:i>0?`1px solid ${C.border}`:'none',padding:'12px 20px',display:'flex',alignItems:'center',gap:12}}>
-                  <div style={{width:34,height:34,borderRadius:9,background:pl.bg,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,color:pl.color,fontSize:13,flexShrink:0}}>{t.name.charAt(0)}</div>
+                  <div style={{width:34,height:34,borderRadius:9,background:pl.bg,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,color:pl.color,fontSize:13,flexShrink:0}}>{(t.name||'?').charAt(0)}</div>
                   <div style={{flex:1,minWidth:0}}>
                     <p style={{fontSize:13,fontWeight:600,color:C.text}}>{t.name}</p>
                     <p style={{fontSize:11,color:C.text3}}>{TYPES[t.type]||t.type}</p>

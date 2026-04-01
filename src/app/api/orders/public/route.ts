@@ -55,6 +55,23 @@ export async function POST(req: NextRequest) {
       0
     )
 
+    // Resolve table BEFORE creating order (so we can store table_id)
+    let tableId: string | null = null
+    let zoneName: string | null = null
+    if (mesa) {
+      const { data: dbTable } = await admin
+        .from('tables')
+        .select('id, zone_name')
+        .eq('tenant_id', tenant.id)
+        .eq('number', String(mesa))
+        .maybeSingle()
+      if (dbTable) {
+        tableId = dbTable.id
+        zoneName = dbTable.zone_name || null
+        await admin.from('tables').update({ status: 'ocupada' }).eq('id', dbTable.id)
+      }
+    }
+
     // Build notes string
     const noteParts = [
       mesa ? `Mesa: ${mesa}` : '',
@@ -62,7 +79,7 @@ export async function POST(req: NextRequest) {
       notes ? sanitizeString(notes, 500) : '',
     ].filter(Boolean)
 
-    // Create order
+    // Create order with table_id
     const { data: order, error } = await admin
       .from('order_events')
       .insert({
@@ -75,6 +92,7 @@ export async function POST(req: NextRequest) {
         notes: noteParts.join(' | ') || 'Pedido QR',
         total_estimate: total,
         payment_method: 'pending',
+        table_id: tableId,
       })
       .select('id')
       .maybeSingle()
@@ -82,21 +100,6 @@ export async function POST(req: NextRequest) {
     if (error) {
       logger.error('public order error', {}, error)
       return NextResponse.json({ error: 'Error al crear pedido' }, { status: 500 })
-    }
-
-    // If table number provided, update table status + get zone
-    let zoneName: string | null = null
-    if (mesa) {
-      const { data: dbTable } = await admin
-        .from('tables')
-        .select('id, zone_name')
-        .eq('tenant_id', tenant.id)
-        .eq('number', String(mesa))
-        .maybeSingle()
-      if (dbTable) {
-        await admin.from('tables').update({ status: 'ocupada' }).eq('id', dbTable.id)
-        zoneName = dbTable.zone_name || null
-      }
     }
 
     // Trigger harmonize: stock decrement + owner notification (non-blocking)

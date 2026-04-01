@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { PageSkeleton } from '@/components/ui'
 import { useTenant } from '@/contexts/TenantContext'
 import { C } from '@/lib/colors'
+import { generateKitchenTicket, printTicket, parseOrderNotes } from '@/lib/kitchen-ticket'
 
 /* ── Types ───────────────────────────────────────────────────────── */
 interface KDSOrder {
@@ -17,6 +18,13 @@ interface KDSOrder {
   table_id: string | null
   created_at: string
   updated_at: string
+}
+
+interface TableInfo {
+  id: string
+  number: string
+  name?: string
+  zone_name?: string
 }
 
 /* ── Time helpers ────────────────────────────────────────────────── */
@@ -38,6 +46,31 @@ function urgencyColor(mins: number): { bg: string; border: string; text: string 
   return { bg: C.surface2, border: C.border, text: C.text3 }
 }
 
+/* ── Sound — kitchen chime via Web Audio API ─────────────────────── */
+function playKitchenChime() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+
+    // Two-tone chime: C5 → E5 (professional kitchen bell sound)
+    const freqs = [523, 659]
+    freqs.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.value = freq
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.15)
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.15 + 0.6)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(ctx.currentTime + i * 0.15)
+      osc.stop(ctx.currentTime + i * 0.15 + 0.6)
+    })
+
+    // Close context after sounds finish
+    setTimeout(() => ctx.close().catch(() => {}), 1500)
+  } catch { /* ignore if audio not available */ }
+}
+
 /* ── Main component ──────────────────────────────────────────────── */
 export default function CocinaPage() {
   const { tenant, template, t } = useTenant()
@@ -46,10 +79,33 @@ export default function CocinaPage() {
   const [updating, setUpdating] = useState<string | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const [now, setNow] = useState(Date.now())
+  const [tableMap, setTableMap] = useState<Record<string, TableInfo>>({})
   const containerRef = useRef<HTMLDivElement>(null)
+  const prevOrderCount = useRef(0)
 
   const tenantId = tenant?.id
   const isHospitality = ['restaurante', 'bar', 'cafeteria'].includes(tenant?.type || '')
+
+  /* ── Play sound on new order ────────────────────────────────── */
+  function playSound() {
+    playKitchenChime()
+  }
+
+  /* ── Load tables map ────────────────────────────────────────── */
+  useEffect(() => {
+    if (!tenantId) return
+    ;(async () => {
+      const { data } = await supabase
+        .from('tables')
+        .select('id,number,name,zone_name')
+        .eq('tenant_id', tenantId)
+      if (data) {
+        const map: Record<string, TableInfo> = {}
+        for (const t of data) map[t.id] = t
+        setTableMap(map)
+      }
+    })()
+  }, [tenantId])
 
   /* ── Fetch active orders ─────────────────────────────────────── */
   const fetchOrders = useCallback(async () => {
@@ -60,7 +116,14 @@ export default function CocinaPage() {
       .eq('tenant_id', tenantId)
       .in('status', ['confirmed', 'preparing'])
       .order('created_at', { ascending: true })
-    if (data) setOrders(data as KDSOrder[])
+    if (data) {
+      // Detect new orders for sound alert
+      if (data.length > prevOrderCount.current && prevOrderCount.current > 0) {
+        playSound()
+      }
+      prevOrderCount.current = data.length
+      setOrders(data as KDSOrder[])
+    }
     setLoading(false)
   }, [tenantId])
 
@@ -76,7 +139,13 @@ export default function CocinaPage() {
         schema: 'public',
         table: 'order_events',
         filter: `tenant_id=eq.${tenantId}`,
-      }, () => { fetchOrders() })
+      }, (payload) => {
+        // Play sound on new order insert
+        if (payload.eventType === 'INSERT' && (payload.new as any)?.status === 'confirmed') {
+          playSound()
+        }
+        fetchOrders()
+      })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [tenantId, fetchOrders])
@@ -98,7 +167,6 @@ export default function CocinaPage() {
         body: JSON.stringify({ id: order.id, status: nextStatus }),
       })
       if (res.ok) {
-        // Optimistic update
         if (nextStatus === 'ready') {
           setOrders(prev => prev.filter(o => o.id !== order.id))
         } else {
@@ -108,6 +176,43 @@ export default function CocinaPage() {
     } finally {
       setUpdating(null)
     }
+  }
+
+  /* ── Print kitchen ticket ───────────────────────────────────── */
+  function handlePrint(order: KDSOrder) {
+    const { mesa: noteMesa, customerNotes } = parseOrderNotes(order.notes)
+    const tableInfo = order.table_id ? tableMap[order.table_id] : null
+    const tableNumber = tableInfo?.number || noteMesa || null
+    const zone = tableInfo?.zone_name || null
+
+    const html = generateKitchenTicket({
+      items: order.items,
+      table: tableNumber,
+      zone,
+      notes: customerNotes || undefined,
+      orderNum: order.id.slice(-4).toUpperCase(),
+      customerName: order.customer_name,
+    })
+    printTicket(html)
+  }
+
+  /* ── Get table label for display ────────────────────────────── */
+  function getTableLabel(order: KDSOrder): { label: string; zone?: string } {
+    // Priority 1: table_id → lookup in tableMap
+    if (order.table_id && tableMap[order.table_id]) {
+      const t = tableMap[order.table_id]
+      return {
+        label: t.name || `Mesa ${t.number}`,
+        zone: t.zone_name || undefined,
+      }
+    }
+    // Priority 2: parse "Mesa: X" from notes
+    const { mesa } = parseOrderNotes(order.notes)
+    if (mesa) return { label: `Mesa ${mesa}` }
+    // Priority 3: order type
+    if (order.order_type === 'recoger') return { label: 'Recoger' }
+    if (order.order_type === 'domicilio') return { label: 'Domicilio' }
+    return { label: 'Barra' }
   }
 
   /* ── Fullscreen toggle ───────────────────────────────────────── */
@@ -131,7 +236,7 @@ export default function CocinaPage() {
   if (!loading && !isHospitality) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 12 }}>
-        <span style={{ fontSize: 40 }}>🍳</span>
+        <span style={{ fontSize: 40 }}>{'\uD83C\uDF73'}</span>
         <div style={{ fontSize: 18, fontWeight: 600, color: C.text }}>Modulo no disponible</div>
         <div style={{ fontSize: 14, color: C.text3 }}>La pantalla de cocina esta disponible para negocios de hosteleria.</div>
       </div>
@@ -152,11 +257,12 @@ export default function CocinaPage() {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 28 }}>🍳</span>
+            <span style={{ fontSize: 28 }}>{'\uD83C\uDF73'}</span>
             <div>
               <h1 style={{ fontSize: fullscreen ? 28 : 22, fontWeight: 700, color: C.text, margin: 0 }}>Cocina</h1>
               <p style={{ fontSize: 13, color: C.text3, margin: '2px 0 0' }}>
                 {orders.length} pedido{orders.length !== 1 ? 's' : ''} activo{orders.length !== 1 ? 's' : ''}
+                {confirmed.length > 0 && <span style={{ color: C.blue, fontWeight: 600 }}> {'\u00b7'} {confirmed.length} nuevo{confirmed.length !== 1 ? 's' : ''}</span>}
               </p>
             </div>
           </div>
@@ -181,7 +287,7 @@ export default function CocinaPage() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             height: fullscreen ? '70vh' : 400, gap: 16,
           }}>
-            <span style={{ fontSize: 64 }}>✅</span>
+            <span style={{ fontSize: 64 }}>{'\u2705'}</span>
             <div style={{ fontSize: 22, fontWeight: 700, color: C.text }}>Sin pedidos pendientes</div>
             <div style={{ fontSize: 15, color: C.text3 }}>Los pedidos nuevos apareceran aqui automaticamente</div>
           </div>
@@ -190,13 +296,14 @@ export default function CocinaPage() {
         {/* Orders grid */}
         {orders.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
-            {/* Confirmed first, then preparing */}
             {[...confirmed, ...preparing].map(order => {
               const mins = minutesAgo(order.created_at)
               const urg = urgencyColor(mins)
               const isPreparing = order.status === 'preparing'
               const items = Array.isArray(order.items) ? order.items : []
               const isUpdating = updating === order.id
+              const { label: tableLabel, zone } = getTableLabel(order)
+              const { customerNotes } = parseOrderNotes(order.notes)
 
               return (
                 <div key={order.id} style={{
@@ -225,11 +332,18 @@ export default function CocinaPage() {
                         {isPreparing ? 'Preparando' : 'Nuevo'}
                       </span>
                     </div>
-                    <div style={{
-                      fontSize: fullscreen ? 20 : 16, fontWeight: 700, color: urg.text,
-                      fontFamily: 'var(--rz-mono)',
-                    }}>
-                      {formatTimer(mins)}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {/* Print button */}
+                      <button onClick={() => handlePrint(order)} title="Imprimir comanda" style={{
+                        background: 'none', border: `1px solid ${C.border}`, borderRadius: 6,
+                        padding: '4px 8px', cursor: 'pointer', color: C.text3, fontSize: 14,
+                      }}>{'\uD83D\uDDA8\uFE0F'}</button>
+                      <div style={{
+                        fontSize: fullscreen ? 20 : 16, fontWeight: 700, color: urg.text,
+                        fontFamily: 'var(--rz-mono)',
+                      }}>
+                        {formatTimer(mins)}
+                      </div>
                     </div>
                   </div>
 
@@ -237,10 +351,11 @@ export default function CocinaPage() {
                   <div style={{ padding: '10px 18px', borderBottom: `1px solid rgba(255,255,255,0.04)` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: fullscreen ? 16 : 14, fontWeight: 600, color: C.text }}>
-                        {order.table_id ? `Mesa ${order.table_id}` : order.order_type === 'recoger' ? 'Recoger' : order.order_type === 'domicilio' ? 'Domicilio' : 'Barra'}
+                        {tableLabel}
                       </span>
-                      {order.customer_name && (
-                        <span style={{ fontSize: 13, color: C.text3 }}>— {order.customer_name}</span>
+                      {zone && <span style={{ fontSize: 12, color: C.text3 }}>{'\u00b7'} {zone}</span>}
+                      {order.customer_name && order.customer_name !== 'TPV' && order.customer_name !== 'QR' && (
+                        <span style={{ fontSize: 13, color: C.text3 }}>{'\u2014'} {order.customer_name}</span>
                       )}
                     </div>
                   </div>
@@ -249,17 +364,16 @@ export default function CocinaPage() {
                   <div style={{ padding: '12px 18px' }}>
                     {items.map((item: any, i: number) => (
                       <div key={i} style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         padding: '6px 0', borderBottom: i < items.length - 1 ? `1px solid rgba(255,255,255,0.03)` : 'none',
                       }}>
-                        <span style={{
-                          fontSize: fullscreen ? 18 : 15, fontWeight: 600, color: C.text,
-                        }}>
-                          {item.qty ? `${item.qty}x ` : ''}{item.name || item.product || 'Producto'}
-                        </span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: fullscreen ? 18 : 15, fontWeight: 600, color: C.text }}>
+                            {item.qty || item.quantity || 1}x {item.name || item.product || 'Producto'}
+                          </span>
+                        </div>
                         {item.notes && (
-                          <span style={{ fontSize: 12, color: C.amber, fontStyle: 'italic', marginLeft: 8 }}>
-                            {item.notes}
+                          <span style={{ fontSize: 12, color: C.amber, fontStyle: 'italic', display: 'block', marginTop: 2 }}>
+                            {'\u26A0'} {item.notes}
                           </span>
                         )}
                       </div>
@@ -269,13 +383,13 @@ export default function CocinaPage() {
                     )}
                   </div>
 
-                  {/* Notes */}
-                  {order.notes && (
+                  {/* Customer notes (parsed — without metadata) */}
+                  {customerNotes && (
                     <div style={{
                       padding: '8px 18px', background: 'rgba(240,168,78,0.06)',
                       borderTop: `1px solid rgba(255,255,255,0.04)`,
                     }}>
-                      <span style={{ fontSize: 13, color: C.amber }}>📝 {order.notes}</span>
+                      <span style={{ fontSize: 13, color: C.amber }}>{'\uD83D\uDCDD'} {customerNotes}</span>
                     </div>
                   )}
 
@@ -292,7 +406,7 @@ export default function CocinaPage() {
                         transition: 'opacity 0.15s',
                       }}
                     >
-                      {isPreparing ? '✅ Marcar listo' : '🔥 Empezar a preparar'}
+                      {isPreparing ? '\u2705 Marcar listo' : '\uD83D\uDD25 Empezar a preparar'}
                     </button>
                   </div>
                 </div>

@@ -13,6 +13,9 @@ interface MenuItem {
   category: string
   image_url?: string
   description?: string
+  featured?: boolean
+  featured_label?: string
+  availability_type?: string
 }
 
 export default async function CartaPublicPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -39,20 +42,27 @@ export default async function CartaPublicPage({ params }: { params: Promise<{ sl
     )
   }
 
-  // Fetch active menu items
+  // Fetch active menu items (including featured + availability)
   const { data: items } = await supabase
     .from('menu_items')
-    .select('id, name, price, category, image_url, description')
+    .select('id, name, price, category, image_url, description, featured, featured_label, availability_type')
     .eq('tenant_id', tenant.id)
     .eq('active', true)
     .order('category')
     .order('name')
 
-  const menuItems: MenuItem[] = (items || []) as MenuItem[]
+  // Filter out unavailable items
+  const menuItems: MenuItem[] = ((items || []) as MenuItem[]).filter(
+    i => i.availability_type !== 'unavailable'
+  )
 
-  // Group by category
+  // Separate featured items
+  const featuredItems = menuItems.filter(i => i.featured)
+
+  // Group non-featured by category
   const categories: Record<string, MenuItem[]> = {}
   for (const item of menuItems) {
+    if (item.featured) continue // shown in specials section
     const cat = item.category || 'Otros'
     if (!categories[cat]) categories[cat] = []
     categories[cat].push(item)
@@ -97,6 +107,46 @@ export default async function CartaPublicPage({ params }: { params: Promise<{ sl
               {cat}
             </a>
           ))}
+        </div>
+      )}
+
+      {/* Featured / Specials section */}
+      {featuredItems.length > 0 && (
+        <div style={{ padding: '16px 20px', maxWidth: 640, margin: '0 auto', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: 18 }}>{'\u2B50'}</span>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#F0A84E', margin: 0 }}>Especiales</h2>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {featuredItems.map(item => (
+              <div key={item.id} style={{
+                display: 'flex', gap: 14, padding: '14px 16px',
+                background: '#131920', borderRadius: 14,
+                border: '1px solid rgba(240,168,78,0.25)',
+                alignItems: 'center', position: 'relative',
+              }}>
+                {item.image_url && (
+                  <img src={item.image_url} alt={item.name} style={{ width: 60, height: 60, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 15, fontWeight: 600, color: '#E8EEF6', margin: 0 }}>{item.name}</p>
+                  {item.description && (
+                    <p style={{ fontSize: 12, color: '#8895A7', margin: '4px 0 0', lineHeight: 1.4 }}>{item.description}</p>
+                  )}
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <p style={{ fontSize: 16, fontWeight: 800, color: '#F0A84E', margin: 0, fontFamily: 'monospace' }}>
+                    {item.price.toFixed(2)}{'\u20AC'}
+                  </p>
+                  {item.featured_label && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#F0A84E', background: 'rgba(240,168,78,0.10)', padding: '2px 8px', borderRadius: 6, marginTop: 4, display: 'inline-block' }}>
+                      {item.featured_label}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

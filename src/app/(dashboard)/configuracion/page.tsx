@@ -208,33 +208,28 @@ export default function ConfiguracionPage() {
       await supabase.from('tenants').update(updateData).eq('id', tenant.id)
     }
 
-    // Sincronizar knowledge a business_knowledge y reprovisionar agente ElevenLabs
+    // Sincronizar knowledge a business_knowledge (upsert por categoría — NO borrar todo)
     try {
-      // Guardar knowledge actualizado
-      await fetch('/api/onboarding/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenant_id: tenant.id,
-          agent_phone: basicForm.agent_phone.trim() || null,
-          business_name: newName,
-          agent_name: newAgent,
-          services: cfg.knowledge.services || null,
-          menu: cfg.knowledge.menu || null,
-          faqs: cfg.knowledge.faqs || null,
-          policies: cfg.knowledge.conditions || null,
-          horarios: cfg.knowledge.horarios || null,
-        })
-      })
+      const knowledgeUpdates: { category: string; content: string }[] = []
+      if (cfg.knowledge.services) knowledgeUpdates.push({ category: 'servicios', content: cfg.knowledge.services })
+      if (cfg.knowledge.menu) knowledgeUpdates.push({ category: 'menu', content: cfg.knowledge.menu })
+      if (cfg.knowledge.faqs) knowledgeUpdates.push({ category: 'faqs', content: cfg.knowledge.faqs })
+      if (cfg.knowledge.conditions) knowledgeUpdates.push({ category: 'politicas', content: cfg.knowledge.conditions })
+      if (cfg.knowledge.horarios) knowledgeUpdates.push({ category: 'horarios', content: cfg.knowledge.horarios })
+
+      for (const k of knowledgeUpdates) {
+        await supabase.from('business_knowledge')
+          .upsert({ tenant_id: tenant.id, category: k.category, content: k.content, active: true },
+            { onConflict: 'tenant_id,category' })
+      }
+
       // Reprovisionar agente ElevenLabs con datos actualizados
-      // provision-agent incluye: prompt completo, tools, voz, webhook post-call
-      // NO llamar a sync-agent porque sobreescribe el prompt con una versión vieja
       await fetch('/api/agent/provision', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenant_id: tenant.id })
       })
-    } catch { /* no crítico */ }
+    } catch { /* no cr\u00edtico */ }
 
     setSaving(false); setSaved(true)
     toast.push({ title: 'Configuración guardada', body: 'Los cambios se han aplicado correctamente', type: 'config', priority: 'info', icon: '✅' })
@@ -709,11 +704,116 @@ export default function ConfiguracionPage() {
           </div>
         )}
 
+        {/* ── Pagos online (Stripe Connect) ──────────────────── */}
+        {isHosb && <StripeConnectSection tenant={tenant} tx={tx} />}
+
         {/* ── Recordatorios configurables ─────────────────────── */}
         <RemindersSection tenantId={tenant?.id} tx={tx} />
 
         <div style={{height:40}}/>
       </div>
+    </div>
+  )
+}
+
+// ── Stripe Connect Section ──────────────────────────────────────
+function StripeConnectSection({ tenant, tx }: { tenant: any; tx: (s: string) => string }) {
+  const toast = useToast()
+  const [loading, setLoading] = useState(false)
+  const isConnected = tenant?.stripe_connect_enabled === true
+  const hasAccount = !!tenant?.stripe_connect_id
+
+  // Check URL params for callback status
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const stripeStatus = params.get('stripe')
+    if (stripeStatus === 'success') {
+      toast.push({ title: tx('Pagos activados'), body: tx('Tu cuenta bancaria esta conectada. Tus clientes ya pueden pagar desde la carta digital.'), type: 'success', priority: 'info', icon: '\u2705' })
+      // Clean URL
+      window.history.replaceState({}, '', '/configuracion')
+    } else if (stripeStatus === 'pending') {
+      toast.push({ title: tx('Configuracion pendiente'), body: tx('Completa la verificacion para activar los pagos.'), type: 'warning', priority: 'warning', icon: '\u26A0\uFE0F' })
+      window.history.replaceState({}, '', '/configuracion')
+    } else if (stripeStatus === 'error') {
+      toast.push({ title: tx('Error'), body: tx('Hubo un problema al configurar los pagos. Intentalo de nuevo.'), type: 'error', priority: 'warning', icon: '\u274C' })
+      window.history.replaceState({}, '', '/configuracion')
+    }
+  }, [])
+
+  async function connectStripe() {
+    setLoading(true)
+    try {
+      const sess = await supabase.auth.getSession()
+      if (!sess.data.session) return
+      const res = await fetch('/api/stripe/connect', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + sess.data.session.access_token },
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        toast.push({ title: tx('Error'), body: data.error || tx('No se pudo iniciar la configuracion'), type: 'error', priority: 'warning', icon: '\u26A0\uFE0F' })
+      }
+    } catch {
+      toast.push({ title: tx('Error de conexion'), type: 'error', priority: 'warning', icon: '\u26A0\uFE0F' })
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div style={{background:C.card,border:`1px solid ${isConnected?'rgba(52,211,153,0.25)':C.border}`,borderRadius:14,padding:'20px'}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
+        <span style={{fontSize:20}}>{isConnected ? '\uD83D\uDCB3' : '\uD83D\uDD12'}</span>
+        <div>
+          <p style={{fontSize:14,fontWeight:700,color:C.text}}>{tx('Pagos online')}</p>
+          <p style={{fontSize:12,color:C.muted,marginTop:1}}>{tx('Permite que tus clientes paguen desde la carta digital')}</p>
+        </div>
+      </div>
+
+      {isConnected ? (
+        <div style={{background:'rgba(52,211,153,0.08)',borderRadius:10,padding:'14px 16px',display:'flex',alignItems:'center',gap:10}}>
+          <span style={{fontSize:20}}>\u2705</span>
+          <div>
+            <p style={{fontSize:13,fontWeight:700,color:'#34D399'}}>{tx('Pagos activados')}</p>
+            <p style={{fontSize:12,color:C.muted,marginTop:2}}>{tx('Tus clientes pueden pagar con tarjeta, Apple Pay y Google Pay desde el QR. El dinero llega directo a tu cuenta bancaria.')}</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <p style={{fontSize:12,color:C.muted,lineHeight:1.6,marginBottom:14}}>
+            {tx('Conecta tu cuenta bancaria para recibir pagos directos de tus clientes. El proceso tarda 2 minutos.')}
+          </p>
+          <div style={{background:C.surface2,borderRadius:10,padding:'12px 14px',marginBottom:14}}>
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{fontSize:12}}>\uD83D\uDCB3</span>
+                <span style={{fontSize:12,color:C.text}}>{tx('Tarjeta, Apple Pay, Google Pay')}</span>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{fontSize:12}}>\uD83C\uDFE6</span>
+                <span style={{fontSize:12,color:C.text}}>{tx('Dinero directo a tu cuenta bancaria')}</span>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{fontSize:12}}>\uD83D\uDD12</span>
+                <span style={{fontSize:12,color:C.text}}>{tx('Seguro y verificado por Stripe')}</span>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{fontSize:12}}>\uD83D\uDCCA</span>
+                <span style={{fontSize:12,color:C.text}}>{tx('Comision: 1.5% por transaccion')}</span>
+              </div>
+            </div>
+          </div>
+          <button onClick={connectStripe} disabled={loading} style={{
+            width:'100%',padding:'12px',borderRadius:10,border:'none',
+            background:loading?C.muted:`linear-gradient(135deg,${C.amber},#E8923A)`,
+            color:C.bg,fontSize:14,fontWeight:700,cursor:loading?'wait':'pointer',fontFamily:'inherit',
+            boxShadow:loading?'none':'0 4px 16px rgba(240,168,78,0.25)',
+          }}>
+            {loading ? tx('Conectando...') : hasAccount ? tx('Completar configuracion') : tx('Conectar cuenta bancaria')}
+          </button>
+        </>
+      )}
     </div>
   )
 }

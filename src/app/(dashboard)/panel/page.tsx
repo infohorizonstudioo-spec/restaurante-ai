@@ -314,7 +314,7 @@ function ForecastChart({ data, forecastLabel, lang='es' }: { data: { hour: strin
           return (
             <div key={d.hour} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
               <div style={{ width:'100%', height:h, background:d.color, borderRadius:3, opacity: isNow ? 1 : 0.7, border: isNow ? '2px solid #E8EEF6' : 'none', transition:'height 0.3s' }}/>
-              <span style={{ fontSize:9, color: isNow ? C.text : C.text3, fontWeight: isNow ? 700 : 400 }}>{d.hour.slice(0,2)}</span>
+              <span style={{ fontSize:9, color: isNow ? C.text : C.text3, fontWeight: isNow ? 700 : 400 }}>{(d.hour||'').slice(0,2)}</span>
             </div>
           )
         })}
@@ -1171,7 +1171,7 @@ export default function PanelPage() {
                   </div>
                   <div style={{ flex:1,minWidth:0 }}>
                     <p style={{ fontSize:13,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{r.customer_name}</p>
-                    <p style={{ fontSize:11,color:C.text3 }}>{(r.time||r.reservation_time||'').slice(0,5)} · {r.people||r.party_size}p</p>
+                    <p style={{ fontSize:11,color:C.text3 }}>{(r.time||r.reservation_time||'').slice(0,5)} · {r.people||r.party_size||'?'}p</p>
                   </div>
                   <span style={{ fontSize:10,padding:'2px 8px',borderRadius:10,background:r.status==='confirmada'?C.greenDim:C.surface2,color:r.status==='confirmada'?C.green:C.text3,fontWeight:600,border:`1px solid ${r.status==='confirmada'?C.green+'25':C.border}`,flexShrink:0 }}>{_tx(r.status)}</span>
                 </div>
