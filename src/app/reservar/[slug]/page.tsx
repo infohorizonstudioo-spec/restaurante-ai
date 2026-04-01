@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import PublicReservationForm from './PublicReservationForm'
 
@@ -6,6 +7,17 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const { data: tenant } = await supabase.from('tenants').select('name').ilike('slug', slug).maybeSingle()
+  const name = tenant?.name || slug
+  return {
+    title: `Reservar en ${name}`,
+    description: `Haz tu reserva en ${name}. Reserva online de forma rapida y sencilla.`,
+    openGraph: { title: `Reservar en ${name}`, description: `Reserva online en ${name}` },
+  }
+}
 
 export default async function ReservarPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
