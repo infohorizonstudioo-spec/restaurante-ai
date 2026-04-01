@@ -40,7 +40,8 @@ export async function GET(req: Request) {
     const userIds = (profiles || []).map(p => p.id)
     const membersWithEmail = await Promise.all(
       userIds.map(async (uid) => {
-        const profile = profiles!.find(p => p.id === uid)!
+        const profile = (profiles || []).find(p => p.id === uid)
+        if (!profile) return null
         try {
           const { data: { user } } = await admin.auth.admin.getUserById(uid)
           return {
@@ -64,7 +65,7 @@ export async function GET(req: Request) {
       })
     )
 
-    return NextResponse.json({ members: membersWithEmail })
+    return NextResponse.json({ members: membersWithEmail.filter(Boolean) })
   } catch (e: unknown) {
     logger.error('Team list: unexpected error', {}, e)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
