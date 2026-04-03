@@ -1,12 +1,14 @@
-// Service Worker — Reservo.AI Push Notifications + Offline TPV
-// Maneja push events y caching offline para el TPV
+// Service Worker — Reservo.AI
+// Push notifications + offline cache para dashboard
+const CACHE_NAME = 'reservo-v2'
+const OFFLINE_URL = '/offline'
 
-const CACHE_NAME = 'reservo-tpv-v1'
-const TPV_URLS = ['/tpv', '/panel']
+// Pages to pre-cache for offline use
+const PRECACHE = ['/panel', '/tpv', '/cocina', '/pedidos', '/reservas']
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(TPV_URLS))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE))
   )
   self.skipWaiting()
 })
@@ -20,32 +22,45 @@ self.addEventListener('activate', event => {
 })
 
 self.addEventListener('fetch', event => {
-  // Network-first for API calls, cache-first for pages
-  if (event.request.url.includes('/api/')) {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
-    )
-  } else {
-    event.respondWith(
-      caches.match(event.request).then(cached => cached || fetch(event.request))
-    )
-  }
+  const url = new URL(event.request.url)
+
+  // Skip non-GET and cross-origin
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return
+
+  // API calls: network-only (don't cache API responses)
+  if (url.pathname.startsWith('/api/')) return
+
+  // Pages: network-first, fallback to cache
+  event.respondWith(
+    fetch(event.request)
+      .then(response => {
+        // Cache successful page loads for offline
+        if (response.ok && response.type === 'basic') {
+          const clone = response.clone()
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone))
+        }
+        return response
+      })
+      .catch(() => caches.match(event.request))
+  )
 })
 
+// Push notifications
 self.addEventListener('push', event => {
   if (!event.data) return
-  const data = event.data.json()
+  let data = {}
+  try { data = event.data.json() } catch { return }
   const options = {
-    body:              data.body    || '',
-    icon:              '/icon-192.png',
-    badge:             '/badge-72.png',
-    tag:               data.tag    || 'reservo-notif',
+    body: data.body || '',
+    icon: '/icon.svg',
+    badge: '/icon.svg',
+    tag: data.tag || 'reservo-notif',
     requireInteraction: data.priority === 'critical',
-    data:              { url: data.url || '/panel' },
-    vibrate:           data.priority === 'critical' ? [200, 100, 200] : [100],
+    data: { url: data.url || '/panel' },
+    vibrate: data.priority === 'critical' ? [200, 100, 200] : [100],
     actions: data.priority === 'critical' ? [
-      { action: 'open',    title: 'Ver ahora' },
-      { action: 'dismiss', title: 'Cerrar'    },
+      { action: 'open', title: 'Ver ahora' },
+      { action: 'dismiss', title: 'Cerrar' },
     ] : [],
   }
   event.waitUntil(
@@ -65,5 +80,3 @@ self.addEventListener('notificationclick', event => {
     })
   )
 })
-
-// install and activate handled above with caching logic

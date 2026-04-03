@@ -73,7 +73,7 @@ function playKitchenChime() {
 
 /* ── Main component ──────────────────────────────────────────────── */
 export default function CocinaPage() {
-  const { tenant, template, t } = useTenant()
+  const { tenant, template, t, tx } = useTenant()
   const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState<KDSOrder[]>([])
   const [updating, setUpdating] = useState<string | null>(null)
@@ -259,7 +259,7 @@ export default function CocinaPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 28 }}>{'\uD83C\uDF73'}</span>
             <div>
-              <h1 style={{ fontSize: fullscreen ? 28 : 22, fontWeight: 700, color: C.text, margin: 0 }}>Cocina</h1>
+              <h1 style={{ fontSize: fullscreen ? 28 : 22, fontWeight: 700, color: C.text, margin: 0 }}>{tx('Cocina')}</h1>
               <p style={{ fontSize: 13, color: C.text3, margin: '2px 0 0' }}>
                 {orders.length} pedido{orders.length !== 1 ? 's' : ''} activo{orders.length !== 1 ? 's' : ''}
                 {confirmed.length > 0 && <span style={{ color: C.blue, fontWeight: 600 }}> {'\u00b7'} {confirmed.length} nuevo{confirmed.length !== 1 ? 's' : ''}</span>}
@@ -277,7 +277,7 @@ export default function CocinaPage() {
                 : <path d="M8 3H5a2 2 0 00-2 2v3m18-5h-3a2 2 0 00-2 2v3m0 8v3a2 2 0 002 2h3M3 16v3a2 2 0 002 2h3" />
               }
             </svg>
-            {fullscreen ? 'Salir' : 'Pantalla completa'}
+            {fullscreen ? tx('Salir') : tx('Pantalla completa')}
           </button>
         </div>
 
@@ -288,8 +288,8 @@ export default function CocinaPage() {
             height: fullscreen ? '70vh' : 400, gap: 16,
           }}>
             <span style={{ fontSize: 64 }}>{'\u2705'}</span>
-            <div style={{ fontSize: 22, fontWeight: 700, color: C.text }}>Sin pedidos pendientes</div>
-            <div style={{ fontSize: 15, color: C.text3 }}>Los pedidos nuevos apareceran aqui automaticamente</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: C.text }}>{tx('Sin pedidos pendientes')}</div>
+            <div style={{ fontSize: 15, color: C.text3 }}>{tx('Los pedidos nuevos apareceran aqui automaticamente')}</div>
           </div>
         )}
 
@@ -329,7 +329,7 @@ export default function CocinaPage() {
                         color: isPreparing ? C.amber : C.blue,
                         textTransform: 'uppercase', letterSpacing: '0.03em',
                       }}>
-                        {isPreparing ? 'Preparando' : 'Nuevo'}
+                        {isPreparing ? tx('Preparando') : tx('Nuevo')}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
