@@ -103,6 +103,11 @@ export async function POST(req: NextRequest) {
       notes ? sanitizeString(notes, 500) : '',
     ].filter(Boolean)
 
+    // Determine order type: barra (no mesa) vs mesa
+    const isBarra = !mesa && !tableId
+    const orderType = isBarra ? 'barra' : 'mesa'
+    const safeName = sanitizeName(customer_name) || (isBarra ? 'Barra' : 'QR')
+
     // Create order with table_id
     const { data: order, error } = await admin
       .from('order_events')
@@ -110,8 +115,8 @@ export async function POST(req: NextRequest) {
         tenant_id: tenant.id,
         call_sid: 'qr_' + Date.now().toString(36),
         status: 'confirmed',
-        order_type: 'mesa',
-        customer_name: sanitizeName(customer_name) || 'QR',
+        order_type: orderType,
+        customer_name: safeName,
         items,
         notes: noteParts.join(' | ') || 'Pedido QR',
         total_estimate: total,
@@ -132,17 +137,20 @@ export async function POST(req: NextRequest) {
         customer_name: customer_name || 'QR',
         items,
         total,
-        order_type: 'mesa',
+        order_type: orderType,
         source: 'qr',
       })
     } catch { /* non-critical */ }
 
     // Create kitchen-focused in-app notification with full order details
     try {
+      const locationLabel = mesa
+        ? `Mesa ${mesa}${zoneName ? ' \u00b7 ' + zoneName : ''}`
+        : `Barra \u2014 ${safeName}`
       await admin.from('notifications').insert({
         tenant_id: tenant.id,
         type: 'new_order',
-        title: `🍳 Comanda QR${mesa ? ' — Mesa ' + mesa : ''}${zoneName ? ' · ' + zoneName : ''}`,
+        title: `\uD83C\uDF73 Comanda QR \u2014 ${locationLabel}`,
         body: items.map((i: { name: string; quantity?: number }) => `${i.quantity || 1}x ${i.name}`).join(', ') + (notes ? ` | Notas: ${sanitizeString(notes, 500)}` : ''),
         priority: 'warning',
         read: false,

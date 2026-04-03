@@ -14,3 +14,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_business_knowledge_tenant_category
 ALTER TABLE supply_orders DROP CONSTRAINT IF EXISTS supply_orders_status_check;
 ALTER TABLE supply_orders ADD CONSTRAINT supply_orders_status_check
   CHECK (status IN ('draft', 'pending', 'ordered', 'called', 'confirmed', 'shipped', 'delivered', 'cancelled', 'partial'));
+
+-- Fix order_events order_type: add 'barra' as valid type (was mapped to 'mesa' losing context)
+ALTER TABLE order_events DROP CONSTRAINT IF EXISTS order_events_order_type_check;
+DO $$ BEGIN
+  ALTER TABLE order_events ADD CONSTRAINT order_events_order_type_check
+    CHECK (order_type IN ('mesa', 'barra', 'recoger', 'domicilio'));
+EXCEPTION WHEN others THEN NULL;
+END $$;

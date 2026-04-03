@@ -71,15 +71,13 @@ export async function POST(req: Request) {
 
     if (!safeName) return NextResponse.json({ error: 'customer_name invalid' }, { status: 400 })
 
-    // Map 'barra' to 'mesa' for DB constraint (valid: mesa, recoger, domicilio)
-    const dbOrderType = order_type === 'barra' ? 'mesa' : order_type
-
+    // 'barra' is now a valid order_type in DB (no longer mapped to 'mesa')
     const { data: order, error } = await admin.from('order_events').insert({
       tenant_id, customer_name: safeName,
       customer_phone: safePhone,
       call_sid: 'tpv_' + Date.now().toString(36),
-      order_type: dbOrderType,
-      notes: order_type === 'barra' ? [safeNotes, 'Barra'].filter(Boolean).join(' | ') : safeNotes,
+      order_type: order_type || 'mesa',
+      notes: safeNotes,
       items: items || [],
       total_estimate: parseFloat(String(total_estimate)) || 0,
       status: 'collecting',
