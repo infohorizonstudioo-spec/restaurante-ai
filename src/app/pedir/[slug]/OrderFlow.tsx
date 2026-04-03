@@ -456,29 +456,55 @@ export default function OrderFlow({ tenant, items: initialItems, mesa, zone, slu
           {/* Step 1: Context */}
           {step === 'context' && (
             <div style={{ padding: '28px 20px' }}>
+              {/* Barra: pedir nombre antes de seguir */}
+              {!mesa && (
+                <div style={{ marginBottom: 24 }}>
+                  <p style={{ fontSize: 13, color: T.amber, fontWeight: 600, textAlign: 'center', marginBottom: 12, background: T.amberDim, padding: '8px 14px', borderRadius: 10, display: 'inline-block', width: '100%' }}>
+                    Pedido en barra
+                  </p>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: T.text2, marginBottom: 6, display: 'block' }}>
+                    Tu nombre (para saber de qui\u00e9n es el pedido)
+                  </label>
+                  <input
+                    value={customerName}
+                    onChange={e => setCustomerName(e.target.value)}
+                    placeholder="Ej: Juan, Ana, Carlos..."
+                    maxLength={40}
+                    autoFocus
+                    style={{
+                      width: '100%', padding: '12px 14px', borderRadius: 10,
+                      background: T.surface, border: `1px solid ${customerName.trim() ? T.amberBorder : T.border}`,
+                      color: T.text, fontSize: 15, fontFamily: 'inherit', outline: 'none',
+                    }}
+                  />
+                </div>
+              )}
+
               <h2 style={{ fontSize: 20, fontWeight: 700, color: T.text, textAlign: 'center', marginBottom: 6 }}>
-                \u00bfQu\u00e9 os apetece?
+                {mesa ? '\u00bfQu\u00e9 os apetece?' : '\u00bfQu\u00e9 te pido?'}
               </h2>
               <p style={{ fontSize: 14, color: T.text2, textAlign: 'center', marginBottom: 24 }}>
-                Ordenamos la carta para vosotros
+                {mesa ? 'Ordenamos la carta para vosotros' : 'Elige lo que quieras'}
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 {CONTEXTS.map(c => (
-                  <button key={c.key} onClick={() => { setContext(c.key); setStep('menu') }} style={{
+                  <button key={c.key} disabled={!mesa && !customerName.trim()} onClick={() => { setContext(c.key); setStep('menu') }} style={{
                     padding: '26px 16px', borderRadius: 16, background: T.surface,
-                    border: `1px solid ${T.border}`, cursor: 'pointer',
+                    border: `1px solid ${T.border}`, cursor: !mesa && !customerName.trim() ? 'not-allowed' : 'pointer',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
                     transition: 'transform 0.15s, border-color 0.15s', fontFamily: 'inherit',
+                    opacity: !mesa && !customerName.trim() ? 0.4 : 1,
                   }}>
                     <span style={{ fontSize: 34 }}>{c.emoji}</span>
                     <span style={{ fontSize: 15, fontWeight: 700, color: T.text }}>{c.label}</span>
                   </button>
                 ))}
               </div>
-              <button onClick={() => setStep('menu')} style={{
+              <button disabled={!mesa && !customerName.trim()} onClick={() => setStep('menu')} style={{
                 marginTop: 16, width: '100%', padding: '12px', borderRadius: 12,
                 background: 'transparent', border: `1px solid ${T.border}`,
-                color: T.text3, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+                color: T.text3, fontSize: 13, cursor: !mesa && !customerName.trim() ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit', opacity: !mesa && !customerName.trim() ? 0.4 : 1,
               }}>Ver toda la carta</button>
             </div>
           )}

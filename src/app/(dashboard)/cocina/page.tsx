@@ -209,7 +209,14 @@ export default function CocinaPage() {
     // Priority 2: parse "Mesa: X" from notes
     const { mesa } = parseOrderNotes(order.notes)
     if (mesa) return { label: `Mesa ${mesa}` }
-    // Priority 3: order type
+    // Priority 3: barra with customer name + time
+    if (order.order_type === 'barra') {
+      const time = new Date(order.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+      const name = order.customer_name && order.customer_name !== 'Barra' && order.customer_name !== 'QR'
+        ? order.customer_name : ''
+      return { label: name ? `Barra \u2014 ${name} \u2014 ${time}` : `Barra \u2014 ${time}` }
+    }
+    // Priority 4: other types
     if (order.order_type === 'recoger') return { label: 'Recoger' }
     if (order.order_type === 'domicilio') return { label: 'Domicilio' }
     return { label: 'Barra' }
