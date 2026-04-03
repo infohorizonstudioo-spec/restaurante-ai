@@ -94,18 +94,32 @@ export default function ProveedoresPage() {
   const [invAlerts, setInvAlerts] = useState<{ type: string; urgency: string; product?: string; message: string; suggestedMultiplier?: number }[]>([])
   const [alertsLoading, setAlertsLoading] = useState(false)
 
-  /* ── Load alerts from inventory intelligence ─────────────────────── */
+  // Consumption data (from inventory intelligence)
+  const [consumption, setConsumption] = useState<Record<string, { avgWeekly: number; daysUntilEmpty: number | null }>>({})
+
+
+  /* ── Load alerts + consumption from inventory intelligence ─────── */
   const loadAlerts = useCallback(async (tenantId: string) => {
     setAlertsLoading(true)
     try {
       const sess = await supabase.auth.getSession()
       if (!sess.data.session) return
-      const res = await fetch(`/api/inventory-alerts?tenant_id=${tenantId}`, {
-        headers: { 'Authorization': 'Bearer ' + sess.data.session.access_token },
-      })
-      if (res.ok) {
-        const data = await res.json()
+      const headers = { 'Authorization': 'Bearer ' + sess.data.session.access_token }
+      const [alertsRes, consumptionRes] = await Promise.all([
+        fetch(`/api/inventory-alerts?tenant_id=${tenantId}`, { headers }),
+        fetch('/api/inventory-consumption', { headers }),
+      ])
+      if (alertsRes.ok) {
+        const data = await alertsRes.json()
         setInvAlerts(data.alerts || [])
+      }
+      if (consumptionRes.ok) {
+        const data = await consumptionRes.json()
+        const map: Record<string, { avgWeekly: number; daysUntilEmpty: number | null }> = {}
+        for (const c of (data.consumption || [])) {
+          map[c.itemId] = { avgWeekly: c.avgWeekly, daysUntilEmpty: c.daysUntilEmpty }
+        }
+        setConsumption(map)
       }
     } catch { /* silent */ }
     finally { setAlertsLoading(false) }
@@ -431,7 +445,7 @@ export default function ProveedoresPage() {
       {/* Content */}
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '20px 24px' }}>
         {tab === 'proveedores' && <SuppliersTab suppliers={filteredSuppliers} onEdit={openEditForm} onToggle={toggleSupplierActive} onCall={launchCall} calling={calling} />}
-        {tab === 'faltantes' && <FaltantesTab items={lowStock} suppliers={suppliers} cart={cart} onAddToCart={addToCart} inventory={inventory} />}
+        {tab === 'faltantes' && <FaltantesTab items={lowStock} suppliers={suppliers} cart={cart} onAddToCart={addToCart} inventory={inventory} consumption={consumption} />}
         {tab === 'pedidos' && <PedidosTab orders={orders} suppliers={suppliers} onDetail={setOrderModal} />}
         {tab === 'llamar' && <LlamarTab cartItems={cartItems} suppliers={activeSuppliers} inventory={inventory} cart={cart} onAddToCart={addToCart} callSupplierId={callSupplierId} setCallSupplierId={setCallSupplierId} callNotes={callNotes} setCallNotes={setCallNotes} onCreateOrder={createOrder} onCall={launchCall} calling={calling} />}
       </div>
@@ -599,8 +613,9 @@ function SuppliersTab({ suppliers, onEdit, onToggle, onCall, calling }: {
 }
 
 /* ── Faltantes tab ─────────────────────────────────────────────────── */
-function FaltantesTab({ items, suppliers, cart, onAddToCart, inventory }: {
+function FaltantesTab({ items, suppliers, cart, onAddToCart, inventory, consumption }: {
   items: InventoryItem[]; suppliers: Supplier[]; cart: Record<string, number>; onAddToCart: (id: string, qty: number) => void; inventory: InventoryItem[]
+  consumption: Record<string, { avgWeekly: number; daysUntilEmpty: number | null }>
 }) {
   if (items.length === 0) return <EmptyState icon="✅" title="Todo en stock" desc="No hay productos por debajo del stock mínimo. Tu inventario esta al dia." />
 
@@ -645,6 +660,17 @@ function FaltantesTab({ items, suppliers, cart, onAddToCart, inventory }: {
                       </span>
                       <span style={{ fontSize: 11, color: C.text3 }}>/ mín {item.min_stock}</span>
                     </div>
+                    {/* Consumption intelligence */}
+                    {(() => { const cons = consumption[item.id]; return cons && cons.avgWeekly > 0 ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                        <span style={{ fontSize: 11, color: C.text3 }}>{cons.avgWeekly.toFixed(1)}/sem</span>
+                        {cons.daysUntilEmpty != null && (
+                          <span style={{ fontSize: 11, fontWeight: 600, color: cons.daysUntilEmpty <= 1 ? C.red : cons.daysUntilEmpty <= 3 ? C.amber : C.text3 }}>
+                            {cons.daysUntilEmpty <= 0 ? 'Agotado' : cons.daysUntilEmpty <= 1 ? 'Se acaba hoy' : `${Math.round(cons.daysUntilEmpty)}d restantes`}
+                          </span>
+                        )}
+                      </div>
+                    ) : null })()}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                     {inCart > 0 ? (

@@ -157,7 +157,7 @@ const SEASONAL_EVENTS: SeasonalEvent[] = [
  * Calculate average weekly consumption per inventory item
  * by analyzing past order_events (sales).
  */
-async function getConsumptionData(tenantId: string): Promise<ConsumptionData[]> {
+export async function getConsumptionData(tenantId: string): Promise<ConsumptionData[]> {
   // Fetch active inventory items
   const { data: items, error: itemsErr } = await supabase
     .from('inventory_items')
