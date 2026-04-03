@@ -52,6 +52,7 @@ export async function DELETE(req: NextRequest) {
 
     const auth = await requireAuth(req)
     if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: 401 })
+    if (!auth.tenantId) return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 403 })
 
     const { endpoint } = await req.json()
     await admin.from('push_subscriptions')

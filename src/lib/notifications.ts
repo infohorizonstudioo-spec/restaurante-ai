@@ -14,10 +14,12 @@ const admin = createClient(
 
 export type NotifType =
   | 'new_call' | 'call_active' | 'call_finished' | 'missed_call'
-  | 'new_reservation' | 'reservation_pending_review'
-  | 'new_order' | 'important_alert' | 'incident' | 'pending_review'
+  | 'new_reservation' | 'reservation_pending_review' | 'reservation_confirmed' | 'reservation_cancelled' | 'reservation_no_show' | 'reservation_updated'
+  | 'new_order' | 'order_ready' | 'bizum_payment' | 'table_payment'
+  | 'important_alert' | 'incident' | 'pending_review'
   | 'call_completed' | 'call_pending' | 'call_attention'
-  | 'call_missed' | 'reservation_created'
+  | 'call_missed' | 'reservation_created' | 'reservation_review' | 'reservation_modified'
+  | 'crisis_alert' | 'no_show_risk'
 
 export type NotifPriority = 'info' | 'warning' | 'critical'
 
@@ -41,6 +43,7 @@ function inferPriority(type: NotifType, override?: NotifPriority): NotifPriority
   const warning:  NotifType[] = [
     'reservation_pending_review', 'call_attention', 'call_pending',
     'pending_review', 'missed_call', 'call_missed',
+    'order_ready', 'bizum_payment', 'table_payment', 'crisis_alert', 'no_show_risk',
   ]
   if (critical.includes(type)) return 'critical'
   if (warning.includes(type))  return 'warning'
@@ -69,7 +72,20 @@ function inferTargetUrl(type: NotifType, params: CreateNotificationParams): stri
     case 'pending_review':
       return '/llamadas?filter=pending'
     case 'new_order':
+    case 'order_ready':
+    case 'bizum_payment':
+    case 'table_payment':
       return '/pedidos'
+    case 'reservation_confirmed':
+    case 'reservation_cancelled':
+    case 'reservation_no_show':
+    case 'reservation_updated':
+    case 'reservation_review':
+    case 'reservation_modified':
+      return rid ? `/reservas?id=${rid}` : '/reservas'
+    case 'crisis_alert':
+    case 'no_show_risk':
+      return '/clientes'
     case 'incident':
     case 'important_alert':
       return sid ? `/llamadas?sid=${sid}` : '/panel'
