@@ -155,6 +155,9 @@ export default function HorariosEquipoPage() {
 
   const addEmployee = async () => {
     if (!newName.trim()) return
+    // Prevent duplicates by name+phone
+    const duplicate = employees.find(e => e.name.toLowerCase() === newName.trim().toLowerCase() && e.phone === newPhone.trim())
+    if (duplicate) { alert('Este empleado ya existe'); return }
     const emp: Employee = {
       id: crypto.randomUUID(),
       name: newName.trim(),
