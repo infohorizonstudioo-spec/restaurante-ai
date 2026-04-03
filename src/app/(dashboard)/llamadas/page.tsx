@@ -370,17 +370,23 @@ export default function LlamadasPage() {
                           ) : (
                             <div style={{display:'flex',alignItems:'center',gap:0}}>
                               {call.caller_phone && call.caller_phone !== 'anonymous' && call.caller_phone !== 'unknown' && (
-                                <button onClick={async () => {
-                                  const sess = await supabase.auth.getSession()
-                                  if (!sess.data.session) return
-                                  await fetch('/api/voice/outbound', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
-                                    body: JSON.stringify({ phone_number: call.caller_phone, reason: 'callback', customer_name: call.customer_name })
-                                  })
+                                <button onClick={async (e) => {
+                                  const btn = e.currentTarget
+                                  btn.disabled = true; btn.textContent = 'Llamando...'
+                                  try {
+                                    const sess = await supabase.auth.getSession()
+                                    if (!sess.data.session) return
+                                    const res = await fetch('/api/voice/outbound', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.data.session.access_token },
+                                      body: JSON.stringify({ phone_number: call.caller_phone, reason: 'callback', customer_name: call.customer_name })
+                                    })
+                                    btn.textContent = res.ok ? '\u2705 Llamada iniciada' : '\u274C Error'
+                                  } catch { btn.textContent = '\u274C Error' }
+                                  setTimeout(() => { btn.disabled = false; btn.textContent = '\uD83D\uDCDE ' + cs.callBack }, 2000)
                                 }}
                                 style={{fontSize:11, padding:'5px 12px', borderRadius:7, border:`1px solid ${C.teal}40`, background:C.tealDim, color:C.teal, cursor:'pointer', fontFamily:'inherit', fontWeight:500, marginRight:8}}>
-                                  📞 {cs.callBack}
+                                  {'\uD83D\uDCDE'} {cs.callBack}
                                 </button>
                               )}
                               <button onClick={()=>{setCorrecting(call.call_sid);setFeedbackNote('')}}
