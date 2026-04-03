@@ -27,8 +27,15 @@ export async function POST(req: NextRequest) {
   if (rl.blocked) return rl.response
 
   try {
-    const body = await req.json()
+    let body: any
+    try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
     const event = body.event
+
+    // Basic validation: reject requests without expected Retell structure
+    if (!event || !body.call?.call_id) {
+      logger.security('Retell webhook: malformed request', { event, hasCall: !!body.call })
+      return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 400 })
+    }
 
     logger.info('Retell webhook received', { event, call_id: body.call?.call_id })
 
