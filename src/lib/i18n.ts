@@ -932,6 +932,38 @@ const TX: Record<string, Record<string, string>> = {
   'Sin datos': {en:'No data',fr:'Pas de données',pt:'Sem dados'},
   'No se pudo completar la acción': {en:'Could not complete the action',fr:'Impossible de compléter l\'action',pt:'Não foi possível completar a ação'},
   'Error al guardar': {en:'Error saving',fr:'Erreur lors de l\'enregistrement',pt:'Erro ao guardar'},
+  // Caja
+  'No hay turno abierto': {en:'No open shift',fr:'Pas de service ouvert',pt:'Sem turno aberto'},
+  'Abre un turno para comenzar a registrar ventas.': {en:'Open a shift to start recording sales.',fr:'Ouvrez un service pour commencer.',pt:'Abra um turno para começar.'},
+  'Sin pedidos en este turno todavia.': {en:'No orders in this shift yet.',fr:'Pas de commandes dans ce service.',pt:'Sem pedidos neste turno.'},
+  'No hay turnos registrados hoy.': {en:'No shifts recorded today.',fr:'Pas de services enregistrés.',pt:'Sem turnos registados hoje.'},
+  'Abrir turno': {en:'Open shift',fr:'Ouvrir service',pt:'Abrir turno'},
+  'Cerrar turno': {en:'Close shift',fr:'Fermer service',pt:'Fechar turno'},
+  'Turno actual': {en:'Current shift',fr:'Service actuel',pt:'Turno atual'},
+  'Resumen del dia': {en:'Day summary',fr:'Résumé du jour',pt:'Resumo do dia'},
+  'Turnos de hoy': {en:'Today shifts',fr:'Services du jour',pt:'Turnos de hoje'},
+  'Productos mas vendidos': {en:'Top products',fr:'Produits les plus vendus',pt:'Produtos mais vendidos'},
+  'Imprimir resumen del turno': {en:'Print shift report',fr:'Imprimer rapport de service',pt:'Imprimir resumo do turno'},
+  'Imprimir resumen del dia': {en:'Print day report',fr:'Imprimer rapport du jour',pt:'Imprimir resumo do dia'},
+  // Cocina
+  'Sin pedidos pendientes': {en:'No pending orders',fr:'Pas de commandes en attente',pt:'Sem pedidos pendentes'},
+  'Los pedidos nuevos apareceran aqui automaticamente': {en:'New orders will appear here automatically',fr:'Les nouvelles commandes apparaîtront ici',pt:'Os novos pedidos aparecerão aqui'},
+  'Cocina': {en:'Kitchen',fr:'Cuisine',pt:'Cozinha'},
+  'Pantalla completa': {en:'Fullscreen',fr:'Plein écran',pt:'Ecrã completo'},
+  'Salir': {en:'Exit',fr:'Quitter',pt:'Sair'},
+  'Preparando': {en:'Preparing',fr:'En préparation',pt:'A preparar'},
+  'Nuevo': {en:'New',fr:'Nouveau',pt:'Novo'},
+  'Imprimir comanda': {en:'Print ticket',fr:'Imprimer commande',pt:'Imprimir comanda'},
+  // Proveedores
+  'Faltantes': {en:'Low stock',fr:'Manquants',pt:'Em falta'},
+  'Todo en stock': {en:'All in stock',fr:'Tout en stock',pt:'Tudo em stock'},
+  'Agotado': {en:'Out of stock',fr:'Épuisé',pt:'Esgotado'},
+  'Se acaba hoy': {en:'Runs out today',fr:'Épuisé aujourd\'hui',pt:'Esgota hoje'},
+  'd restantes': {en:'d remaining',fr:'j restants',pt:'d restantes'},
+  // Pagos
+  'Pagos online': {en:'Online payments',fr:'Paiements en ligne',pt:'Pagamentos online'},
+  'Pagos activados': {en:'Payments enabled',fr:'Paiements activés',pt:'Pagamentos ativos'},
+  'Conectar cuenta bancaria': {en:'Connect bank account',fr:'Connecter compte bancaire',pt:'Conectar conta bancária'},
 }
 
 export function tx(text: string, locale: string): string {

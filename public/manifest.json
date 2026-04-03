@@ -1,13 +1,43 @@
 {
-  "name": "Reservo.AI",
+  "name": "Reservo.AI — Recepcionista IA",
   "short_name": "Reservo",
-  "description": "Recepcionista IA para tu negocio",
+  "description": "Recepcionista virtual 24/7 para tu restaurante. Gestiona reservas, pedidos y llamadas con inteligencia artificial.",
   "start_url": "/panel",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#0C1018",
   "theme_color": "#F0A84E",
+  "lang": "es",
+  "categories": ["business", "food", "productivity"],
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Reservas",
+      "short_name": "Reservas",
+      "url": "/reservas",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "TPV",
+      "short_name": "TPV",
+      "url": "/tpv",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Cocina",
+      "short_name": "Cocina",
+      "url": "/cocina",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Pedidos",
+      "short_name": "Pedidos",
+      "url": "/pedidos",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    }
   ]
 }
