@@ -176,34 +176,68 @@ export async function POST(req: NextRequest) {
     await supabase.from("tenants").update(updates).eq("id", tenant_id)
 
     // ── 4. CREATE RESOURCES (tables + zones) ────────────────────────────────
-    if (zone_names && Array.isArray(zone_names) && zone_names.length > 0) {
-      // Create zones
-      const zonesToInsert = zone_names.map((name: string) => ({
-        tenant_id, name, active: true,
-      }))
-      await supabase.from("zones").insert(zonesToInsert)
-    }
+    // Check if tenant already has zones/tables (avoid duplicates on re-onboarding)
+    const { data: existingZones } = await supabase.from("zones").select("id").eq("tenant_id", tenant_id).limit(1)
+    const hasExistingSetup = existingZones && existingZones.length > 0
 
-    if (resource_names && Array.isArray(resource_names) && resource_names.length > 0) {
-      // Get created zones for mapping
-      const { data: createdZones } = await supabase.from("zones").select("id,name").eq("tenant_id", tenant_id).eq("active", true)
-      const zoneMap: Record<string, string> = {}
-      if (createdZones) createdZones.forEach((z: any) => { zoneMap[z.name] = z.id })
+    if (!hasExistingSetup) {
+      if (zone_names && Array.isArray(zone_names) && zone_names.length > 0) {
+        const zonesToInsert = zone_names.map((name: string) => ({
+          tenant_id, name, active: true,
+        }))
+        await supabase.from("zones").insert(zonesToInsert)
+      } else if (['restaurante', 'bar', 'cafeteria'].includes(business_type || '')) {
+        // Create default zones for hospitality businesses
+        await supabase.from("zones").insert([
+          { tenant_id, name: 'Interior', active: true },
+          { tenant_id, name: 'Terraza', active: true },
+        ])
+      }
 
-      const tablesToInsert = resource_names.map((r: { name: string; capacity: number }, i: number) => ({
-        tenant_id,
-        number: String(i + 1),
-        name: r.name,
-        capacity: r.capacity || 2,
-        status: 'libre',
-        shape_type: 'square',
-        x_pos: 40 + (i % 6) * 120,
-        y_pos: 40 + Math.floor(i / 6) * 120,
-        w: 80,
-        h: 70,
-        rotation: 0,
-      }))
-      await supabase.from("tables").insert(tablesToInsert)
+      if (resource_names && Array.isArray(resource_names) && resource_names.length > 0) {
+        const { data: createdZones } = await supabase.from("zones").select("id,name").eq("tenant_id", tenant_id).eq("active", true)
+        const zoneMap: Record<string, string> = {}
+        if (createdZones) createdZones.forEach((z: any) => { zoneMap[z.name] = z.id })
+
+        const tablesToInsert = resource_names.map((r: { name: string; capacity: number }, i: number) => ({
+          tenant_id,
+          number: String(i + 1),
+          name: r.name,
+          capacity: r.capacity || 2,
+          status: 'libre',
+          shape_type: 'square',
+          x_pos: 40 + (i % 6) * 120,
+          y_pos: 40 + Math.floor(i / 6) * 120,
+          w: 80, h: 70, rotation: 0,
+        }))
+        await supabase.from("tables").insert(tablesToInsert)
+      } else if (['restaurante', 'bar', 'cafeteria'].includes(business_type || '')) {
+        // Create default tables for hospitality (6 interior + 4 terraza)
+        const { data: zones } = await supabase.from("zones").select("id,name").eq("tenant_id", tenant_id).eq("active", true)
+        const interiorZone = zones?.find((z: any) => z.name === 'Interior')?.id
+        const terrazaZone = zones?.find((z: any) => z.name === 'Terraza')?.id
+
+        const defaultTables = []
+        for (let i = 1; i <= 6; i++) {
+          defaultTables.push({
+            tenant_id, number: String(i), name: `Mesa ${i}`,
+            capacity: 4, status: 'libre', shape_type: i <= 2 ? 'round' : 'square',
+            zone_id: interiorZone, zone_name: 'Interior',
+            x_pos: 40 + ((i - 1) % 3) * 140, y_pos: 40 + Math.floor((i - 1) / 3) * 130,
+            w: 80, h: 70, rotation: 0,
+          })
+        }
+        for (let i = 7; i <= 10; i++) {
+          defaultTables.push({
+            tenant_id, number: String(i), name: `Mesa ${i}`,
+            capacity: 4, status: 'libre', shape_type: 'square',
+            zone_id: terrazaZone, zone_name: 'Terraza',
+            x_pos: 40 + ((i - 7) % 2) * 140, y_pos: 440 + Math.floor((i - 7) / 2) * 130,
+            w: 80, h: 70, rotation: 0,
+          })
+        }
+        await supabase.from("tables").insert(defaultTables)
+      }
     }
 
     // ── 5. CONFIGURE REMINDERS ──────────────────────────────────────────────
