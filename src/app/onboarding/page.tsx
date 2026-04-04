@@ -78,7 +78,7 @@ const LANGUAGES = [
   { id: 'pt', label: 'Português', flag: '🇧🇷' },
 ]
 
-const STEP_LABELS = ['Tu negocio', 'Tu recepcionista', 'Horarios', 'Tu carta', '¡Listo!']
+const STEP_LABELS = ['Tu negocio', 'Tu recepcionista', 'Horarios', 'Tu local', 'Tu carta', '¡Listo!']
 
 // ── Categories by business type (for menu step) ─────────────────────────────
 const MENU_CATEGORIES_BY_TYPE: Record<string, string[]> = {
@@ -229,6 +229,14 @@ export default function OnboardingWizard() {
   const [slotDuration, setSlotDuration] = useState(60)
 
   // Step 4 — Menu
+  // Step 3b: Zones & tables
+  const [zones, setZones] = useState<{ name: string; tables: number }[]>([
+    { name: 'Interior', tables: 6 },
+    { name: 'Terraza', tables: 4 },
+  ])
+  const [newZoneName, setNewZoneName] = useState('')
+
+  // Step 4: Menu
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [newItemName, setNewItemName] = useState('')
   const [newItemPrice, setNewItemPrice] = useState('')
@@ -298,9 +306,18 @@ export default function OnboardingWizard() {
         }
       }
 
-      if (nextStep === 5) {
+      if (nextStep === 6) {
         // Complete onboarding: create zones, tables, knowledge, provision agent
         if (tenantId) {
+          // Build zone_names and resource_names from user input
+          const zoneNames = zones.map(z => z.name)
+          const resourceNames: { name: string; capacity: number; zone?: string }[] = []
+          for (const z of zones) {
+            for (let i = 1; i <= z.tables; i++) {
+              resourceNames.push({ name: `Mesa ${resourceNames.length + 1}`, capacity: 4, zone: z.name })
+            }
+          }
+
           try {
             await fetch('/api/onboarding/complete', {
               method: 'POST',
@@ -315,6 +332,8 @@ export default function OnboardingWizard() {
                 language: language || 'es',
                 services: menuItems.map((m: any) => m.name).join(', ') || null,
                 schedule: schedule || null,
+                zone_names: zoneNames,
+                resource_names: resourceNames,
               }),
             })
           } catch { /* non-blocking — onboarding completes even if provision fails */ }
@@ -332,7 +351,7 @@ export default function OnboardingWizard() {
     } finally {
       setSaving(false)
     }
-  }, [step, tenantId, businessName, businessType, phone, address, maxCapacity, slotDuration, agentName, greetingStyle, language, schedule, menuItems, reload])
+  }, [step, tenantId, businessName, businessType, phone, address, maxCapacity, slotDuration, agentName, greetingStyle, language, schedule, menuItems, zones, reload])
 
   // ── Validation ────────────────────────────────────────────────────────────
   const canAdvance = step === 0
@@ -819,6 +838,98 @@ export default function OnboardingWizard() {
             )
           })}
         </div>
+      </div>
+    )
+  }
+
+  // ── Step 3b: Tu local (zonas + mesas) ────────────────────────────────────
+  function StepLocal() {
+    function addZone() {
+      if (!newZoneName.trim()) return
+      if (zones.find(z => z.name.toLowerCase() === newZoneName.trim().toLowerCase())) return
+      setZones([...zones, { name: newZoneName.trim(), tables: 4 }])
+      setNewZoneName('')
+    }
+    function removeZone(idx: number) {
+      setZones(zones.filter((_, i) => i !== idx))
+    }
+    function updateTables(idx: number, count: number) {
+      setZones(zones.map((z, i) => i === idx ? { ...z, tables: Math.max(0, Math.min(30, count)) } : z))
+    }
+    const totalTables = zones.reduce((s, z) => s + z.tables, 0)
+
+    return (
+      <div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: C.text, marginBottom: 4 }}>Tu local</h2>
+        <p style={{ fontSize: 14, color: C.text2, marginBottom: 24 }}>
+          Configura las zonas y mesas de tu restaurante
+        </p>
+
+        {/* Existing zones */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+          {zones.map((z, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              background: C.surface2, borderRadius: 12, padding: '12px 16px',
+              border: `1px solid ${C.border}`,
+            }}>
+              <span style={{ fontSize: 18 }}>{z.name === 'Interior' ? '\uD83C\uDFE0' : z.name === 'Terraza' ? '\u2600\uFE0F' : z.name.toLowerCase().includes('barra') ? '\uD83C\uDF7A' : '\uD83D\uDCCD'}</span>
+              <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: C.text }}>{z.name}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button onClick={() => updateTables(i, z.tables - 1)} style={{
+                  width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`,
+                  background: C.surface, color: C.text, fontSize: 16, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>{'\u2212'}</button>
+                <span style={{ fontSize: 16, fontWeight: 700, color: C.amber, minWidth: 28, textAlign: 'center' as const }}>{z.tables}</span>
+                <button onClick={() => updateTables(i, z.tables + 1)} style={{
+                  width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`,
+                  background: C.surface, color: C.text, fontSize: 16, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>+</button>
+                <span style={{ fontSize: 12, color: C.text3, minWidth: 40 }}>mesas</span>
+              </div>
+              {zones.length > 1 && (
+                <button onClick={() => removeZone(i)} style={{
+                  background: 'none', border: 'none', color: C.text3, fontSize: 16,
+                  cursor: 'pointer', padding: '0 4px',
+                }}>{'\u00D7'}</button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Add zone */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+          <input
+            value={newZoneName}
+            onChange={e => setNewZoneName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addZone()}
+            placeholder="A\u00f1adir zona (ej: Barra, Jard\u00edn, Sal\u00f3n privado...)"
+            style={{ ...inputStyle, flex: 1 }}
+          />
+          <button onClick={addZone} disabled={!newZoneName.trim()} style={{
+            padding: '12px 20px', borderRadius: 10, border: 'none',
+            background: newZoneName.trim() ? C.amber : C.surface2,
+            color: newZoneName.trim() ? '#0C1018' : C.text3,
+            fontSize: 14, fontWeight: 700, cursor: newZoneName.trim() ? 'pointer' : 'not-allowed',
+            fontFamily: 'inherit',
+          }}>A\u00f1adir</button>
+        </div>
+
+        {/* Summary */}
+        <div style={{
+          background: C.surface2, borderRadius: 12, padding: '14px 18px',
+          border: `1px solid ${C.border}`,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <span style={{ fontSize: 14, color: C.text2 }}>{zones.length} zona{zones.length !== 1 ? 's' : ''}</span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: C.amber }}>{totalTables} mesas</span>
+        </div>
+
+        <p style={{ fontSize: 12, color: C.text3, marginTop: 10 }}>
+          Podr\u00e1s ajustar las mesas y su posici\u00f3n en el plano despu\u00e9s desde "Mesas y zonas"
+        </p>
       </div>
     )
   }
@@ -1390,7 +1501,7 @@ export default function OnboardingWizard() {
             minWidth: 140,
           }}
         >
-          {saving ? 'Guardando...' : step === 3 ? 'Finalizar' : 'Siguiente'}
+          {saving ? 'Guardando...' : step === 4 ? 'Finalizar' : 'Siguiente'}
         </button>
       </div>
     )
@@ -1423,7 +1534,7 @@ export default function OnboardingWizard() {
           backgroundColor: C.surface,
           border: `1px solid ${C.border}`,
           borderRadius: 20,
-          padding: step === 4 ? '32px 28px' : '28px 28px 32px',
+          padding: step === 5 ? '32px 28px' : '28px 28px 32px',
           boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
         }}>
           <ProgressBar />
@@ -1431,10 +1542,11 @@ export default function OnboardingWizard() {
           {step === 0 && <Step1 />}
           {step === 1 && <Step2 />}
           {step === 2 && <Step3 />}
-          {step === 3 && <Step4Menu />}
-          {step === 4 && <Step5 />}
+          {step === 3 && <StepLocal />}
+          {step === 4 && <Step4Menu />}
+          {step === 5 && <Step5 />}
 
-          {step < 4 && <NavButtons />}
+          {step < 5 && <NavButtons />}
         </div>
       </div>
     </div>
