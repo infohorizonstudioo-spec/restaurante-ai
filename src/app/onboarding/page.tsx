@@ -299,9 +299,31 @@ export default function OnboardingWizard() {
       }
 
       if (nextStep === 5) {
-        // Mark onboarding done
+        // Complete onboarding: create zones, tables, knowledge, provision agent
         if (tenantId) {
-          await supabase.from('tenants').update({ onboarding_done: true }).eq('id', tenantId)
+          try {
+            await fetch('/api/onboarding/complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tenant_id: tenantId,
+                business_name: businessName,
+                business_type: businessType,
+                agent_name: agentName,
+                agent_phone: phone || null,
+                address: address || null,
+                language: language || 'es',
+                services: menuItems.map((m: any) => m.name).join(', ') || null,
+                schedule: schedule || null,
+              }),
+            })
+          } catch { /* non-blocking — onboarding completes even if provision fails */ }
+
+          // Mark onboarding complete (both fields for compatibility)
+          await supabase.from('tenants').update({
+            onboarding_complete: true,
+            onboarding_done: true,
+          }).eq('id', tenantId)
         }
         reload()
       }
