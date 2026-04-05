@@ -36,7 +36,7 @@ export default async function CartaPublicPage({ params }: { params: Promise<{ sl
   // Find tenant by slug
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, slug')
+    .select('id, name, slug, logo_url, address, phone')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -81,39 +81,45 @@ export default async function CartaPublicPage({ params }: { params: Promise<{ sl
   }
   const categoryNames = Object.keys(categories)
 
+  const hasProducts = menuItems.length > 0
+  const pedir_url = `/pedir/${tenant.slug}`
+
   return (
     <div style={{
       minHeight: '100vh', background: '#0C1018',
       fontFamily: 'system-ui, -apple-system, sans-serif',
+      maxWidth: 680, margin: '0 auto',
     }}>
       {/* Header */}
       <div style={{
-        padding: '32px 20px 24px', textAlign: 'center',
+        padding: '28px 20px 20px', textAlign: 'center',
         background: 'linear-gradient(180deg, #131920 0%, #0C1018 100%)',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
-        <h1 style={{
-          fontSize: 28, fontWeight: 800, color: '#E8EEF6',
-          letterSpacing: '-0.02em', margin: 0,
-        }}>
+        {tenant.logo_url && (
+          <img src={tenant.logo_url} alt={tenant.name}
+            style={{ width: 56, height: 56, borderRadius: 14, objectFit: 'cover', marginBottom: 10 }} />
+        )}
+        <h1 style={{ fontSize: 26, fontWeight: 800, color: '#E8EEF6', letterSpacing: '-0.02em', margin: 0 }}>
           {tenant.name}
         </h1>
-        <p style={{ fontSize: 14, color: '#8895A7', marginTop: 8 }}>
-          Nuestra carta
-        </p>
+        {tenant.address && (
+          <p style={{ fontSize: 12, color: '#49566A', marginTop: 6 }}>{tenant.address}</p>
+        )}
       </div>
 
       {/* Category nav */}
       {categoryNames.length > 1 && (
         <div style={{
-          display: 'flex', gap: 8, padding: '16px 20px',
-          overflowX: 'auto', borderBottom: '1px solid rgba(255,255,255,0.07)',
+          display: 'flex', gap: 6, padding: '12px 20px',
+          overflowX: 'auto', borderBottom: '1px solid rgba(255,255,255,0.06)',
+          WebkitOverflowScrolling: 'touch',
         }}>
           {categoryNames.map(cat => (
             <a key={cat} href={`#cat-${cat.replace(/\s+/g, '-')}`} style={{
-              padding: '8px 16px', borderRadius: 20,
-              background: 'rgba(240,168,78,0.1)', border: '1px solid rgba(240,168,78,0.2)',
-              color: '#F0A84E', fontSize: 13, fontWeight: 600,
+              padding: '7px 14px', borderRadius: 20,
+              background: 'rgba(240,168,78,0.08)', border: '1px solid rgba(240,168,78,0.18)',
+              color: '#F0A84E', fontSize: 12, fontWeight: 600,
               textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
             }}>
               {cat}
@@ -122,95 +128,91 @@ export default async function CartaPublicPage({ params }: { params: Promise<{ sl
         </div>
       )}
 
-      {/* Featured / Specials section */}
+      {/* Especiales del d\u00eda */}
       {featuredItems.length > 0 && (
-        <div style={{ padding: '16px 20px', maxWidth: 640, margin: '0 auto', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <span style={{ fontSize: 18 }}>{'\u2B50'}</span>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#F0A84E', margin: 0 }}>Especiales</h2>
+        <div style={{ padding: '18px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 16 }}>{'\u2B50'}</span>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#F0A84E', margin: 0 }}>Recomendaciones</h2>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {featuredItems.map(item => (
               <div key={item.id} style={{
-                display: 'flex', gap: 14, padding: '14px 16px',
-                background: '#131920', borderRadius: 14,
-                border: '1px solid rgba(240,168,78,0.25)',
-                alignItems: 'center', position: 'relative',
+                display: 'flex', gap: 12, padding: '12px 14px',
+                background: 'rgba(240,168,78,0.04)', borderRadius: 12,
+                border: '1px solid rgba(240,168,78,0.20)',
+                alignItems: 'center',
               }}>
                 {item.image_url && (
-                  <img src={item.image_url} alt={item.name} style={{ width: 60, height: 60, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                  <img src={item.image_url} alt={item.name} style={{ width: 56, height: 56, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 15, fontWeight: 600, color: '#E8EEF6', margin: 0 }}>{item.name}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: '#E8EEF6', margin: 0 }}>{item.name}</p>
                   {item.description && (
-                    <p style={{ fontSize: 12, color: '#8895A7', margin: '4px 0 0', lineHeight: 1.4 }}>{item.description}</p>
+                    <p style={{ fontSize: 11, color: '#8895A7', margin: '3px 0 0', lineHeight: 1.4 }}>{item.description}</p>
                   )}
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p style={{ fontSize: 16, fontWeight: 800, color: '#F0A84E', margin: 0, fontFamily: 'monospace' }}>
-                    {item.price.toFixed(2)}{'\u20AC'}
-                  </p>
                   {item.featured_label && (
-                    <span style={{ fontSize: 9, fontWeight: 700, color: '#F0A84E', background: 'rgba(240,168,78,0.10)', padding: '2px 8px', borderRadius: 6, marginTop: 4, display: 'inline-block' }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#F0A84E', background: 'rgba(240,168,78,0.12)', padding: '2px 7px', borderRadius: 5, marginTop: 4, display: 'inline-block' }}>
                       {item.featured_label}
                     </span>
                   )}
                 </div>
+                <span style={{ fontSize: 15, fontWeight: 800, color: '#F0A84E', flexShrink: 0 }}>
+                  {item.price.toFixed(2)}\u20AC
+                </span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Menu items */}
-      <div style={{ padding: '16px 20px 40px', maxWidth: 640, margin: '0 auto' }}>
-        {menuItems.length === 0 && (
-          <p style={{ textAlign: 'center', color: '#8895A7', padding: '40px 0', fontSize: 15 }}>
-            La carta se esta preparando...
-          </p>
+      {/* Carta */}
+      <div style={{ padding: '18px 20px 32px' }}>
+        {!hasProducts && (
+          <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>{'\uD83C\uDF7D\uFE0F'}</div>
+            <p style={{ fontSize: 16, fontWeight: 600, color: '#E8EEF6', marginBottom: 6 }}>
+              Carta en preparaci\u00f3n
+            </p>
+            <p style={{ fontSize: 13, color: '#8895A7' }}>
+              Estamos actualizando nuestra carta. Vuelve pronto.
+            </p>
+          </div>
         )}
 
         {categoryNames.map(cat => (
-          <div key={cat} id={`cat-${cat.replace(/\s+/g, '-')}`} style={{ marginBottom: 32 }}>
+          <div key={cat} id={`cat-${cat.replace(/\s+/g, '-')}`} style={{ marginBottom: 28 }}>
             <h2 style={{
-              fontSize: 18, fontWeight: 700, color: '#F0A84E',
-              marginBottom: 16, paddingBottom: 8,
-              borderBottom: '1px solid rgba(240,168,78,0.2)',
+              fontSize: 15, fontWeight: 700, color: '#F0A84E',
+              marginBottom: 12, paddingBottom: 6,
+              borderBottom: '1px solid rgba(240,168,78,0.15)',
+              textTransform: 'uppercase', letterSpacing: '0.04em',
             }}>
               {cat}
             </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {categories[cat].map(item => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {categories[cat].map((item, idx) => (
                 <div key={item.id} style={{
-                  display: 'flex', gap: 14, padding: '14px 16px',
-                  background: '#131920', borderRadius: 14,
-                  border: '1px solid rgba(255,255,255,0.07)',
+                  display: 'flex', gap: 12, padding: '12px 0',
+                  borderBottom: idx < categories[cat].length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
                   alignItems: 'center',
                 }}>
                   {item.image_url && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={item.image_url} alt={item.name}
-                      style={{
-                        width: 60, height: 60, borderRadius: 10, objectFit: 'cover',
-                        flexShrink: 0,
-                      }}
-                    />
+                      style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 15, fontWeight: 600, color: '#E8EEF6', margin: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: '#E8EEF6', margin: 0 }}>
                       {item.name}
                     </p>
                     {item.description && (
-                      <p style={{ fontSize: 12, color: '#8895A7', margin: '4px 0 0', lineHeight: 1.4 }}>
+                      <p style={{ fontSize: 11, color: '#6B7A8D', margin: '3px 0 0', lineHeight: 1.4 }}>
                         {item.description}
                       </p>
                     )}
                   </div>
-                  <span style={{
-                    fontSize: 16, fontWeight: 800, color: '#F0A84E',
-                    flexShrink: 0, fontFamily: 'monospace',
-                  }}>
-                    {item.price.toFixed(2)}{'\u20AC'}
+                  <span style={{ fontSize: 15, fontWeight: 800, color: '#F0A84E', flexShrink: 0 }}>
+                    {item.price.toFixed(2)}\u20AC
                   </span>
                 </div>
               ))}
@@ -219,12 +221,27 @@ export default async function CartaPublicPage({ params }: { params: Promise<{ sl
         ))}
       </div>
 
+      {/* CTA: hacer pedido */}
+      {hasProducts && (
+        <div style={{ padding: '0 20px 24px' }}>
+          <a href={pedir_url} style={{
+            display: 'block', textAlign: 'center', padding: '14px',
+            borderRadius: 12, background: 'linear-gradient(135deg, #F0A84E, #E8923A)',
+            color: '#0C1018', fontSize: 15, fontWeight: 800,
+            textDecoration: 'none', boxShadow: '0 4px 16px rgba(240,168,78,0.3)',
+          }}>
+            Hacer pedido
+          </a>
+        </div>
+      )}
+
       {/* Footer */}
       <div style={{
-        textAlign: 'center', padding: '20px', borderTop: '1px solid rgba(255,255,255,0.07)',
-        color: '#49566A', fontSize: 11,
+        textAlign: 'center', padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.06)',
+        color: '#3A4555', fontSize: 10,
       }}>
-        Powered by Reservo.AI
+        {tenant.phone && <p style={{ marginBottom: 4 }}>{tenant.phone}</p>}
+        Carta digital by Reservo.AI
       </div>
     </div>
   )
