@@ -78,7 +78,7 @@ const LANGUAGES = [
   { id: 'pt', label: 'Português', flag: '🇧🇷' },
 ]
 
-const STEP_LABELS = ['Tu negocio', 'Tu recepcionista', 'Horarios', 'Tu local', 'Tu carta', '¡Listo!']
+const STEP_LABELS = ['Negocio', 'Agente IA', 'Horarios', 'Tu local', 'Carta', '\u00a1Listo!']
 
 // ── Categories by business type (for menu step) ─────────────────────────────
 const MENU_CATEGORIES_BY_TYPE: Record<string, string[]> = {
