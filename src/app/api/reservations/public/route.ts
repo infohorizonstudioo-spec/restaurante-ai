@@ -38,15 +38,43 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Formato de hora invalido' }, { status: 400 })
     }
 
-    // Find tenant by slug
+    // Find tenant by slug (include business_hours for validation)
     const { data: tenant } = await admin
       .from('tenants')
-      .select('id, name')
+      .select('id, name, business_hours')
       .eq('slug', slug)
       .maybeSingle()
 
     if (!tenant) {
       return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 })
+    }
+
+    // Validate time against business hours
+    if (tenant.business_hours) {
+      const dayNames = ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab']
+      const reservationDate = new Date(cleanDate + 'T12:00:00')
+      const dayKey = dayNames[reservationDate.getDay()]
+      const dayHours = (tenant.business_hours as Record<string, string>)[dayKey]
+
+      if (!dayHours || dayHours === 'cerrado') {
+        return NextResponse.json({ error: 'El negocio est\u00e1 cerrado ese d\u00eda' }, { status: 400 })
+      }
+
+      // Parse hours "12:00-23:00" format
+      const parts = dayHours.split('-')
+      if (parts.length === 2) {
+        const openTime = parts[0].trim()
+        const closeTime = parts[1].trim()
+        if (cleanTime < openTime || cleanTime >= closeTime) {
+          return NextResponse.json({ error: `Horario disponible: ${openTime} - ${closeTime}` }, { status: 400 })
+        }
+      }
+    }
+
+    // Validate date is not in the past
+    const todayStr = new Date().toISOString().slice(0, 10)
+    if (cleanDate < todayStr) {
+      return NextResponse.json({ error: 'No se puede reservar en una fecha pasada' }, { status: 400 })
     }
 
     // Create or find customer

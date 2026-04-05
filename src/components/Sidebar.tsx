@@ -203,7 +203,7 @@ export default function Sidebar() {
               {!collapsed && (
                 <>
                   <span className="rz-nav-label">{navLabel(item)}</span>
-                  {item.pro && (
+                  {item.pro && isTrial && (
                     <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:5, background:'var(--rz-violet-dim)', color:'var(--rz-violet)', flexShrink:0, letterSpacing:'0.04em' }}>PRO</span>
                   )}
                 </>
