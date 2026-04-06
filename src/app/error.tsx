@@ -20,10 +20,10 @@ export default function GlobalError({ reset }: { error: Error; reset: () => void
           </svg>
         </div>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 8 }}>
-          Error en la aplicacion
+          Error en la aplicaci\u00f3n
         </h2>
         <p style={{ fontSize: 14, color: C.text2, marginBottom: 24, lineHeight: 1.6 }}>
-          Ha ocurrido un error inesperado. Puedes intentar recargar la pagina o volver al panel principal.
+          Ha ocurrido un error inesperado. Puedes intentar recargar la p\u00e1gina o volver al panel principal.
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <button

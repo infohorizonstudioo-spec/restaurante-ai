@@ -77,7 +77,7 @@ export default async function ReservarPage({ params }: { params: Promise<{ slug:
         <PublicReservationForm slug={slug} />
 
         <div style={{ textAlign: 'center', marginTop: 24 }}>
-          <p style={{ fontSize: 10, color: '#49566A' }}>Powered by Reservo.AI</p>
+          <p style={{ fontSize: 10, color: '#3A4555' }}>Reservas by Reservo.AI</p>
         </div>
       </div>
     </div>
