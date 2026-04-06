@@ -1477,10 +1477,10 @@ export default function TPVPage() {
                     <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 40px', color: C.text3 }}>
                       <div style={{ fontSize: 48, marginBottom: 12, filter: 'drop-shadow(0 0 8px rgba(240,168,78,0.2))' }}>{search.trim() ? '\uD83D\uDD0D' : '\uD83D\uDCE6'}</div>
                       <p style={{ fontSize: 15, fontWeight: 600, color: C.text2, marginBottom: 4 }}>
-                        {search.trim() ? 'Sin resultados' : menuItems.length === 0 ? 'Sin productos configurados' : 'Sin productos en esta categoria'}
+                        {search.trim() ? 'Sin resultados' : menuItems.length === 0 ? 'Sin productos configurados' : 'Sin productos en esta categor\u00eda'}
                       </p>
                       <p style={{ fontSize: 12, color: C.text3 }}>
-                        {search.trim() ? 'Prueba con otro termino de busqueda' : menuItems.length === 0 ? 'Configura tu carta para empezar a usar el TPV' : 'Selecciona otra categoria del menu lateral'}
+                        {search.trim() ? 'Prueba con otro t\u00e9rmino de b\u00fasqueda' : menuItems.length === 0 ? 'Configura tu carta para empezar a usar el TPV' : 'Selecciona otra categor\u00eda del men\u00fa lateral'}
                       </p>
                       {menuItems.length === 0 && !search.trim() && (
                         <a href="/productos" style={{ display: 'inline-block', marginTop: 16, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: C.bg, background: 'linear-gradient(135deg, #F0A84E, #E8923A)', borderRadius: 9, textDecoration: 'none' }}>
@@ -1594,7 +1594,7 @@ export default function TPVPage() {
                         fontFamily: 'inherit', whiteSpace: 'nowrap',
                       }}
                     >
-                      + Anadir
+                      + A\u00f1adir
                     </button>
                   </div>
                 )}

@@ -87,22 +87,22 @@ export default function AyudaPage() {
 
       {/* Section 1: Primeros pasos */}
       <Accordion title="Primeros pasos" defaultOpen>
-        <Step num={1} title="Configura tu negocio" desc="Ve a Configuracion y completa el nombre, direccion, horarios y tipo de negocio. Esto personaliza toda la plataforma para ti." />
-        <Step num={2} title="Anade tu carta" desc="En Productos, crea tus categorias y anade cada producto con nombre, precio y foto. Los clientes los veran en la carta digital." />
-        <Step num={3} title="Configura mesas" desc="En Mesas, define tus zonas (terraza, salon, barra) y anade las mesas con su capacidad. Asi podras gestionar reservas y pedidos por mesa." />
-        <Step num={4} title="Genera QRs" desc="En QR Carta, genera codigos QR para cada mesa. Los clientes escanean y pueden ver tu carta y hacer pedidos desde su movil." />
-        <Step num={5} title="Activa el agente" desc="En Mi Recepcionista, configura tu agente de voz IA. Atendera llamadas, gestionara reservas y tomara pedidos automaticamente." />
+        <Step num={1} title="Configura tu negocio" desc="Ve a Configuraci\u00f3n y completa el nombre, direcci\u00f3n, horarios y tipo de negocio. Esto personaliza toda la plataforma para ti." />
+        <Step num={2} title="A\u00f1ade tu carta" desc="En Productos, crea tus categor\u00edas y a\u00f1ade cada producto con nombre, precio y foto. Los clientes los ver\u00e1n en la carta digital." />
+        <Step num={3} title="Configura mesas" desc="En Mesas, define tus zonas (terraza, sal\u00f3n, barra) y a\u00f1ade las mesas con su capacidad. As\u00ed podr\u00e1s gestionar reservas y pedidos por mesa." />
+        <Step num={4} title="Genera QRs" desc="En QR Carta, genera c\u00f3digos QR para cada mesa. Los clientes escanean y pueden ver tu carta y hacer pedidos desde su m\u00f3vil." />
+        <Step num={5} title="Activa el agente" desc="En Mi Recepcionista, configura tu agente de voz IA. Atender\u00e1 llamadas, gestionar\u00e1 reservas y tomar\u00e1 pedidos autom\u00e1ticamente." />
       </Accordion>
 
-      {/* Section 2: Guia de la TPV */}
-      <Accordion title="Guia de la TPV">
+      {/* Section 2: Gu\u00eda de la TPV */}
+      <Accordion title="Gu\u00eda de la TPV">
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontWeight: 600, color: C.text, marginBottom: 6 }}>Anadir productos al ticket</div>
-          <p style={{ margin: 0 }}>Desde la TPV, pulsa sobre cualquier producto de tu carta para anadirlo al ticket actual. Puedes modificar cantidades con los botones + y -.</p>
+          <div style={{ fontWeight: 600, color: C.text, marginBottom: 6 }}>A\u00f1adir productos al ticket</div>
+          <p style={{ margin: 0 }}>Desde la TPV, pulsa sobre cualquier producto de tu carta para a\u00f1adirlo al ticket actual. Puedes modificar cantidades con los botones + y -.</p>
         </div>
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontWeight: 600, color: C.text, marginBottom: 6 }}>Cobrar un pedido</div>
-          <p style={{ margin: 0 }}>Pulsa el boton de cobrar para ver el total. Selecciona el metodo de pago (efectivo, tarjeta) y confirma. El pedido se marcara como entregado.</p>
+          <p style={{ margin: 0 }}>Pulsa el bot\u00f3n de cobrar para ver el total. Selecciona el m\u00e9todo de pago (efectivo, tarjeta) y confirma. El pedido se marcar\u00e1 como entregado.</p>
         </div>
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontWeight: 600, color: C.text, marginBottom: 6 }}>Dividir cuenta</div>
@@ -110,22 +110,22 @@ export default function AyudaPage() {
         </div>
         <div>
           <div style={{ fontWeight: 600, color: C.text, marginBottom: 6 }}>Enviar a cocina</div>
-          <p style={{ margin: 0 }}>Al confirmar un pedido, se envia automaticamente a la pantalla de cocina (KDS). La cocina ve los productos en orden de prioridad.</p>
+          <p style={{ margin: 0 }}>Al confirmar un pedido, se env\u00eda autom\u00e1ticamente a la pantalla de cocina (KDS). La cocina ve los productos en orden de prioridad.</p>
         </div>
       </Accordion>
 
-      {/* Section 3: Guia de pedidos QR */}
-      <Accordion title="Guia de pedidos QR">
+      {/* Section 3: Gu\u00eda de pedidos QR */}
+      <Accordion title="Gu\u00eda de pedidos QR">
         <p style={{ margin: '0 0 12px' }}>
-          El sistema de carta QR permite a tus clientes hacer pedidos directamente desde su movil.
+          El sistema de carta QR permite a tus clientes hacer pedidos directamente desde su m\u00f3vil.
         </p>
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 600, color: C.text, marginBottom: 4 }}>Como funciona</div>
+          <div style={{ fontWeight: 600, color: C.text, marginBottom: 4 }}>C\u00f3mo funciona</div>
           <p style={{ margin: 0 }}>El cliente escanea el QR de su mesa, ve tu carta digital, selecciona productos y confirma el pedido. El pedido llega directamente a tu panel de pedidos y a la cocina.</p>
         </div>
         <div>
           <div style={{ fontWeight: 600, color: C.text, marginBottom: 4 }}>Generar QRs por mesa</div>
-          <p style={{ margin: 0 }}>Ve a la seccion QR Carta. Alli puedes generar e imprimir un QR unico para cada mesa. Cada QR incluye el identificador de mesa para que los pedidos lleguen correctamente asignados.</p>
+          <p style={{ margin: 0 }}>Ve a la secci\u00f3n QR Carta. All\u00ed puedes generar e imprimir un QR \u00fanico para cada mesa. Cada QR incluye el identificador de mesa para que los pedidos lleguen correctamente asignados.</p>
         </div>
       </Accordion>
 
@@ -133,7 +133,7 @@ export default function AyudaPage() {
       <Accordion title="Caja y turnos">
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontWeight: 600, color: C.text, marginBottom: 4 }}>Abrir un turno</div>
-          <p style={{ margin: 0 }}>Al empezar tu jornada, ve a Caja y pulsa Abrir turno. Introduce el efectivo inicial en caja. Todos los cobros del turno se registraran automaticamente.</p>
+          <p style={{ margin: 0 }}>Al empezar tu jornada, ve a Caja y pulsa Abrir turno. Introduce el efectivo inicial en caja. Todos los cobros del turno se registrar\u00e1n autom\u00e1ticamente.</p>
         </div>
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontWeight: 600, color: C.text, marginBottom: 4 }}>Cerrar turno</div>

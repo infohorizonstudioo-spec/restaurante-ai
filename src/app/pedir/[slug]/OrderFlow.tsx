@@ -730,7 +730,7 @@ export default function OrderFlow({ tenant, items: initialItems, mesa, zone, slu
 
       {/* Footer */}
       <div style={{ textAlign: 'center', padding: '20px', borderTop: `1px solid ${T.border}`, color: T.text3, fontSize: 11, marginTop: step === 'done' ? 20 : 0 }}>
-        Powered by Reservo.AI
+        Carta digital by Reservo.AI
       </div>
     </div>
   )
