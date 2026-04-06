@@ -34,6 +34,7 @@ export default function CajaPage() {
   // Modal state
   const [showOpenModal, setShowOpenModal] = useState(false)
   const [showCloseModal, setShowCloseModal] = useState(false)
+  const [savingShift, setSavingShift] = useState(false)
   const [openCash, setOpenCash] = useState('')
   const [openName, setOpenName] = useState('')
   const [closeCash, setCloseCash] = useState('')
@@ -129,9 +130,11 @@ export default function CajaPage() {
 
   /* ── Open shift ────────────────────────────────────────────────── */
   async function handleOpenShift() {
-    if (!tid) return
+    if (!tid || savingShift) return
+    setSavingShift(true)
+    try {
     const sess = await supabase.auth.getSession()
-    if (!sess.data.session) return
+    if (!sess.data.session) { setSavingShift(false); return }
     const res = await fetch('/api/caja-shifts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + sess.data.session.access_token },
@@ -147,11 +150,14 @@ export default function CajaPage() {
     } else {
       alert(d.error || 'Error al abrir turno. Int\u00e9ntalo de nuevo.')
     }
+    } finally { setSavingShift(false) }
   }
 
   /* ── Close shift ───────────────────────────────────────────────── */
   async function handleCloseShift() {
-    if (!tid || !openShift) return
+    if (!tid || !openShift || savingShift) return
+    setSavingShift(true)
+    try {
     const sess = await supabase.auth.getSession()
     if (!sess.data.session) return
     const counted = parseFloat(closeCash) || 0
@@ -176,6 +182,7 @@ export default function CajaPage() {
     } else {
       alert(d.error || 'Error al cerrar turno. Int\u00e9ntalo de nuevo.')
     }
+    } finally { setSavingShift(false) }
   }
 
   /* ── Print reports ──────────────────────────────────────────────── */
@@ -569,15 +576,15 @@ export default function CajaPage() {
             </div>
             <button
               onClick={handleOpenShift}
-              disabled={!openName}
+              disabled={!openName || savingShift}
               style={{
-                width: '100%', padding: '12px', borderRadius: 10, border: 'none', cursor: openName ? 'pointer' : 'not-allowed',
-                background: openName ? `linear-gradient(135deg, ${C.green}, #22B88A)` : C.surface2,
+                width: '100%', padding: '12px', borderRadius: 10, border: 'none', cursor: openName && !savingShift ? 'pointer' : 'not-allowed',
+                background: openName && !savingShift ? `linear-gradient(135deg, ${C.green}, #22B88A)` : C.surface2,
                 color: openName ? '#0C1018' : C.text3, fontSize: 14, fontWeight: 700,
                 opacity: openName ? 1 : 0.5,
               }}
             >
-              Abrir turno
+              {savingShift ? 'Abriendo...' : 'Abrir turno'}
             </button>
           </Modal>
         )}
@@ -631,20 +638,21 @@ export default function CajaPage() {
             </div>
 
             {/* Difference */}
-            {closeCash && (
-              <div style={{
-                padding: '10px 14px', borderRadius: 8, marginBottom: 14,
-                background: getDiffBg(parseFloat(closeCash) - (openShift.initial_cash + shiftTotals.total_cash)),
-              }}>
-                <span style={{
-                  fontSize: 14, fontWeight: 700,
-                  color: getDiffColor(parseFloat(closeCash) - (openShift.initial_cash + shiftTotals.total_cash)),
+            {closeCash && !isNaN(parseFloat(closeCash)) && (() => {
+              const counted = parseFloat(closeCash)
+              const expected = openShift.initial_cash + shiftTotals.total_cash
+              const diff = Math.round((counted - expected) * 100) / 100
+              return (
+                <div style={{
+                  padding: '10px 14px', borderRadius: 8, marginBottom: 14,
+                  background: getDiffBg(diff),
                 }}>
-                  Diferencia: {getDiffSign(parseFloat(closeCash) - (openShift.initial_cash + shiftTotals.total_cash))}
-                  {formatCurrency(Math.abs(parseFloat(closeCash) - (openShift.initial_cash + shiftTotals.total_cash)))} EUR
-                </span>
-              </div>
-            )}
+                  <span style={{ fontSize: 14, fontWeight: 700, color: getDiffColor(diff) }}>
+                    Diferencia: {getDiffSign(diff)}{formatCurrency(Math.abs(diff))} EUR
+                  </span>
+                </div>
+              )
+            })()}
 
             {/* Notes */}
             <div style={{ marginBottom: 20 }}>
@@ -664,13 +672,16 @@ export default function CajaPage() {
 
             <button
               onClick={handleCloseShift}
+              disabled={savingShift}
               style={{
-                width: '100%', padding: '12px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: `linear-gradient(135deg, ${C.red}, #E05252)`,
+                width: '100%', padding: '12px', borderRadius: 10, border: 'none',
+                cursor: savingShift ? 'wait' : 'pointer',
+                background: savingShift ? C.surface2 : `linear-gradient(135deg, ${C.red}, #E05252)`,
                 color: '#fff', fontSize: 14, fontWeight: 700,
+                opacity: savingShift ? 0.6 : 1,
               }}
             >
-              Confirmar cierre
+              {savingShift ? 'Cerrando...' : 'Confirmar cierre'}
             </button>
           </Modal>
         )}
