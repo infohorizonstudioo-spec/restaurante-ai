@@ -621,15 +621,16 @@ export default function TPVPage() {
     setOrder(prev => prev.filter(i => i.id !== id))
   }
 
-  // Computed discount/tip values for cobrar
-  const discountAmount = cobroDiscountType === 'percent'
+  // Computed discount/tip values for cobrar (rounded to avoid floating-point errors)
+  const r2 = (n: number) => Math.round(n * 100) / 100
+  const discountAmount = r2(cobroDiscountType === 'percent'
     ? total * (Math.min(100, Math.max(0, cobroDiscount)) / 100)
-    : Math.min(total, Math.max(0, cobroDiscount))
-  const tipAmount = cobroTipMode === 'none' ? 0
+    : Math.min(total, Math.max(0, cobroDiscount)))
+  const tipAmount = r2(cobroTipMode === 'none' ? 0
     : cobroTipMode === '5' ? total * 0.05
     : cobroTipMode === '10' ? total * 0.10
-    : Math.max(0, cobroTip)
-  const finalTotal = Math.max(0, total - discountAmount + tipAmount)
+    : Math.max(0, cobroTip))
+  const finalTotal = r2(Math.max(0, total - discountAmount + tipAmount))
 
   async function cobrar() {
     if (!tid || order.length === 0) return
@@ -750,7 +751,12 @@ export default function TPVPage() {
     setSaving(true)
     try {
       const splitItems = order.filter((_, i) => splitSelected.has(i))
-      const splitTotal = splitItems.reduce((s, i) => s + i.price * i.quantity, 0)
+      const splitRawTotal = splitItems.reduce((s, i) => s + i.price * i.quantity, 0)
+      // Apply discount/tip proportionally based on split ratio
+      const ratio = total > 0 ? splitRawTotal / total : 1
+      const splitDiscount = Math.round(discountAmount * ratio * 100) / 100
+      const splitTip = Math.round(tipAmount * ratio * 100) / 100
+      const splitTotal = Math.round(Math.max(0, splitRawTotal - splitDiscount + splitTip) * 100) / 100
       const { data: { session } } = await supabase.auth.getSession()
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (session?.access_token) headers.Authorization = 'Bearer ' + session.access_token
@@ -762,7 +768,12 @@ export default function TPVPage() {
           tenant_id: tid,
           customer_name: 'TPV (cuenta parcial)',
           order_type: selectedTable ? 'mesa' : 'barra',
-          notes: selectedTable ? `Mesa: ${selectedTable} (cuenta parcial)` : 'Cuenta parcial',
+          notes: [
+            selectedTable ? `Mesa: ${selectedTable}` : '',
+            'Cuenta parcial',
+            splitDiscount > 0 ? `Descuento: -${splitDiscount.toFixed(2)}\u20AC` : '',
+            splitTip > 0 ? `Propina: +${splitTip.toFixed(2)}\u20AC` : '',
+          ].filter(Boolean).join(' | '),
           items: splitItems.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
           total_estimate: splitTotal,
           payment_method: cobroPayment,
