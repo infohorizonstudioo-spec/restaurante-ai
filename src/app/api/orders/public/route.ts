@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     if (rl.blocked) return rl.response
 
     const body = await req.json()
-    const { slug, mesa, items, customer_name, notes, context } = body
+    const { slug, mesa, items, customer_name, customer_phone, notes, context } = body
 
     // Validate
     if (!slug || !items || !Array.isArray(items) || items.length === 0) {
@@ -107,6 +107,22 @@ export async function POST(req: NextRequest) {
     const isBarra = !mesa && !tableId
     const orderType = isBarra ? 'barra' : 'mesa'
     const safeName = sanitizeName(customer_name) || (isBarra ? 'Barra' : 'QR')
+    const safePhone = customer_phone ? String(customer_phone).replace(/[^0-9+]/g, '').slice(0, 20) : null
+
+    // Link to existing customer if phone provided (non-blocking)
+    if (safePhone && safePhone.length >= 6) {
+      try {
+        const { data: existing } = await admin.from('customers')
+          .select('id').eq('tenant_id', tenant.id)
+          .or(`phone.eq.${safePhone},phone.eq.+${safePhone.replace(/^\+/, '')}`)
+          .maybeSingle()
+        if (!existing && safeName && safeName !== 'QR' && safeName !== 'Barra') {
+          await admin.from('customers').insert({
+            tenant_id: tenant.id, name: safeName, phone: safePhone,
+          })
+        }
+      } catch { /* non-critical */ }
+    }
 
     // Create order with table_id
     const { data: order, error } = await admin
@@ -117,6 +133,7 @@ export async function POST(req: NextRequest) {
         status: 'confirmed',
         order_type: orderType,
         customer_name: safeName,
+        customer_phone: safePhone,
         items,
         notes: noteParts.join(' | ') || 'Pedido QR',
         total_estimate: total,
