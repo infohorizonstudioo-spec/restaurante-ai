@@ -1059,7 +1059,7 @@ export default function PanelPage() {
           </div>
         ) : (
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24, textAlign: 'center' }}>
-            <p style={{ fontSize: 14, color: C.text3 }}>{_tx('Sin datos operativos todavia')}</p>
+            <p style={{ fontSize: 14, color: C.text3 }}>{_tx('Sin datos operativos todav\u00eda')}</p>
             <p style={{ fontSize: 12, marginTop: 4, color: C.text3 }}>{_tx('Los datos apareceran cuando haya actividad')}</p>
           </div>
         )}

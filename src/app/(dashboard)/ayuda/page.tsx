@@ -141,20 +141,20 @@ export default function AyudaPage() {
         </div>
         <div>
           <div style={{ fontWeight: 600, color: C.text, marginBottom: 4 }}>Arqueo de caja</div>
-          <p style={{ margin: 0 }}>El resumen del dia muestra todos los turnos, ingresos por metodo de pago, y diferencias de caja. Puedes consultarlo en cualquier momento desde la pestana Resumen del dia.</p>
+          <p style={{ margin: 0 }}>El resumen del d\u00eda muestra todos los turnos, ingresos por m\u00e9todo de pago, y diferencias de caja. Puedes consultarlo en cualquier momento desde la pesta\u00f1a Resumen del d\u00eda.</p>
         </div>
       </Accordion>
 
       {/* Section 5: Preguntas frecuentes */}
       <Accordion title="Preguntas frecuentes">
-        <FAQ q="Como cambio el horario de mi negocio?" a="Ve a Configuracion > Horarios. Puedes definir horarios distintos para cada dia de la semana y anadir periodos de cierre extraordinario." />
-        <FAQ q="Puedo usar Reservo.AI en varios dispositivos?" a="Si. Tu cuenta funciona en cualquier navegador y dispositivo. Los datos se sincronizan en tiempo real entre todos los dispositivos conectados." />
-        <FAQ q="Como cancelo una reserva?" a="En la seccion de Reservas, busca la reserva y pulsa sobre ella. En el detalle puedes cambiar el estado a cancelada o eliminarla." />
-        <FAQ q="El agente de voz funciona 24h?" a="Si. Una vez activado, el agente atiende llamadas las 24 horas del dia, los 7 dias de la semana, incluso cuando tu negocio esta cerrado." />
-        <FAQ q="Como anadir un nuevo empleado?" a="Ve a Configuracion > Equipo y pulsa Anadir miembro. Introduce su email y se le enviara una invitacion para acceder al panel." />
-        <FAQ q="Que pasa si me quedo sin llamadas incluidas?" a="Puedes contratar mas llamadas desde la seccion de Facturacion, o actualizar a un plan superior con mas llamadas incluidas." />
-        <FAQ q="Puedo personalizar los mensajes del agente?" a="Si. En Mi Recepcionista puedes personalizar el saludo, el tono, los idiomas y las instrucciones especificas que sigue tu agente." />
-        <FAQ q="Como contacto con soporte?" a="Puedes escribirnos a soporte@reservo.ai o usar el chat de ayuda desde cualquier pagina del panel. Respondemos en menos de 24 horas." />
+        <FAQ q="\u00bfC\u00f3mo cambio el horario de mi negocio?" a="Ve a Configuraci\u00f3n > Horarios. Puedes definir horarios distintos para cada d\u00eda de la semana y a\u00f1adir periodos de cierre extraordinario." />
+        <FAQ q="\u00bfPuedo usar Reservo.AI en varios dispositivos?" a="S\u00ed. Tu cuenta funciona en cualquier navegador y dispositivo. Los datos se sincronizan en tiempo real entre todos los dispositivos conectados." />
+        <FAQ q="\u00bfC\u00f3mo cancelo una reserva?" a="En la secci\u00f3n de Reservas, busca la reserva y pulsa sobre ella. En el detalle puedes cambiar el estado a cancelada o eliminarla." />
+        <FAQ q="\u00bfEl agente de voz funciona 24h?" a="S\u00ed. Una vez activado, el agente atiende llamadas las 24 horas del d\u00eda, los 7 d\u00edas de la semana, incluso cuando tu negocio est\u00e1 cerrado." />
+        <FAQ q="\u00bfC\u00f3mo a\u00f1adir un nuevo empleado?" a="Ve a Configuraci\u00f3n > Equipo y pulsa A\u00f1adir miembro. Introduce su email y se le enviar\u00e1 una invitaci\u00f3n para acceder al panel." />
+        <FAQ q="\u00bfQu\u00e9 pasa si me quedo sin llamadas incluidas?" a="Puedes contratar m\u00e1s llamadas desde la secci\u00f3n de Facturaci\u00f3n, o actualizar a un plan superior con m\u00e1s llamadas incluidas." />
+        <FAQ q="\u00bfPuedo personalizar los mensajes del agente?" a="S\u00ed. En Mi Recepcionista puedes personalizar el saludo, el tono, los idiomas y las instrucciones espec\u00edficas que sigue tu agente." />
+        <FAQ q="\u00bfC\u00f3mo contacto con soporte?" a="Puedes escribirnos a soporte@reservo.ai o usar el chat de ayuda desde cualquier p\u00e1gina del panel. Respondemos en menos de 24 horas." />
       </Accordion>
     </div>
   )

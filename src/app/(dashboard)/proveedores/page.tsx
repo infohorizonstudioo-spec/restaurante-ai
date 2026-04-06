@@ -703,7 +703,7 @@ function PedidosTab({ orders, suppliers, onDetail }: {
 
   const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter)
 
-  if (orders.length === 0) return <EmptyState icon="📦" title="Sin pedidos" desc="Cuando crees pedidos a proveedores aparecerán aqui con su estado y detalle." />
+  if (orders.length === 0) return <EmptyState icon="\uD83D\uDCE6" title="Sin pedidos" desc="Cuando crees pedidos a proveedores aparecer\u00e1n aqu\u00ed con su estado y detalle." />
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
