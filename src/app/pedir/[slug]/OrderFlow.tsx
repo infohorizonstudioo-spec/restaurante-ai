@@ -96,11 +96,39 @@ export default function OrderFlow({ tenant, items: initialItems, mesa, zone, slu
   const [step, setStep] = useState<'context' | 'menu' | 'review' | 'done'>('context')
   const [context, setContext] = useState('')
   const [customerName, setCustomerName] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
   const [orderNotes, setOrderNotes] = useState('')
+  const [returning, setReturning] = useState(false)
   const [sending, setSending] = useState(false)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<'carta' | 'cuenta'>(justPaid ? 'cuenta' : 'carta')
+
+  // Customer history (favorites + last order)
+  const [favorites, setFavorites] = useState<{ name: string; count: number; price: number }[]>([])
+  const [lastOrderItems, setLastOrderItems] = useState<{ name: string; quantity: number; price: number }[]>([])
+
+  // Load saved customer data from localStorage (remember returning customers)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('reservo_customer')
+      if (saved) {
+        const data = JSON.parse(saved)
+        if (data.name) { setCustomerName(data.name); setReturning(true) }
+        if (data.phone) {
+          setCustomerPhone(data.phone)
+          // Load customer history from API
+          fetch(`/api/orders/customer-history?slug=${slug}&phone=${encodeURIComponent(data.phone)}`)
+            .then(r => r.json())
+            .then(d => {
+              if (d.favorites?.length) setFavorites(d.favorites)
+              if (d.lastOrder?.items?.length) setLastOrderItems(d.lastOrder.items)
+            })
+            .catch(() => {})
+        }
+      }
+    } catch { /* ignore */ }
+  }, [slug])
 
   // Live items (can update via realtime)
   const [liveItems, setLiveItems] = useState<MenuItem[]>(initialItems)
@@ -248,9 +276,13 @@ export default function OrderFlow({ tenant, items: initialItems, mesa, zone, slu
       const res = await fetch('/api/orders/public', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, mesa, items: cart, customer_name: customerName || undefined, notes: orderNotes || undefined, context }),
+        body: JSON.stringify({ slug, mesa, items: cart, customer_name: customerName || undefined, customer_phone: customerPhone || undefined, notes: orderNotes || undefined, context }),
       })
       if (res.ok) {
+        // Save customer data for next visit
+        if (customerName || customerPhone) {
+          try { localStorage.setItem('reservo_customer', JSON.stringify({ name: customerName, phone: customerPhone })) } catch {}
+        }
         setStep('done')
       } else {
         const d = await res.json().catch(() => ({}))
@@ -512,6 +544,51 @@ export default function OrderFlow({ tenant, items: initialItems, mesa, zone, slu
           {/* Step 2: Menu */}
           {step === 'menu' && (
             <div style={{ paddingBottom: cartCount > 0 ? 90 : 20 }}>
+              {/* Returning customer: last order quick-reorder */}
+              {lastOrderItems.length > 0 && (
+                <div style={{ padding: '14px 20px', borderBottom: `1px solid ${T.border}`, background: 'rgba(45,212,191,0.04)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 14 }}>{'\uD83D\uDD04'}</span>
+                      <h3 style={{ fontSize: 14, fontWeight: 700, color: T.teal, margin: 0 }}>{'\u00bfLo de siempre?'}</h3>
+                    </div>
+                    <button onClick={() => {
+                      for (const item of lastOrderItems) {
+                        const menuItem = availableItems.find(m => m.name === item.name)
+                        if (menuItem) for (let i = 0; i < item.quantity; i++) addToCart(menuItem)
+                      }
+                    }} style={{
+                      fontSize: 12, fontWeight: 700, color: T.bg, background: T.teal,
+                      border: 'none', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontFamily: 'inherit',
+                    }}>Repetir pedido</button>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {lastOrderItems.map((item, i) => (
+                      <span key={i} style={{ fontSize: 12, color: T.text2, background: T.surface2, padding: '4px 10px', borderRadius: 8 }}>
+                        {item.quantity > 1 ? `${item.quantity}x ` : ''}{item.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Returning customer: favorites */}
+              {favorites.length > 0 && lastOrderItems.length === 0 && (
+                <div style={{ padding: '14px 20px', borderBottom: `1px solid ${T.border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                    <span style={{ fontSize: 14 }}>{'\u2764\uFE0F'}</span>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: T.amber, margin: 0 }}>Tus favoritos</h3>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {favorites.map((fav, i) => {
+                      const menuItem = availableItems.find(m => m.name === fav.name)
+                      if (!menuItem) return null
+                      return renderItemCard(menuItem)
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Featured section */}
               {featuredItems.length > 0 && (
                 <div style={{ padding: '16px 20px', borderBottom: `1px solid ${T.border}` }}>
@@ -643,12 +720,27 @@ export default function OrderFlow({ tenant, items: initialItems, mesa, zone, slu
                 ))}
               </div>
 
-              {/* Optional fields */}
+              {/* Returning customer banner */}
+              {returning && customerName && (
+                <div style={{ background: 'rgba(45,212,191,0.08)', border: `1px solid rgba(45,212,191,0.20)`, borderRadius: 12, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>{'\uD83D\uDC4B'}</span>
+                  <span style={{ fontSize: 13, color: T.teal, fontWeight: 600 }}>Hola de nuevo, {customerName}</span>
+                </div>
+              )}
+
+              {/* Customer info */}
               <div style={{ background: T.surface, borderRadius: 16, border: `1px solid ${T.border}`, padding: '16px', marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, marginBottom: 6, display: 'block' }}>Tu nombre (opcional)</label>
-                  <input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Para saber a qui\u00e9n servir" maxLength={60}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, background: T.surface2, border: `1px solid ${T.border}`, color: T.text, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, marginBottom: 6, display: 'block' }}>Tu nombre</label>
+                    <input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Para tu pedido" maxLength={60}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, background: T.surface2, border: `1px solid ${T.border}`, color: T.text, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, marginBottom: 6, display: 'block' }}>Tel\u00e9fono (opcional)</label>
+                    <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="Para recordarte" maxLength={15}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, background: T.surface2, border: `1px solid ${T.border}`, color: T.text, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
+                  </div>
                 </div>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, marginBottom: 6, display: 'block' }}>Notas (alergias, sin gluten, etc.)</label>
