@@ -1129,7 +1129,7 @@ export default function TPVPage() {
         <div style={{ textAlign: 'center', maxWidth: 400 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>{'\uD83D\uDEAB'}</div>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 8 }}>Módulo no disponible</h2>
-          <p style={{ fontSize: 14, color: C.text2, lineHeight: 1.6 }}>El TPV esta disponible para negocios de hosteleria.</p>
+          <p style={{ fontSize: 14, color: C.text2, lineHeight: 1.6 }}>El TPV est\u00e1 disponible para negocios de hosteler\u00eda.</p>
         </div>
       </div>
     )

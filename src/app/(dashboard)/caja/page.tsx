@@ -207,8 +207,8 @@ export default function CajaPage() {
       <div style={{ padding: 32 }}>
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '64px 24px', textAlign: 'center' }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>💰</div>
-          <h3 style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 8 }}>Modulo no disponible</h3>
-          <p style={{ fontSize: 14, color: C.text2 }}>La caja esta disponible para negocios de hosteleria.</p>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 8 }}>M\u00f3dulo no disponible</h3>
+          <p style={{ fontSize: 14, color: C.text2 }}>La caja est\u00e1 disponible para negocios de hosteler\u00eda.</p>
         </div>
       </div>
     )
@@ -363,7 +363,7 @@ export default function CajaPage() {
                   </h3>
                   {shiftOrders.length === 0 ? (
                     <p style={{ fontSize: 13, color: C.text3, textAlign: 'center', padding: '20px 0' }}>
-                      Sin pedidos en este turno todavia.
+                      Sin pedidos en este turno todav\u00eda.
                     </p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

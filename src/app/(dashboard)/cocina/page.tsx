@@ -244,8 +244,8 @@ export default function CocinaPage() {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 12 }}>
         <span style={{ fontSize: 40 }}>{'\uD83C\uDF73'}</span>
-        <div style={{ fontSize: 18, fontWeight: 600, color: C.text }}>Modulo no disponible</div>
-        <div style={{ fontSize: 14, color: C.text3 }}>La pantalla de cocina esta disponible para negocios de hosteleria.</div>
+        <div style={{ fontSize: 18, fontWeight: 600, color: C.text }}>M\u00f3dulo no disponible</div>
+        <div style={{ fontSize: 14, color: C.text3 }}>La pantalla de cocina est\u00e1 disponible para negocios de hosteler\u00eda.</div>
       </div>
     )
   }
