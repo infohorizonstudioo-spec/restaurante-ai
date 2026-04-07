@@ -89,6 +89,7 @@ export default function ProveedoresPage() {
 
   // Auto-order trigger
   const [autoOrdering, setAutoOrdering] = useState(false)
+  const [updatingOrder, setUpdatingOrder] = useState(false)
 
   // Inventory intelligence alerts
   const [invAlerts, setInvAlerts] = useState<{ type: string; urgency: string; product?: string; message: string; suggestedMultiplier?: number }[]>([])
@@ -293,7 +294,9 @@ export default function ProveedoresPage() {
 
   /* ── Update order status ─────────────────────────────────────────── */
   async function updateOrderStatus(orderId: string, status: string) {
-    if (!tid) return
+    if (!tid || updatingOrder) return
+    setUpdatingOrder(true)
+    try {
     const payload: any = { status }
     if (status === 'delivered') payload.delivered_at = new Date().toISOString()
     await supabase.from('supply_orders').update(payload).eq('id', orderId).eq('tenant_id', tid)
@@ -325,6 +328,7 @@ export default function ProveedoresPage() {
     toast.push({ title: 'Estado actualizado', type: 'success', priority: 'info', icon: '\u2705' })
     setOrderModal(null)
     loadAll(tid)
+    } finally { setUpdatingOrder(false) }
   }
 
   /* ── Auto-order: review stock and trigger orders ────────────────── */

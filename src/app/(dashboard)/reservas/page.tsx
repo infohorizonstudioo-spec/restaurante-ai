@@ -58,6 +58,7 @@ export default function ReservasPage() {
   const [modal,setModal]       = useState<any|null>(null)
   const [search,setSearch]     = useState('')
   const [customerMap,setCustomerMap] = useState<Record<string,any>>({})
+  const [updatingStatus,setUpdatingStatus] = useState(false)
   const L = template?.labels   // etiquetas dinámicas
 
   const load = useCallback(async (tenantId:string) => {
@@ -121,6 +122,8 @@ export default function ReservasPage() {
   const today = new Date().toISOString().slice(0,10)
 
   async function updateStatus(id:string, status:string) {
+    if (updatingStatus) return
+    setUpdatingStatus(true)
     try {
       const sess = await supabase.auth.getSession()
       if (!sess.data.session) return
@@ -134,6 +137,8 @@ export default function ReservasPage() {
       }
     } catch {
       toast.push({ title: 'Error de conexi\u00f3n', type: 'error', priority: 'warning', icon: '\u26A0\uFE0F' })
+    } finally {
+      setUpdatingStatus(false)
     }
     if (tid) load(tid)
     setModal(null)
@@ -247,10 +252,11 @@ export default function ReservasPage() {
             {modal.source==='voice_agent'&&<p style={{fontSize:12,color:C.violet,marginBottom:16,background:C.violetDim,padding:'6px 10px',borderRadius:8}}>\uD83D\uDCDE {tx('Reserva creada por el agente de voz')}</p>}
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>
               {['confirmada','pendiente','cancelada','completada','no_show'].map(s=>(
-                <button key={s} onClick={()=>updateStatus(modal.id,s)}
+                <button key={s} onClick={()=>updateStatus(modal.id,s)} disabled={updatingStatus}
                   style={{padding:'7px 14px',fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${RESERVATION_STATUS[s]?.color||C.border}40`,
                     background: modal.status===s ? RESERVATION_STATUS[s]?.bg||C.surface2 : 'transparent',
-                    color: RESERVATION_STATUS[s]?.color||C.text2,cursor:'pointer',fontFamily:'inherit'}}>
+                    color: RESERVATION_STATUS[s]?.color||C.text2,cursor:updatingStatus?'wait':'pointer',fontFamily:'inherit',
+                    opacity:updatingStatus?0.5:1}}>
                   {getStatusLabel(s, t.locale)}
                 </button>
               ))}
